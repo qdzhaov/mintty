@@ -208,7 +208,7 @@ typedef struct {
   int geom_sync;
   int tabbar;
   int col_spacing, row_spacing;
-  int padding;
+  int padding,partline;
   int ligatures;
   int ligatures_support;
   int handle_dpichanged;

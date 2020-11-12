@@ -2073,7 +2073,8 @@ win_adapt_term_size(bool sync_size_with_font, bool scale_font_with_size)
     norm_extra_height = extra_height;
   }
   int term_width = client_width - 2 * PADDING;
-  int term_height = client_height - 2 * PADDING;
+  if(cfg.partline>6)cfg.partline=6;
+  int term_height = client_height - 2 * PADDING+cell_height*cfg.partline/8;
   if (!sync_size_with_font /*&& win_tabbar_visible()*/) {
     // apparently insignificant if sync_size_with_font && win_is_fullscreen
     term_height -= OFFSET;
