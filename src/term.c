@@ -15,7 +15,9 @@
 #endif
 
 
-struct term term;
+STerm dterm={0};
+STerm *cterm=&dterm;
+#define term (*cterm)
 
 typedef struct {
   termline ** buf;
@@ -112,9 +114,9 @@ geturl(int n)
 
 
 static bool
-vt220(string term)
+vt220(string Term)
 {
-  char * vt = strstr(term, "vt");
+  char * vt = strstr(Term, "vt");
   if (vt) {
     unsigned int ver;
     if (sscanf(vt + 2, "%u", &ver) == 1 && ver >= 220)
@@ -303,7 +305,7 @@ term_reset(bool full)
   if (full) {
     term.lrmargmode = false;
     term.deccolm_allowed = cfg.enable_deccolm_init;  // not reset by xterm
-    term.vt220_keys = vt220(cfg.term);  // not reset by xterm
+    term.vt220_keys = vt220(cfg.Term);  // not reset by xterm
     term.app_keypad = false;  // xterm only with RIS
     term.app_control = 0;
     term.auto_repeat = cfg.auto_repeat;  // not supported by xterm
@@ -395,13 +397,52 @@ term_reset(bool full)
   term_schedule_tblink();
   term_schedule_tblink2();
   term_schedule_cblink();
-  term_clear_scrollback();
+  term_clear_scrollback(cterm);
 
   term.detect_progress = cfg.progress_bar;
 
   term_schedule_search_update();
 
   win_reset_colours();
+}
+static void freelines(termlines* lines, int rows) {
+  if (lines) {
+    for (int i = 0; i < rows; i++)
+      freeline(lines[i]);
+    free(lines);
+  }
+}
+void
+term_free(struct STerm* pterm)
+{
+  freelines(pterm->displines, pterm->rows);
+  freelines(pterm->lines, pterm->rows);
+  freelines(pterm->other_lines, pterm->rows);
+
+  term_clear_scrollback(pterm);
+
+  free(pterm->suspbuf );
+
+  free(pterm->printbuf);
+
+  free(pterm->tabs);
+
+  free(pterm->paste_buffer);
+
+  free(pterm->ltemp);
+  free(pterm->wcFrom);
+  free(pterm->wcTo);
+  for (int i = 0; i < pterm->bidi_cache_size; i++) {
+    free(pterm->pre_bidi_cache[i].chars);
+    free(pterm->pre_bidi_cache[i].forward);
+    free(pterm->pre_bidi_cache[i].backward);
+    free(pterm->post_bidi_cache[i].chars);
+    free(pterm->post_bidi_cache[i].forward);
+    free(pterm->post_bidi_cache[i].backward);
+  }
+  free(pterm->pre_bidi_cache);
+  free(pterm->post_bidi_cache);
+  memset(pterm, 0, sizeof(*pterm));
 }
 
 static void
@@ -455,8 +496,8 @@ term_reconfig(void)
     term.bell_taskbar = new_cfg.bell_taskbar;
   if (new_cfg.bell_popup != cfg.bell_popup)
     term.bell_popup = new_cfg.bell_popup;
-  if (strcmp(new_cfg.term, cfg.term))
-    term.vt220_keys = vt220(new_cfg.term);
+  if (strcmp(new_cfg.Term, cfg.Term))
+    term.vt220_keys = vt220(new_cfg.Term);
 }
 
 static int
@@ -1037,15 +1078,15 @@ scrollback_pop(void)
  * Clear the scrollback.
  */
 void
-term_clear_scrollback(void)
+term_clear_scrollback(STerm* pterm)
 {
-  while (term.sblines)
+  while (pterm->sblines)
     free(scrollback_pop());
-  free(term.scrollback);
-  term.scrollback = 0;
-  term.sblen = term.sblines = term.sbpos = 0;
-  term.tempsblines = 0;
-  term.disptop = 0;
+  free(pterm->scrollback);
+  pterm->scrollback = 0;
+  pterm->sblen = pterm->sblines = pterm->sbpos = 0;
+  pterm->tempsblines = 0;
+  pterm->disptop = 0;
 }
 
 /*

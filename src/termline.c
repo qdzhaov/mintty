@@ -6,6 +6,7 @@
 #include "termpriv.h"
 #include "win.h"  // cfg.bidi
 
+#define term (*cterm)
 
 #define newn_1(poi, type, count)	{poi = newn(type, count + 1); poi++;}
 #define renewn_1(poi, count)	{poi--; poi = renewn(poi, count + 1); poi++;}

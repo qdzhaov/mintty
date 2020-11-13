@@ -18,6 +18,7 @@
 #ifdef __CYGWIN__
 #include <sys/cygwin.h>  // cygwin_internal
 #endif
+#define term (*cterm)
 
 static DWORD WINAPI
 shell_exec_thread(void *data)
@@ -344,8 +345,8 @@ win_open(wstring wpath, bool adjust_dir)
       // current directory, so we can only consider the working directory 
       // explicitly communicated via the OSC 7 escape sequence here.
       if (*wpath != '/' && wcsncmp(wpath, W("~/"), 2) != 0) {
-        if (child_dir && *child_dir) {
-          wchar * cd = cs__mbstowcs(child_dir);
+        if (cchild->_child_dir && *cchild->_child_dir) {
+          wchar * cd = cs__mbstowcs(cchild->_child_dir);
           cd = renewn(cd, wcslen(cd) + wcslen(wpath) + 2);
           cd[wcslen(cd)] = '/';
           wcscpy(&cd[wcslen(cd) + 1], wpath);

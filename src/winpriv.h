@@ -55,7 +55,6 @@ extern void toggle_charinfo(void);
 extern void toggle_vt220(void);
 extern char * fontpropinfo(void);
 
-extern bool title_settable;
 extern bool support_wsl;
 extern wstring wsl_basepath;
 extern bool report_child_pid;
@@ -150,5 +149,28 @@ extern void win_close(void);
 extern unsigned long mtime(void);
 
 extern void term_save_image(void);
+//========= for wintab 
+extern STerm* win_tab_active_term() ;
+extern void win_tab_init(char* home, char* cmd, char** argv, int width, int height, char* title) ;
+extern void win_tab_create() ;
+extern void win_tab_clean() ;
+extern bool win_tab_should_die();
+extern int  win_tab_active();     
+extern int  win_tab_count() ;
+extern int  win_tab_height() ;
+extern void win_tab_for_each(void (*cb)(STerm* pterm));
+extern void win_tab_paint(HDC dc);
+extern void win_tab_attention(STerm* pterm) ;
+extern void win_tab_change(int change) ;
+extern void win_tab_mouse_click(int x) ;
+extern void win_tab_move(int amount) ;
+extern void win_tab_set_argv(char** argv) ;
+
+extern void     win_tab_save_title(STerm* pterm);
+extern void     win_tab_restore_title(STerm* pterm);
+extern void     win_tab_set_title(STerm* pterm, wchar_t* title) ;
+extern wchar_t* win_tab_get_title(unsigned int idx) ;
+extern void     win_tab_title_push(STerm* pterm) ;
+extern wchar_t* win_tab_title_pop(STerm* pterm) ;
 
 #endif

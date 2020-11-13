@@ -13,6 +13,7 @@
 #include "winimg.h"
 #include "sixel.h"
 
+#define term (*cterm)
 // tempfile_t manipulation
 
 static tempfile_t *tempfile_current = NULL;

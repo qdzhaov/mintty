@@ -8,6 +8,7 @@
 #include "win.h"
 #include "child.h"
 #include "charset.h"
+#define term (*cterm)
 
 typedef struct {
   size_t capacity;  // number of items allocated for text/cattrs

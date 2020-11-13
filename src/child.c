@@ -40,12 +40,15 @@ int forkpty(int *, char *, struct termios *, struct winsize *);
 // http://www.tldp.org/LDP/abs/html/exitcodes.html
 #define mexit 126
 
-string child_dir = null;
-
-static pid_t pid;
-static bool killed;
+#define term (*cterm)
+SChild dchild={0,0,0,-1,0,-1,0};
+SChild*cchild=&dchild;
+#define child_dir  (cchild->_child_dir)
+#define pid        (cchild->_pid      )
+#define killed     (cchild->_killed   )
+#define pty_fd     (cchild->_pty_fd   )
+#define pty_fd     (cchild->_pty_fd   )
 static int win_fd;
-static int pty_fd = -1;
 static int log_fd = -1;
 bool logging = false;
 
@@ -104,13 +107,12 @@ childerror(char * action, bool from_fork, int errno_code, int code)
   }
 }
 
-static void
-sigexit(int sig)
-{
-  if (pid)
-    kill(-pid, SIGHUP);
+static void sigexit(int sig) {
+  for (Tab**t=win_tabs();*t;t++){
+    if ((*t)->chld->_pid)
+      kill(-(*t)->chld->_pid, SIGHUP);
+  }
   signal(sig, SIG_DFL);
-  report_pos();
   kill(getpid(), sig);
 }
 
@@ -201,7 +203,7 @@ void
 child_update_charset(void)
 {
 #ifdef IUTF8
-  if (pty_fd >= 0) {
+  if (cchild&&pty_fd >= 0) {
     // Terminal line settings
     struct termios attr;
     tcgetattr(pty_fd, &attr);
@@ -216,8 +218,12 @@ child_update_charset(void)
 }
 
 void
-child_create(char *argv[], struct winsize *winp)
+child_create(SChild* cchild, struct STerm* pterm,
+             char *argv[], struct winsize *winp, const char* path)
 {
+  pid_t _pid;
+  pty_fd = -1;
+  cchild->pterm = cterm=pterm;
   trace_dir(asform("child_create: %s", getcwd(malloc(MAX_PATH), MAX_PATH)));
 
   // xterm and urxvt ignore SIGHUP, so let's do the same.
@@ -228,22 +234,22 @@ child_create(char *argv[], struct winsize *winp)
   signal(SIGQUIT, sigexit);
 
   // Create the child process and pseudo terminal.
-  pid = forkpty(&pty_fd, 0, 0, winp);
-  if (pid < 0) {
+  _pid = forkpty(&pty_fd, 0, 0, winp);
+  if (_pid < 0) {
     bool rebase_prompt = (errno == EAGAIN);
     //ENOENT  There are no available terminals.
     //EAGAIN  Cannot allocate sufficient memory to allocate a task structure.
     //EAGAIN  Not possible to create a new process; RLIMIT_NPROC limit.
     //ENOMEM  Memory is tight.
-    childerror(_("Error: Could not fork child process"), true, errno, pid);
+    childerror(_("Error: Could not fork child process"), true, errno, _pid);
     if (rebase_prompt)
       childerror(_("DLL rebasing may be required; see 'rebaseall / rebase --help'"), false, 0, 0);
 
-    pid = 0;
+    _pid = 0;
 
     term_hide_cursor();
   }
-  else if (!pid) { // Child process.
+  else if (!_pid) { // Child process.
 #if CYGWIN_VERSION_DLL_MAJOR < 1007
     // Some native console programs require a console to be attached to the
     // process, otherwise they pop one up themselves, which is rather annoying.
@@ -257,7 +263,7 @@ child_create(char *argv[], struct winsize *winp)
     // but it'll do.
 #if CYGWIN_VERSION_DLL_MAJOR == 1005
     DWORD win_version = GetVersion();
-    win_version = ((win_version & 0xff) << 8) | ((win_version >> 8) & 0xff);
+    win_versiON = ((win_version & 0xff) << 8) | ((win_version >> 8) & 0xff);
     if (win_version >= 0x0601)  // Windows 7 is NT 6.1.
 #endif
       if (AllocConsole()) {
@@ -280,7 +286,7 @@ child_create(char *argv[], struct winsize *winp)
     signal(SIGTTIN, SIG_IGN);
     signal(SIGTTOU, SIG_IGN);
 
-    setenv("TERM", cfg.term, true);
+    setenv("TERM", cfg.Term, true);
     // unreliable info about terminal application (#881)
     setenv("TERM_PROGRAM", APPNAME, true);
     setenv("TERM_PROGRAM_VERSION", VERSION, true);
@@ -320,6 +326,7 @@ child_create(char *argv[], struct winsize *winp)
     attr.c_lflag |= ECHOE | ECHOK | ECHOCTL | ECHOKE;
     tcsetattr(0, TCSANOW, &attr);
 
+    if (path) chdir(path);
     // Invoke command
     execvp(cmd, argv);
 
@@ -340,8 +347,9 @@ child_create(char *argv[], struct winsize *winp)
     exit(mexit);
   }
   else { // Parent process.
+    pid=_pid;
     if (report_child_pid) {
-      printf("%d\n", pid);
+      printf("%d\n", _pid);
       fflush(stdout);
     }
 
@@ -376,7 +384,7 @@ child_create(char *argv[], struct winsize *winp)
           ut.ut_id[i] = *dev++;
 
         ut.ut_type = USER_PROCESS;
-        ut.ut_pid = pid;
+        ut.ut_pid = _pid;
         ut.ut_time = time(0);
         strlcpy(ut.ut_user, getlogin() ?: "?", sizeof ut.ut_user);
         gethostname(ut.ut_host, sizeof ut.ut_host);
@@ -405,154 +413,157 @@ void
 child_proc(void)
 {
   for (;;) {
-    if (term.paste_buffer)
-      term_send_paste();
+    for (Tab**t=win_tabs();*t;t++){
+      if ((*t)->terminal->paste_buffer){
+        cterm=(*t)->terminal;
+        term_send_paste();
+      }
+    }
 
     struct timeval timeout = {0, 100000}, *timeout_p = 0;
     fd_set fds;
     FD_ZERO(&fds);
     FD_SET(win_fd, &fds);
-    if (pty_fd >= 0)
-      FD_SET(pty_fd, &fds);
-#ifndef patch_319
-    else
-#endif
-    if (pid) {
-      int status;
-      if (waitpid(pid, &status, WNOHANG) == pid) {
-        pid = 0;
-
-        // Decide whether we want to exit now or later
-        if (killed || cfg.hold == HOLD_NEVER)
-          exit_mintty();
-        else if (cfg.hold == HOLD_START) {
-          if (WIFSIGNALED(status) || WEXITSTATUS(status) != mexit)
-            exit_mintty();
-        }
-        else if (cfg.hold == HOLD_ERROR) {
-          if (WIFEXITED(status)) {
-            if (WEXITSTATUS(status) == 0)
-              exit_mintty();
+    int highfd = win_fd;
+    for (Tab**t=win_tabs();*t;t++){
+      SChild*cchild=(*t)->chld;
+      cterm=cchild->pterm;
+      if (pty_fd > highfd) highfd = pty_fd;
+      if (pty_fd >= 0)
+        FD_SET(pty_fd, &fds);
+      if (pid) {
+        int status;
+        if (waitpid(pid, &status, WNOHANG) == pid) {
+          pid = 0;
+          // Decide whether we want to exit now or later
+          if (killed || cfg.hold == HOLD_NEVER)
+            win_tab_clean();
+          else if (cfg.hold == HOLD_START) {
+            if (WIFSIGNALED(status) || WEXITSTATUS(status) != mexit)
+              win_tab_clean();
           }
-          else {
-            const int error_sigs =
-              1 << SIGILL | 1 << SIGTRAP | 1 << SIGABRT | 1 << SIGFPE |
-              1 << SIGBUS | 1 << SIGSEGV | 1 << SIGPIPE | 1 << SIGSYS;
-            if (!(error_sigs & 1 << WTERMSIG(status)))
-              exit_mintty();
-          }
-        }
-
-        char *s = 0;
-        bool err = true;
-        if (WIFEXITED(status)) {
-          int code = WEXITSTATUS(status);
-          if (code == 0)
-            err = false;
-          if ((code || cfg.exit_write) /*&& cfg.hold != HOLD_START*/)
-            //__ %1$s: client command (e.g. shell) terminated, %2$i: exit code
-            asprintf(&s, _("%s: Exit %i"), cmd, code);
-        }
-        else if (WIFSIGNALED(status))
-          asprintf(&s, "%s: %s", cmd, strsignal(WTERMSIG(status)));
-
-        if (!s && cfg.exit_write) {
-          //__ default inline notification if ExitWrite=yes
-          s = _("TERMINATED");
-        }
-        if (s) {
-          char * wsl_pre = "\0337\033[H\033[L";
-          char * wsl_post = "\0338\033[B";
-          if (err && support_wsl)
-            term_write(wsl_pre, strlen(wsl_pre));
-          childerror(s, false, 0, err ? 41 : 42);
-          if (err && support_wsl)
-            term_write(wsl_post, strlen(wsl_post));
-        }
-
-        if (cfg.exit_title && *cfg.exit_title)
-          win_prefix_title(cfg.exit_title);
-      }
-#ifdef patch_319
-      if (pid != 0 && pty_fd < 0) // Pty gone, but process still there: keep checking
-#else
-      else // Pty gone, but process still there: keep checking
-#endif
-        timeout_p = &timeout;
-    }
-
-    if (select(win_fd + 1, &fds, 0, 0, timeout_p) > 0) {
-      if (pty_fd >= 0 && FD_ISSET(pty_fd, &fds)) {
-        // Pty devices on old Cygwin versions (pre 1005) deliver only 4 bytes
-        // at a time, and newer ones or MSYS2 deliver up to 256 at a time.
-        // so call read() repeatedly until we have a worthwhile haul.
-        // this avoids most partial updates, results in less flickering/tearing.
-        static char buf[4096];
-        uint len = 0;
-#if CYGWIN_VERSION_API_MINOR >= 74
-        if (cfg.baud > 0) {
-          uint cps = cfg.baud / 10; // 1 start bit, 8 data bits, 1 stop bit
-          uint nspc = 2000000000 / cps;
-
-          static ulong prevtime = 0;
-          static ulong exceeded = 0;
-          static ulong granularity = 0;
-          struct timespec tim;
-          if (!granularity) {
-            clock_getres(CLOCK_MONOTONIC, &tim); // cygwin granularity: 539ns
-            granularity = tim.tv_nsec;
-          }
-          clock_gettime(CLOCK_MONOTONIC, &tim);
-          ulong now = tim.tv_sec * (long)1000000000 + tim.tv_nsec;
-          //printf("baud %d ns/char %d prev %ld now %ld delta\n", cfg.baud, nspc, prevtime, now);
-          if (now < prevtime + nspc) {
-            ulong delay = prevtime ? prevtime + nspc - now : 0;
-            if (delay < exceeded)
-              exceeded -= delay;
+          else if (cfg.hold == HOLD_ERROR) {
+            if (WIFEXITED(status)) {
+              if (WEXITSTATUS(status) == 0)
+                win_tab_clean();
+            }
             else {
-              tim.tv_sec = delay / 1000000000;
-              tim.tv_nsec = delay % 1000000000;
-              clock_nanosleep(CLOCK_MONOTONIC, 0, &tim, 0);
-              clock_gettime(CLOCK_MONOTONIC, &tim);
-              ulong then = tim.tv_sec * (long)1000000000 + tim.tv_nsec;
-              //printf("nsleep %ld -> %ld\n", delay, then - now);
-              if (then - now > delay)
-                exceeded = then - now - delay;
-              now = then;
+              const int error_sigs =
+                  1 << SIGILL | 1 << SIGTRAP | 1 << SIGABRT | 1 << SIGFPE |
+                  1 << SIGBUS | 1 << SIGSEGV | 1 << SIGPIPE | 1 << SIGSYS;
+              if (!(error_sigs & 1 << WTERMSIG(status)))
+                win_tab_clean();
             }
           }
-          prevtime = now;
 
-          int ret = read(pty_fd, buf, 1);
-          if (ret > 0)
-            len = ret;
-        }
-        else
-#endif
-        do {
-          int ret = read(pty_fd, buf + len, sizeof buf - len);
-          //if (kb_trace) printf("[%lu] read %d\n", mtime(), ret);
-          if (ret > 0)
-            len += ret;
-          else
-            break;
-        } while (len < sizeof buf);
+          char *s = 0;
+          bool err = true;
+          if (WIFEXITED(status)) {
+            int code = WEXITSTATUS(status);
+            if (code == 0) err = false;
+            if ((code || cfg.exit_write) /*&& cfg.hold != HOLD_START*/)
+              //__ %1$s: client command (e.g. shell) terminated, %2$i: exit code
+              asprintf(&s, _("%s: Exit %i"), cmd, code);
+          } else if (WIFSIGNALED(status))
+            asprintf(&s, "%s: %s", cmd, strsignal(WTERMSIG(status)));
 
-        if (len > 0) {
-          term_write(buf, len);
-          // accelerate keyboard echo if (unechoed) keyboard input is pending
-          if (kb_input) {
-            kb_input = false;
-            if (cfg.display_speedup)
-              // undocumented safeguard in case something goes wrong here
-              win_update_now();
+          if (!s && cfg.exit_write) {
+            //__ default inline notification if ExitWrite=yes
+            s = _("TERMINATED");
           }
-          if (log_fd >= 0 && logging)
-            write(log_fd, buf, len);
+          if (s) {
+            char * wsl_pre = "\0337\033[H\033[L";
+            char * wsl_post = "\0338\033[B";
+            if (err && support_wsl)
+              term_write(wsl_pre, strlen(wsl_pre));
+            childerror(s, false, 0, err ? 41 : 42);
+            if (err && support_wsl)
+              term_write(wsl_post, strlen(wsl_post));
+          }
+
+          if (cfg.exit_title && *cfg.exit_title)
+            win_prefix_title(cfg.exit_title);
         }
-        else {
-          pty_fd = -1;
-          term_hide_cursor();
+        if (pid != 0 && pty_fd < 0) // Pty gone, but process still there: keep checking
+          timeout_p = &timeout;
+      }
+    }
+
+    if (select(highfd + 1, &fds, 0, 0, timeout_p) > 0) {
+      for (Tab**t=win_tabs();*t;t++){
+        SChild* cchild = (*t)->chld;
+        cterm=cchild->pterm;
+        if (pty_fd >= 0 && FD_ISSET(pty_fd, &fds)) {
+          // Pty devices on old Cygwin versions (pre 1005) deliver only 4 bytes
+          // at a time, and newer ones or MSYS2 deliver up to 256 at a time.
+          // so call read() repeatedly until we have a worthwhile haul.
+          // this avoids most partial updates, results in less flickering/tearing.
+          static char buf[4096];
+          uint len = 0;
+#if CYGWIN_VERSION_API_MINOR >= 74
+          if (cfg.baud > 0) {
+            uint cps = cfg.baud / 10; // 1 start bit, 8 data bits, 1 stop bit
+            uint nspc = 2000000000 / cps;
+
+            static ulong prevtime = 0;
+            static ulong exceeded = 0;
+            static ulong granularity = 0;
+            struct timespec tim;
+            if (!granularity) {
+              clock_getres(CLOCK_MONOTONIC, &tim); // cygwin granularity: 539ns
+              granularity = tim.tv_nsec;
+            }
+            clock_gettime(CLOCK_MONOTONIC, &tim);
+            ulong now = tim.tv_sec * (long)1000000000 + tim.tv_nsec;
+            //printf("baud %d ns/char %d prev %ld now %ld delta\n", cfg.baud, nspc, prevtime, now);
+            if (now < prevtime + nspc) {
+              ulong delay = prevtime ? prevtime + nspc - now : 0;
+              if (delay < exceeded)
+                exceeded -= delay;
+              else {
+                tim.tv_sec = delay / 1000000000;
+                tim.tv_nsec = delay % 1000000000;
+                clock_nanosleep(CLOCK_MONOTONIC, 0, &tim, 0);
+                clock_gettime(CLOCK_MONOTONIC, &tim);
+                ulong then = tim.tv_sec * (long)1000000000 + tim.tv_nsec;
+                //printf("nsleep %ld -> %ld\n", delay, then - now);
+                if (then - now > delay)
+                  exceeded = then - now - delay;
+                now = then;
+              }
+            }
+            prevtime = now;
+
+            int ret = read(pty_fd, buf, 1);
+            if (ret > 0)
+              len = ret;
+          }
+          else
+#endif
+            do {
+              int ret = read(pty_fd, buf + len, sizeof buf - len);
+              if (ret > 0)
+                len += ret;
+              else
+                break;
+            } while (len < sizeof buf);
+
+          if (len > 0) {
+            term_write(buf, len);
+            // accelerate keyboard echo if (unechoed) keyboard input is pending
+            if (kb_input) {
+              kb_input = false;
+              if (cfg.display_speedup)
+                // undocumented safeguard in case something goes wrong here
+                win_update_now();
+            }
+            if (log_fd >= 0 && logging)
+              write(log_fd, buf, len);
+          }
+          else {
+            pty_fd = -1;
+            term_hide_cursor();
+          }
         }
       }
       if (FD_ISSET(win_fd, &fds))
@@ -564,11 +575,11 @@ child_proc(void)
 void
 child_kill(bool point_blank)
 {
-  if (!pid ||
-      kill(-pid, point_blank ? SIGKILL : SIGHUP) < 0 ||
-      point_blank)
-    exit_mintty();
-  killed = true;
+  for (Tab**t=win_tabs();*t;t++){
+    SChild* pchild = (*t)->chld;
+    kill(-pchild->_pid, point_blank ? SIGKILL : SIGHUP);
+    pchild->_killed = true;
+  }
 }
 
 bool
@@ -578,9 +589,9 @@ child_is_alive(void)
 }
 
 bool
-child_is_parent(void)
+child_is_parent(SChild *pchild)
 {
-  if (!pid)
+  if (!pchild->_pid)
     return false;
   DIR * d = opendir("/proc");
   if (!d)
@@ -609,7 +620,7 @@ child_is_parent(void)
 }
 
 static struct procinfo {
-  int pid;
+  int _pid;
   int ppid;
   int winpid;
   char * cmdline;
@@ -617,10 +628,10 @@ static struct procinfo {
 static uint nttyprocs = 0;
 
 static char *
-procres(int pid, char * res)
+procres(int _pid, char * res)
 {
   char fbuf[99];
-  char * fn = asform("/proc/%d/%s", pid, res);
+  char * fn = asform("/proc/%d/%s", _pid, res);
   int fd = open(fn, O_BINARY | O_RDONLY);
   free(fn);
   if (fd < 0)
@@ -638,9 +649,9 @@ procres(int pid, char * res)
 }
 
 static int
-procresi(int pid, char * res)
+procresi(int _pid, char * res)
 {
-  char * si = procres(pid, res);
+  char * si = procres(_pid, res);
   int i = atoi(si);
   free(si);
   return i;
@@ -675,7 +686,7 @@ grandchild_process_list(void)
           int winpid = procresi(thispid, "winpid");
           // not including the direct child (pid)
           ttyprocs = renewn(ttyprocs, nttyprocs + 1);
-          ttyprocs[nttyprocs].pid = thispid;
+          ttyprocs[nttyprocs]._pid = thispid;
           ttyprocs[nttyprocs].ppid = ppid;
           ttyprocs[nttyprocs].winpid = winpid;
           char * cmd = procres(thispid, "cmdline");
@@ -695,7 +706,7 @@ grandchild_process_list(void)
   wchar * res = 0;
   for (uint i = 0; i < nttyprocs; i++) {
     char * proc = newn(char, 50 + strlen(ttyprocs[i].cmdline));
-    sprintf(proc, " %5u %5u %s", ttyprocs[i].winpid, ttyprocs[i].pid, ttyprocs[i].cmdline);
+    sprintf(proc, " %5u %5u %s", ttyprocs[i].winpid, ttyprocs[i]._pid, ttyprocs[i].cmdline);
     free(ttyprocs[i].cmdline);
     wchar * procw = cs__mbstowcs(proc);
     free(proc);
@@ -1262,4 +1273,46 @@ child_launch(int n, int argc, char * argv[], int moni)
     free(cmds);
   }
 }
+//============================
+bool child_is_any_parent() {
+  for (Tab**t=win_tabs();*t;t++){
+    if(child_is_parent((*t)->chld))return 1;
+  };
+  return 0;
+}
+void child_terminate(SChild* cchild) {
+  kill(-pid, SIGKILL);
 
+  // Seems that sometimes cygwin leaves process in non-waitable and
+  // non-alive state. The result for that is that there will be
+  // unkillable tabs.
+  //
+  // This stupid hack solves the problem.
+  //
+  // TODO: Find out better way to solve this. Now the child processes are
+  // not always cleaned up.
+  int cpid = pid;
+  for (Tab**t=win_tabs();*t;t++){
+    if ((*t)->chld->_pid == cpid) 
+      (*t)->chld->_pid = 0;
+  }
+}
+void child_init() {
+  // xterm and urxvt ignore SIGHUP, so let's do the same.
+  signal(SIGHUP, SIG_IGN);
+
+  signal(SIGINT, sigexit);
+  signal(SIGTERM, sigexit);
+  signal(SIGQUIT, sigexit);
+
+  win_fd = open("/dev/windows", O_RDONLY);
+  // Open log file if any
+  open_logfile(true);
+}
+void
+child_free(SChild* pchild)
+{
+  if (pchild->_pty_fd >= 0)
+    close(pchild->_pty_fd);
+  pchild->_pty_fd = -1;
+}

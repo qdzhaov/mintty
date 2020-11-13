@@ -1,5 +1,6 @@
 #include "tek.h"
 
+#define term (*cterm)
 enum tekmode tek_mode = TEKMODE_OFF;
 bool tek_bypass = false;
 static uchar intensity = 0x7F; // for point modes

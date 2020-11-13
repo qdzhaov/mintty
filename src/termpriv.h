@@ -36,6 +36,7 @@ extern void clear_wrapcontd(termline * line, int y);
 extern ushort getparabidi(termline * line);
 extern wchar * wcsline(termline * line);  // for debug output
 
+#define term (*cterm)
 static inline bool
 term_selecting(void)
 { return term.mouse_state < 0 && term.mouse_state >= MS_SEL_LINE; }

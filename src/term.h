@@ -438,7 +438,8 @@ typedef struct {
   unsigned long last_bell;
 } term_bell;
 
-struct term {
+struct SChild ;
+typedef struct STerm {
   // these used to be in term_cursor, thus affected by cursor restore
   bool decnrc_enabled;  /* DECNRCM: enable NRC */
   bool autowrap;        /* DECAWM: Autowrap mode */
@@ -638,20 +639,23 @@ struct term {
   bidi_cache_entry *pre_bidi_cache, *post_bidi_cache;
   int bidi_cache_size;
 
+  struct SChild* child;
   // Search results
   termresults results;
 
   termimgs imgs;
-};
+}STerm ;
 
-extern struct term term;
+extern STerm *cterm;
+//#define term (*cterm)
 
 extern void scroll_rect(int topline, int botline, int lines);
 
 extern void term_resize(int, int);
 extern void term_scroll(int, int);
 extern void term_reset(bool full);
-extern void term_clear_scrollback(void);
+extern void term_free(STerm* pterm);
+extern void term_clear_scrollback(STerm* pterm);
 extern bool term_mouse_click(mouse_button, mod_keys, pos, int count);
 extern void term_mouse_release(mouse_button, mod_keys, pos);
 extern void term_mouse_move(mod_keys, pos);

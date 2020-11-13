@@ -9,6 +9,8 @@
 #include "charset.h"  // cs__utftowcs
 #include "tek.h"
 
+#define term (*cterm)
+
 /*
  * Fetch the character at a particular position in a line array.
  * The reason this isn't just a simple array reference is that if the

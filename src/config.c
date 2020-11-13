@@ -26,6 +26,7 @@
 #define dont_support_blurred
 
 
+#define term (*cterm)
 string config_dir = 0;
 static wstring rc_filename = 0;
 static char linebuf[444];
@@ -45,8 +46,12 @@ const config default_cfg = {
   .tek_defocused_colour = (colour)-1,
   .tek_glow = 1,
   .underl_colour = (colour)-1,
-  .tab_fg_colour = (colour)-1,
-  .tab_bg_colour = (colour)-1,
+  //.tab_fg_colour = (colour)-1,
+  //.tab_bg_colour = (colour)-1,
+  .tab_fg_colour = 0x00FF00,
+  .tab_bg_colour = 0x000000,
+  .tab_active_bg_colour = 0x323232,
+  .tab_attention_bg_colour = 0x003200,
   .disp_space = 0,
   .disp_clear = 0,
   .disp_tab = 0,
@@ -149,7 +154,7 @@ const config default_cfg = {
   .search_bar = W(""),
   .search_context = 0,
   // Terminal
-  .term = "xterm",
+  .Term = "xterm",
   .answerback = W(""),
   .old_wrapmodes = false,
   .enable_deccolm_init = false,
@@ -174,6 +179,7 @@ const config default_cfg = {
   .logging = true,
   .create_utmp = false,
   .title = W(""),
+  .title_settable = true,
   .daemonize = true,
   .daemonize_always = false,
   // "Hidden"
@@ -292,6 +298,9 @@ options[] = {
   {"UnderlineColour", OPT_COLOUR, offcfg(underl_colour)},
   {"TabForegroundColour", OPT_COLOUR, offcfg(tab_fg_colour)},
   {"TabBackgroundColour", OPT_COLOUR, offcfg(tab_bg_colour)},
+  {"TabAttentionColour", OPT_COLOUR, offcfg(tab_attention_bg_colour)},
+  {"TabActiveColour", OPT_COLOUR, offcfg(tab_active_bg_colour)},
+
   {"DispSpace", OPT_INT, offcfg(disp_space)},
   {"DispClear", OPT_INT, offcfg(disp_clear)},
   {"DispTab", OPT_INT, offcfg(disp_tab)},
@@ -419,7 +428,7 @@ options[] = {
   {"SearchContext", OPT_INT, offcfg(search_context)},
 
   // Terminal
-  {"Term", OPT_STRING, offcfg(term)},
+  {"Term", OPT_STRING, offcfg(Term)},
   {"Answerback", OPT_WSTRING, offcfg(answerback)},
   {"OldWrapModes", OPT_BOOL, offcfg(old_wrapmodes)},
   {"Enable132ColumnSwitching", OPT_BOOL, offcfg(enable_deccolm_init)},
@@ -2157,9 +2166,9 @@ term_handler(control *ctrl, int event)
         dlg_listbox_add(ctrl, "mintty");
       if (terminfo_exists("mintty-direct"))
         dlg_listbox_add(ctrl, "mintty-direct");
-      dlg_editbox_set(ctrl, new_cfg.term);
+      dlg_editbox_set(ctrl, new_cfg.Term);
     when EVENT_VALCHANGE or EVENT_SELCHANGE:
-      dlg_editbox_get(ctrl, &new_cfg.term);
+      dlg_editbox_get(ctrl, &new_cfg.Term);
   }
 }
 

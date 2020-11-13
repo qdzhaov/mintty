@@ -20,6 +20,7 @@
 #include <termios.h>
 #include <sys/time.h>
 
+#define term (*cterm)
 #define TERM_CMD_BUF_INC_STEP 128
 #define TERM_CMD_BUF_MAX_SIZE (1024 * 1024)
 
@@ -690,7 +691,7 @@ static void
 write_primary_da(void)
 {
   string primary_da = primary_da4;
-  char * vt = strstr(cfg.term, "vt");
+  char * vt = strstr(cfg.Term, "vt");
   if (vt) {
     unsigned int ver;
     if (sscanf(vt + 2, "%u", &ver) == 1) {
@@ -2561,10 +2562,10 @@ do_winop(void)
     }
     when 22:
       if (arg1 == 0 || arg1 == 2)
-        win_save_title();
+        win_tab_save_title(cterm);
     when 23:
       if (arg1 == 0 || arg1 == 2)
-        win_restore_title();
+        win_tab_restore_title(cterm);
   }
 }
 
@@ -2670,7 +2671,7 @@ do_csi(uchar c)
     when 'J' or CPAIR('?', 'J'):  /* ED/DECSED: (selective) erase in display */
       if (arg0 == 3) { /* Erase Saved Lines (xterm) */
         // don't care if (term.esc_mod) // ignore selective
-        term_clear_scrollback();
+        term_clear_scrollback(cterm);
         term.disptop = 0;
       }
       else if (arg0 <= 2) {
@@ -3673,6 +3674,9 @@ do_cmd(void)
 {
   char *s = term.cmd_buf;
   s[term.cmd_len] = 0;
+  int size = cs_mbstowcs(NULL, s, 0) + 1;
+  wchar *ws = malloc(size * sizeof(wchar));  // includes terminating NUL
+  cs_mbstowcs(ws, s, size);
   //printf("OSC %d <%s> %s\n", term.cmd_num, s, term.state == CMD_ESCAPE ? "ST" : "BEL");
   char * osc_fini = term.state == CMD_ESCAPE ? "\e\\" : "\a";
 
@@ -3681,7 +3685,13 @@ do_cmd(void)
     return;
 
   switch (term.cmd_num) {
-    when 0 or 2: win_set_title(s);  // ignore icon title
+    when 0 or 2:
+    { 
+      wchar ws[strlen(s) + 1];
+      if (cs_mbstowcs(ws, s, lengthof(ws)) >= 0) {
+        win_tab_set_title(cterm,ws);  // ignore icon title
+      }
+    }
     when 4:   do_colour_osc(true, 4, false);
     when 5:   do_colour_osc(true, 5, false);
     when 6 or 106: {

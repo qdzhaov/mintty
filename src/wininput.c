@@ -14,6 +14,7 @@
 #include <winnls.h>
 #include <termios.h>
 
+#define term (*cterm)
 static HMENU ctxmenu = NULL;
 static HMENU sysmenu;
 static int sysmenulen;
@@ -462,6 +463,11 @@ win_update_menus(bool callback)
   modify_menu(sysmenu, SC_CLOSE, 0, itemlabel(__("&Close")),
     alt_fn ? W("Alt+F4") : ct_sh ? W("Ctrl+Shift+W") : null
   );
+  uint switch_move_enabled = win_tab_count() == 1;
+  EnableMenuItem(sysmenu, IDM_PREVTAB, switch_move_enabled);
+  EnableMenuItem(sysmenu, IDM_NEXTTAB, switch_move_enabled);
+  EnableMenuItem(sysmenu, IDM_MOVELEFT, switch_move_enabled);
+  EnableMenuItem(sysmenu, IDM_MOVERIGHT, switch_move_enabled);
 
   //__ System menu:
   modify_menu(sysmenu, IDM_NEW, 0, _W("Ne&w"),
@@ -652,6 +658,13 @@ win_init_ctxmenu(bool extended_menu, bool with_user_commands)
 #endif
   //__ Context menu:
   AppendMenuW(ctxmenu, MF_ENABLED, IDM_OPEN, _W("Ope&n"));
+  AppendMenuW(ctxmenu, MF_ENABLED, IDM_NEWTAB, _W("New tab\tCtrl+Shift+T"));
+  AppendMenuW(ctxmenu, MF_ENABLED, IDM_KILLTAB, _W("Kill tab"));
+  AppendMenuW(ctxmenu, MF_SEPARATOR, 0, 0);
+  AppendMenuW(ctxmenu, MF_ENABLED, IDM_PREVTAB, _W("Previous tab\tShift+<-"));
+  AppendMenuW(ctxmenu, MF_ENABLED, IDM_NEXTTAB, _W("Next tab\tShift+->"));
+  AppendMenuW(ctxmenu, MF_ENABLED, IDM_MOVELEFT, _W("Move to left\tCtrl+Shift+<-"));
+  AppendMenuW(ctxmenu, MF_ENABLED, IDM_MOVERIGHT, _W("Next to right\tCtrl+Shift+->"));
   AppendMenuW(ctxmenu, MF_SEPARATOR, 0, 0);
   AppendMenuW(ctxmenu, MF_ENABLED, IDM_COPY, 0);
   if (extended_menu) {
@@ -961,6 +974,14 @@ get_mouse_pos(LPARAM lp)
   return translate_pos(GET_X_LPARAM(lp), GET_Y_LPARAM(lp));
 }
 
+static bool tab_bar_click(LPARAM lp) {
+  int y = GET_Y_LPARAM(lp);
+  if (y >= PADDING && y < PADDING + OFFSET) {
+    win_tab_mouse_click(GET_X_LPARAM(lp));
+    return true;
+  }
+  return false;
+}
 bool
 win_mouse_click(mouse_button b, LPARAM lp)
 {
@@ -971,6 +992,7 @@ win_mouse_click(mouse_button b, LPARAM lp)
   static uint last_time, count;
 
   win_show_mouse();
+  if (tab_bar_click(lp)) return 1;
   mod_keys mods = get_mods();
   pos p = get_mouse_pos(lp);
 
@@ -1324,13 +1346,13 @@ mflags_paste()
 static void
 lock_title()
 {
-  title_settable = false;
+  cfg.title_settable = false;
 }
 
 static void
 clear_title()
 {
-  win_set_title("");
+  win_set_title(W(""));
 }
 
 static void
@@ -1379,7 +1401,7 @@ mflags_kb_select()
 static uint
 mflags_lock_title()
 {
-  return title_settable ? MF_ENABLED : MF_GRAYED;
+  return cfg.title_settable ? MF_ENABLED : MF_GRAYED;
 }
 
 static uint
@@ -2096,7 +2118,7 @@ static LONG last_key_time = 0;
 
   // Workaround for Windows clipboard history pasting simply injecting Ctrl+V
   // (mintty/wsltty#139)
-  if (key == 'V' && mods == MDK_CTRL && !scancode) {
+  if (key == 'V' && mods == MDK_CTRL ){//&& !scancode) {
     win_paste();
     return true;
   }
@@ -2114,7 +2136,7 @@ static LONG last_key_time = 0;
   // Exit when pressing Enter or Escape while holding the window open after
   // the child process has died.
   if ((key == VK_RETURN || key == VK_ESCAPE) && !mods && !child_is_alive())
-    exit_mintty();
+    win_tab_clean();
 
   // Handling special shifted key functions
   if (newwin_pending) {
@@ -2474,22 +2496,14 @@ static LONG last_key_time = 0;
         when 'V': win_paste();
         when 'I': open_popup_menu(true, "ls", mods);
         when 'N': send_syscommand(IDM_NEW);
-        when 'W': send_syscommand(SC_CLOSE);
+        //when 'W': send_syscommand(SC_CLOSE);
         when 'R': send_syscommand(IDM_RESET);
         when 'D': send_syscommand(IDM_DEFSIZE);
         when 'F': send_syscommand(cfg.zoom_font_with_window ? IDM_FULLSCREEN_ZOOM : IDM_FULLSCREEN);
         when 'S': send_syscommand(IDM_FLIPSCREEN);
         when 'H': send_syscommand(IDM_SEARCH);
-        when 'T': if (!transparency_pending) {
-                    previous_transparency = cfg.transparency;
-                    transparency_pending = 1;
-                    transparency_tuned = false;
-                  }
-                  if (cfg.opaque_when_focused)
-                    win_update_transparency(false);
-#ifdef debug_transparency
-                  printf("++%d\n", transparency_pending);
-#endif
+        when 'T': win_tab_create();
+        when 'W': child_terminate(cterm->child);
         when 'P': cycle_pointer_style();
         when 'O': toggle_scrollbar();
       }
@@ -3085,8 +3099,20 @@ static struct {
     when VK_END:    term.vt220_keys ? edit_key(4, '1') : cursor_key('F', '1');
     when VK_UP:     cursor_key('A', '8');
     when VK_DOWN:   cursor_key('B', '2');
-    when VK_LEFT:   cursor_key('D', '4');
-    when VK_RIGHT:  cursor_key('C', '6');
+    when VK_LEFT:
+      if (shift && ctrl)
+        win_tab_move(-1);
+      else if (shift)
+        win_tab_change(-1);
+      else
+        cursor_key('D', '4');
+    when VK_RIGHT:
+      if (shift && ctrl)
+        win_tab_move(1);
+      else if (shift)
+        win_tab_change(1);
+      else
+        cursor_key('C', '6');
     when VK_CLEAR:  cursor_key('E', '5');
     when VK_MULTIPLY ... VK_DIVIDE:
       if (term.vt52_mode && term.app_keypad)
@@ -3118,6 +3144,8 @@ static struct {
         send_syscommand(SC_KEYMENU);
         return true;
       }
+      else if (shift && ctrl && key == 'T') win_tab_create();
+      else if (shift && ctrl && key == 'W') child_terminate(cterm->child);
       else if (altgr_key())
         trace_key("altgr");
       else if (!modaltgr && !cfg.altgr_is_alt && altgr0 && !term.modify_other_keys)

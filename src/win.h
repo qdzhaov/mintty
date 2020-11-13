@@ -33,7 +33,7 @@ extern void win_get_locator_info(int *x, int *y, int *buttons, bool by_pixels);
 extern void win_bell(config *);
 extern void win_margin_bell(config *);
 
-extern void win_set_title(char *);
+extern void win_set_title(wchar_t *);
 extern void win_save_title(void);
 extern void win_restore_title(void);
 extern void win_copy_title(void);
@@ -105,4 +105,12 @@ typedef enum {
 
 extern cattr apply_attr_colour(cattr a, attr_colour_mode mode);
 
+extern struct STerm* win_tab_active_term() ;
+// Wrap GDI object for automatic release
+typedef struct {
+    HDC tdc;
+    HGDIOBJ old;
+}SGDIObj;
+#define VSELGDIOBJ(s,d,o) SGDIObj s;s.tdc = d; s.old = SelectObject(d, o); 
+#define VDELGDIOBJ(s) DeleteObject(SelectObject(s.tdc, s.old)); 
 #endif

@@ -16,8 +16,24 @@ char * mintty_debug;
 #include "winsearch.h"
 #include "winimg.h"
 #include "jumplist.h"
+#define NOTABBAR
+#ifndef NOTABBAR
 #include "wintab.h"
-
+void update_tab_titles();
+void refresh_tab_titles(bool trace);
+void ptabbar();
+#else
+#define old_win_switch
+//Dump wintab
+#define win_tabbar_visible() 0 
+#define win_prepare_tabbar() 
+#define win_open_tabbar()
+#define win_update_tabbar()
+#define win_close_tabbar()
+#define refresh_tab_titles(trace)
+#define update_tab_titles()
+#define ptabbar()
+#endif  
 #include "term.h"
 #include "appinfo.h"
 #include "child.h"
@@ -97,7 +113,6 @@ static bool default_size_token = false;
 bool clipboard_token = false;
 
 // Options
-bool title_settable = true;
 static string border_style = 0;
 static string report_geom = 0;
 static bool report_moni = false;
@@ -394,192 +409,6 @@ void
 win_set_timer(void (*cb)(void), uint ticks)
 { SetTimer(wnd, (UINT_PTR)cb, ticks, null); }
 
-
-/*
-  Session management: maintain list of window titles.
- */
-
-#define dont_debug_tabbar
-
-struct tabinfo * tabinfo = 0;
-int ntabinfo = 0;
-
-static HWND
-get_prev_tab(bool all)
-{
-  HWND prev = 0;
-  for (int w = 0; w < ntabinfo; w++)
-    if (tabinfo[w].wnd != wnd) {
-      if (all || !IsIconic(tabinfo[w].wnd))
-        prev = tabinfo[w].wnd;
-    }
-    else if (prev)
-      return prev;
-  return prev;
-}
-
-static HWND
-get_next_tab(bool all)
-{
-  HWND next = 0;
-  for (int w = ntabinfo - 1; w >= 0; w--)
-    if (tabinfo[w].wnd != wnd) {
-      if (all || !IsIconic(tabinfo[w].wnd)) {
-        next = tabinfo[w].wnd;
-      }
-    }
-    else if (next)
-      return next;
-  return next;
-}
-
-static void
-clear_tabinfo()
-{
-  for (int i = 0; i < ntabinfo; i++) {
-    free(tabinfo[i].title);
-  }
-  if (tabinfo) {
-    free(tabinfo);
-    tabinfo = 0;
-    ntabinfo = 0;
-  }
-}
-
-static void
-add_tabinfo(unsigned long tag, HWND wnd, wchar * title)
-{
-  struct tabinfo * newtabinfo = renewn(tabinfo, ntabinfo + 1);
-  if (newtabinfo) {
-    tabinfo = newtabinfo;
-    tabinfo[ntabinfo].tag = tag;
-    tabinfo[ntabinfo].wnd = wnd;
-    tabinfo[ntabinfo].title = wcsdup(title);
-    ntabinfo++;
-  }
-}
-
-static void
-sort_tabinfo()
-{
-  int comp_tabinfo(const void * t1, const void * t2)
-  {
-    if (((struct tabinfo *)t1)->tag < ((struct tabinfo *)t2)->tag)
-      return -1;
-    if (((struct tabinfo *)t1)->tag > ((struct tabinfo *)t2)->tag)
-      return 1;
-    else
-      return 0;
-  }
-  qsort(tabinfo, ntabinfo, sizeof(struct tabinfo), comp_tabinfo);
-}
-
-/*
-  Enumerate all windows of the mintty class.
-  ///TODO: Maintain a local list of them.
-  To be used for tab bar display.
- */
-static void
-refresh_tab_titles(bool trace)
-{
-  BOOL CALLBACK wnd_enum_tabs(HWND curr_wnd, LPARAM lp)
-  {
-    bool trace = (bool)lp;
-
-    WINDOWINFO curr_wnd_info;
-    curr_wnd_info.cbSize = sizeof(WINDOWINFO);
-    GetWindowInfo(curr_wnd, &curr_wnd_info);
-    if (class_atom == curr_wnd_info.atomWindowType) {
-      int len = GetWindowTextLengthW(curr_wnd);
-      if (!len) {
-        // check whether already terminating
-        LONG fini = GetWindowLong(curr_wnd, GWL_USERDATA);
-        if (fini) {
-#ifdef debug_tabbar
-          printf("[%8p] get tab %8p: fini\n", wnd, curr_wnd);
-#endif
-          return true;
-        }
-      }
-      wchar title[len + 1];
-      GetWindowTextW(curr_wnd, title, len + 1);
-#ifdef debug_tabbar
-      printf("[%8p] get tab %8p: <%ls>\n", wnd, curr_wnd, title);
-#endif
-
-      static bool sort_tabs_by_time = true;
-
-      if (sort_tabs_by_time) {
-        DWORD pid;
-        GetWindowThreadProcessId(curr_wnd, &pid);
-        HANDLE ph = OpenProcess(PROCESS_QUERY_INFORMATION, 0, pid);
-        // PROCESS_QUERY_LIMITED_INFORMATION ?
-        FILETIME cr_time, dummy;
-        if (GetProcessTimes(ph, &cr_time, &dummy, &dummy, &dummy)) {
-          unsigned long long crtime = ((unsigned long long)cr_time.dwHighDateTime << 32) | cr_time.dwLowDateTime;
-          add_tabinfo(crtime, curr_wnd, title);
-          if (trace) {
-#ifdef debug_tabbar
-            SYSTEMTIME start_time;
-            if (FileTimeToSystemTime(&cr_time, &start_time))
-              printf("  %04d-%02d-%02d_%02d:%02d:%02d.%03d\n",
-                     start_time.wYear, start_time.wMonth, start_time.wDay,
-                     start_time.wHour, start_time.wMinute, 
-                     start_time.wSecond, start_time.wMilliseconds);
-#endif
-          }
-        }
-        CloseHandle(ph);
-      }
-      else
-        add_tabinfo((unsigned long)curr_wnd, curr_wnd, title);
-
-    }
-    return true;
-  }
-
-  clear_tabinfo();
-  EnumWindows(wnd_enum_tabs, (LPARAM)trace);
-  sort_tabinfo();
-#if defined(debug_tabbar) || defined(debug_win_switch)
-  for (int w = 0; w < ntabinfo; w++)
-    printf("[%d] %p eq %d iconic %d <%ls>\n", w, tabinfo[w].wnd, tabinfo[w].wnd == wnd, IsIconic(tabinfo[w].wnd), tabinfo[w].title);
-#endif
-}
-
-/*
-  Update list of windows in all windows of the mintty class.
- */
-static void
-update_tab_titles()
-{
-  BOOL CALLBACK wnd_enum_tabs(HWND curr_wnd, LPARAM lp)
-  {
-    (void)lp;
-    WINDOWINFO curr_wnd_info;
-    curr_wnd_info.cbSize = sizeof(WINDOWINFO);
-    GetWindowInfo(curr_wnd, &curr_wnd_info);
-    if (class_atom == curr_wnd_info.atomWindowType) {
-      if (curr_wnd != wnd) {
-        PostMessage(curr_wnd, WM_USER, 0, WIN_TITLE);
-#ifdef debug_tabbar
-        printf("[%8p] notified %8p to update tabbar\n", wnd, curr_wnd);
-#endif
-      }
-    }
-    return true;
-  }
-  if (sync_level() || win_tabbar_visible()) {
-    // update my own list
-    refresh_tab_titles(true);
-    // support tabbar
-    win_update_tabbar();
-    // tell the others to update their's
-    EnumWindows(wnd_enum_tabs, 0);
-  }
-}
-
-
 /*
    Window system colour configuration.
    Applicable to current window if switched via WM_SETFOCUS/WM_KILLFOCUS.
@@ -694,20 +523,17 @@ win_set_icon(char * s, int icon_index)
 }
 
 void
-win_set_title(char *title)
+win_set_title(wchar*title)
 {
   //printf("win_set_title settable %d <%s>\n", title_settable, title);
-  if (title_settable) {
-    wchar wtitle[strlen(title) + 1];
-    if (cs_mbstowcs(wtitle, title, lengthof(wtitle)) >= 0) {
+  if (cfg.title_settable) {
       // check current title to suppress unnecessary update_tab_titles()
       int len = GetWindowTextLengthW(wnd);
       wchar oldtitle[len + 1];
       GetWindowTextW(wnd, oldtitle, len + 1);
-      if (0 != wcscmp(wtitle, oldtitle)) {
-        SetWindowTextW(wnd, wtitle);
+      if (0 != wcscmp(title, oldtitle)) {
+        SetWindowTextW(wnd, title);
         update_tab_titles();
-      }
     }
   }
 }
@@ -772,38 +598,6 @@ win_unprefix_title(const wstring prefix)
     SetWindowTextW(wnd, title);
     // "[Printing...] "
     update_tab_titles();
-  }
-}
-
-/*
- * Title stack (implemented as fixed-size circular buffer)
- */
-static wstring titles[16];
-static uint titles_i;
-
-void
-win_save_title(void)
-{
-  int len = GetWindowTextLengthW(wnd);
-  wchar *title = newn(wchar, len + 1);
-  GetWindowTextW(wnd, title, len + 1);
-  delete(titles[titles_i]);
-  titles[titles_i++] = title;
-  if (titles_i == lengthof(titles))
-    titles_i = 0;
-}
-
-void
-win_restore_title(void)
-{
-  if (!titles_i)
-    titles_i = lengthof(titles);
-  wstring title = titles[--titles_i];
-  if (title) {
-    SetWindowTextW(wnd, title);
-    update_tab_titles();
-    delete(title);
-    titles[titles_i] = 0;
   }
 }
 
@@ -939,7 +733,6 @@ win_switch(bool back, bool alternate)
   //SetWindowPos(wnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
 
 #ifdef old_win_switch
-  (void)get_next_tab; (void)get_prev_tab;
 
 #if defined(debug_sessions) && debug_sessions > 1
   first_wnd = 0, last_wnd = 0, prev_wnd = 0, next_wnd = 0, wnd_passed = false;
@@ -972,10 +765,10 @@ win_switch(bool back, bool alternate)
   }
 #else
   refresh_tab_titles(false);
-  win_to_top(back ? get_prev_tab(alternate) : get_next_tab(alternate));
+  //win_to_top(back ? get_prev_tab(alternate) : get_next_tab(alternate));
   // support tabbar
-  if (sync_level())
-    win_post_sync_msg(back ? get_prev_tab(alternate) : get_next_tab(alternate), sync_level());
+  //if (sync_level())
+  //  win_post_sync_msg(back ? get_prev_tab(alternate) : get_next_tab(alternate), sync_level());
   win_update_tabbar();
 #endif
 }
@@ -2010,7 +1803,7 @@ win_adjust_borders(int t_width, int t_height)
   printf("win_adjust_borders w/h %d %d\n", width, height);
 #endif
 
-  if (term.app_scrollbar || cfg.scrollbar)
+  if ((cterm&&term.app_scrollbar) || cfg.scrollbar)
     width += GetSystemMetrics(SM_CXVSCROLL);
 
   extra_width = width - (cr.right - cr.left);
@@ -2281,12 +2074,13 @@ static void
 font_cs_reconfig(bool font_changed)
 {
   //printf("font_cs_reconfig font_changed %d\n", font_changed);
+  if(!cterm)return;
   if (font_changed) {
     win_init_fonts(cfg.font.size);
     if (tek_mode)
       tek_init(false, cfg.tek_glow);
     trace_resize((" (font_cs_reconfig -> win_adapt_term_size)\n"));
-    win_adapt_term_size(true, false);
+    if(cterm)win_adapt_term_size(true, false);
   }
   win_update_scrollbar(true); // assume "inner", shouldn't change anyway
   win_update_transparency(cfg.opaque_when_focused);
@@ -2337,7 +2131,7 @@ static bool
 confirm_exit(void)
 {
 #ifdef use_ps
-  if (!child_is_parent())
+  if (!child_is_parent(cchild))
     return true;
 
   /* command to retrieve list of child processes */
@@ -2595,6 +2389,7 @@ in_client_area(HWND wnd, LPARAM lp)
 static LRESULT CALLBACK
 win_proc(HWND wnd, UINT message, WPARAM wp, LPARAM lp)
 {
+  cterm = win_tab_active_term();
 #ifdef debug_messages
 static struct {
   uint wm_;
@@ -2806,7 +2601,7 @@ static struct {
         when IDM_COPY_HFMT: term_copy_as('f');
         when IDM_COPY_HTML: term_copy_as('H');
         when IDM_COPASTE: term_copy(); win_paste();
-        when IDM_CLRSCRLBCK: term_clear_scrollback(); term.disptop = 0;
+        when IDM_CLRSCRLBCK: term_clear_scrollback(cterm); term.disptop = 0;
         when IDM_TOGLOG: toggle_logging();
         when IDM_HTML: term_export_html(GetKeyState(VK_SHIFT) & 0x80);
         when IDM_TOGCHARINFO: toggle_charinfo();
@@ -2879,6 +2674,12 @@ static struct {
           child_fork(main_argc, main_argv, moni, get_mods() & MDK_SHIFT);
         }
         when IDM_COPYTITLE: win_copy_title();
+        when IDM_NEWTAB: win_tab_create();
+        when IDM_KILLTAB: child_terminate(cterm->child);
+        when IDM_PREVTAB: win_tab_change(-1);
+        when IDM_NEXTTAB: win_tab_change(+1);
+        when IDM_MOVELEFT: win_tab_move(-1);
+        when IDM_MOVERIGHT: win_tab_move(+1);
         when IDM_KEY_DOWN_UP: {
           bool on = lp & 0x10000;
           int vk = lp & 0xFFFF;
@@ -4134,7 +3935,7 @@ select_WSL(char * wsl)
   int err = getlxssinfo(false, wslname, &wsl_ver, &wsl_guid, &wsl_basepath, &wsl_icon);
   if (!err) {
     // set --title
-    if (title_settable)
+    if (cfg.title_settable)
       set_arg_option("Title", strdup(wsl && *wsl ? wsl : "WSL"));
     // set --icon if WSL specific icon exists
     if (wsl_icon) {
@@ -4439,6 +4240,7 @@ static char help[] =
   "\n"
   "Options:\n"
 // 12345678901234567890123456789012345678901234567890123456789012345678901234567890
+  "  -b, --tab COMMAND     Spawn a new tab and execute the command\n"
   "  -c, --config FILE     Load specified config file (cf. -C or -o ThemeFile)\n"
   "  -e, --exec ...        Treat remaining arguments as the command to execute\n"
   "  -h, --hold never|start|error|always  Keep window open after command finishes\n"
@@ -4447,7 +4249,8 @@ static char help[] =
   "  -p, --position @N     Open window on monitor N\n"
   "  -s, --size COLS,ROWS  Set screen size in characters (also COLSxROWS)\n"
   "  -s, --size maxwidth|maxheight  Set max screen size in given dimension\n"
-  "  -t, --title TITLE     Set window title (default: the invoked command) (cf. -T)\n"
+  "  -t, --title TITLE     Set tab title (default: the invoked command)(cf. -T)\n"
+  "                        Must be set before -b/--tab option\n"
   "  -w, --window normal|min|max|full|hide  Set initial window state\n"
   "  -i, --icon FILE[,IX]  Load window icon from file, optionally with index\n"
   "  -l, --log FILE|-      Log output to file or stdout\n"
@@ -4480,6 +4283,7 @@ enum {
 
 static const struct option
 opts[] = {
+  {"tab",        required_argument, 0, 'b'},
   {"config",     required_argument, 0, 'c'},
   {"loadconfig", required_argument, 0, 'C'},
   {"configdir",  required_argument, 0, ''},
@@ -4685,6 +4489,12 @@ main(int argc, char *argv[])
     // referred shortcut actually runs the same binary as we're running.
     // If that's not the case, we should unset MINTTY_SHORTCUT here.
   }
+  char *tablist[32];
+  char *tablist_title[32];
+  int current_tab_size = 0;
+  
+  for (int i = 0; i < 32; i++)
+    tablist_title[i] = NULL;
 
   for (;;) {
     int opt = cfg.short_long_opts
@@ -4790,10 +4600,15 @@ main(int argc, char *argv[])
           ;
         else
           option_error(__("Syntax error in size argument '%s'"), optarg, 0);
-      when 't': set_arg_option("Title", optarg);
+      when 'b':
+        tablist[current_tab_size] = optarg;
+        current_tab_size++;
+      when 't':
+        tablist_title[current_tab_size] = optarg;
+        set_arg_option("Title", optarg);
       when 'T':
         set_arg_option("Title", optarg);
-        title_settable = false;
+        cfg.title_settable = false;
       when '':
         set_arg_option("TabBar", strdup("1"));
         set_arg_option("SessionGeomSync", optarg ?: strdup("2"));
@@ -5009,6 +4824,7 @@ main(int argc, char *argv[])
     daemonize = false;
   if (cfg.daemonize_always)
     daemonize = true;
+  daemonize = 0;
   if (daemonize) {  // detach from parent process and terminal
     pid_t pid = fork();
     if (pid < 0)
@@ -5380,7 +5196,7 @@ static int dynfonts = 0;
   }
 
   // Create initial window.
-  term.show_scrollbar = cfg.scrollbar;  // hotfix #597
+  //term.show_scrollbar = cfg.scrollbar;  // hotfix #597
   wnd = CreateWindowExW(cfg.scrollbar < 0 ? WS_EX_LEFTSCROLLBAR : 0,
                         wclass, wtitle,
                         window_style | (cfg.scrollbar ? WS_VSCROLL : 0),
@@ -5470,6 +5286,24 @@ static int dynfonts = 0;
     trace_winsize("-p");
   }
 
+  // TODO: should refactor win_tab_init to just initialize tabs-system and
+  // create tabls with separate function (more general version of
+  // win_tab_create. Would be cleaner and no need for win_tab_set_argv etc
+
+  if (current_tab_size == 0) {
+    win_tab_init(home, cmd, argv, term_width, term_height, tablist_title[0]);
+  }
+  else {
+    for (int i = 0; i < current_tab_size; i++) {
+      if (tablist[i] != NULL) {
+        char *tabexec = tablist[i];
+        char *tab_argv[4] = { cmd, "-c", tabexec, NULL };
+        win_tab_init(home, cmd, tab_argv, term_width, term_height, tablist_title[i]);
+      }
+    }
+
+    win_tab_set_argv(argv);
+  }
   if (per_monitor_dpi_aware) {
     if (cfg.x != (int)CW_USEDEFAULT) {
       // The first SetWindowPos actually set x and y
@@ -5547,30 +5381,6 @@ static int dynfonts = 0;
     trace_winsize("border_style");
   }
 
-  if (cfg.tabbar && !getenv("MINTTY_DX") && !getenv("MINTTY_DY")) {
-    HWND wnd_other = FindWindowExW(NULL, wnd,
-        (LPCWSTR)(uintptr_t)class_atom, NULL);
-    if (wnd_other && FindWindowExA(wnd_other, NULL, TABBARCLASS, NULL)) {
-      if (IsZoomed(wnd_other)) {
-        if ((GetWindowLong(wnd_other, GWL_STYLE) & WS_THICKFRAME) == 0) {
-          setenvi("MINTTY_DX", 0);
-          setenvi("MINTTY_DY", 0);
-        }
-        else {
-          run_max = 1;
-        }
-      }
-      else {
-        RECT r;
-        GetWindowRect(wnd_other, &r);
-        setenvi("MINTTY_X", r.left);
-        setenvi("MINTTY_Y", r.top);
-        setenvi("MINTTY_DX", r.right - r.left);
-        setenvi("MINTTY_DY", r.bottom - r.top);
-      }
-    }
-  }
-
   {
     // INT16 to handle multi-monitor negative coordinates properly
     INT16 sx = 0, sy = 0, sdx = 1, sdy = 1;
@@ -5622,9 +5432,7 @@ static int dynfonts = 0;
   }
 
   // Initialise the terminal.
-  term_reset(true);
   term.show_scrollbar = !!cfg.scrollbar;
-  term_resize(term_rows, term_cols);
 
   // Initialise the scroll bar.
   SetScrollInfo(
@@ -5672,9 +5480,8 @@ static int dynfonts = 0;
     scale_to_image_ratio();
 
   // Create child process.
-  child_create(
-    argv, &(struct winsize){term_rows, term_cols, term_width, term_height}
-  );
+  struct winsize ws={term_rows, term_cols, term_width, term_height};
+  child_create( cchild,cterm, argv, &ws    ,NULL);
 
   // Set up clipboard notifications.
   HRESULT (WINAPI * pAddClipboardFormatListener)(HWND) =
@@ -5686,8 +5493,8 @@ static int dynfonts = 0;
   }
 
   // Set up tabbar
-  if (cfg.tabbar) {
-    win_open_tabbar();
+  if (cfg.tabbar) { 
+    win_open_tabbar(); 
   }
 
   // Finally show the window.
@@ -5739,5 +5546,7 @@ static int dynfonts = 0;
         DispatchMessage(&msg);
     }
     child_proc();
+    if(win_tab_should_die())break;
   }
+  win_tab_clean();
 }

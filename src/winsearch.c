@@ -4,6 +4,7 @@
 
 #include "winsearch.h"
 
+#define term (*cterm)
 
 static bool search_initialised = false;
 static int prev_height = 0;

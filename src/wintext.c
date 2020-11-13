@@ -1204,6 +1204,7 @@ do_update(void)
     update_state = UPDATE_IDLE;
     return;
   }
+  cterm = win_tab_active_term();
 
   update_skipped++;
   int output_speed = lines_scrolled / (term.rows ?: cfg.rows);
@@ -1233,6 +1234,7 @@ do_update(void)
     term_paint();
     winimgs_paint();
   }
+  win_tab_paint(dc);
 
   ReleaseDC(wnd, dc);
 
@@ -4593,7 +4595,7 @@ win_paint(void)
 {
   PAINTSTRUCT p;
   dc = BeginPaint(wnd, &p);
-
+  cterm = win_tab_active_term();
   // better invalidate more than less; limited to text area in term_invalidate
   term_invalidate(
     (p.rcPaint.left - PADDING) / cell_width,
@@ -4612,6 +4614,7 @@ win_paint(void)
     }
   }
 
+  win_tab_paint(dc);
   if (// check whether no background was configured and successfully loaded
       !bgbrush_bmp &&
 #if CYGWIN_VERSION_API_MINOR >= 74

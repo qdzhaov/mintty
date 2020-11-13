@@ -54,6 +54,7 @@ typedef struct {
   colour tek_fg_colour, tek_bg_colour, tek_cursor_colour;
   colour tek_write_thru_colour, tek_defocused_colour;
   colour tab_fg_colour, tab_bg_colour;
+  colour tab_attention_bg_colour, tab_active_bg_colour;
   int tek_glow;
   colour underl_colour, hover_colour;
   int disp_space, disp_clear, disp_tab;
@@ -142,7 +143,7 @@ typedef struct {
   wstring search_bar;
   int search_context;
   // Terminal
-  string term;
+  string Term;
   wstring answerback;
   bool old_wrapmodes;
   bool enable_deccolm_init;
@@ -166,6 +167,7 @@ typedef struct {
   wstring log;
   bool logging;
   wstring title;
+  bool title_settable;
   bool create_utmp;
   char window;
   int x, y;
