@@ -396,6 +396,7 @@ term_reset(bool full)
   term_schedule_tblink2();
   term_schedule_cblink();
   term_clear_scrollback(cterm);
+  taskbar_progress(-9);
 
   cterm->detect_progress = cfg.progress_bar;
 
@@ -1344,12 +1345,13 @@ disp_scroll(int topscroll, int botscroll, int scrolllines)
 static void
 disp_do_scroll(int topscroll, int botscroll, int scrolllines)
 {
-  if (!win_do_scroll(topscroll, botscroll, scrolllines))
+  bool down = scrolllines < 0;
+  int lines = min(abs(scrolllines), term.rows);
+
+  if (!win_do_scroll(topscroll, botscroll, lines))
     return;
 
   // update display cache
-  bool down = scrolllines < 0;
-  int lines = abs(scrolllines);
   termline * recycled[lines];
   if (down) {
     for (int l = 0; l < lines; l++) {
