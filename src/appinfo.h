@@ -14,6 +14,11 @@
 #define AUTHOR  "Andy Koppe / Thomas Wolff"
 #define YEAR    "2013/2020"
 
+#ifndef NDEBUG
+#define VERSION_SUFFIX multitab debug
+#else
+#define VERSION_SUFFIX multitab
+#endif
 
 #define CONCAT_(a,b) a##b
 #define CONCAT(a,b) CONCAT_(a,b)

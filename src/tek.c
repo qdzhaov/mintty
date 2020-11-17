@@ -1,6 +1,5 @@
 #include "tek.h"
 
-#define term (*cterm)
 enum tekmode tek_mode = TEKMODE_OFF;
 bool tek_bypass = false;
 static uchar intensity = 0x7F; // for point modes
@@ -477,7 +476,7 @@ tek_move_to(int y, int x)
 void
 tek_send_address(void)
 {
-  child_printf("%c%c%c%c",
+  child_printf(cterm,"%c%c%c%c",
                0x20 | (tek_y >> 7), 0x60 | ((tek_y >> 2) & 0x1F),
                0x20 | (tek_x >> 7), 0x40 | ((tek_x >> 2) & 0x1F));
   tek_mode = TEKMODE_ALPHA;
@@ -486,7 +485,7 @@ tek_send_address(void)
 void
 tek_enq(void)
 {
-  child_write("4", 1);
+  child_write(cterm,"4", 1);
   tek_send_address();
 }
 
@@ -700,7 +699,7 @@ tek_paint(void)
   if (cc == (colour)-1)
     cc = win_get_colour(CURSOR_COLOUR_I);
   // optionally use current text colour?
-  //cattr attr = apply_attr_colour(term.curs.attr, ACM_SIMPLE); .truefg/bg
+  //cattr attr = apply_attr_colour(cterm->curs.attr, ACM_SIMPLE); .truefg/bg
 
   // adjust colours
   // use full colour for glow or bold (defocused)
@@ -925,7 +924,7 @@ tek_paint(void)
   }
 
   // text cursor
-  if (!copyfn && lastfont < 4 && term.cblinker) {
+  if (!copyfn && lastfont < 4 && cterm->cblinker) {
     if (cc != fg)
       out_flush(hdc);
     fg = cc;

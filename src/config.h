@@ -208,7 +208,7 @@ typedef struct {
   string menu_title_ctrl_l;
   string menu_title_ctrl_r;
   int geom_sync;
-  int tabbar;
+  int tab_font_size,tab_bar_show,indicator;
   int col_spacing, row_spacing;
   int padding,partline;
   int ligatures;

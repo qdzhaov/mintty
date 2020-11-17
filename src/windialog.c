@@ -46,7 +46,6 @@ extern void setup_config_box(controlbox *);
    so to use TreeView_InsertItem in either mode, it needs to be expanded 
    to SendMessageA/SendMessageW.
  */
-#define term (*cterm)
 
 /*
  * These are the various bits of data required to handle the

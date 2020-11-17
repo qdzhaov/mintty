@@ -14,10 +14,8 @@
 #include <langinfo.h>
 #endif
 
-
 STerm dterm={0};
 STerm *cterm=&dterm;
-#define term (*cterm)
 
 typedef struct {
   termline ** buf;
@@ -135,7 +133,7 @@ static void term_schedule_tblink2(void);
 static void
 tblink_cb(void)
 {
-  term.tblinker = !term.tblinker;
+  cterm->tblinker = !cterm->tblinker;
   term_schedule_tblink();
   win_update(false);
 }
@@ -143,16 +141,16 @@ tblink_cb(void)
 static void
 term_schedule_tblink(void)
 {
-  if (term.blink_is_real)
+  if (cterm->blink_is_real)
     win_set_timer(tblink_cb, 500);
   else
-    term.tblinker = 1;  /* reset when not in use */
+    cterm->tblinker = 1;  /* reset when not in use */
 }
 
 static void
 tblink2_cb(void)
 {
-  term.tblinker2 = !term.tblinker2;
+  cterm->tblinker2 = !cterm->tblinker2;
   term_schedule_tblink2();
   win_update(false);
 }
@@ -160,10 +158,10 @@ tblink2_cb(void)
 static void
 term_schedule_tblink2(void)
 {
-  if (term.blink_is_real)
+  if (cterm->blink_is_real)
     win_set_timer(tblink2_cb, 300);
   else
-    term.tblinker2 = 1;  /* reset when not in use */
+    cterm->tblinker2 = 1;  /* reset when not in use */
 }
 
 /*
@@ -172,21 +170,21 @@ term_schedule_tblink2(void)
 int
 term_cursor_type(void)
 {
-  return term.cursor_type == -1 ? cfg.cursor_type : term.cursor_type;
+  return cterm->cursor_type == -1 ? cfg.cursor_type : cterm->cursor_type;
 }
 
 static bool
 term_cursor_blinks(void)
 {
-  return term.cursor_blinkmode
-      || (term.cursor_blinks == -1 ? cfg.cursor_blinks : term.cursor_blinks);
+  return cterm->cursor_blinkmode
+      || (cterm->cursor_blinks == -1 ? cfg.cursor_blinks : cterm->cursor_blinks);
 }
 
 void
 term_hide_cursor(void)
 {
-  if (term.cursor_on) {
-    term.cursor_on = false;
+  if (cterm->cursor_on) {
+    cterm->cursor_on = false;
     win_update(false);
   }
 }
@@ -194,7 +192,7 @@ term_hide_cursor(void)
 static void
 cblink_cb(void)
 {
-  term.cblinker = !term.cblinker;
+  cterm->cblinker = !cterm->cblinker;
   term_schedule_cblink();
   win_update(false);
 }
@@ -202,16 +200,16 @@ cblink_cb(void)
 void
 term_schedule_cblink(void)
 {
-  if (term_cursor_blinks() && term.has_focus)
-    win_set_timer(cblink_cb, term.cursor_blink_interval ?: cursor_blink_ticks());
+  if (term_cursor_blinks() && cterm->has_focus)
+    win_set_timer(cblink_cb, cterm->cursor_blink_interval ?: cursor_blink_ticks());
   else
-    term.cblinker = 1;  /* reset when not in use */
+    cterm->cblinker = 1;  /* reset when not in use */
 }
 
 static void
 vbell_cb(void)
 {
-  term.in_vbell = false;
+  cterm->in_vbell = false;
   win_update(false);
 }
 
@@ -220,7 +218,7 @@ term_schedule_vbell(int already_started, int startpoint)
 {
   int ticks_gone = already_started ? get_tick_count() - startpoint : 0;
   int ticks = 141 - ticks_gone;
-  if ((term.in_vbell = ticks > 0))
+  if ((cterm->in_vbell = ticks > 0))
     win_set_timer(vbell_cb, ticks);
 }
 
@@ -231,11 +229,11 @@ term_schedule_vbell(int already_started, int startpoint)
 int
 term_last_nonempty_line(void)
 {
-  for (int i = term.rows - 1; i >= 0; i--) {
-    termline *line = term.lines[i];
+  for (int i = cterm->rows - 1; i >= 0; i--) {
+    termline *line = cterm->lines[i];
     if (line) {
       for (int j = 0; j < line->cols; j++)
-        if (!termchars_equal(&line->chars[j], &term.erase_char))
+        if (!termchars_equal(&line->chars[j], &cterm->erase_char))
           return i;
     }
   }
@@ -272,134 +270,134 @@ term_bell_reset(term_bell *bell)
 void
 term_reset(bool full)
 {
-  if (term.cmd_buf == NULL) {
-    term.cmd_buf = newn(char, 128);
-    term.cmd_buf_cap = 128;
+  if (cterm->cmd_buf == NULL) {
+    cterm->cmd_buf = newn(char, 128);
+    cterm->cmd_buf_cap = 128;
   }
 
-  term.state = NORMAL;
-  term.vt52_mode = 0;
+  cterm->state = NORMAL;
+  cterm->vt52_mode = 0;
 
   // DECSTR attributes and cursor states to be reset
-  term_cursor_reset(&term.curs);
-  term_cursor_reset(&term.saved_cursors[0]);
-  term_cursor_reset(&term.saved_cursors[1]);
+  term_cursor_reset(&cterm->curs);
+  term_cursor_reset(&cterm->saved_cursors[0]);
+  term_cursor_reset(&cterm->saved_cursors[1]);
   term_update_cs();
-  term.erase_char = basic_erase_char;
+  cterm->erase_char = basic_erase_char;
   // these used to be in term_cursor, thus affected by cursor restore
-  term.decnrc_enabled = false;
-  term.autowrap = true;
-  term.rev_wrap = cfg.old_wrapmodes;
+  cterm->decnrc_enabled = false;
+  cterm->autowrap = true;
+  cterm->rev_wrap = cfg.old_wrapmodes;
 
   // DECSTR states to be reset (in addition to cursor states)
   // https://www.vt100.net/docs/vt220-rm/table4-10.html
-  term.cursor_on = true;
-  term.insert = false;
-  term.marg_top = 0;
-  term.marg_bot = term.rows - 1;
-  term.marg_left = 0;
-  term.marg_right = term.cols - 1;
-  term.app_cursor_keys = false;
-  term.app_scrollbar = false;
+  cterm->cursor_on = true;
+  cterm->insert = false;
+  cterm->marg_top = 0;
+  cterm->marg_bot = cterm->rows - 1;
+  cterm->marg_left = 0;
+  cterm->marg_right = cterm->cols - 1;
+  cterm->app_cursor_keys = false;
+  cterm->app_scrollbar = false;
 
   if (full) {
-    term.lrmargmode = false;
-    term.deccolm_allowed = cfg.enable_deccolm_init;  // not reset by xterm
-    term.vt220_keys = vt220(cfg.Term);  // not reset by xterm
-    term.app_keypad = false;  // xterm only with RIS
-    term.app_control = 0;
-    term.auto_repeat = cfg.auto_repeat;  // not supported by xterm
-    term.repeat_rate = 0;
-    term.attr_rect = false;
-    term.deccolm_noclear = false;
+    cterm->lrmargmode = false;
+    cterm->deccolm_allowed = cfg.enable_deccolm_init;  // not reset by xterm
+    cterm->vt220_keys = vt220(cfg.Term);  // not reset by xterm
+    cterm->app_keypad = false;  // xterm only with RIS
+    cterm->app_control = 0;
+    cterm->auto_repeat = cfg.auto_repeat;  // not supported by xterm
+    cterm->repeat_rate = 0;
+    cterm->attr_rect = false;
+    cterm->deccolm_noclear = false;
   }
-  term.modify_other_keys = 0;  // xterm resets this
+  cterm->modify_other_keys = 0;  // xterm resets this
 
-  term.backspace_sends_bs = cfg.backspace_sends_bs;  // xterm only with RIS
-  term.delete_sends_del = cfg.delete_sends_del;  // not reset by xterm
-  if (full && term.tabs) {
-    for (int i = 0; i < term.cols; i++)
-      term.tabs[i] = (i % 8 == 0);
+  cterm->backspace_sends_bs = cfg.backspace_sends_bs;  // xterm only with RIS
+  cterm->delete_sends_del = cfg.delete_sends_del;  // not reset by xterm
+  if (full && cterm->tabs) {
+    for (int i = 0; i < cterm->cols; i++)
+      cterm->tabs[i] = (i % 8 == 0);
   }
   if (full) {
-    term.newtab = 1;  // set default tabs on resize
-    term.rvideo = 0;  // not reset by xterm
-    term_bell_reset(&term.bell);
-    term_bell_reset(&term.marginbell);
-    term.margin_bell = false;  // not reset by xterm
-    term.ring_enabled = false;
-    term.bell_taskbar = cfg.bell_taskbar;  // not reset by xterm
-    term.bell_popup = cfg.bell_popup;  // not reset by xterm
-    term.mouse_mode = MM_NONE;
-    term.mouse_enc = ME_X10;
-    term.locator_by_pixels = false;
-    term.locator_1_enabled = false;
-    term.locator_report_up = false;
-    term.locator_report_dn = false;
-    term.locator_rectangle = false;
-    term.report_focus = 0;  // xterm only with RIS
-    term.report_font_changed = 0;
-    term.report_ambig_width = 0;
-    term.shortcut_override = term.escape_sends_fs = term.app_escape_key = false;
-    term.wheel_reporting_xterm = false;
-    term.wheel_reporting = true;
-    term.app_wheel = false;
-    term.echoing = false;
-    term.bracketed_paste = false;
-    term.wide_indic = false;
-    term.wide_extra = false;
-    term.disable_bidi = false;
-    term.enable_bold_colour = cfg.bold_as_colour;
+    cterm->newtab = 1;  // set default tabs on resize
+    cterm->rvideo = 0;  // not reset by xterm
+    term_bell_reset(&cterm->bell);
+    term_bell_reset(&cterm->marginbell);
+    cterm->margin_bell = false;  // not reset by xterm
+    cterm->ring_enabled = false;
+    cterm->bell_taskbar = cfg.bell_taskbar;  // not reset by xterm
+    cterm->bell_popup = cfg.bell_popup;  // not reset by xterm
+    cterm->mouse_mode = MM_NONE;
+    cterm->mouse_enc = ME_X10;
+    cterm->locator_by_pixels = false;
+    cterm->locator_1_enabled = false;
+    cterm->locator_report_up = false;
+    cterm->locator_report_dn = false;
+    cterm->locator_rectangle = false;
+    cterm->report_focus = 0;  // xterm only with RIS
+    cterm->report_font_changed = 0;
+    cterm->report_ambig_width = 0;
+    cterm->shortcut_override = cterm->escape_sends_fs = cterm->app_escape_key = false;
+    cterm->wheel_reporting_xterm = false;
+    cterm->wheel_reporting = true;
+    cterm->app_wheel = false;
+    cterm->echoing = false;
+    cterm->bracketed_paste = false;
+    cterm->wide_indic = false;
+    cterm->wide_extra = false;
+    cterm->disable_bidi = false;
+    cterm->enable_bold_colour = cfg.bold_as_colour;
   }
 
-  term.virtuallines = 0;
-  term.altvirtuallines = 0;
-  term.imgs.parser_state = NULL;
-  term.imgs.first = NULL;
-  term.imgs.last = NULL;
-  term.imgs.altfirst = NULL;
-  term.imgs.altlast = NULL;
-  term.sixel_display = 0;
-  term.sixel_scrolls_right = 0;
-  term.sixel_scrolls_left = 0;
+  cterm->virtuallines = 0;
+  cterm->altvirtuallines = 0;
+  cterm->imgs.parser_state = NULL;
+  cterm->imgs.first = NULL;
+  cterm->imgs.last = NULL;
+  cterm->imgs.altfirst = NULL;
+  cterm->imgs.altlast = NULL;
+  cterm->sixel_display = 0;
+  cterm->sixel_scrolls_right = 0;
+  cterm->sixel_scrolls_left = 0;
 
-  term.cursor_type = -1;
-  term.cursor_size = 0;
-  term.cursor_blinks = -1;
-  term.cursor_blink_interval = 0;
+  cterm->cursor_type = -1;
+  cterm->cursor_size = 0;
+  cterm->cursor_blinks = -1;
+  cterm->cursor_blink_interval = 0;
   if (full) {
-    term.blink_is_real = cfg.allow_blinking;
-    term.hide_mouse = cfg.hide_mouse;
+    cterm->blink_is_real = cfg.allow_blinking;
+    cterm->hide_mouse = cfg.hide_mouse;
   }
 
   if (full) {
-    term.selected = false;
-    term.hovering = false;
-    term.hoverlink = -1;
-    term.on_alt_screen = false;
+    cterm->selected = false;
+    cterm->hovering = false;
+    cterm->hoverlink = -1;
+    cterm->on_alt_screen = false;
     term_print_finish();
-    if (term.lines) {
+    if (cterm->lines) {
       term_switch_screen(1, false);
       term_erase(false, false, true, true);
       term_switch_screen(0, false);
       term_erase(false, false, true, true);
-      term.curs.y = term_last_nonempty_line() + 1;
-      if (term.curs.y == term.rows) {
-        term.curs.y--;
-        term_do_scroll(0, term.rows - 1, 1, true);
+      cterm->curs.y = term_last_nonempty_line() + 1;
+      if (cterm->curs.y == cterm->rows) {
+        cterm->curs.y--;
+        term_do_scroll(0, cterm->rows - 1, 1, true);
       }
     }
-    term.curs.x = 0;
-    term.curs.y = 0;
+    cterm->curs.x = 0;
+    cterm->curs.y = 0;
   }
 
-  term.in_vbell = false;
+  cterm->in_vbell = false;
   term_schedule_tblink();
   term_schedule_tblink2();
   term_schedule_cblink();
   term_clear_scrollback(cterm);
 
-  term.detect_progress = cfg.progress_bar;
+  cterm->detect_progress = cfg.progress_bar;
 
   term_schedule_search_update();
 
@@ -448,14 +446,14 @@ term_free(struct STerm* pterm)
 static void
 show_screen(bool other_screen, bool flip)
 {
-  term.show_other_screen = other_screen;
-  term.disptop = 0;
+  cterm->show_other_screen = other_screen;
+  cterm->disptop = 0;
   if (flip || cfg.input_clears_selection)
-    term.selected = false;
+    cterm->selected = false;
 
   // Reset cursor blinking.
   if (!other_screen) {
-    term.cblinker = 1;
+    cterm->cblinker = 1;
     term_schedule_cblink();
   }
 
@@ -473,7 +471,7 @@ term_reset_screen(void)
 void
 term_flip_screen(void)
 {
-  show_screen(!term.show_other_screen, true);
+  show_screen(!cterm->show_other_screen, true);
 }
 
 /* Apply changed settings */
@@ -483,39 +481,39 @@ term_reconfig(void)
   if (!*new_cfg.printer)
     term_print_finish();
   if (new_cfg.allow_blinking != cfg.allow_blinking)
-    term.blink_is_real = new_cfg.allow_blinking;
+    cterm->blink_is_real = new_cfg.allow_blinking;
   cfg.cursor_blinks = new_cfg.cursor_blinks;
   term_schedule_tblink();
   term_schedule_tblink2();
   term_schedule_cblink();
   if (new_cfg.backspace_sends_bs != cfg.backspace_sends_bs)
-    term.backspace_sends_bs = new_cfg.backspace_sends_bs;
+    cterm->backspace_sends_bs = new_cfg.backspace_sends_bs;
   if (new_cfg.delete_sends_del != cfg.delete_sends_del)
-    term.delete_sends_del = new_cfg.delete_sends_del;
+    cterm->delete_sends_del = new_cfg.delete_sends_del;
   if (new_cfg.bell_taskbar != cfg.bell_taskbar)
-    term.bell_taskbar = new_cfg.bell_taskbar;
+    cterm->bell_taskbar = new_cfg.bell_taskbar;
   if (new_cfg.bell_popup != cfg.bell_popup)
-    term.bell_popup = new_cfg.bell_popup;
+    cterm->bell_popup = new_cfg.bell_popup;
   if (strcmp(new_cfg.Term, cfg.Term))
-    term.vt220_keys = vt220(new_cfg.Term);
+    cterm->vt220_keys = vt220(new_cfg.Term);
 }
 
 static int
 in_results(pos scrpos)
 {
-  if (term.results.xquery_length == 0) {
+  if (cterm->results.xquery_length == 0) {
     return 0;
   }
-  int idx = scrpos.x + (scrpos.y + term.sblines) * term.cols;
-  if (!(term.results.range_begin <= idx && idx < term.results.range_end)) {
+  int idx = scrpos.x + (scrpos.y + cterm->sblines) * cterm->cols;
+  if (!(cterm->results.range_begin <= idx && idx < cterm->results.range_end)) {
     term_search_expand(idx);
   }
 
   int b = 0;
-  int e = term.results.length;
+  int e = cterm->results.length;
   while (b < e) {
     int m = (b + e) / 2;
-    if (term.results.results[m].idx > idx) {
+    if (cterm->results.results[m].idx > idx) {
       e = m;
     } else {
       b = m + 1;
@@ -525,12 +523,12 @@ in_results(pos scrpos)
   if (e <= 0) {
     return 0;
   }
-  result hit = term.results.results[e - 1];
+  result hit = cterm->results.results[e - 1];
   if (idx >= hit.idx + hit.len) {
     return 0;
   }
   int match = 1;
-  if (term.results.current.idx <= idx && idx < term.results.current.idx + term.results.current.len) {
+  if (cterm->results.current.idx <= idx && idx < cterm->results.current.idx + cterm->results.current.len) {
     match += 1;
   }
   return match;
@@ -539,21 +537,21 @@ in_results(pos scrpos)
 static void
 results_add(result abspos)
 {
-  assert(term.results.capacity > 0);
-  if (term.results.length == term.results.capacity) {
-    term.results.capacity *= 2;
-    term.results.results = renewn(term.results.results, term.results.capacity);
+  assert(cterm->results.capacity > 0);
+  if (cterm->results.length == cterm->results.capacity) {
+    cterm->results.capacity *= 2;
+    cterm->results.results = renewn(cterm->results.results, cterm->results.capacity);
   }
 
-  term.results.results[term.results.length] = abspos;
-  ++term.results.length;
+  cterm->results.results[cterm->results.length] = abspos;
+  ++cterm->results.length;
 }
 
 void
 term_set_search(wchar * needle)
 {
-  free(term.results.query);
-  term.results.query = needle;
+  free(cterm->results.query);
+  cterm->results.query = needle;
 
   // transform UTF-16 to UCS for matching
   int wlen = wcslen(needle);
@@ -569,10 +567,10 @@ term_set_search(wchar * needle)
   }
   xquery[++xlen] = 0;
 
-  free(term.results.xquery);
-  term.results.xquery = xquery;
-  term.results.xquery_length = xlen;
-  term.results.update_type = FULL_UPDATE;
+  free(cterm->results.xquery);
+  cterm->results.xquery = xquery;
+  cterm->results.xquery_length = xlen;
+  cterm->results.update_type = FULL_UPDATE;
 }
 
 #ifdef dynamic_casefolding
@@ -658,11 +656,11 @@ case_fold(uint ch)
 void
 term_update_search(void)
 {
-  if (term.results.update_type == NO_UPDATE)
+  if (cterm->results.update_type == NO_UPDATE)
     return;
-  term.results.update_type = NO_UPDATE;
+  cterm->results.update_type = NO_UPDATE;
 
-  if (term.results.xquery_length == 0) {
+  if (cterm->results.xquery_length == 0) {
     term_clear_search();
     return;
   }
@@ -674,7 +672,7 @@ term_update_search(void)
 // return search results contained by [begin, end)
 static void
 do_search(int begin, int end) {
-  if (term.results.xquery_length == 0) {
+  if (cterm->results.xquery_length == 0) {
     return;
   }
 
@@ -692,18 +690,18 @@ do_search(int begin, int end) {
   int line_y = -1;
   while (cpos < end) {
     // Determine the current position.
-    int x = (cpos % term.cols);
-    int y = (cpos / term.cols);
+    int x = (cpos % cterm->cols);
+    int y = (cpos / cterm->cols);
     if (line_y != y) {
         // If our current position isn't in the termline, add it in.
         if (line) {
             release_line(line);
         }
-        line = fetch_line(y - term.sblines);
+        line = fetch_line(y - cterm->sblines);
         line_y = y;
     }
 
-    if (npos == 0 && cpos + term.results.xquery_length >= end) {
+    if (npos == 0 && cpos + cterm->results.xquery_length >= end) {
       // Not enough data to match.
       break;
     }
@@ -716,7 +714,7 @@ do_search(int begin, int end) {
         ch = combine_surrogates(chr->chr, cc->chr);
       }
     }
-    xchar pat = term.results.xquery[npos];
+    xchar pat = cterm->results.xquery[npos];
     bool match = case_fold(ch) == case_fold(pat);
     if (!match) {
       // Skip the second cell of any wide characters
@@ -734,7 +732,7 @@ do_search(int begin, int end) {
     ++anpos;
     ++npos;
 
-    if (npos >= term.results.xquery_length) {
+    if (npos >= cterm->results.xquery_length) {
       result run = {
         .idx = cpos - anpos + 1,
         .len = anpos
@@ -772,88 +770,88 @@ static int imin(int a, int b) { return a < b ? a : b; }
 void
 term_search_expand(int idx)
 {
-  int max_idx = term.cols * (term.sblines + term.rows);
+  int max_idx = cterm->cols * (cterm->sblines + cterm->rows);
   idx = imin(idx, max_idx - 1);
   idx = imax(idx, 0);
 
   // [range_1_begin, range_2_end) is the search region that covers [idx - look_around, idx + look_around)
-  int look_around = term.cols * term.rows;    // chosen arbitrarily
-  int pad = term.results.xquery_length * 2;   // the doubling is for UCSWIDE
+  int look_around = cterm->cols * cterm->rows;    // chosen arbitrarily
+  int pad = cterm->results.xquery_length * 2;   // the doubling is for UCSWIDE
   int range_1_begin = imax(idx - look_around - pad, 0);
   int range_2_end = imin(idx + look_around + pad, max_idx);
 
   // Previous range is empty, expand to [idx - look_around, idx + look_around).
-  if (term.results.range_begin == term.results.range_end) {
-    assert(term.results.length == 0);
+  if (cterm->results.range_begin == cterm->results.range_end) {
+    assert(cterm->results.length == 0);
     do_search(range_1_begin, range_2_end);
-    term.results.range_begin = imax(idx - look_around, 0);
-    term.results.range_end = imin(idx + look_around, max_idx);
+    cterm->results.range_begin = imax(idx - look_around, 0);
+    cterm->results.range_end = imin(idx + look_around, max_idx);
   }
-  // Expand range_begin, and append the results to term.results.results.
+  // Expand range_begin, and append the results to cterm->results.results.
   // (Actually the results should be prepended instead of appended, we'll fix that later.)
-  else if (idx < term.results.range_begin) {
-    int previous_len = term.results.length;
-    do_search(range_1_begin, term.results.range_begin);
+  else if (idx < cterm->results.range_begin) {
+    int previous_len = cterm->results.length;
+    do_search(range_1_begin, cterm->results.range_begin);
 
     // The results from the expanding of range_begin were misplaced, fix it!
-    int appended_len = term.results.length - previous_len;
+    int appended_len = cterm->results.length - previous_len;
     if (appended_len > 0 && previous_len > 0) {
       // <Previous_results> <Appended_results>
-      results_reverse(term.results.results, previous_len);
+      results_reverse(cterm->results.results, previous_len);
       // <stluser_suoiverP> <Appended_results>
-      results_reverse(term.results.results + previous_len, appended_len);
+      results_reverse(cterm->results.results + previous_len, appended_len);
       // <stluser_suoiverP> <stluser_dedneppA>
-      results_reverse(term.results.results, previous_len + appended_len);
+      results_reverse(cterm->results.results, previous_len + appended_len);
       // <Appended_results> <Previous_results>
     }
 
-    term.results.range_begin = imax(idx - look_around, 0);
+    cterm->results.range_begin = imax(idx - look_around, 0);
   }
-  // Expand range_end, and append the results to term.results.results.
-  else if (idx >= term.results.range_end) {
-    do_search(term.results.range_end, range_2_end);
-    term.results.range_end = imin(idx + look_around, max_idx);
+  // Expand range_end, and append the results to cterm->results.results.
+  else if (idx >= cterm->results.range_end) {
+    do_search(cterm->results.range_end, range_2_end);
+    cterm->results.range_end = imin(idx + look_around, max_idx);
   }
 
-  if (term.results.length > 0) {
+  if (cterm->results.length > 0) {
     // Invariant: [range_begin, range_end) contains all results.
-    result first = term.results.results[0];
-    result last = term.results.results[term.results.length - 1];
-    term.results.range_begin = imin(term.results.range_begin, first.idx);
-    term.results.range_end = imax(term.results.range_end, last.idx + last.len);
+    result first = cterm->results.results[0];
+    result last = cterm->results.results[cterm->results.length - 1];
+    cterm->results.range_begin = imin(cterm->results.range_begin, first.idx);
+    cterm->results.range_end = imax(cterm->results.range_end, last.idx + last.len);
 
     // Mark the current result (first result) if we can.
-    if (term.results.current.len == 0 && term.results.range_begin == 0) {
-      term.results.current = first;
+    if (cterm->results.current.len == 0 && cterm->results.range_begin == 0) {
+      cterm->results.current = first;
     }
   }
 
   // Invariant: the results should be sorted and non-overlapping.
-  for (int i = 1; i < term.results.length; ++i) {
-    result prev = term.results.results[i - 1];
-    assert(prev.idx + prev.len <= term.results.results[i].idx);
+  for (int i = 1; i < cterm->results.length; ++i) {
+    result prev = cterm->results.results[i - 1];
+    assert(prev.idx + prev.len <= cterm->results.results[i].idx);
     (void)prev;
   }
   // Invariant: idx is covered by [range_begin, range_end).
-  assert(term.results.range_begin <= idx && idx < term.results.range_end);
+  assert(cterm->results.range_begin <= idx && idx < cterm->results.range_end);
 }
 
 static result
 results_find_ge(int idx)
 {
   int b = 0;
-  int e = term.results.length;
+  int e = cterm->results.length;
   while (b < e) {
     int m = (b + e) / 2;
-    if (term.results.results[m].idx < idx) {
+    if (cterm->results.results[m].idx < idx) {
       b = m + 1;
     } else {
       e = m;
     }
   }
 
-  if (b < term.results.length) {
-    return term.results.results[b];
+  if (b < cterm->results.length) {
+    return cterm->results.results[b];
   } else {
     return (result) {0, 0};
   }
@@ -863,10 +861,10 @@ static result
 results_find_le(int idx)
 {
   int b = 0;
-  int e = term.results.length;
+  int e = cterm->results.length;
   while (b < e) {
     int m = (b + e) / 2;
-    if (term.results.results[m].idx > idx) {
+    if (cterm->results.results[m].idx > idx) {
       e = m;
     } else {
       b = m + 1;
@@ -874,7 +872,7 @@ results_find_le(int idx)
   }
 
   if (e > 0) {
-    return term.results.results[e - 1];
+    return cterm->results.results[e - 1];
   } else {
     return (result) {0, 0};
   }
@@ -896,8 +894,8 @@ term_search_next(void)
   uint64_t ts0 = rdtsc();
 #endif
 
-  result current = term.results.current;
-  int max_idx = term.cols * (term.sblines + term.rows);
+  result current = cterm->results.current;
+  int max_idx = cterm->cols * (cterm->sblines + cterm->rows);
 
   // Search the region after current result.
   // If the current result was not marked, then idx == 0,
@@ -917,7 +915,7 @@ term_search_next(void)
     }
 
     // Not covered, advance idx to uncovered region.
-    idx = term.results.range_end;
+    idx = cterm->results.range_end;
 
     if (idx >= max_idx) {
       // End of screen reached.
@@ -936,11 +934,11 @@ term_search_next(void)
 
       // Search from the beginning.
       idx = 0;
-      if (term.results.range_begin != 0) {
+      if (cterm->results.range_begin != 0) {
         // Clear results before the next expansion to avoid full search.
         term_clear_results();
-        // term.results.current should be preserved.
-        term.results.current = current;
+        // cterm->results.current should be preserved.
+        cterm->results.current = current;
       }
     }
   }
@@ -951,8 +949,8 @@ term_search_next(void)
 result
 term_search_prev(void)
 {
-  result current = term.results.current;
-  int max_idx = term.cols * (term.sblines + term.rows);
+  result current = cterm->results.current;
+  int max_idx = cterm->cols * (cterm->sblines + cterm->rows);
   assert(max_idx > 0);
 
   // Search the region before current result.
@@ -971,7 +969,7 @@ term_search_prev(void)
     }
 
     // Not covered, fall back idx to uncovered region.
-    idx = term.results.range_begin - 1;
+    idx = cterm->results.range_begin - 1;
 
     if (idx < 0) {
       // Beginning of scrollback or screen reached.
@@ -990,11 +988,11 @@ term_search_prev(void)
 
       // Search from the end.
       idx = max_idx - 1;
-      if (term.results.range_end != max_idx) {
+      if (cterm->results.range_end != max_idx) {
         // Clear results before the next expansion to avoid full search.
         term_clear_results();
-        // term.results.current should be preserved.
-        term.results.current = current;
+        // cterm->results.current should be preserved.
+        cterm->results.current = current;
       }
     }
   }
@@ -1005,73 +1003,73 @@ term_search_prev(void)
 void
 term_schedule_search_update(void)
 {
-  term.results.update_type = FULL_UPDATE;
+  cterm->results.update_type = FULL_UPDATE;
 }
 
 void
 term_clear_results(void)
 {
-  term.results.results = renewn(term.results.results, 16);
-  term.results.current = (result) {0, 0};
-  term.results.range_begin = term.results.range_end = 0;
-  term.results.length = 0;
-  term.results.capacity = 16;
+  cterm->results.results = renewn(cterm->results.results, 16);
+  cterm->results.current = (result) {0, 0};
+  cterm->results.range_begin = cterm->results.range_end = 0;
+  cterm->results.length = 0;
+  cterm->results.capacity = 16;
 }
 
 void
 term_clear_search(void)
 {
   term_clear_results();
-  term.results.update_type = NO_UPDATE;
-  free(term.results.query);
-  free(term.results.xquery);
-  term.results.query = NULL;
-  term.results.xquery = NULL;
-  term.results.xquery_length = 0;
+  cterm->results.update_type = NO_UPDATE;
+  free(cterm->results.query);
+  free(cterm->results.xquery);
+  cterm->results.query = NULL;
+  cterm->results.xquery = NULL;
+  cterm->results.xquery_length = 0;
 }
 
 static void
 scrollback_push(uchar *line)
 {
-  if (term.sblines == term.sblen) {
+  if (cterm->sblines == cterm->sblen) {
     // Need to make space for the new line.
-    if (term.sblen < cfg.scrollback_lines) {
+    if (cterm->sblen < cfg.scrollback_lines) {
       // Expand buffer
-      assert(term.sbpos == 0);
-      int new_sblen = min(cfg.scrollback_lines, term.sblen * 3 + 1024);
-      term.scrollback = renewn(term.scrollback, new_sblen);
-      term.sbpos = term.sblen;
-      term.sblen = new_sblen;
+      assert(cterm->sbpos == 0);
+      int new_sblen = min(cfg.scrollback_lines, cterm->sblen * 3 + 1024);
+      cterm->scrollback = renewn(cterm->scrollback, new_sblen);
+      cterm->sbpos = cterm->sblen;
+      cterm->sblen = new_sblen;
     }
-    else if (term.sblines) {
+    else if (cterm->sblines) {
       // Throw away the oldest line
-      free(term.scrollback[term.sbpos]);
-      term.sblines--;
+      free(cterm->scrollback[cterm->sbpos]);
+      cterm->sblines--;
     }
     else
       return;
   }
-  assert(term.sblines < term.sblen);
-  assert(term.sbpos < term.sblen);
-  term.scrollback[term.sbpos++] = line;
-  if (term.sbpos == term.sblen)
-    term.sbpos = 0;
-  term.sblines++;
-  if (term.tempsblines < term.sblines)
-    term.tempsblines++;
+  assert(cterm->sblines < cterm->sblen);
+  assert(cterm->sbpos < cterm->sblen);
+  cterm->scrollback[cterm->sbpos++] = line;
+  if (cterm->sbpos == cterm->sblen)
+    cterm->sbpos = 0;
+  cterm->sblines++;
+  if (cterm->tempsblines < cterm->sblines)
+    cterm->tempsblines++;
 }
 
 static uchar *
 scrollback_pop(void)
 {
-  assert(term.sblines > 0);
-  assert(term.sbpos < term.sblen);
-  term.sblines--;
-  if (term.tempsblines)
-    term.tempsblines--;
-  if (term.sbpos == 0)
-    term.sbpos = term.sblen;
-  return term.scrollback[--term.sbpos];
+  assert(cterm->sblines > 0);
+  assert(cterm->sbpos < cterm->sblen);
+  cterm->sblines--;
+  if (cterm->tempsblines)
+    cterm->tempsblines--;
+  if (cterm->sbpos == 0)
+    cterm->sbpos = cterm->sblen;
+  return cterm->scrollback[--cterm->sbpos];
 }
 
 /*
@@ -1096,15 +1094,15 @@ void
 term_resize(int newrows, int newcols)
 {
   trace_resize(("--- term_resize %d %d\n", newrows, newcols));
-  bool on_alt_screen = term.on_alt_screen;
+  bool on_alt_screen = cterm->on_alt_screen;
   term_switch_screen(0, false);
 
-  term.selected = false;
+  cterm->selected = false;
 
-  term.marg_top = 0;
-  term.marg_bot = newrows - 1;
-  term.marg_left = 0;
-  term.marg_right = newcols - 1;
+  cterm->marg_top = 0;
+  cterm->marg_bot = newrows - 1;
+  cterm->marg_left = 0;
+  cterm->marg_right = newcols - 1;
 
  /*
   * Resize the screen and scrollback. We only need to shift
@@ -1126,21 +1124,21 @@ term_resize(int newrows, int newcols)
   *    away.
   */
 
-  termlines *lines = term.lines;
-  term_cursor *curs = &term.curs;
-  term_cursor *saved_curs = &term.saved_cursors[term.on_alt_screen];
+  termlines *lines = cterm->lines;
+  term_cursor *curs = &cterm->curs;
+  term_cursor *saved_curs = &cterm->saved_cursors[cterm->on_alt_screen];
 
   // Shrink the screen if newrows < rows
-  if (newrows < term.rows) {
-    int removed = term.rows - newrows;
-    int destroy = min(removed, term.rows - (curs->y + 1));
+  if (newrows < cterm->rows) {
+    int removed = cterm->rows - newrows;
+    int destroy = min(removed, cterm->rows - (curs->y + 1));
     int store = removed - destroy;
 
     // Push removed lines into scrollback
     for (int i = 0; i < store; i++) {
       termline *line = lines[i];
       scrollback_push(compressline(line));
-      term.virtuallines++;
+      cterm->virtuallines++;
       freeline(line);
     }
 
@@ -1148,7 +1146,7 @@ term_resize(int newrows, int newcols)
     memmove(lines, lines + store, newrows * sizeof(termline *));
 
     // Destroy removed lines below the cursor
-    for (int i = term.rows - destroy; i < term.rows; i++)
+    for (int i = cterm->rows - destroy; i < cterm->rows; i++)
       freeline(lines[i]);
 
     // Adjust cursor position
@@ -1156,15 +1154,15 @@ term_resize(int newrows, int newcols)
     saved_curs->y = max(0, saved_curs->y - store);
 
     // Adjust image position
-    term.virtuallines += min(0, store);
+    cterm->virtuallines += min(0, store);
   }
 
-  term.lines = lines = renewn(lines, newrows);
+  cterm->lines = lines = renewn(lines, newrows);
 
   // Expand the screen if newrows > rows
-  if (newrows > term.rows) {
-    int added = newrows - term.rows;
-    int restore = min(added, term.tempsblines);
+  if (newrows > cterm->rows) {
+    int added = newrows - cterm->rows;
+    int restore = min(added, cterm->tempsblines);
     int create = added - restore;
 
     // Fill bottom of screen with blank lines
@@ -1172,7 +1170,7 @@ term_resize(int newrows, int newcols)
       lines[i] = newline(newcols, false);
 
     // Move existing lines down
-    memmove(lines + restore, lines, term.rows * sizeof(termline *));
+    memmove(lines + restore, lines, cterm->rows * sizeof(termline *));
 
     // Restore lines from scrollback
     for (int i = restore; i--;) {
@@ -1188,7 +1186,7 @@ term_resize(int newrows, int newcols)
     saved_curs->y += restore;
 
     // Adjust image position
-    term.virtuallines -= restore;
+    cterm->virtuallines -= restore;
   }
 
   // Resize lines
@@ -1196,14 +1194,14 @@ term_resize(int newrows, int newcols)
     resizeline(lines[i], newcols);
 
   // Make a new displayed text buffer.
-  if (term.displines) {
-    for (int i = 0; i < term.rows; i++)
-      freeline(term.displines[i]);
+  if (cterm->displines) {
+    for (int i = 0; i < cterm->rows; i++)
+      freeline(cterm->displines[i]);
   }
-  term.displines = renewn(term.displines, newrows);
+  cterm->displines = renewn(cterm->displines, newrows);
   for (int i = 0; i < newrows; i++) {
     termline *line = newline(newcols, false);
-    term.displines[i] = line;
+    cterm->displines[i] = line;
     for (int j = 0; j < newcols; j++) {
       line->chars[j].attr = CATTR_DEFAULT;
       line->chars[j].attr.attr = ATTR_INVALID;
@@ -1211,19 +1209,19 @@ term_resize(int newrows, int newcols)
   }
 
   // Make a new alternate screen.
-  lines = term.other_lines;
+  lines = cterm->other_lines;
   if (lines) {
-    for (int i = 0; i < term.rows; i++)
+    for (int i = 0; i < cterm->rows; i++)
       freeline(lines[i]);
   }
-  term.other_lines = lines = renewn(lines, newrows);
+  cterm->other_lines = lines = renewn(lines, newrows);
   for (int i = 0; i < newrows; i++)
     lines[i] = newline(newcols, true);
 
   // Reset tab stops
-  term.tabs = renewn(term.tabs, newcols);
-  for (int i = (term.cols > 0 ? term.cols : 0); i < newcols; i++)
-    term.tabs[i] = term.newtab && (i % 8 == 0);
+  cterm->tabs = renewn(cterm->tabs, newcols);
+  for (int i = (cterm->cols > 0 ? cterm->cols : 0); i < newcols; i++)
+    cterm->tabs[i] = cterm->newtab && (i % 8 == 0);
 
   // Check that the cursor positions are still valid.
   assert(0 <= curs->y && curs->y < newrows);
@@ -1232,12 +1230,12 @@ term_resize(int newrows, int newcols)
 
   curs->wrapnext = false;
 
-  term.disptop = 0;
+  cterm->disptop = 0;
 
-  term.rows = newrows;
-  term.cols = newcols;
-  term.rows0 = newrows;
-  term.cols0 = newcols;
+  cterm->rows = newrows;
+  cterm->cols = newcols;
+  cterm->rows0 = newrows;
+  cterm->cols0 = newcols;
 
   term_switch_screen(on_alt_screen, false);
 }
@@ -1251,25 +1249,25 @@ term_resize(int newrows, int newcols)
 void
 term_switch_screen(bool to_alt, bool reset)
 {
-  if (to_alt == term.on_alt_screen)
+  if (to_alt == cterm->on_alt_screen)
     return;
 
-  term.on_alt_screen = to_alt;
+  cterm->on_alt_screen = to_alt;
 
-  termlines *oldlines = term.lines;
-  term.lines = term.other_lines;
-  term.other_lines = oldlines;
+  termlines *oldlines = cterm->lines;
+  cterm->lines = cterm->other_lines;
+  cterm->other_lines = oldlines;
 
   /* swap image list */
-  imglist * first = term.imgs.first;
-  imglist * last = term.imgs.last;
-  long long int offset = term.virtuallines;
-  term.imgs.first = term.imgs.altfirst;
-  term.imgs.last = term.imgs.altlast;
-  term.virtuallines = term.altvirtuallines;
-  term.imgs.altfirst = first;
-  term.imgs.altlast = last;
-  term.altvirtuallines = offset;
+  imglist * first = cterm->imgs.first;
+  imglist * last = cterm->imgs.last;
+  long long int offset = cterm->virtuallines;
+  cterm->imgs.first = cterm->imgs.altfirst;
+  cterm->imgs.last = cterm->imgs.altlast;
+  cterm->virtuallines = cterm->altvirtuallines;
+  cterm->imgs.altfirst = first;
+  cterm->imgs.altlast = last;
+  cterm->altvirtuallines = offset;
 
   if (to_alt && reset)
     term_erase(false, false, true, true);
@@ -1298,14 +1296,14 @@ void
 term_check_boundary(int x, int y)
 {
  /* Validate input coordinates, just in case. */
-  if (x <= 0 || x > term.cols)
+  if (x <= 0 || x > cterm->cols)
     return;
 
-  termline *line = term.lines[y];
-  if (x == term.cols)
+  termline *line = cterm->lines[y];
+  if (x == cterm->cols)
     line->lattr &= ~LATTR_WRAPPED2;
   else if (line->chars[x].chr == UCSWIDE) {
-    if (x == term.marg_right + 1)
+    if (x == cterm->marg_right + 1)
       line->lattr &= ~LATTR_WRAPPED2;
     clear_cc(line, x - 1);
     clear_cc(line, x);
@@ -1355,30 +1353,30 @@ disp_do_scroll(int topscroll, int botscroll, int scrolllines)
   termline * recycled[lines];
   if (down) {
     for (int l = 0; l < lines; l++) {
-      recycled[l] = term.displines[botscroll - 1 - l];
+      recycled[l] = cterm->displines[botscroll - 1 - l];
       clearline(recycled[l]);
-      for (int j = 0; j < term.cols; j++)
+      for (int j = 0; j < cterm->cols; j++)
         recycled[l]->chars[j].attr.attr |= ATTR_INVALID;
     }
     for (int l = botscroll - 1; l >= topscroll + lines; l--) {
-      term.displines[l] = term.displines[l - lines];
+      cterm->displines[l] = cterm->displines[l - lines];
     }
     for (int l = 0; l < lines; l++) {
-      term.displines[topscroll + l] = recycled[l];
+      cterm->displines[topscroll + l] = recycled[l];
     }
   }
   else {
     for (int l = 0; l < lines; l++) {
-      recycled[l] = term.displines[topscroll + l];
+      recycled[l] = cterm->displines[topscroll + l];
       clearline(recycled[l]);
-      for (int j = 0; j < term.cols; j++)
+      for (int j = 0; j < cterm->cols; j++)
         recycled[l]->chars[j].attr.attr |= ATTR_INVALID;
     }
     for (int l = topscroll; l < botscroll - lines; l++) {
-      term.displines[l] = term.displines[l + lines];
+      cterm->displines[l] = cterm->displines[l + lines];
     }
     for (int l = 0; l < lines; l++) {
-      term.displines[botscroll - 1 - l] = recycled[l];
+      cterm->displines[botscroll - 1 - l] = recycled[l];
     }
   }
 }
@@ -1393,12 +1391,12 @@ disp_do_scroll(int topscroll, int botscroll, int scrolllines)
 void
 term_do_scroll(int topline, int botline, int lines, bool sb)
 {
-  if (term.hovering) {
-    term.hovering = false;
+  if (cterm->hovering) {
+    cterm->hovering = false;
     win_update(true);
   }
 
-  if (term.lrmargmode && (term.marg_left || term.marg_right != term.cols - 1)) {
+  if (cterm->lrmargmode && (cterm->marg_left || cterm->marg_right != cterm->cols - 1)) {
     scroll_rect(topline, botline, lines);
     return;
   }
@@ -1426,15 +1424,15 @@ term_do_scroll(int topline, int botline, int lines, bool sb)
   int moved_lines = lines_in_region - lines;
 
   // Useful pointers to the top and (one below the) bottom lines.
-  termline **top = term.lines + topline;
-  termline **bot = term.lines + botline;
+  termline **top = cterm->lines + topline;
+  termline **bot = cterm->lines + botline;
 
 #ifdef use_display_scrolling
   // Screen scrolling
-  int topscroll = topline - term.disptop;
-  if (topscroll < term.rows) {
-    int botscroll = min(botline - term.disptop, term.rows);
-    if (!down && term.disptop && !topline)
+  int topscroll = topline - cterm->disptop;
+  if (topscroll < cterm->rows) {
+    int botscroll = min(botline - cterm->disptop, cterm->rows);
+    if (!down && cterm->disptop && !topline)
       ; // ignore bottom forward scroll if scrolled back
     else
       disp_scroll(topscroll, botscroll, scrolllines);
@@ -1458,18 +1456,18 @@ term_do_scroll(int topline, int botline, int lines, bool sb)
 
     // Move selection markers if they're within the scroll region
     void scroll_pos(pos *p) {
-      if (!term.show_other_screen && p->y >= topline && p->y < botline) {
+      if (!cterm->show_other_screen && p->y >= topline && p->y < botline) {
         if ((p->y += lines) >= botline)
           *p = (pos){.y = botline, .x = 0};
       }
     }
-    scroll_pos(&term.sel_start);
-    scroll_pos(&term.sel_anchor);
-    scroll_pos(&term.sel_end);
+    scroll_pos(&cterm->sel_start);
+    scroll_pos(&cterm->sel_anchor);
+    scroll_pos(&cterm->sel_end);
 
     // Move graphics if within the scroll region
-    for (imglist * cur = term.imgs.first; cur; cur = cur->next) {
-      if (cur->top - term.virtuallines >= topline) {
+    for (imglist * cur = cterm->imgs.first; cur; cur = cur->next) {
+      if (cur->top - cterm->virtuallines >= topline) {
         cur->top += lines;
       }
     }
@@ -1477,19 +1475,19 @@ term_do_scroll(int topline, int botline, int lines, bool sb)
   else {
     int seltop = topline;
 
-    term.virtuallines += lines;
+    cterm->virtuallines += lines;
 
     // Only push lines into the scrollback when scrolling off the top of the
     // normal screen and scrollback is actually enabled.
-    if (sb && topline == 0 && !term.on_alt_screen && cfg.scrollback_lines) {
+    if (sb && topline == 0 && !cterm->on_alt_screen && cfg.scrollback_lines) {
       for (int i = 0; i < lines; i++)
-        scrollback_push(compressline(term.lines[i]));
+        scrollback_push(compressline(cterm->lines[i]));
 
       // Shift viewpoint accordingly if user is looking at scrollback
-      if (term.disptop < 0)
-        term.disptop = max(term.disptop - lines, -term.sblines);
+      if (cterm->disptop < 0)
+        cterm->disptop = max(cterm->disptop - lines, -cterm->sblines);
 
-      seltop = -term.sblines;
+      seltop = -cterm->sblines;
     }
 
     // Move up remaining lines and push in the recycled lines
@@ -1499,14 +1497,14 @@ term_do_scroll(int topline, int botline, int lines, bool sb)
 
     // Move selection markers if they're within the scroll region
     void scroll_pos(pos *p) {
-      if (!term.show_other_screen && p->y >= seltop && p->y < botline) {
+      if (!cterm->show_other_screen && p->y >= seltop && p->y < botline) {
         if ((p->y -= lines) < seltop)
           *p = (pos){.y = seltop, .x = 0};
       }
     }
-    scroll_pos(&term.sel_start);
-    scroll_pos(&term.sel_anchor);
-    scroll_pos(&term.sel_end);
+    scroll_pos(&cterm->sel_start);
+    scroll_pos(&cterm->sel_anchor);
+    scroll_pos(&cterm->sel_end);
   }
 }
 
@@ -1516,8 +1514,8 @@ term_do_scroll(int topline, int botline, int lines, bool sb)
 void
 clear_wrapcontd(termline * line, int y)
 {
-  if (y < term.rows - 1 && (line->lattr & LATTR_WRAPPED)) {
-    line = term.lines[y + 1];
+  if (y < cterm->rows - 1 && (line->lattr & LATTR_WRAPPED)) {
+    line = cterm->lines[y + 1];
     line->lattr &= ~(LATTR_WRAPCONTD | LATTR_AUTOSEL);
   }
 }
@@ -1529,7 +1527,7 @@ clear_wrapcontd(termline * line, int y)
 void
 term_erase(bool selective, bool line_only, bool from_begin, bool to_end)
 {
-  term_cursor * curs = &term.curs;
+  term_cursor * curs = &cterm->curs;
   pos start, end;
 
   // avoid clearing a "pending wrap" position, where the cursor is 
@@ -1540,7 +1538,7 @@ term_erase(bool selective, bool line_only, bool from_begin, bool to_end)
       return;  // simple approach
 #else
     static term_cursor c;
-    c = term.curs;
+    c = cterm->curs;
     incpos(c);
     curs = &c;
 #endif
@@ -1552,7 +1550,7 @@ term_erase(bool selective, bool line_only, bool from_begin, bool to_end)
     start = (pos){.y = curs->y, .x = curs->x};
 
   if (to_end)
-    end = (pos){.y = line_only ? curs->y + 1 : term.rows, .x = 0};
+    end = (pos){.y = line_only ? curs->y + 1 : cterm->rows, .x = 0};
   else
     end = (pos){.y = curs->y, .x = curs->x}, incpos(end);
 
@@ -1566,14 +1564,14 @@ term_erase(bool selective, bool line_only, bool from_begin, bool to_end)
     start.y == 0 && start.x == 0 && end.x == 0 && !line_only && !selective;
 
   if (erasing_lines_from_top && 
-      !(term.lrmargmode && (term.marg_left || term.marg_right != term.cols - 1))
+      !(cterm->lrmargmode && (cterm->marg_left || cterm->marg_right != cterm->cols - 1))
      )
   {
    /* If it's a whole number of lines, starting at the top, and
     * we're fully erasing them, erase by scrolling and keep the
     * lines in the scrollback. */
     int scrolllines = end.y;
-    if (end.y == term.rows) {
+    if (end.y == cterm->rows) {
      /* Shrink until we find a non-empty row. */
       scrolllines = term_last_nonempty_line() + 1;
     }
@@ -1583,13 +1581,13 @@ term_erase(bool selective, bool line_only, bool from_begin, bool to_end)
    /* After an erase of lines from the top of the screen, we shouldn't
     * bring the lines back again if the terminal enlarges (since the user or
     * application has explictly thrown them away). */
-    if (!term.on_alt_screen)
-      term.tempsblines = 0;
+    if (!cterm->on_alt_screen)
+      cterm->tempsblines = 0;
   }
   else
 #endif
   {
-    termline *line = term.lines[start.y];
+    termline *line = cterm->lines[start.y];
     while (poslt(start, end)) {
       int cols = min(line->cols, line->size);
       if (start.x == cols) {
@@ -1603,12 +1601,12 @@ term_erase(bool selective, bool line_only, bool from_begin, bool to_end)
                !(line->chars[start.x].attr.attr & ATTR_PROTECTED)
               )
       {
-        line->chars[start.x] = term.erase_char;
+        line->chars[start.x] = cterm->erase_char;
         if (!start.x)
           clear_cc(line, -1);
       }
-      if (inclpos(start, cols) && start.y < term.rows)
-        line = term.lines[start.y];
+      if (inclpos(start, cols) && start.y < cterm->rows)
+        line = cterm->lines[start.y];
     }
   }
 }
@@ -2130,12 +2128,12 @@ term_paint(void)
 
  /* The display line that the cursor is on, or -1 if the cursor is invisible. */
   int curs_y =
-    term.cursor_on && !term.show_other_screen
-    ? term.curs.y - term.disptop : -1;
+    cterm->cursor_on && !cterm->show_other_screen
+    ? cterm->curs.y - cterm->disptop : -1;
 
-  for (int i = 0; i < term.rows; i++) {
+  for (int i = 0; i < cterm->rows; i++) {
     pos scrpos;
-    scrpos.y = i + term.disptop;
+    scrpos.y = i + cterm->disptop;
     termline *line = fetch_line(scrpos.y);
 
     //trace_line("loop0", line->chars);
@@ -2145,11 +2143,11 @@ term_paint(void)
     */
     // Prevent nested emoji sequence matching from matching partial subseqs
     int emoji_col = 0;  // column from which to match for emoji sequences
-    for (int j = 0; j < term.cols; j++) {
+    for (int j = 0; j < cterm->cols; j++) {
       termchar *d = line->chars + j;
       cattr tattr = d->attr;
 
-      if (j < term.cols - 1 && d[1].chr == UCSWIDE)
+      if (j < cterm->cols - 1 && d[1].chr == UCSWIDE)
         tattr.attr |= TATTR_WIDE;
 
      /* Match emoji sequences
@@ -2162,7 +2160,7 @@ term_paint(void)
           e.len = 0;
         }
         else
-          e = match_emoji(d, term.cols - j);
+          e = match_emoji(d, cterm->cols - j);
         if (e.len) {  // we have matched an emoji (sequence)
           // avoid subsequent matching of a partial emoji subsequence
           emoji_col = j + e.len;
@@ -2219,13 +2217,13 @@ term_paint(void)
 
    /* Do Arabic shaping and bidi. */
     termchar *chars = term_bidi_line(line, i);
-    int *backward = chars ? term.post_bidi_cache[i].backward : 0;
-    int *forward = chars ? term.post_bidi_cache[i].forward : 0;
+    int *backward = chars ? cterm->post_bidi_cache[i].backward : 0;
+    int *forward = chars ? cterm->post_bidi_cache[i].forward : 0;
     chars = chars ?: line->chars;
 
-    termline *displine = term.displines[i];
+    termline *displine = cterm->displines[i];
     termchar *dispchars = displine->chars;
-    termchar newchars[term.cols];
+    termchar newchars[cterm->cols];
 
     //trace_line("loop1", chars);
 
@@ -2233,7 +2231,7 @@ term_paint(void)
     * First loop: work along the line deciding what we want
     * each character cell to look like.
     */
-    for (int j = 0; j < term.cols; j++) {
+    for (int j = 0; j < cterm->cols; j++) {
       termchar *d = chars + j;
       scrpos.x = backward ? backward[j] : j;
       wchar tchar = d->chr;
@@ -2261,15 +2259,15 @@ term_paint(void)
         }
       }
 
-      if (j < term.cols - 1 && d[1].chr == UCSWIDE)
+      if (j < cterm->cols - 1 && d[1].chr == UCSWIDE)
         tattr.attr |= TATTR_WIDE;
 
      /* Video reversing things */
       bool selected =
-        term.selected &&
-        ( term.sel_rect
-          ? posPle(term.sel_start, scrpos) && posPlt(scrpos, term.sel_end)
-          : posle(term.sel_start, scrpos) && poslt(scrpos, term.sel_end)
+        cterm->selected &&
+        ( cterm->sel_rect
+          ? posPle(cterm->sel_start, scrpos) && posPlt(scrpos, cterm->sel_end)
+          : posle(cterm->sel_start, scrpos) && poslt(scrpos, cterm->sel_end)
         );
 
       if (selected) {
@@ -2294,10 +2292,10 @@ term_paint(void)
           tattr.attr ^= ATTR_REVERSE;
       }
 
-      if (term.hovering &&
-          (term.hoverlink >= 0
-           ? term.hoverlink == tattr.link
-           : posle(term.hover_start, scrpos) && poslt(scrpos, term.hover_end)
+      if (cterm->hovering &&
+          (cterm->hoverlink >= 0
+           ? cterm->hoverlink == tattr.link
+           : posle(cterm->hover_start, scrpos) && poslt(scrpos, cterm->hover_end)
           )
          )
       {
@@ -2309,12 +2307,12 @@ term_paint(void)
         }
       }
 
-      bool flashchar = term.in_vbell &&
+      bool flashchar = cterm->in_vbell &&
                        ((cfg.bell_flash_style & FLASH_FULL)
                         ||
                         ((cfg.bell_flash_style & FLASH_BORDER)
                          && (i == 0 || j == 0 ||
-                             i == term.rows - 1 || j == term.cols - 1
+                             i == cterm->rows - 1 || j == cterm->cols - 1
                             )
                         )
                        );
@@ -2346,13 +2344,13 @@ term_paint(void)
       }
 
      /* 'Real' blinking ? */
-      if (term.blink_is_real && (tattr.attr & ATTR_BLINK)) {
-        if (term.has_focus && term.tblinker)
+      if (cterm->blink_is_real && (tattr.attr & ATTR_BLINK)) {
+        if (cterm->has_focus && cterm->tblinker)
           tchar = ' ';
         tattr.attr &= ~ATTR_BLINK;
       }
-      if (term.blink_is_real && (tattr.attr & ATTR_BLINK2)) {
-        if (term.has_focus && term.tblinker2)
+      if (cterm->blink_is_real && (tattr.attr & ATTR_BLINK2)) {
+        if (cterm->has_focus && cterm->tblinker2)
           tchar = ' ';
         tattr.attr &= ~ATTR_BLINK2;
       }
@@ -2416,7 +2414,7 @@ term_paint(void)
           }
           else
 #ifdef failed_attempt_to_tame_narrowing
-            if (j + 1 < term.cols && chars[j + 1].chr != ' ')
+            if (j + 1 < cterm->cols && chars[j + 1].chr != ' ')
 #endif
             tattr.attr |= TATTR_NARROW;
             //if (ch != 0x25CC)
@@ -2508,7 +2506,7 @@ term_paint(void)
       * moving it one column to the left when it's on the right half of a
       * wide character.
       */
-      int curs_x = term.curs.x;
+      int curs_x = cterm->curs.x;
       if (forward)
         curs_x = forward[curs_x];
 #ifdef support_triple_width
@@ -2521,11 +2519,11 @@ term_paint(void)
 
      /* Determine cursor cell attributes. */
       newchars[curs_x].attr.attr |=
-        (!term.has_focus ? TATTR_PASCURS :
-         term.cblinker || !term_cursor_blinks() ? TATTR_ACTCURS : 0) |
-        (term.curs.wrapnext ? TATTR_RIGHTCURS : 0);
+        (!cterm->has_focus ? TATTR_PASCURS :
+         cterm->cblinker || !term_cursor_blinks() ? TATTR_ACTCURS : 0) |
+        (cterm->curs.wrapnext ? TATTR_RIGHTCURS : 0);
 
-      if (term.cursor_invalid)
+      if (cterm->cursor_invalid)
 #ifdef debug_dirty
         printf("INVALID c %d\n", curs_x),
 #endif
@@ -2538,8 +2536,8 @@ term_paint(void)
 #endif
         dispchars[curs_x].attr.attr |= ATTR_INVALID;
 
-      if (term.detect_progress) {
-        int j = term.cols;
+      if (cterm->detect_progress) {
+        int j = cterm->cols;
         while (--j > 0) {
           if (chars[j].chr == '%' ||
               (!(chars[j].attr.attr & TATTR_CLEAR)
@@ -2598,7 +2596,7 @@ term_paint(void)
     bool prevdirtyitalic = false;
     bool firstdirtyitalic = false;
     bool dirtyrect = false;
-    for (int j = 0; j < term.cols; j++) {
+    for (int j = 0; j < cterm->cols; j++) {
       if (dispchars[j].attr.attr & DATTR_STARTRUN) {
         laststart = j;
         dirtyrect = false;
@@ -2640,7 +2638,7 @@ term_paint(void)
     }
     if (prevdirtyitalic) {
       // clear overhang into right padding border
-      win_text(term.cols, i, W(" "), 1, CATTR_DEFAULT, (cattr*)&CATTR_DEFAULT, line->lattr, false, true, 0);
+      win_text(cterm->cols, i, W(" "), 1, CATTR_DEFAULT, (cattr*)&CATTR_DEFAULT, line->lattr, false, true, 0);
     }
     if (firstdirtyitalic) {
       // clear overhang into left padding border
@@ -2683,7 +2681,7 @@ term_paint(void)
     overlay:;
     bool do_overlay = false;
 
-    int maxtextlen = max(term.cols, 16);
+    int maxtextlen = max(cterm->cols, 16);
     wchar text[maxtextlen];
     cattr textattr[maxtextlen];
     int textlen = 0;
@@ -2823,7 +2821,7 @@ term_paint(void)
    /*
     * Third loop, for actual drawing.
     */
-    for (int j = 0; j < term.cols; j++) {
+    for (int j = 0; j < cterm->cols; j++) {
       termchar *d = chars + j;
       cattr tattr = newchars[j].attr;
       wchar tchar = newchars[j].chr;
@@ -3017,7 +3015,7 @@ term_paint(void)
       }
 
      /* If it's a wide char step along to the next one. */
-      if ((tattr.attr & TATTR_WIDE) && ++j < term.cols) {
+      if ((tattr.attr & TATTR_WIDE) && ++j < cterm->cols) {
         d++;
        /*
         * By construction above, the cursor should not
@@ -3059,7 +3057,7 @@ term_paint(void)
     release_line(line);
   }
 
-  term.cursor_invalid = false;
+  cterm->cursor_invalid = false;
 }
 
 void
@@ -3069,18 +3067,18 @@ term_invalidate(int left, int top, int right, int bottom)
     left = 0;
   if (top < 0)
     top = 0;
-  if (right >= term.cols)
-    right = term.cols - 1;
-  if (bottom >= term.rows)
-    bottom = term.rows - 1;
+  if (right >= cterm->cols)
+    right = cterm->cols - 1;
+  if (bottom >= cterm->rows)
+    bottom = cterm->rows - 1;
 
-  for (int i = top; i <= bottom && i < term.rows; i++) {
-    if ((term.displines[i]->lattr & LATTR_MODE) == LATTR_NORM)
-      for (int j = left; j <= right && j < term.cols; j++)
-        term.displines[i]->chars[j].attr.attr |= ATTR_INVALID;
+  for (int i = top; i <= bottom && i < cterm->rows; i++) {
+    if ((cterm->displines[i]->lattr & LATTR_MODE) == LATTR_NORM)
+      for (int j = left; j <= right && j < cterm->cols; j++)
+        cterm->displines[i]->chars[j].attr.attr |= ATTR_INVALID;
     else
-      for (int j = left / 2; j <= right / 2 + 1 && j < term.cols; j++)
-        term.displines[i]->chars[j].attr.attr |= ATTR_INVALID;
+      for (int j = left / 2; j <= right / 2 + 1 && j < cterm->cols; j++)
+        cterm->displines[i]->chars[j].attr.attr |= ATTR_INVALID;
   }
 }
 
@@ -3096,8 +3094,8 @@ term_invalidate(int left, int top, int right, int bottom)
 void
 term_scroll(int rel, int where)
 {
-  if (term.hovering) {
-    term.hovering = false;
+  if (cterm->hovering) {
+    cterm->hovering = false;
     win_update(true);
   }
 
@@ -3117,19 +3115,19 @@ term_scroll(int rel, int where)
       release_line(line);
       if (lattr & LATTR_MARKED) {
         markpos = y;
-        term.disptop = y;
+        cterm->disptop = y;
         break;
       }
     }
     do_schedule_update = true;
   }
   else
-    term.disptop = (rel < 0 ? 0 : rel > 0 ? sbtop : term.disptop) + where;
+    cterm->disptop = (rel < 0 ? 0 : rel > 0 ? sbtop : cterm->disptop) + where;
 
-  if (term.disptop < sbtop)
-    term.disptop = sbtop;
-  if (term.disptop > 0)
-    term.disptop = 0;
+  if (cterm->disptop < sbtop)
+    cterm->disptop = sbtop;
+  if (cterm->disptop > 0)
+    cterm->disptop = 0;
   win_update(false);
 
   if (do_schedule_update) {
@@ -3142,24 +3140,24 @@ void
 term_set_focus(bool has_focus, bool may_report)
 {
   if (!has_focus)
-    term.hovering = false;
+    cterm->hovering = false;
 
-  if (has_focus != term.has_focus) {
-    term.has_focus = has_focus;
+  if (has_focus != cterm->has_focus) {
+    cterm->has_focus = has_focus;
     term_schedule_cblink();
   }
 
-  if (has_focus != term.focus_reported && may_report) {
-    term.focus_reported = has_focus;
-    if (term.report_focus)
-      child_write(has_focus ? "\e[I" : "\e[O", 3);
+  if (has_focus != cterm->focus_reported && may_report) {
+    cterm->focus_reported = has_focus;
+    if (cterm->report_focus)
+      child_write(cterm,has_focus ? "\e[I" : "\e[O", 3);
   }
 }
 
 void
 term_update_cs(void)
 {
-  term_cursor *curs = &term.curs;
+  term_cursor *curs = &cterm->curs;
   cs_set_mode(
     curs->oem_acs ? CSM_OEM :
     curs->utf ? CSM_UTF8 :

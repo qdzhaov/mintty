@@ -17,8 +17,6 @@ extern HIMC imc;        // the input method context
 extern HWND config_wnd; // the options window
 extern ATOM class_atom;
 
-extern void clear_tabs(void);
-extern void add_tab(uint tabi, HWND wndi);
 // Inter-window actions
 enum {
   WIN_MINIMIZE = 0,
@@ -28,16 +26,6 @@ enum {
   WIN_TITLE = 4,
   WIN_INIT_POS = 5
 };
-// support tabbar
-extern void win_to_top(HWND top_wnd);
-extern void win_post_sync_msg(HWND target, int level);
-struct tabinfo {
-  unsigned long tag;
-  HWND wnd;
-  wchar * title;
-};
-extern struct tabinfo * tabinfo;
-extern int ntabinfo;
 
 extern COLORREF colours[COLOUR_NUM];
 extern colour brighten(colour c, colour against, bool monotone);
@@ -116,6 +104,7 @@ extern mod_keys get_mods(void);
 extern void win_key_reset(void);
 extern void provide_input(wchar);
 extern bool win_key_down(WPARAM, LPARAM);
+extern bool win_whotkey(WPARAM, LPARAM);
 extern bool win_key_up(WPARAM, LPARAM);
 extern void do_win_key_toggle(int vk, bool on);
 extern void win_csi_seq(char * pre, char * suf);
@@ -128,10 +117,10 @@ extern void win_init_drop_target(void);
 
 extern wstring wslicon(wchar * params);
 
-extern char * foreground_cwd(void);
+typedef struct SChild SChild;
+extern char * foreground_cwd(STerm* pterm);
 
 extern void win_switch(bool back, bool alternate);
-extern int sync_level(void);
 
 extern int search_monitors(int * minx, int * miny, HMONITOR lookup_mon, int get_primary, MONITORINFO *mip);
 
@@ -144,31 +133,41 @@ extern void win_dark_mode(HWND w);
 extern void show_message(char * msg, UINT type);
 extern void show_info(char * msg);
 
-extern void win_close(void);
+extern void win_close();
+extern void app_close();
 
 extern unsigned long mtime(void);
 
 extern void term_save_image(void);
 //========= for wintab 
+extern void win_tog_scrollbar();
+extern void win_tog_partline();
 extern STerm* win_tab_active_term() ;
-extern void win_tab_init(char* home, char* cmd, char** argv, int width, int height, char* title) ;
+extern void win_tab_show();
+extern void win_tab_indicator();
+extern void win_tab_init(const char* home,const  char* cmd,char** argv,const  int width, int height, const char* title) ;
 extern void win_tab_create() ;
 extern void win_tab_clean() ;
 extern bool win_tab_should_die();
 extern int  win_tab_active();     
 extern int  win_tab_count() ;
-extern int  win_tab_height() ;
 extern void win_tab_for_each(void (*cb)(STerm* pterm));
 extern void win_tab_paint(HDC dc);
 extern void win_tab_attention(STerm* pterm) ;
 extern void win_tab_change(int change) ;
+extern void win_tab_go(int index) ;
 extern void win_tab_mouse_click(int x) ;
 extern void win_tab_move(int amount) ;
 extern void win_tab_set_argv(char** argv) ;
+typedef struct STab STab;
+extern void win_tab_push(STab *tab);
+extern void win_tab_pop();
+extern void win_tab_v(STab *tab);
+extern void win_tab_actv();
 
 extern void     win_tab_save_title(STerm* pterm);
 extern void     win_tab_restore_title(STerm* pterm);
-extern void     win_tab_set_title(STerm* pterm, wchar_t* title) ;
+extern void     win_tab_set_title(STerm* pterm, const wchar_t* title) ;
 extern wchar_t* win_tab_get_title(unsigned int idx) ;
 extern void     win_tab_title_push(STerm* pterm) ;
 extern wchar_t* win_tab_title_pop(STerm* pterm) ;

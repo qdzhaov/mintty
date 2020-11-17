@@ -40,18 +40,9 @@ int forkpty(int *, char *, struct termios *, struct winsize *);
 // http://www.tldp.org/LDP/abs/html/exitcodes.html
 #define mexit 126
 
-#define term (*cterm)
-SChild dchild={0,0,0,-1,0,-1,0};
-SChild*cchild=&dchild;
-#define child_dir  (cchild->_child_dir)
-#define pid        (cchild->_pid      )
-#define killed     (cchild->_killed   )
-#define pty_fd     (cchild->_pty_fd   )
-#define pty_fd     (cchild->_pty_fd   )
 static int win_fd;
 static int log_fd = -1;
 bool logging = false;
-
 #if CYGWIN_VERSION_API_MINOR >= 66
 #include <langinfo.h>
 #endif
@@ -64,8 +55,9 @@ bool logging = false;
 #else
 #define trace_dir(d)	
 #endif
-
-
+int child_get_pid(STerm*pterm){
+  return pterm->child.pid;
+}
 static void
 childerror(char * action, bool from_fork, int errno_code, int code)
 {
@@ -108,9 +100,9 @@ childerror(char * action, bool from_fork, int errno_code, int code)
 }
 
 static void sigexit(int sig) {
-  for (Tab**t=win_tabs();*t;t++){
-    if ((*t)->chld->_pid)
-      kill(-(*t)->chld->_pid, SIGHUP);
+  for (STab**t=win_tabs();*t;t++){
+    if ((*t)->terminal->child.pid)
+      kill(-(*t)->terminal->child.pid, SIGHUP);
   }
   signal(sig, SIG_DFL);
   kill(getpid(), sig);
@@ -200,30 +192,30 @@ toggle_logging()
 }
 
 void
-child_update_charset(void)
+child_update_charset(STerm *pterm   )
 {
 #ifdef IUTF8
-  if (cchild&&pty_fd >= 0) {
+  if (pterm&&pterm->child.pty_fd >= 0) {
     // Terminal line settings
     struct termios attr;
-    tcgetattr(pty_fd, &attr);
+    tcgetattr(pterm->child.pty_fd, &attr);
     bool utf8 = strcmp(nl_langinfo(CODESET), "UTF-8") == 0;
     if (utf8)
       attr.c_iflag |= IUTF8;
     else
       attr.c_iflag &= ~IUTF8;
-    tcsetattr(pty_fd, TCSANOW, &attr);
+    tcsetattr(pterm->child.pty_fd, TCSANOW, &attr);
   }
 #endif
 }
 
 void
-child_create(SChild* cchild, struct STerm* pterm,
+child_create(struct STerm* pterm,
              char *argv[], struct winsize *winp, const char* path)
 {
-  pid_t _pid;
-  pty_fd = -1;
-  cchild->pterm = cterm=pterm;
+  pid_t pid;
+  (pterm->child.pty_fd   ) = -1;
+  win_tab_v(pterm->tab);
   trace_dir(asform("child_create: %s", getcwd(malloc(MAX_PATH), MAX_PATH)));
 
   // xterm and urxvt ignore SIGHUP, so let's do the same.
@@ -234,22 +226,22 @@ child_create(SChild* cchild, struct STerm* pterm,
   signal(SIGQUIT, sigexit);
 
   // Create the child process and pseudo terminal.
-  _pid = forkpty(&pty_fd, 0, 0, winp);
-  if (_pid < 0) {
+  pid = forkpty(&(pterm->child.pty_fd   ), 0, 0, winp);
+  if (pid < 0) {
     bool rebase_prompt = (errno == EAGAIN);
     //ENOENT  There are no available terminals.
     //EAGAIN  Cannot allocate sufficient memory to allocate a task structure.
     //EAGAIN  Not possible to create a new process; RLIMIT_NPROC limit.
     //ENOMEM  Memory is tight.
-    childerror(_("Error: Could not fork child process"), true, errno, _pid);
+    childerror(_("Error: Could not fork child process"), true, errno, pid);
     if (rebase_prompt)
       childerror(_("DLL rebasing may be required; see 'rebaseall / rebase --help'"), false, 0, 0);
 
-    _pid = 0;
+    pid = 0;
 
     term_hide_cursor();
   }
-  else if (!_pid) { // Child process.
+  else if (!pid) { // Child process.
 #if CYGWIN_VERSION_DLL_MAJOR < 1007
     // Some native console programs require a console to be attached to the
     // process, otherwise they pop one up themselves, which is rather annoying.
@@ -347,26 +339,26 @@ child_create(SChild* cchild, struct STerm* pterm,
     exit(mexit);
   }
   else { // Parent process.
-    pid=_pid;
+    (pterm->child.pid      )=pid;
     if (report_child_pid) {
-      printf("%d\n", _pid);
+      printf("%d\n", pid);
       fflush(stdout);
     }
 
 #ifdef __midipix__
     // This corrupts CR in cygwin
     struct termios attr;
-    tcgetattr(pty_fd, &attr);
+    tcgetattr(pterm->child.pty_fd   , &attr);
     cfmakeraw(&attr);
-    tcsetattr(pty_fd, TCSANOW, &attr);
+    tcsetattr(pterm->child.pty_fd   , TCSANOW, &attr);
 #endif
 
-    fcntl(pty_fd, F_SETFL, O_NONBLOCK);
+    fcntl(pterm->child.pty_fd   , F_SETFL, O_NONBLOCK);
 
     //child_update_charset();  // could do it here or as above
 
     if (cfg.create_utmp) {
-      char *dev = ptsname(pty_fd);
+      char *dev = ptsname(pterm->child.pty_fd   );
       if (dev) {
         struct utmp ut;
         memset(&ut, 0, sizeof ut);
@@ -384,7 +376,7 @@ child_create(SChild* cchild, struct STerm* pterm,
           ut.ut_id[i] = *dev++;
 
         ut.ut_type = USER_PROCESS;
-        ut.ut_pid = _pid;
+        ut.ut_pid = pid;
         ut.ut_time = time(0);
         strlcpy(ut.ut_user, getlogin() ?: "?", sizeof ut.ut_user);
         gethostname(ut.ut_host, sizeof ut.ut_host);
@@ -402,98 +394,99 @@ child_create(SChild* cchild, struct STerm* pterm,
 }
 
 char *
-child_tty(void)
+child_tty(STerm* pterm)
 {
-  return ptsname(pty_fd);
+  return ptsname((pterm->child.pty_fd   ));
 }
 
 #define patch_319
+static void vprocclose(STerm* pterm){
+  if (pterm->child.pid) {
+    int status;
+    if (waitpid(pterm->child.pid, &status, WNOHANG) == pterm->child.pid) {
+      pterm->child.pid = 0;
+      // Decide whether we want to exit now or later
+      if ((pterm->child.killed   ) || cfg.hold == HOLD_NEVER)
+        win_tab_clean();
+      else if (cfg.hold == HOLD_START) {
+        if (WIFSIGNALED(status) || WEXITSTATUS(status) != mexit)
+          win_tab_clean();
+      }
+      else if (cfg.hold == HOLD_ERROR) {
+        if (WIFEXITED(status)) {
+          if (WEXITSTATUS(status) == 0)
+            win_tab_clean();
+        }
+        else {
+          const int error_sigs =
+              1 << SIGILL | 1 << SIGTRAP | 1 << SIGABRT | 1 << SIGFPE |
+              1 << SIGBUS | 1 << SIGSEGV | 1 << SIGPIPE | 1 << SIGSYS;
+          if (!(error_sigs & 1 << WTERMSIG(status)))
+            win_tab_clean();
+        }
+      }
+      char *s = 0;
+      bool err = true;
+      if (WIFEXITED(status)) {
+        int code = WEXITSTATUS(status);
+        if (code == 0) err = false;
+        if ((code || cfg.exit_write) /*&& cfg.hold != HOLD_START*/)
+          //__ %1$s: client command (e.g. shell) terminated, %2$i: exit code
+          asprintf(&s, _("%s: Exit %i"), cmd, code);
+      } else if (WIFSIGNALED(status))
+        asprintf(&s, "%s: %s", cmd, strsignal(WTERMSIG(status)));
+
+      if (!s && cfg.exit_write) {
+        //__ default inline notification if ExitWrite=yes
+        s = _("TERMINATED");
+      }
+      if (s) {
+        char * wsl_pre = "\0337\033[H\033[L";
+        char * wsl_post = "\0338\033[B";
+        if (err && support_wsl)
+          term_write(wsl_pre, strlen(wsl_pre));
+        childerror(s, false, 0, err ? 41 : 42);
+        if (err && support_wsl)
+          term_write(wsl_post, strlen(wsl_post));
+      }
+
+      if (cfg.exit_title && *cfg.exit_title)
+        win_prefix_title(cfg.exit_title);
+    }
+  }
+}
 
 void
 child_proc(void)
 {
   for (;;) {
-    for (Tab**t=win_tabs();*t;t++){
+    for (STab**t=win_tabs();*t;t++){
       if ((*t)->terminal->paste_buffer){
-        cterm=(*t)->terminal;
+        win_tab_v(*t);
         term_send_paste();
       }
     }
-
     struct timeval timeout = {0, 100000}, *timeout_p = 0;
     fd_set fds;
     FD_ZERO(&fds);
     FD_SET(win_fd, &fds);
     int highfd = win_fd;
-    for (Tab**t=win_tabs();*t;t++){
-      SChild*cchild=(*t)->chld;
-      cterm=cchild->pterm;
-      if (pty_fd > highfd) highfd = pty_fd;
-      if (pty_fd >= 0)
-        FD_SET(pty_fd, &fds);
-      if (pid) {
-        int status;
-        if (waitpid(pid, &status, WNOHANG) == pid) {
-          pid = 0;
-          // Decide whether we want to exit now or later
-          if (killed || cfg.hold == HOLD_NEVER)
-            win_tab_clean();
-          else if (cfg.hold == HOLD_START) {
-            if (WIFSIGNALED(status) || WEXITSTATUS(status) != mexit)
-              win_tab_clean();
-          }
-          else if (cfg.hold == HOLD_ERROR) {
-            if (WIFEXITED(status)) {
-              if (WEXITSTATUS(status) == 0)
-                win_tab_clean();
-            }
-            else {
-              const int error_sigs =
-                  1 << SIGILL | 1 << SIGTRAP | 1 << SIGABRT | 1 << SIGFPE |
-                  1 << SIGBUS | 1 << SIGSEGV | 1 << SIGPIPE | 1 << SIGSYS;
-              if (!(error_sigs & 1 << WTERMSIG(status)))
-                win_tab_clean();
-            }
-          }
-
-          char *s = 0;
-          bool err = true;
-          if (WIFEXITED(status)) {
-            int code = WEXITSTATUS(status);
-            if (code == 0) err = false;
-            if ((code || cfg.exit_write) /*&& cfg.hold != HOLD_START*/)
-              //__ %1$s: client command (e.g. shell) terminated, %2$i: exit code
-              asprintf(&s, _("%s: Exit %i"), cmd, code);
-          } else if (WIFSIGNALED(status))
-            asprintf(&s, "%s: %s", cmd, strsignal(WTERMSIG(status)));
-
-          if (!s && cfg.exit_write) {
-            //__ default inline notification if ExitWrite=yes
-            s = _("TERMINATED");
-          }
-          if (s) {
-            char * wsl_pre = "\0337\033[H\033[L";
-            char * wsl_post = "\0338\033[B";
-            if (err && support_wsl)
-              term_write(wsl_pre, strlen(wsl_pre));
-            childerror(s, false, 0, err ? 41 : 42);
-            if (err && support_wsl)
-              term_write(wsl_post, strlen(wsl_post));
-          }
-
-          if (cfg.exit_title && *cfg.exit_title)
-            win_prefix_title(cfg.exit_title);
-        }
-        if (pid != 0 && pty_fd < 0) // Pty gone, but process still there: keep checking
-          timeout_p = &timeout;
-      }
+    for (STab**t=win_tabs();*t;t++){
+      win_tab_v(*t);
+      STerm *pterm=(*t)->terminal;
+      if (pterm->child.pty_fd > highfd) highfd = pterm->child.pty_fd;
+      if (pterm->child.pty_fd >= 0)
+        FD_SET(pterm->child.pty_fd, &fds);
+      vprocclose(pterm);
+      if (pterm->child.pid != 0 && pterm->child.pty_fd < 0) // Pty gone, but process still there: keep checking
+        timeout_p = &timeout;
     }
 
     if (select(highfd + 1, &fds, 0, 0, timeout_p) > 0) {
-      for (Tab**t=win_tabs();*t;t++){
-        SChild* cchild = (*t)->chld;
-        cterm=cchild->pterm;
-        if (pty_fd >= 0 && FD_ISSET(pty_fd, &fds)) {
+      for (STab**t=win_tabs();*t;t++){
+        STerm *pterm=(*t)->terminal;
+        win_tab_v(*t);
+        if (pterm->child.pty_fd >= 0 && FD_ISSET(pterm->child.pty_fd, &fds)) {
           // Pty devices on old Cygwin versions (pre 1005) deliver only 4 bytes
           // at a time, and newer ones or MSYS2 deliver up to 256 at a time.
           // so call read() repeatedly until we have a worthwhile haul.
@@ -534,14 +527,14 @@ child_proc(void)
             }
             prevtime = now;
 
-            int ret = read(pty_fd, buf, 1);
+            int ret = read(pterm->child.pty_fd, buf, 1);
             if (ret > 0)
               len = ret;
           }
           else
 #endif
             do {
-              int ret = read(pty_fd, buf + len, sizeof buf - len);
+              int ret = read(pterm->child.pty_fd, buf + len, sizeof buf - len);
               if (ret > 0)
                 len += ret;
               else
@@ -561,13 +554,13 @@ child_proc(void)
               write(log_fd, buf, len);
           }
           else {
-            pty_fd = -1;
+            pterm->child.pty_fd = -1;
             term_hide_cursor();
+            //win_tab_clean();
           }
         }
       }
-      if (FD_ISSET(win_fd, &fds))
-        return;
+      if (FD_ISSET(win_fd, &fds)) return;
     }
   }
 }
@@ -575,52 +568,21 @@ child_proc(void)
 void
 child_kill(bool point_blank)
 {
-  for (Tab**t=win_tabs();*t;t++){
-    SChild* pchild = (*t)->chld;
-    kill(-pchild->_pid, point_blank ? SIGKILL : SIGHUP);
-    pchild->_killed = true;
+  for (STab**t=win_tabs();*t;t++){
+    STerm *pterm=(*t)->terminal;
+    kill(-pterm->child.pid, point_blank ? SIGKILL : SIGHUP);
+    pterm->child.killed = true;
   }
 }
 
 bool
-child_is_alive(void)
+child_is_alive(STerm* pterm)
 {
-    return pid;
-}
-
-bool
-child_is_parent(SChild *pchild)
-{
-  if (!pchild->_pid)
-    return false;
-  DIR * d = opendir("/proc");
-  if (!d)
-    return false;
-  bool res = false;
-  struct dirent * e;
-  while ((e = readdir(d))) {
-    char * pn = e->d_name;
-    if (isdigit((uchar)*pn) && strlen(pn) <= 6) {
-      char * fn = asform("/proc/%s/ppid", pn);
-      FILE * f = fopen(fn, "r");
-      free(fn);
-      if (!f)
-        continue;
-      pid_t ppid = 0;
-      fscanf(f, "%u", &ppid);
-      fclose(f);
-      if (ppid == pid) {
-        res = true;
-        break;
-      }
-    }
-  }
-  closedir(d);
-  return res;
+    return (pterm->child.pid >0 );
 }
 
 static struct procinfo {
-  int _pid;
+  int pid;
   int ppid;
   int winpid;
   char * cmdline;
@@ -628,10 +590,10 @@ static struct procinfo {
 static uint nttyprocs = 0;
 
 static char *
-procres(int _pid, char * res)
+procres(int pid, char * res)
 {
   char fbuf[99];
-  char * fn = asform("/proc/%d/%s", _pid, res);
+  char * fn = asform("/proc/%d/%s", pid, res);
   int fd = open(fn, O_BINARY | O_RDONLY);
   free(fn);
   if (fd < 0)
@@ -649,9 +611,9 @@ procres(int _pid, char * res)
 }
 
 static int
-procresi(int _pid, char * res)
+procresi(int pid, char * res)
 {
-  char * si = procres(_pid, res);
+  char * si = procres(pid, res);
   int i = atoi(si);
   free(si);
   return i;
@@ -666,27 +628,27 @@ procresi(int _pid, char * res)
 #endif
 
 wchar *
-grandchild_process_list(void)
+grandchild_process_list(STerm* pterm)
 {
-  if (!pid)
+  if (!(pterm->child.pid      ))
     return 0;
   DIR * d = opendir("/proc");
   if (!d)
     return 0;
-  char * tty = child_tty();
+  char * tty = child_tty(pterm);
   struct dirent * e;
   while ((e = readdir(d))) {
     char * pn = e->d_name;
     int thispid = atoi(pn);
-    if (thispid && thispid != pid) {
+    if (thispid && thispid != (pterm->child.pid      )) {
       char * ctty = procres(thispid, "ctty");
       if (ctty) {
         if (0 == strcmp(ctty, tty)) {
           int ppid = procresi(thispid, "ppid");
           int winpid = procresi(thispid, "winpid");
-          // not including the direct child (pid)
+          // not including the direct child ((pterm->child.pid      ))
           ttyprocs = renewn(ttyprocs, nttyprocs + 1);
-          ttyprocs[nttyprocs]._pid = thispid;
+          ttyprocs[nttyprocs].pid = thispid;
           ttyprocs[nttyprocs].ppid = ppid;
           ttyprocs[nttyprocs].winpid = winpid;
           char * cmd = procres(thispid, "cmdline");
@@ -706,7 +668,7 @@ grandchild_process_list(void)
   wchar * res = 0;
   for (uint i = 0; i < nttyprocs; i++) {
     char * proc = newn(char, 50 + strlen(ttyprocs[i].cmdline));
-    sprintf(proc, " %5u %5u %s", ttyprocs[i].winpid, ttyprocs[i]._pid, ttyprocs[i].cmdline);
+    sprintf(proc, " %5u %5u %s", ttyprocs[i].winpid, ttyprocs[i].pid, ttyprocs[i].cmdline);
     free(ttyprocs[i].cmdline);
     wchar * procw = cs__mbstowcs(proc);
     free(proc);
@@ -722,13 +684,13 @@ grandchild_process_list(void)
 
     if (win_version >= 0x0601) {
       if (!res)
-        res = wcsdup(W("╎ WPID   PID  COMMAND\n"));  // ┆┇┊┋╎╏
+        res = wcsdup(W("╎ WPID   pid  COMMAND\n"));  // ┆┇┊┋╎╏
       res = renewn(res, wcslen(res) + wcslen(procw) + 3);
       wcscat(res, W("╎"));
     }
     else {
       if (!res)
-        res = wcsdup(W("| WPID   PID  COMMAND\n"));  // ┆┇┊┋╎╏
+        res = wcsdup(W("| WPID   pid  COMMAND\n"));  // ┆┇┊┋╎╏
       res = renewn(res, wcslen(res) + wcslen(procw) + 3);
       wcscat(res, W("|"));
     }
@@ -746,22 +708,22 @@ grandchild_process_list(void)
 }
 
 void
-child_write(const char *buf, uint len)
+child_write(STerm* pterm,const char *buf, uint len)
 {
-  if (pty_fd >= 0)
-    write(pty_fd, buf, len);
+  if ((pterm->child.pty_fd   ) >= 0)
+    write((pterm->child.pty_fd   ), buf, len);
 }
 
 /*
   Simulate a BREAK event.
  */
 void
-child_break()
+child_break(STerm* pterm)
 {
-  int gid = tcgetpgrp(pty_fd);
+  int gid = tcgetpgrp((pterm->child.pty_fd   ));
   if (gid > 1) {
     struct termios attr;
-    tcgetattr(pty_fd, &attr);
+    tcgetattr((pterm->child.pty_fd   ), &attr);
     if ((attr.c_iflag & (IGNBRK | BRKINT)) == BRKINT) {
       kill(gid, SIGINT);
     }
@@ -769,57 +731,57 @@ child_break()
 }
 
 void
-child_printf(const char *fmt, ...)
+child_printf(STerm* pterm ,const char *fmt, ...)
 {
-  if (pty_fd >= 0) {
+  if ((pterm->child.pty_fd   ) >= 0) {
     va_list va;
     va_start(va, fmt);
     char *s;
     int len = vasprintf(&s, fmt, va);
     va_end(va);
     if (len >= 0)
-      write(pty_fd, s, len);
+      write((pterm->child.pty_fd   ), s, len);
     free(s);
   }
 }
 
 void
-child_send(const char *buf, uint len)
+child_send(STerm* pterm,const char *buf, uint len)
 {
   term_reset_screen();
-  if (term.echoing)
+  if (pterm->echoing)
     term_write(buf, len);
-  child_write(buf, len);
+  child_write(pterm,buf, len);
 }
 
 void
-child_sendw(const wchar *ws, uint wlen)
+child_sendw(STerm* pterm,const wchar *ws, uint wlen)
 {
   char s[wlen * cs_cur_max];
   int len = cs_wcntombn(s, ws, sizeof s, wlen);
   if (len > 0)
-    child_send(s, len);
+    child_send(pterm,s, len);
 }
 
 void
-child_resize(struct winsize *winp)
+child_resize(STerm* pterm,struct winsize *winp)
 {
-  if (pty_fd >= 0)
-    ioctl(pty_fd, TIOCSWINSZ, winp);
+  if ((pterm->child.pty_fd   ) >= 0)
+    ioctl((pterm->child.pty_fd   ), TIOCSWINSZ, winp);
 }
 
 static int
-foreground_pid()
+foregroundpid(STerm* pterm)
 {
-  return (pty_fd >= 0) ? tcgetpgrp(pty_fd) : 0;
+  return ((pterm->child.pty_fd   ) >= 0) ? tcgetpgrp((pterm->child.pty_fd   )) : 0;
 }
 
 char *
-foreground_cwd()
+foreground_cwd(STerm* pterm)
 {
   // if working dir is communicated interactively, use it
-  if (child_dir && *child_dir)
-    return strdup(child_dir);
+  if ((pterm->child.child_dir) && *(pterm->child.child_dir))
+    return strdup((pterm->child.child_dir));
 
   // for WSL, do not check foreground process; hope start dir is good
   if (support_wsl) {
@@ -831,10 +793,10 @@ foreground_cwd()
   }
 
 #if CYGWIN_VERSION_DLL_MAJOR >= 1005
-  int fg_pid = foreground_pid();
-  if (fg_pid > 0) {
+  int fgpid = foregroundpid(pterm);
+  if (fgpid > 0) {
     char proc_cwd[32];
-    sprintf(proc_cwd, "/proc/%u/cwd", fg_pid);
+    sprintf(proc_cwd, "/proc/%u/cwd", fgpid);
     return realpath(proc_cwd, 0);
   }
 #endif
@@ -842,13 +804,13 @@ foreground_cwd()
 }
 
 char *
-foreground_prog()
+foreground_prog(STerm* pterm)
 {
 #if CYGWIN_VERSION_DLL_MAJOR >= 1005
-  int fg_pid = foreground_pid();
-  if (fg_pid > 0) {
+  int fgpid = foregroundpid(pterm);
+  if (fgpid > 0) {
     char exename[32];
-    sprintf(exename, "/proc/%u/exename", fg_pid);
+    sprintf(exename, "/proc/%u/exename", fgpid);
     FILE * enf = fopen(exename, "r");
     if (enf) {
       char exepath[MAX_PATH + 1];
@@ -868,7 +830,7 @@ foreground_prog()
 }
 
 void
-user_command(wstring commands, int n)
+user_command(STerm* pterm,wstring commands, int n)
 {
   if (*commands) {
     char * cmds = cs__wcstombs(commands);
@@ -876,7 +838,6 @@ user_command(wstring commands, int n)
     char sepch = ';';
     if ((uchar)*cmdp <= (uchar)' ')
       sepch = *cmdp++;
-
     char * progp;
     while (n >= 0 && (progp = strchr(cmdp, ':'))) {
       progp++;
@@ -885,21 +846,21 @@ user_command(wstring commands, int n)
         *sepp = '\0';
 
       if (n == 0) {
-        int fgpid = foreground_pid();
+        int fgpid = foregroundpid(pterm);
         if (fgpid) {
           char * _fgpid = 0;
           asprintf(&_fgpid, "%d", fgpid);
           if (_fgpid) {
-            setenv("MINTTY_PID", _fgpid, true);
+            setenv("MINTTYpid", _fgpid, true);
             free(_fgpid);
           }
         }
-        char * fgp = foreground_prog();
+        char * fgp = foreground_prog(pterm);
         if (fgp) {
           setenv("MINTTY_PROG", fgp, true);
           free(fgp);
         }
-        char * fgd = foreground_cwd();
+        char * fgd = foreground_cwd(pterm);
         if (fgd) {
           setenv("MINTTY_CWD", fgd, true);
           free(fgd);
@@ -907,7 +868,7 @@ user_command(wstring commands, int n)
         term_cmd(progp);
         unsetenv("MINTTY_CWD");
         unsetenv("MINTTY_PROG");
-        unsetenv("MINTTY_PID");
+        unsetenv("MINTTYpid");
         break;
       }
       n--;
@@ -932,8 +893,29 @@ user_command(wstring commands, int n)
    used by win_open
 */
 wstring
-child_conv_path(wstring wpath, bool adjust_dir)
+child_conv_path(STerm* pterm,wstring wpath, bool adjust_dir)
 {
+  // Need to convert POSIX path to Windows first
+  if (support_wsl) {
+    // First, we need to replicate some of the handling of relative paths 
+    // as implemented in child_conv_path,
+    // because the dewsl functionality would actually go in between 
+    // the workflow of child_conv_path.
+    // We cannot determine the WSL foreground process and its 
+    // current directory, so we can only consider the working directory 
+    // explicitly communicated via the OSC 7 escape sequence here.
+    if (*wpath != '/' && wcsncmp(wpath, W("~/"), 2) != 0) {
+      if (pterm->child.child_dir && *pterm->child.child_dir) {
+        wchar * cd = cs__mbstowcs(pterm->child.child_dir);
+        cd = renewn(cd, wcslen(cd) + wcslen(wpath) + 2);
+        cd[wcslen(cd)] = '/';
+        wcscpy(&cd[wcslen(cd) + 1], wpath);
+        delete(wpath);
+        wpath = cd;
+      }
+    }
+    wpath = dewsl((wchar *)wpath);
+  }
   int wlen = wcslen(wpath);
   int len = wlen * cs_cur_max;
   char path[len];
@@ -970,11 +952,11 @@ child_conv_path(wstring wpath, bool adjust_dir)
     // requires the /proc filesystem, which isn't available before Cygwin 1.5.
 
     // Find pty's foreground process, if any. Fall back to child process.
-    int fg_pid = (pty_fd >= 0) ? tcgetpgrp(pty_fd) : 0;
-    if (fg_pid <= 0)
-      fg_pid = pid;
+    int fgpid = ((pterm->child.pty_fd   ) >= 0) ? tcgetpgrp((pterm->child.pty_fd   )) : 0;
+    if (fgpid <= 0)
+      fgpid = (pterm->child.pid      );
 
-    char * cwd = foreground_cwd();
+    char * cwd = foreground_cwd(pterm);
     exp_path = asform("%s/%s", cwd ?: home, path);
     if (cwd)
       free(cwd);
@@ -1013,9 +995,9 @@ child_conv_path(wstring wpath, bool adjust_dir)
 }
 
 void
-child_set_fork_dir(char * dir)
+child_set_fork_dir(STerm* pterm,char * dir)
 {
-  strset(&child_dir, dir);
+  strset(&(pterm->child.child_dir), dir);
 }
 
 void
@@ -1025,37 +1007,13 @@ setenvi(char * env, int val)
   sprintf(valbuf, "%d", val);
   setenv(env, valbuf, true);
 }
-
-static void
-setup_sync()
-{
-  if (sync_level()) {
-    if (win_is_fullscreen) {
-      setenvi("MINTTY_DX", 0);
-      setenvi("MINTTY_DY", 0);
-    }
-    else if (!IsZoomed(wnd)) {
-      RECT r;
-      GetWindowRect(wnd, &r);
-      setenvi("MINTTY_X", r.left);
-      setenvi("MINTTY_Y", r.top);
-      setenvi("MINTTY_DX", r.right - r.left);
-      setenvi("MINTTY_DY", r.bottom - r.top);
-    }
-    if (cfg.tabbar)
-      setenvi("MINTTY_TABBAR", cfg.tabbar);
-  }
-}
-
 /*
   Called from Alt+F2 (or session launcher via child_launch).
  */
 static void
-do_child_fork(int argc, char *argv[], int moni, bool launch, bool config_size)
+do_child_fork(STerm* pterm,int argc, char *argv[], int moni, bool launch, bool config_size)
 {
   trace_dir(asform("do_child_fork: %s", getcwd(malloc(MAX_PATH), MAX_PATH)));
-  setup_sync();
-
 #ifdef control_AltF2_size_via_token
   void reset_fork_mode()
   {
@@ -1088,16 +1046,16 @@ do_child_fork(int argc, char *argv[], int moni, bool launch, bool config_size)
   }
 
   if (clone == 0) {  // prepare child process to spawn new terminal
-    if (pty_fd >= 0)
-      close(pty_fd);
+    if ((pterm->child.pty_fd   ) >= 0)
+      close((pterm->child.pty_fd   ));
     if (log_fd >= 0)
       close(log_fd);
     close(win_fd);
 
-    if (child_dir && *child_dir) {
-      string set_dir = child_dir;
+    if ((pterm->child.child_dir) && *(pterm->child.child_dir)) {
+      string set_dir = (pterm->child.child_dir);
       if (support_wsl) {
-        wchar * wcd = cs__utftowcs(child_dir);
+        wchar * wcd = cs__utftowcs((pterm->child.child_dir));
 #ifdef debug_wsl
         printf("fork wsl <%ls>\n", wcd);
 #endif
@@ -1139,11 +1097,11 @@ do_child_fork(int argc, char *argv[], int moni, bool launch, bool config_size)
         // insert additional parameters here
         newargv[j++] = "-o";
         static char parbuf1[28];  // static to prevent #530
-        sprintf(parbuf1, "Rows=%d", term.rows);
+        sprintf(parbuf1, "Rows=%d", pterm->rows);
         newargv[j++] = parbuf1;
         newargv[j++] = "-o";
         static char parbuf2[31];  // static to prevent #530
-        sprintf(parbuf2, "Columns=%d", term.cols);
+        sprintf(parbuf2, "Columns=%d", pterm->cols);
         newargv[j++] = parbuf2;
       }
       newargv[j] = argv[i];
@@ -1159,8 +1117,8 @@ do_child_fork(int argc, char *argv[], int moni, bool launch, bool config_size)
 
     // provide environment to clone size
     if (!config_size) {
-      setenvi("MINTTY_ROWS", term.rows0);
-      setenvi("MINTTY_COLS", term.cols0);
+      setenvi("MINTTY_ROWS", pterm->rows0);
+      setenvi("MINTTY_COLS", pterm->cols0);
       // provide environment to maximise window
       if (win_is_fullscreen)
         setenvi("MINTTY_MAXIMIZE", 2);
@@ -1207,16 +1165,16 @@ do_child_fork(int argc, char *argv[], int moni, bool launch, bool config_size)
   Called from Alt+F2.
  */
 void
-child_fork(int argc, char *argv[], int moni, bool config_size)
+child_fork(STerm* pterm,int argc, char *argv[], int moni, bool config_size)
 {
-  do_child_fork(argc, argv, moni, false, config_size);
+  do_child_fork(pterm,argc, argv, moni, false, config_size);
 }
 
 /*
   Called from session launcher.
  */
 void
-child_launch(int n, int argc, char * argv[], int moni)
+child_launch(STerm* pterm,int n, int argc, char * argv[], int moni)
 {
   if (*cfg.session_commands) {
     char * cmds = cs__wcstombs(cfg.session_commands);
@@ -1229,11 +1187,8 @@ child_launch(int n, int argc, char * argv[], int moni)
     while (n >= 0 && (paramp = strchr(cmdp, ':'))) {
       paramp++;
       char * sepp = strchr(paramp, sepch);
-      if (sepp)
-        *sepp = '\0';
-
+      if (sepp) *sepp = '\0';
       if (n == 0) {
-        //setup_sync();
         argc = 1;
         char ** new_argv = newn(char *, argc + 1);
         new_argv[0] = argv[0];
@@ -1252,7 +1207,7 @@ child_launch(int n, int argc, char * argv[], int moni)
           }
         }
         new_argv[argc] = 0;
-        do_child_fork(argc, new_argv, moni, true, true);
+        do_child_fork(pterm,argc, new_argv, moni, true, true);
         free(new_argv);
         break;
       }
@@ -1274,14 +1229,8 @@ child_launch(int n, int argc, char * argv[], int moni)
   }
 }
 //============================
-bool child_is_any_parent() {
-  for (Tab**t=win_tabs();*t;t++){
-    if(child_is_parent((*t)->chld))return 1;
-  };
-  return 0;
-}
-void child_terminate(SChild* cchild) {
-  kill(-pid, SIGKILL);
+void child_terminate(STerm* pterm) {
+  kill(-(pterm->child.pid      ), SIGKILL);
 
   // Seems that sometimes cygwin leaves process in non-waitable and
   // non-alive state. The result for that is that there will be
@@ -1291,28 +1240,16 @@ void child_terminate(SChild* cchild) {
   //
   // TODO: Find out better way to solve this. Now the child processes are
   // not always cleaned up.
-  int cpid = pid;
-  for (Tab**t=win_tabs();*t;t++){
-    if ((*t)->chld->_pid == cpid) 
-      (*t)->chld->_pid = 0;
+  int cpid = (pterm->child.pid      );
+  for (STab**t=win_tabs();*t;t++){
+    if ((*t)->terminal->child.pid == cpid) 
+      (*t)->terminal->child.pid = 0;
   }
 }
-void child_init() {
-  // xterm and urxvt ignore SIGHUP, so let's do the same.
-  signal(SIGHUP, SIG_IGN);
-
-  signal(SIGINT, sigexit);
-  signal(SIGTERM, sigexit);
-  signal(SIGQUIT, sigexit);
-
-  win_fd = open("/dev/windows", O_RDONLY);
-  // Open log file if any
-  open_logfile(true);
-}
 void
-child_free(SChild* pchild)
+child_free(STerm* pterm)
 {
-  if (pchild->_pty_fd >= 0)
-    close(pchild->_pty_fd);
-  pchild->_pty_fd = -1;
+  if (pterm->child.pty_fd >= 0)
+    close(pterm->child.pty_fd);
+  pterm->child.pty_fd = -1;
 }

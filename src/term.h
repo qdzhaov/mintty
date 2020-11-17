@@ -329,18 +329,18 @@ typedef enum {
 /* Searching */
 typedef struct {
   // Index of a virtual array of scrollback + screen.
-  // y = idx / term.cols
-  // x = idx % term.rows
+  // y = idx / cterm->cols
+  // x = idx % cterm->rows
   // y starts from the top most line (y = 0, the first line of scrollback or screen).
   int idx;
-  // The length of a match, maybe larger than term.results.xquery_length because of UCSWIDE.
+  // The length of a match, maybe larger than cterm->results.xquery_length because of UCSWIDE.
   int len;
 } result;
 
 typedef struct {
   // The current active result, for prev/next button.
   result current;
-  // An idx can be matched against term.results.results iff idx in [range_begin, range_end).
+  // An idx can be matched against cterm->results.results iff idx in [range_begin, range_end).
   int range_begin, range_end;
   result * results;
   wchar * query;
@@ -384,7 +384,7 @@ typedef struct imglist {
 
   // image ref for disposal management
   int imgi;
-  // position within scrollback (top includes offset term.virtuallines)
+  // position within scrollback (top includes offset cterm->virtuallines)
   int top, left;
 
   // image area (cell units)
@@ -438,7 +438,15 @@ typedef struct {
   unsigned long last_bell;
 } term_bell;
 
-struct SChild ;
+struct STab;
+typedef struct SChild {
+  const char *home, *cmd;
+  string child_dir;
+  pid_t pid;
+  bool killed;
+  int pty_fd;
+  struct STerm* pterm;
+}SChild;
 typedef struct STerm {
   // these used to be in term_cursor, thus affected by cursor restore
   bool decnrc_enabled;  /* DECNRCM: enable NRC */
@@ -489,6 +497,7 @@ typedef struct STerm {
   char *printbuf;         /* buffered data for printer */
   uint printbuf_size, printbuf_pos;
 
+  int usepartline;
   int  rows, cols;
   int  rows0, cols0;
   bool has_focus;
@@ -610,6 +619,7 @@ typedef struct STerm {
   bool locator_rectangle;
   int locator_top, locator_left, locator_bottom, locator_right;
 
+  int selection_pending;
   bool selected, sel_rect;
   pos sel_start, sel_end, sel_anchor;
   bool hovering;
@@ -639,7 +649,8 @@ typedef struct STerm {
   bidi_cache_entry *pre_bidi_cache, *post_bidi_cache;
   int bidi_cache_size;
 
-  struct SChild* child;
+  SChild child;
+  struct STab* tab;
   // Search results
   termresults results;
 
@@ -647,7 +658,6 @@ typedef struct STerm {
 }STerm ;
 
 extern STerm *cterm;
-//#define term (*cterm)
 
 extern void scroll_rect(int topline, int botline, int lines);
 

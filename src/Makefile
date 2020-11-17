@@ -22,13 +22,19 @@
 #	make DEBUG=1
 
 #############################################################################
-NAME := mintty
+DEBUG ?=0
 
 .PHONY: exe src pkg zip pdf clean
 
 BINFOLDER = ../bin
 #BINDIR = $(BINFOLDER)/$(TARGET)
+ifeq ($(DEBUG), 1)
+BINDIR = $(BINFOLDER)/$(platform)g
+NAME := minttyg
+else
 BINDIR = $(BINFOLDER)/$(platform)
+NAME := mintty
+endif
 
 ifdef TARGET
   CC := $(TARGET)-gcc
@@ -93,7 +99,7 @@ bins := $(patsubst %.o,$(BINDIR)/%.o,$(objs))
 ifneq ($(platform), msys)
   # ensure avoidance of trampolines (a gcc mechanism to implement 
   # some nested functions) as they cause some security software to choke
-  SECUR=-Wtrampolines
+  #SECUR=-Wtrampolines
 endif
 # support cygwin debug package (use += to accept injected options)
 CFLAGS += -std=gnu99 -include std.h -Wall -Wextra -Wundef -Werror $(SECUR)
@@ -115,7 +121,7 @@ LDLIBS := -mwindows $(extralibs) -lcomctl32 -limm32 -lwinmm -lwinspool -lole32 -
 #override LDFLAGS += -L$(shell $(CC) -print-file-name=w32api) -static-libgcc
 #override LDLIBS += -mwindows $(extralibs) -lcomctl32 -limm32 -lwinmm -lwinspool -lole32 -luuid
 
-ifdef DEBUG
+ifeq ($(DEBUG), 1)
 #  CPPFLAGS += -Wno-trampolines
   CFLAGS += -g
 else

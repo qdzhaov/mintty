@@ -9,6 +9,7 @@
 #include "config.h"
 #include "winimg.h"  // winimgs_paint
 #include "tek.h"
+#include "child.h"
 
 #include <winnls.h>
 #include <usp10.h>  // Uniscribe
@@ -140,7 +141,7 @@ int line_scale;
 wchar
 win_linedraw_char(int i)
 {
-  int findex = (term.curs.attr.attr & FONTFAM_MASK) >> ATTR_FONTFAM_SHIFT;
+  int findex = (cterm->curs.attr.attr & FONTFAM_MASK) >> ATTR_FONTFAM_SHIFT;
   if (findex > 10)
     findex = 0;
   struct fontfam * ff = &fontfamilies[findex];
@@ -948,7 +949,7 @@ win_get_font_size(void)
 void
 win_set_font_size(int size, bool sync_size_with_font)
 {
-  trace_resize(("--- win_set_font_size %d %d×%d\n", size, term.rows, term.cols));
+  trace_resize(("--- win_set_font_size %d %d×%d\n", size, cterm->rows, cterm->cols));
   size = size ? sgn(font_size) * min(size, 72) : cfg.font.size;
   if (size != font_size) {
     win_init_fonts(size);
@@ -1178,13 +1179,13 @@ show_curchar_info(char tag)
     show_char_msg(cs);  // does free(cs);
   }
 
-  int line = term.curs.y - term.disptop;
-  if (line < 0 || line >= term.rows) {
+  int line = cterm->curs.y - cterm->disptop;
+  if (line < 0 || line >= cterm->rows) {
     show_char_info(null);
   }
   else {
-    termline * displine = term.displines[line];
-    termchar * dispchar = &displine->chars[term.curs.x];
+    termline * displine = cterm->displines[line];
+    termchar * dispchar = &displine->chars[cterm->curs.x];
     show_char_info(dispchar);
   }
 }
@@ -1198,16 +1199,16 @@ do_update(void)
   //if (kb_trace) printf("[%ld] do_update\n", mtime());
 
 #if defined(debug_cursor) && debug_cursor > 1
-  printf("do_update cursor_on %d @%d,%d\n", term.cursor_on, term.curs.y, term.curs.x);
+  printf("do_update cursor_on %d @%d,%d\n", cterm->cursor_on, cterm->curs.y, cterm->curs.x);
 #endif
   if (update_state == UPDATE_BLOCKED) {
     update_state = UPDATE_IDLE;
     return;
   }
-  cterm = win_tab_active_term();
+  win_tab_actv();
 
   update_skipped++;
-  int output_speed = lines_scrolled / (term.rows ?: cfg.rows);
+  int output_speed = lines_scrolled / (cterm->rows ?: cfg.rows);
   lines_scrolled = 0;
   if ((update_skipped < cfg.display_speedup && cfg.display_speedup < 10
        && output_speed > update_skipped
@@ -1239,15 +1240,15 @@ do_update(void)
   ReleaseDC(wnd, dc);
 
   // Update scrollbar
-  if (cfg.scrollbar && term.show_scrollbar && !term.app_scrollbar) {
+  if (cfg.scrollbar && cterm->show_scrollbar && !cterm->app_scrollbar) {
     int lines = sblines();
     SCROLLINFO si = {
       .cbSize = sizeof si,
       .fMask = SIF_ALL | SIF_DISABLENOSCROLL,
       .nMin = 0,
-      .nMax = lines + term.rows - 1,
-      .nPage = term.rows,
-      .nPos = lines + term.disptop
+      .nMax = lines + cterm->rows - 1,
+      .nPage = cterm->rows,
+      .nPos = lines + cterm->disptop
     };
     SetScrollInfo(wnd, SB_VERT, &si, true);
   }
@@ -1256,9 +1257,9 @@ do_update(void)
   // (We maintain a caret, even though it's invisible, for the benefit of
   // blind people: apparently some helper software tracks the system caret,
   // so we should arrange to have one.)
-  if (term.has_focus) {
-    int x = term.curs.x * cell_width + PADDING;
-    int y = (term.curs.y - term.disptop) * cell_height + OFFSET + PADDING;
+  if (cterm->has_focus) {
+    int x = cterm->curs.x * cell_width + PADDING;
+    int y = (cterm->curs.y - cterm->disptop) * cell_height + OFFSET + PADDING;
     SetCaretPos(x, y);
     if (ime_open) {
       COMPOSITIONFORM cf = {.dwStyle = CFS_POINT, .ptCurrentPos = {x, y}};
@@ -1283,19 +1284,19 @@ static void
 sel_update(bool update_sel_tip)
 {
   static bool selection_tip_active = false;
-  //printf("sel_update tok %d sel %d act %d\n", tip_token, term.selected, selection_tip_active);
-  if (term.selected && cfg.selection_show_size && update_sel_tip) {
+  //printf("sel_update tok %d sel %d act %d\n", tip_token, cterm->selected, selection_tip_active);
+  if (cterm->selected && cfg.selection_show_size && update_sel_tip) {
     int cols, rows;
-    if (term.sel_rect) {
-      rows = abs(term.sel_end.y - term.sel_start.y) + 1;
-      cols = abs(term.sel_end.x - term.sel_start.x);
+    if (cterm->sel_rect) {
+      rows = abs(cterm->sel_end.y - cterm->sel_start.y) + 1;
+      cols = abs(cterm->sel_end.x - cterm->sel_start.x);
     }
     else {
-      rows = term.sel_end.y - term.sel_start.y + 1;
+      rows = cterm->sel_end.y - cterm->sel_start.y + 1;
       if (rows == 1)
-        cols = term.sel_end.x - term.sel_start.x;
+        cols = cterm->sel_end.x - cterm->sel_start.x;
       else
-        cols = term.cols;
+        cols = cterm->cols;
     }
     RECT wr;
     GetWindowRect(wnd, &wr);
@@ -1320,7 +1321,7 @@ sel_update(bool update_sel_tip)
     win_show_tip(x + dx, y + dy, cols, rows);
     selection_tip_active = true;
   }
-  else if (!term.selected && selection_tip_active) {
+  else if (!cterm->selected && selection_tip_active) {
     win_destroy_tip();
     selection_tip_active = false;
   }
@@ -1331,7 +1332,7 @@ show_link(void)
 {
   static int lasthoverlink = -1;
 
-  int hoverlink = term.hovering ? term.hoverlink : -1;
+  int hoverlink = cterm->hovering ? cterm->hoverlink : -1;
   if (hoverlink != lasthoverlink) {
     lasthoverlink = hoverlink;
 
@@ -1449,7 +1450,7 @@ win_set_ime_open(bool open)
 {
   if (open != ime_open) {
     ime_open = open;
-    term.cursor_invalid = true;
+    cterm->cursor_invalid = true;
     win_update(false);
   }
 }
@@ -1706,7 +1707,7 @@ load_background_image_brush(HDC dc, wstring fn)
         // rescale window to aspect ratio of background image
         win_set_pixels(xh - 2 * PADDING - OFFSET - sy, xw - 2 * PADDING);
         // WARNING: rescaling asynchronously at this point makes 
-        // terminal geometry (term.rows, term.cols) inconsistent with 
+        // terminal geometry (cterm->rows, cterm->cols) inconsistent with 
         // running operations and may crash mintty; 
         // postponing the resizing with SendMessage does not help;
         // therefore try to update mintty data now; 
@@ -1993,7 +1994,7 @@ get_bg_filename(void)
       bf = bfexp;
     }
     else if (*bf != '/' && !(*bf && bf[1] == ':')) {
-      char * fgd = foreground_cwd();
+      char * fgd = foreground_cwd(cterm);
       if (fgd) {
         char * bfexp = asform("%s/%s", fgd, bf);
         free(bf);
@@ -2466,7 +2467,7 @@ old_apply_attr_colour(cattr a, attr_colour_mode mode)
   if (do_dim && (a.attr & ATTR_DIM)) {
     // we dim by blending fg 50-50 with the default terminal bg
     // (x & 0xFEFEFEFE) >> 1  halves each of the RGB components of x .
-    // win_get_colour(..) takes term.rvideo into account.
+    // win_get_colour(..) takes cterm->rvideo into account.
     fg = ((fg & 0xFEFEFEFE) >> 1) + ((win_get_colour(BG_COLOUR_I) & 0xFEFEFEFE) >> 1);
   }
 
@@ -2509,7 +2510,7 @@ apply_bold_colour(colour_i *pfgi)
     return true;  // both thickened
   }
   // switchable bold_colour
-  if (term.enable_bold_colour && CCL_DEFAULT(*pfgi)
+  if (cterm->enable_bold_colour && CCL_DEFAULT(*pfgi)
       && colours[BOLD_COLOUR_I] != (colour)-1
      )
     *pfgi = BOLD_COLOUR_I;
@@ -2615,7 +2616,7 @@ apply_attr_colour(cattr a, attr_colour_mode mode)
   if (do_dim && (a.attr & ATTR_DIM)) {
     // we dim by blending fg 50-50 with the default terminal bg
     // (x & 0xFEFEFEFE) >> 1  halves each of the RGB components of x .
-    // win_get_colour(..) takes term.rvideo into account.
+    // win_get_colour(..) takes cterm->rvideo into account.
     fg = ((fg & 0xFEFEFEFE) >> 1) + ((win_get_colour(BG_COLOUR_I) & 0xFEFEFEFE) >> 1);
   }
 
@@ -2711,7 +2712,7 @@ win_text(int tx, int ty, wchar *text, int len, cattr attr, cattr *textattr, usho
 
  /* Only want the left half of double width lines */
   // check this before scaling up x to pixels!
-  if (lattr != LATTR_NORM && tx * 2 >= term.cols)
+  if (lattr != LATTR_NORM && tx * 2 >= cterm->cols)
     return;
 
  /* Convert to window coordinates */
@@ -2796,7 +2797,7 @@ win_text(int tx, int ty, wchar *text, int len, cattr attr, cattr *textattr, usho
         fg = bg;
       bg = cursor_colour;
 #ifdef debug_cursor
-      printf("set cursor (colour %06X) @(row %d col %d) cursor_on %d\n", bg, (y - PADDING - OFFSET) / cell_height, (x - PADDING) / char_width, term.cursor_on);
+      printf("set cursor (colour %06X) @(row %d col %d) cursor_on %d\n", bg, (y - PADDING - OFFSET) / cell_height, (x - PADDING) / char_width, cterm->cursor_on);
 #endif
     }
   }
@@ -2964,7 +2965,7 @@ win_text(int tx, int ty, wchar *text, int len, cattr attr, cattr *textattr, usho
   for (int i = 0; i < len; i++) {
     if (is_high_surrogate(text[i]))
       // This does not have the expected effect so we keep splitting up 
-      // non-BMP characters into single character chunks for now (term.c)
+      // non-BMP characters into single character chunks for now (cterm->c)
       dxs[i] = 0;
     else
       dxs[i] = dx;
@@ -2982,7 +2983,7 @@ win_text(int tx, int ty, wchar *text, int len, cattr attr, cattr *textattr, usho
   int width = char_width * (combining ? 1 : ulen);
   RECT box = {
     .top = y, .bottom = y + cell_height,
-    .left = x, .right = min(x + width, cell_width * term.cols + PADDING)
+    .left = x, .right = min(x + width, cell_width * cterm->cols + PADDING)
   };
   RECT box0 = box;
   if (ldisp2) {  // e.g. attr.attr & ATTR_ITALIC
@@ -3090,11 +3091,11 @@ win_text(int tx, int ty, wchar *text, int len, cattr attr, cattr *textattr, usho
     // extend into padding area
     if (!tx)
       bgbox.left = 0;
-    if (bgbox.right >= PADDING + cell_width * term.cols)
+    if (bgbox.right >= PADDING + cell_width * cterm->cols)
       bgbox.right += PADDING;
     if (!ty)
       bgbox.top = 0;
-    if (ty == term.rows - 1) {
+    if (ty == cterm->rows - 1) {
       RECT cr;
       GetClientRect(wnd, &cr);
       if (win_search_visible())
@@ -3116,7 +3117,7 @@ win_text(int tx, int ty, wchar *text, int len, cattr attr, cattr *textattr, usho
   if (lpresrtl) {
     coord_transformed = SetGraphicsMode(dc, GM_ADVANCED);
     if (coord_transformed && GetWorldTransform(dc, &old_xform)) {
-      XFORM xform = (XFORM){-1.0, 0.0, 0.0, 1.0, term.cols * cell_width + 2 * PADDING, 0.0};
+      XFORM xform = (XFORM){-1.0, 0.0, 0.0, 1.0, cterm->cols * cell_width + 2 * PADDING, 0.0};
       coord_transformed = SetWorldTransform(dc, &xform);
     }
   }
@@ -3930,7 +3931,7 @@ draw:;
     if (layer)
       _cc = ((_cc & 0xFEFEFEFE) >> 1) + ((win_get_colour(BG_COLOUR_I) & 0xFEFEFEFE) >> 1);
 #if defined(debug_cursor) && debug_cursor > 1
-    printf("painting cursor_type '%c' cursor_on %d\n", "?b_l"[term_cursor_type()+1], term.cursor_on);
+    printf("painting cursor_type '%c' cursor_on %d\n", "?b_l"[term_cursor_type()+1], cterm->cursor_on);
 #endif
     HPEN oldpen = SelectObject(dc, CreatePen(PS_SOLID, 0, _cc));
     switch (term_cursor_type()) {
@@ -3993,7 +3994,7 @@ draw:;
 		6   full block
           */
           int up = 0;
-          switch (term.cursor_size) {
+          switch (cterm->cursor_size) {
             when 1: up = -2;
             when 2: up = line_width - 1;
             when 3: up = cell_height / 3 - 1;
@@ -4534,7 +4535,7 @@ win_set_colour(colour_i i, colour c)
 colour
 win_get_colour(colour_i i)
 {
-  if (term.rvideo && CCL_DEFAULT(i))
+  if (cterm->rvideo && CCL_DEFAULT(i))
     return colours[i ^ 2];  // [BOLD]_FG_COLOUR_I  <-->  [BOLD]_BG_COLOUR_I
   return i < COLOUR_NUM ? colours[i] : 0;
 }
@@ -4595,7 +4596,7 @@ win_paint(void)
 {
   PAINTSTRUCT p;
   dc = BeginPaint(wnd, &p);
-  cterm = win_tab_active_term();
+  win_tab_actv();
   // better invalidate more than less; limited to text area in term_invalidate
   term_invalidate(
     (p.rcPaint.left - PADDING) / cell_width,
@@ -4624,8 +4625,8 @@ win_paint(void)
       (p.fErase
        || p.rcPaint.left < PADDING
        || p.rcPaint.top < OFFSET + PADDING
-       || p.rcPaint.right >= PADDING + cell_width * term.cols
-       || p.rcPaint.bottom >= OFFSET + PADDING + cell_height * term.rows
+       || p.rcPaint.right >= PADDING + cell_width * cterm->cols
+       || p.rcPaint.bottom >= OFFSET + PADDING + cell_height * cterm->rows
       )
      )
   {
@@ -4639,7 +4640,7 @@ win_paint(void)
        * So let's keep finer control and paint background with text chunks 
          but not modify the established behaviour if there is no background.
      */
-    colour bg_colour = colours[term.rvideo ? FG_COLOUR_I : BG_COLOUR_I];
+    colour bg_colour = colours[cterm->rvideo ? FG_COLOUR_I : BG_COLOUR_I];
 #ifdef debug_padding_background
     // visualize background for testing
     bg_colour = RGB(222, 0, 0);
@@ -4654,8 +4655,8 @@ win_paint(void)
     // mask inner area not to pad with background
     ExcludeClipRect(dc, PADDING,
                         OFFSET + PADDING,
-                        PADDING + cell_width * term.cols,
-                        OFFSET + PADDING + cell_height * term.rows);
+                        PADDING + cell_width * cterm->cols,
+                        OFFSET + PADDING + cell_height * cterm->rows);
 
     // fill outer padding area with background
     int sy = win_search_visible() ? SEARCHBAR_HEIGHT : 0;

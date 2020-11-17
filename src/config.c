@@ -26,7 +26,6 @@
 #define dont_support_blurred
 
 
-#define term (*cterm)
 string config_dir = 0;
 static wstring rc_filename = 0;
 static char linebuf[444];
@@ -217,11 +216,13 @@ const config default_cfg = {
   .menu_title_ctrl_l = "Ws",
   .menu_title_ctrl_r = "Ws",
   .geom_sync = 0,
-  .tabbar = 0,
+  .tab_bar_show = 1,
+  .indicator = 1,
+  .tab_font_size= 24 ,
   .col_spacing = 0,
   .row_spacing = 0,
   .padding = 1,
-  .partline= 0,
+  .partline= 4,
   .ligatures = 1,
   .ligatures_support = 0,
   .handle_dpichanged = 2,
@@ -461,6 +462,7 @@ options[] = {
   {"Log", OPT_WSTRING, offcfg(log)},
   {"Logging", OPT_BOOL, offcfg(logging)},
   {"Title", OPT_WSTRING, offcfg(title)},
+  {"title_settable", OPT_BOOL, offcfg(title_settable)},
   {"Utmp", OPT_BOOL, offcfg(create_utmp)},
   {"Window", OPT_WINDOW, offcfg(window)},
   {"X", OPT_INT, offcfg(x)},
@@ -503,7 +505,9 @@ options[] = {
   {"MenuTitleCtrlRight", OPT_STRING, offcfg(menu_title_ctrl_r)},
 
   {"SessionGeomSync", OPT_INT, offcfg(geom_sync)},
-  {"TabBar", OPT_BOOL, offcfg(tabbar)},
+  {"tab_bar_show", OPT_BOOL, offcfg(tab_bar_show)},
+  {"indicator", OPT_BOOL, offcfg(indicator)},
+  {"tab_font_size", OPT_BOOL, offcfg(tab_font_size)},
   {"ColSpacing", OPT_INT, offcfg(col_spacing)},
   {"RowSpacing", OPT_INT, offcfg(row_spacing)},
   {"Padding", OPT_INT, offcfg(padding)},
@@ -1976,8 +1980,8 @@ static void
 current_size_handler(control *unused(ctrl), int event)
 {
   if (event == EVENT_ACTION) {
-    new_cfg.cols = term.cols;
-    new_cfg.rows = term.rows;
+    new_cfg.cols = cterm->cols;
+    new_cfg.rows = cterm->rows;
     dlg_refresh(cols_box);
     dlg_refresh(rows_box);
   }
