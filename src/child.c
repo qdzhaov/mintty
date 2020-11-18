@@ -565,6 +565,23 @@ child_proc(void)
   }
 }
 
+void child_terminate(STerm* pterm) {
+  kill(-(pterm->child.pid      ), SIGKILL);
+
+  // Seems that sometimes cygwin leaves process in non-waitable and
+  // non-alive state. The result for that is that there will be
+  // unkillable tabs.
+  // This stupid hack solves the problem.
+  // TODO: Find out better way to solve this. Now the child processes are
+  // not always cleaned up.
+  int cpid = (pterm->child.pid      );
+  for (STab**t=win_tabs();*t;t++){
+    if ((*t)->terminal->child.pid == cpid){ 
+      (*t)->terminal->child.pid = 0;
+      (*t)->terminal->child.killed= 1;
+    }
+  }
+}
 void
 child_kill(bool point_blank)
 {
@@ -1229,23 +1246,6 @@ child_launch(STerm* pterm,int n, int argc, char * argv[], int moni)
   }
 }
 //============================
-void child_terminate(STerm* pterm) {
-  kill(-(pterm->child.pid      ), SIGKILL);
-
-  // Seems that sometimes cygwin leaves process in non-waitable and
-  // non-alive state. The result for that is that there will be
-  // unkillable tabs.
-  //
-  // This stupid hack solves the problem.
-  //
-  // TODO: Find out better way to solve this. Now the child processes are
-  // not always cleaned up.
-  int cpid = (pterm->child.pid      );
-  for (STab**t=win_tabs();*t;t++){
-    if ((*t)->terminal->child.pid == cpid) 
-      (*t)->terminal->child.pid = 0;
-  }
-}
 void
 child_free(STerm* pterm)
 {

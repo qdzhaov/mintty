@@ -134,7 +134,7 @@ create_controls(HWND wnd, char *path)
    /*
     * Here we must create the basic standard controls.
     */
-    ctrlposinit(&cp, wnd, 3, 3, DIALOG_HEIGHT - 17);
+    ctrlposinit(&cp, wnd, 3, 3, dialog_height - 17);
     wc = &ctrls_base;
     base_id = IDCX_STDBASE;
   }
@@ -434,6 +434,32 @@ tree_proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp, UINT_PTR uid, DWORD_PTR dat
  * (Being a dialog procedure, in general it returns 0 if the default
  * dialog processing should be performed, and 1 if it should not.)
  */
+static void OnVScroll(HWND wnd,UINT nSBCode, int nPos) 
+{
+  SCROLLINFO si;
+  memset(&si,0,sizeof(si));
+  si.cbSize = sizeof(SCROLLINFO);
+  si.fMask = SIF_ALL;
+  if(!GetScrollInfo(wnd,SB_VERT,&si)) return;
+  int sy;
+  switch (nSBCode)
+  {
+    when SB_BOTTOM  : nPos = si.nMax;
+    when SB_TOP     : nPos = si.nMin;
+    when SB_LINEUP  : nPos -= 10; if (nPos<si.nMin) nPos = si.nMin;
+    when SB_LINEDOWN: nPos += 10; if (nPos>si.nMax) nPos = si.nMax;
+    when SB_PAGEUP  : nPos -= 50; if (nPos<si.nMin) nPos = si.nMin;
+    when SB_PAGEDOWN: nPos += 50; if (nPos>si.nMax) nPos = si.nMax;
+    when SB_ENDSCROLL:;
+    when SB_THUMBPOSITION: sy=si.nPos-nPos;
+    when SB_THUMBTRACK   : sy=si.nPos-nPos;
+    otherwise: nPos=si.nPos;
+  }
+  sy=si.nPos-nPos; si.nPos=nPos;
+  ScrollWindowEx(wnd,0,sy,0,0,0,0,SW_INVALIDATE);
+  SetScrollInfo(wnd,SB_VERT,&si,SIF_ALL);
+}
+static HFONT cfdfont=0;
 static INT_PTR CALLBACK
 config_dialog_proc(HWND wnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -469,7 +495,16 @@ config_dialog_proc(HWND wnd, UINT msg, WPARAM wParam, LPARAM lParam)
 #endif
 
   switch (msg) {
+		when WM_VSCROLL: OnVScroll(wnd,LOWORD(wParam),HIWORD(wParam));
+    when WM_SETFONT: cfdfont=(HFONT)wParam;
+    when WM_GETFONT: return (WPARAM)cfdfont;
     when WM_INITDIALOG: {
+      win_set_font(wnd);
+      SetWindowPos(wnd,0,0,0,
+                   240*cfg.gui_font_size*dpi/500,
+                   190*cfg.gui_font_size*dpi/500,
+                   SWP_NOMOVE|SWP_NOZORDER);
+      SetWindowLong(wnd, GWL_STYLE,GetWindowLong(wnd, GWL_STYLE)|WS_VSCROLL ); 
       ctrlbox = ctrl_new_box();
       setup_config_box(ctrlbox);
       windlg_init();
@@ -483,6 +518,17 @@ config_dialog_proc(HWND wnd, UINT msg, WPARAM wParam, LPARAM lParam)
       GetWindowRect(GetParent(wnd), &r);
       dlg.wnd = wnd;
 
+      GetClientRect(wnd,&r);
+      SCROLLINFO si;
+      memset(&si,0,sizeof(si));
+      si.cbSize = sizeof(SCROLLINFO);
+      si.fMask = SIF_ALL;
+      si.nPos = 0;
+      si.nMin = 0;
+      si.nMax = r.bottom;
+      si.nPage=1;
+      si.nTrackPos=0;
+      SetScrollInfo(wnd,SB_VERT, &si,1);
      /*
       * Create the actual GUI widgets.
       */
@@ -498,7 +544,7 @@ config_dialog_proc(HWND wnd, UINT msg, WPARAM wParam, LPARAM lParam)
       r.left = 3;
       r.right = r.left + 64;
       r.top = 3;
-      r.bottom = r.top + DIALOG_HEIGHT - 26;
+      r.bottom = r.top + dialog_height - 26;
       MapDialogRect(wnd, &r);
       HWND treeview =
         CreateWindowExA(WS_EX_CLIENTEDGE, WC_TREEVIEWA, "",
@@ -507,8 +553,9 @@ config_dialog_proc(HWND wnd, UINT msg, WPARAM wParam, LPARAM lParam)
                        | TVS_SHOWSELALWAYS, r.left, r.top, r.right - r.left,
                        r.bottom - r.top, wnd, (HMENU) IDCX_TREEVIEW, inst,
                        null);
-      WPARAM font = SendMessage(wnd, WM_GETFONT, 0, 0);
-      SendMessage(treeview, WM_SETFONT, font, MAKELPARAM(true, 0));
+      win_set_font(treeview);
+
+
       treeview_faff tvfaff;
       tvfaff.treeview = treeview;
       memset(tvfaff.lastat, 0, sizeof(tvfaff.lastat));
@@ -578,6 +625,7 @@ config_dialog_proc(HWND wnd, UINT msg, WPARAM wParam, LPARAM lParam)
         }
       }
     }
+      SetWindowLong(wnd, GWL_STYLE,GetWindowLong(wnd, GWL_STYLE)|WS_VSCROLL ); 
 
 #ifdef darken_dialog_elements
     when WM_CTLCOLORDLG      // dialog background
@@ -790,10 +838,10 @@ win_open_config(void)
     });
     initialised = true;
   }
+  dialog_height=DIALOG_HEIGHT;
 
   hook_windows(scale_options);
-  config_wnd = CreateDialog(inst, MAKEINTRESOURCE(IDD_MAINBOX),
-                            wnd, config_dialog_proc);
+  config_wnd = CreateDialog(inst, MAKEINTRESOURCE(IDD_MAINBOX), wnd, config_dialog_proc);
   unhook_windows();
   // At this point, we could actually calculate the size of the 
   // dialog box used for the Options menu; however, the resulting 

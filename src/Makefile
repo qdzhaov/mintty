@@ -102,7 +102,8 @@ ifneq ($(platform), msys)
   #SECUR=-Wtrampolines
 endif
 # support cygwin debug package (use += to accept injected options)
-CFLAGS += -std=gnu99 -include std.h -Wall -Wextra -Wundef -Werror $(SECUR)
+CFLAGS += -std=gnu99 -include std.h -Wall -Wextra -Wundef  $(SECUR) \
+					-Werror  -Wno-stringop-truncation -Wno-stringop-overflow
 
 ifeq ($(shell VER=`$(CC) -dumpversion`; expr $${VER%.*} '>=' 4.5), 1)
   CFLAGS += -mtune=atom

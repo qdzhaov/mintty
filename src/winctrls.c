@@ -44,7 +44,8 @@ ctrlposinit(ctrlpos * cp, HWND wnd, int leftborder, int rightborder,
 {
   RECT r, r2;
   cp->wnd = wnd;
-  cp->font = SendMessage(wnd, WM_GETFONT, 0, 0);
+  cp->font = win_set_font(wnd);
+    //SendMessage(wnd, WM_GETFONT, 0, 0);
   cp->ypos = topborder;
   GetClientRect(wnd, &r);
   r2.left = r2.top = 0;

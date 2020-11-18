@@ -1,3 +1,5 @@
+//code for ShortCuts Key Process
+//included by wininput.c
 struct KNVDef{
   char*name;
   int key;
@@ -247,7 +249,7 @@ static bool transparency_tuned;
 
 #define dont_debug_transparency
 enum funct_type{
-  FT_CMD=0,FT_NORM,FT_KEY,FT_KEYV,FT_PAR1,FT_PAR2,
+  FT_NULL=0,FT_CMD,FT_NORM,FT_NORV,FT_KEY,FT_KEYV,FT_PAR1,FT_PAR2,
   FT_RAWS,FT_ESCC,FT_SHEL
 };
 struct function_def {
@@ -257,6 +259,7 @@ struct function_def {
     WPARAM cmd;
     void *f;
     void (*fct)(void);
+    int  (*fctv)(void);
     void (*fct_key)(uint key, mod_keys mods);
     int  (*fct_keyv)(uint key, mod_keys mods);
     void (*fct_par1)(int p0);
@@ -433,13 +436,14 @@ static void tab_prev	   (){win_tab_change(-1);}
 static void tab_next	   (){win_tab_change( 1);}
 static void tab_move_prev(){win_tab_move  (-1);}
 static void tab_move_next(){win_tab_move  ( 1);}
-
+static int  vtabclose    (){if(!child_is_alive(cterm)) {win_tab_clean();return 1;}return 0;}
+static void win_hide() { ShowWindow(wnd, IsIconic(wnd) ?SW_RESTORE: SW_MINIMIZE ); }
 static void super_down(uint key, mod_keys mods) { super_key = key; (void)mods; }
 static void hyper_down(uint key, mod_keys mods) { hyper_key = key; (void)mods; }
-
+static void win_ctrlmode(){tabctrling=2;}
+static uint mflags_lock_title() { return cfg.title_settable ? MF_ENABLED : MF_GRAYED; }
 static uint mflags_copy() { return cterm->selected ? MF_ENABLED : MF_GRAYED; }
 static uint mflags_kb_select() { return cterm->selection_pending; }
-static uint mflags_lock_title() { return cfg.title_settable ? MF_ENABLED : MF_GRAYED; }
 static uint mflags_fullscreen() { return win_is_fullscreen ? MF_CHECKED : MF_UNCHECKED; }
 static uint mflags_zoomed() { return IsZoomed(wnd) ? MF_CHECKED: MF_UNCHECKED; }
 static uint mflags_flipscreen() { return cterm->show_other_screen ? MF_CHECKED : MF_UNCHECKED; }
@@ -450,6 +454,35 @@ static uint mflags_auto_repeat() { return cterm->auto_repeat ? MF_CHECKED : MF_U
 static uint mflags_options() { return config_wnd ? MF_GRAYED : MF_ENABLED; }
 static uint mflags_tek_mode() { return tek_mode ? MF_ENABLED : MF_GRAYED; }
 void win_close() { child_terminate(cterm); }
+typedef struct pstr{ short len; char s[1]; }pstr;
+typedef struct pwstr{ short len; wchar s[1]; }pwstr;
+pwstr *pwsdup(wchar*s){
+  int len=wcslen(s);
+  pwstr *d=(pwstr*)malloc(len+2);
+  wcsncpy(d->s,s,len);
+  d->len=len;
+  return d;
+}
+pstr *psdup(char*s){
+  int len=strlen(s);
+  pstr *d=(pstr*)malloc(len+4);
+  strncpy(d->s,s,len);
+  d->len=len;
+  return d;
+}
+
+static void wpwstr(pwstr*s){//FT_RAWS
+  provide_input(s->s[0]);
+  child_sendw(cterm,s->s, s->len );
+}
+static void wpesccode(int code,int mods){//FT_ESCC
+  char buf[33];
+  int len = sprintf(buf, mods ? "\e[%i;%u~" : "\e[%i~", code, mods + 1);
+  child_send(cterm,buf, len);
+}
+static void shellcmd(char*cmd){//FT_SHEL
+  term_cmd(cmd);
+}
 /* Keyboard handling */
 typedef void(*QFT)(int,int);
 static struct function_def cmd_defs[] = {
@@ -667,6 +700,7 @@ static int fundef_run(char*cmd,uint key, mod_keys mods){
       when FT_CMD :send_syscommand(fundef->cmd);
       when FT_NORM:fundef->fct();
       when FT_KEY :fundef->fct_key(key,mods);
+      when FT_NORV:return fundef->fctv();
       when FT_KEYV:return fundef->fct_keyv(key,mods);
       when FT_PAR1:fundef->fct_par1(fundef->p0);
       when FT_PAR2:fundef->fct_par2(fundef->p0,fundef->p1);
@@ -690,69 +724,107 @@ static int fundef_stat(char*cmd){
   }
   return 0;
 } 
-struct HKDef{
-  int modr,mods;
-  void*f;
+struct SCKDef{
+  int moda,mods;
+  union {
+    WPARAM cmd;
+    void *f;
+    void (*fct)(void);
+    int  (*fctv)(void);
+    void (*fct_key)(uint key, mod_keys mods);
+    int  (*fct_keyv)(uint key, mod_keys mods);
+    void (*fct_par1)(int p0);
+    void (*fct_par2)(int p0,int p1);
+  };
   short key,type;
   int p0,p1,p2;
-  struct HKDef*next;
+  struct SCKDef*next;
 };
-static long hkmask[256]={0};
-struct HKDef *hkdef[256];
-int modr2s(int modr){
-  int r=(modr&0xFF)|((modr>>8)&0xFF)|((modr>>16)&0xFF);
-  if(r&0xF0){
-    if(r&0x80)return 0x11;
-    else return 0x10;
-  }
+static int  sckmask[256]={0};
+static int  sckwmask[256]={0};
+static struct SCKDef *sckdef[256]={0};
+static struct SCKDef *sckwdef[256]={0};
+//modkey < 7,
+static int modr2s(int moda){
+  int r=(moda&0xFF)|((moda>>8)&0xFF)|((moda>>16)&0xFF);
   return r;
 }
-typedef struct pstr{
-  short len;
-  char s[1];
-}pstr;
-typedef struct pwstr{
-  short len;
-  wchar s[1];
-}pwstr;
-static void wpwstr(pwstr*s){//FT_RAWS
-  provide_input(s->s[0]);
-  child_sendw(cterm,s->s, s->len );
+//asume MKD_WIN=8,depend on MDK_KEYS
+static int packmod(int mods){
+  if(mods&0x70)return 0x8|((mods>>4)&0x7);
+  return mods&7;
 }
-static void wpesccode(int code,int mods){//FT_ESCC
-  char buf[33];
-  int len = sprintf(buf, mods ? "\e[%i;%u~" : "\e[%i~", code, mods + 1);
-  child_send(cterm,buf, len);
-}
-static void shellcmd(char*cmd){//FT_SHEL
-  term_cmd(cmd);
-}
-void sethk(int modr,uint key,int ft,void*func){
-  struct HKDef **pp=&hkdef[key],*n;
-  int mods=modr2s(modr);;
-  //S+A*2+C*4+W*8+U*16+Y*32+Z*64;
-  hkmask[key]|=1<mods;
-  n=new(struct HKDef);
-  n->f=func;
-  n->type=ft;
-  n->key=key;
-  n->mods=mods;
-  n->modr=modr;
-  n->next=*pp;
-  *pp=n;
-}
-void dehk(struct HKDef *hkd){
-  switch(hkd->type){
-    when FT_RAWS or FT_SHEL or FT_ESCC:
-        free(hkd->f);
+static void desck(struct SCKDef *sckd){
+  switch(sckd->type){
+    when FT_RAWS or FT_SHEL :
+        free(sckd->f);
   }
 }
-void dehkk(int key,int mods,int modr){
-  hkmask[key]&=~(1<<mods);
-  struct HKDef **pp=&hkdef[key],*p;
+static void setsck(int moda,uint key,int ft,void*func){
+  struct SCKDef **pp,*n;
+  int *pm;
+  int mods=modr2s(moda);;
+  moda|=mods;
+  if(ft==FT_NULL){
+    int nmask=0;
+    if(mods&MDK_WIN){
+      pm=&sckwmask[key];
+      pp=&sckwdef[key];
+    }else{
+      pm=&sckmask[key];
+      pp=&sckdef[key];
+    }
+    for(n=*pp;n;pp=&n->next,n=n->next){
+      int m=0;
+      if(n->moda&~0xF){
+        m=(moda==n->moda);
+      }else {
+        m=(n->moda==(moda&0xf));
+      }
+      if(m){
+        *pp=n->next;
+        desck(n);  
+      }else{
+        nmask|=(1<<packmod(n->mods));
+      }
+    }
+    *pm=nmask;
+  } else{
+    if(mods&MDK_WIN){
+      pm=&sckwmask[key];
+      pp=&sckwdef[key];
+    }else{
+      pm=&sckmask[key];
+      pp=&sckdef[key];
+    }
+    for(n=*pp;n;pp=&n->next,n=n->next){
+      int m=0;
+      if(n->moda&~0xF){
+        m=(moda==n->moda);
+      }else {
+        m=(n->moda==(moda&0xf));
+      }
+      if(m)break;
+    }
+    if(!n){
+      n=new(struct SCKDef);
+      n->next=*pp;
+      *pp=n;
+    }
+    n->f=func;
+    n->type=ft;
+    n->key=key;
+    n->mods=mods;
+    n->moda=moda;
+    *pm|=(1<<packmod(mods));
+  }
+}
+void desckk(int key,int mods,int moda){
+  sckmask[key]&=~(1<<mods);
+  struct SCKDef **pp=&sckdef[key],*p;
   for(p=*pp;p;p=*pp){
-    if(p->modr==modr){
-      dehk(p);
+    if(p->moda==moda){
+      desck(p);
       *pp=p->next;
       free(p);
       break;
@@ -760,15 +832,55 @@ void dehkk(int key,int mods,int modr){
     pp=&p->next;
   }
 }
-int hk_run(uint key,int modr){
-  (void)key;(void)modr;
-  shellcmd(0);
-  wpesccode(0,modr);
-  wpwstr(0);
-  return 1;
+int sck_runr(struct SCKDef*pd,uint key,int moda){
+  int res=1;
+  switch(pd->type){
+    when FT_CMD : send_syscommand(pd->cmd);
+    when FT_NORM: pd->fct();
+    when FT_KEY : pd->fct_key(key,moda);
+    when FT_NORV: res=pd->fctv();
+    when FT_KEYV: res=pd->fct_keyv(key,moda);
+    when FT_PAR1: pd->fct_par1(pd->p0);
+    when FT_PAR2: pd->fct_par2(pd->p0,pd->p1);
+    when FT_RAWS: wpwstr(pd->f);
+    when FT_ESCC: wpesccode(pd->cmd,moda);
+    when FT_SHEL: shellcmd(pd->f);
+  }
+  return res;
 }
-void pstrhk(char*shk){
-  char * cmdp = shk;
+
+int sckw_run(uint key,int moda){
+  struct SCKDef*pd;
+  for(pd=sckwdef[key];pd;pd=pd->next){
+    int m=0;
+    if(pd->moda&~0xF){
+      m=(moda==pd->moda);
+    }else {
+      m=(pd->moda==(moda&0xf));
+    }
+    if(m){
+      return sck_runr(pd,key,moda);
+    }
+  }
+  return 0;
+}
+int sck_run(uint key,int moda){
+  struct SCKDef*pd;
+  for(pd=sckdef[key];pd;pd=pd->next){
+    int m=0;
+    if(pd->moda&~0xF){
+      m=(moda==pd->moda);
+    }else {
+      m=(pd->moda==(moda&0xf));
+    }
+    if(m){
+      return sck_runr(pd,key,moda);
+    }
+  }
+  return 0;
+}
+void pstrsck(char*ssck){
+  char * cmdp = ssck;
   char sepch = ';';
   if ((uchar)*cmdp <= (uchar)' ') sepch = *cmdp++;
     // check for multi-line separation
@@ -831,17 +943,23 @@ void pstrhk(char*shk){
 #if defined(debug_def_keys) && debug_def_keys > 1
     printf("tag <%s>: cmd <%s> cmd0 <%s> mod %X fct <%s>\n", tag, cmdp, cmd0, mod_cmd, paramp);
 #endif
+    for(;*paramp==' ';paramp++);
     wchar * fct = cs__utftowcs(paramp);
     uint code;
     int len=wcslen(fct);
     switch(*fct){
+      when 0:
+          // empty definition (e.g. "A+Enter:;"), shall disable 
+          // further shortcut handling for the input key but 
+          // trigger fall-back to "normal" key handling (with mods)
+            setsck(mod_cmd,key,FT_NULL,0);
       when '"' or '\'' :
           if(fct[len-1]==*fct) {//raww string "xxx" or 'xxx'
             fct[len-1]=0;
             pwstr *s=(pwstr*)malloc(len+2);
             s->len=len-2;
             wcsncpy(s->s,fct+1,len-2);
-            sethk(mod_cmd,key,FT_RAWS,s);
+            setsck(mod_cmd,key,FT_RAWS,s);
           }
       when '^':
           if(len==2){
@@ -857,28 +975,24 @@ void pstrhk(char*shk){
             s->len=1;
             s->s[0]=cc[1];
             s->s[1]=0;
-            sethk(mod_cmd,key,FT_RAWS,s);
+            setsck(mod_cmd,key,FT_RAWS,s);
           }
       when '`':
           if (fct[len - 1] == '`') {//`shell cmd`
             fct[len - 1] = 0;
             char * cmd = cs__wcstombs(&fct[1]);
             if (*cmd) {
-              sethk(mod_cmd,key,FT_SHEL,cmd);
+              setsck(mod_cmd,key,FT_SHEL,cmd);
             }
           }
       when '0' ... '9':
           if (sscanf (paramp, "%u%c", & code, &(char){0}) == 1) {//key escape
-            sethk(mod_cmd,key,FT_ESCC,(void*)(long)code);
+            setsck(mod_cmd,key,FT_ESCC,(void*)(long)code);
           }
-      when 0:
-          // empty definition (e.g. "A+Enter:;"), shall disable 
-          // further shortcut handling for the input key but 
-          // trigger fall-back to "normal" key handling (with mods)
       otherwise: 
       {
         struct function_def * fd = function_def(cmd);
-          if(fd)sethk(mod_cmd,key,fd->type,fd->f);
+          if(fd)setsck(mod_cmd,key,fd->type,fd->f);
       }
     }
     free(fct);
@@ -893,78 +1007,108 @@ void pstrhk(char*shk){
 
 }
 
-void updatehk(){
+void win_update_shortcuts(){
   int i;
-  memset (hkmask,0,sizeof(hkmask));
+  memset (sckmask,0,sizeof(sckmask));
   for(i=0;i<256;i++){
-    struct HKDef *p=hkdef[i],*n;
+    struct SCKDef *p=sckdef[i],*n;
     for(;p;p=n){
-      dehk(p); n=p->next; free(p);
+      desck(p); n=p->next; free(p);
     }
-    hkdef[i]=NULL;
+    sckdef[i]=NULL;
   };
   /*
   typedef enum { MDK_SHIFT = 1, MDK_ALT = 2, MDK_CTRL = 4, 
     MDK_WIN = 8, MDK_SUPER = 16, MDK_HYPER = 32 } mod_keys;
     */
+#undef W
 #define S MDK_SHIFT
 #define A MDK_ALT
 #define C MDK_CTRL
+#define W MDK_WIN
 #define AS MDK_ALT+MDK_SHIFT
 #define CS MDK_CTRL+MDK_SHIFT
-#define  SETHK(m,k,t,f) sethk(m,k,t,(void*)f)
-  SETHK(AS,VK_RETURN    ,FT_CMD ,IDM_FULLSCREEN_ZOOM);
-  SETHK(A,VK_RETURN     ,FT_CMD ,IDM_FULLSCREEN );
-  SETHK(S,VK_APPS       ,FT_CMD ,SC_KEYMENU);
-  SETHK(C,VK_APPS       ,FT_NORM,win_key_menu);
-  SETHK(0,VK_APPS       ,FT_NORM,win_key_menu);
-  SETHK(A,VK_SPACE      ,FT_CMD ,SC_KEYMENU);
+#define WS MDK_WIN+MDK_SHIFT
+#define SETSCK(m,k,t,f) setsck(m,k,t,(void*)f)
+  SETSCK(AS,VK_RETURN    ,FT_CMD ,IDM_FULLSCREEN_ZOOM);
+  SETSCK(A,VK_RETURN     ,FT_CMD ,IDM_FULLSCREEN );
+  SETSCK(0,VK_RETURN     ,FT_NORV,vtabclose);
+  SETSCK(0,VK_ESCAPE     ,FT_NORV,vtabclose);
+  SETSCK(S,VK_APPS       ,FT_CMD ,SC_KEYMENU);
+  SETSCK(C,VK_APPS       ,FT_KEYV,win_key_menu);
+  SETSCK(0,VK_APPS       ,FT_KEYV,win_key_menu);
+  if(cfg.window_shortcuts){
+    SETSCK(A,VK_SPACE      ,FT_CMD ,SC_KEYMENU);
+  }
 
+  if (cfg.switch_shortcuts) {
+    SETSCK(CS,VK_TAB    ,FT_NORM,tab_prev	    );
+    SETSCK(C ,VK_TAB    ,FT_NORM,tab_next	    );
+  }
+  if(cfg.win_shortcuts ){
+    SETSCK(W ,'Q'        ,FT_NORM,app_close    );
+    SETSCK(W ,'T'        ,FT_NORM,win_tab_create);
+    SETSCK(W ,'W'        ,FT_NORM,win_close    );
+    SETSCK(W ,'X'        ,FT_NORM,win_ctrlmode );
+    SETSCK(W ,'Z'        ,FT_NORM,win_hide     );
+    SETSCK(W ,VK_LEFT    ,FT_NORM,tab_prev	   );
+    SETSCK(W ,VK_RIGHT   ,FT_NORM,tab_next	   );
+    SETSCK(WS,VK_LEFT    ,FT_NORM,tab_move_prev);
+    SETSCK(WS,VK_RIGHT   ,FT_NORM,tab_move_next);
+  }
   if(cfg.clip_shortcuts ){
-    SETHK(C,VK_INSERT  ,FT_NORM,term_copy);
-    SETHK(S,VK_INSERT  ,FT_NORM,win_paste);
-    SETHK(C,VK_F12     ,FT_NORM,term_copy);
-    SETHK(S,VK_F12     ,FT_NORM,win_paste);
+    SETSCK(C,VK_INSERT  ,FT_NORM,term_copy);
+    SETSCK(S,VK_INSERT  ,FT_NORM,win_paste);
+    SETSCK(C,VK_F12     ,FT_NORM,term_copy);
+    SETSCK(S,VK_F12     ,FT_NORM,win_paste);
   }
   if(cfg.alt_fn_shortcuts){
-    SETHK(A,VK_F2   ,FT_NORM,newwin);
-    SETHK(A,VK_F3   ,FT_NORM,IDM_SEARCH);
-    SETHK(A,VK_F4   ,FT_CMD ,SC_CLOSE);
-    SETHK(A,VK_F8   ,FT_CMD ,IDM_RESET);
-    SETHK(A,VK_F10  ,FT_CMD ,IDM_DEFSIZE_ZOOM);
-    SETHK(A,VK_F11  ,FT_CMD ,IDM_FULLSCREEN);
-    SETHK(A,VK_F12  ,FT_CMD ,IDM_FLIPSCREEN);
+    SETSCK(A,VK_F2   ,FT_NORM,newwin);
+    SETSCK(A,VK_F3   ,FT_NORM,IDM_SEARCH);
+    SETSCK(A,VK_F4   ,FT_CMD ,SC_CLOSE);
+    SETSCK(A,VK_F8   ,FT_CMD ,IDM_RESET);
+    SETSCK(A,VK_F10  ,FT_CMD ,IDM_DEFSIZE_ZOOM);
+    SETSCK(A,VK_F11  ,FT_CMD ,IDM_FULLSCREEN);
+    SETSCK(A,VK_F12  ,FT_CMD ,IDM_FLIPSCREEN);
   }
   if(cfg.ctrl_shift_shortcuts  ){
-    SETHK(CS,'A'     ,FT_NORM,term_select_all);
-    SETHK(CS,'C'     ,FT_NORM,term_copy);
-    SETHK(CS,'V'     ,FT_NORM,win_paste);
-    SETHK(CS,'I'     ,FT_NORM,win_popup_menu);
-    SETHK(CS,'N'     ,FT_CMD ,IDM_NEW);
-    SETHK(CS,'R'     ,FT_CMD ,IDM_RESET);
-    SETHK(CS,'D'     ,FT_CMD ,IDM_DEFSIZE);
-    SETHK(CS,'F'     ,FT_NORM,IDM_FULLSCREEN_ZOOM );
-    SETHK(CS,'S'     ,FT_CMD ,IDM_FLIPSCREEN);
-    SETHK(CS,'H'     ,FT_CMD ,IDM_SEARCH);
-    SETHK(CS,'T'     ,FT_NORM,win_tab_create);
-    SETHK(CS,'W'     ,FT_CMD ,SC_CLOSE);
-    SETHK(CS,'P'     ,FT_NORM,cycle_pointer_style);
-    SETHK(CS,'O'     ,FT_NORM,win_tog_scrollbar);
+    SETSCK(CS,'A'     ,FT_NORM,term_select_all);
+    SETSCK(CS,'C'     ,FT_NORM,term_copy);
+    SETSCK(CS,'V'     ,FT_NORM,win_paste);
+    SETSCK(CS,'I'     ,FT_NORM,win_popup_menu);
+    SETSCK(CS,'N'     ,FT_CMD ,IDM_NEW);
+    SETSCK(CS,'R'     ,FT_CMD ,IDM_RESET);
+    SETSCK(CS,'D'     ,FT_CMD ,IDM_DEFSIZE);
+    SETSCK(CS,'F'     ,FT_NORM,IDM_FULLSCREEN_ZOOM );
+    SETSCK(CS,'S'     ,FT_CMD ,IDM_FLIPSCREEN);
+    SETSCK(CS,'H'     ,FT_CMD ,IDM_SEARCH);
+    SETSCK(CS,'T'     ,FT_NORM,win_tab_create);
+    SETSCK(CS,'W'     ,FT_NORM,win_close);
+    SETSCK(CS,'P'     ,FT_NORM,cycle_pointer_style);
+    SETSCK(CS,'O'     ,FT_NORM,win_tog_scrollbar);
   }
   if( cfg.zoom_shortcuts ){
-    SETHK(C,VK_SUBTRACT   ,FT_NORM,zoom_font_out   );
-    SETHK(C,VK_ADD        ,FT_NORM,zoom_font_in    );
-    SETHK(C,VK_NUMPAD0    ,FT_NORM,zoom_font_reset );
-    SETHK(C,VK_OEM_MINUS  ,FT_NORM,zoom_font_out   );
-    SETHK(C,VK_OEM_PLUS   ,FT_NORM,zoom_font_in    );
-    SETHK(C,'0'					  ,FT_NORM,zoom_font_reset );
-    SETHK(CS,VK_SUBTRACT  ,FT_NORM,zoom_font_sout  );
-    SETHK(CS,VK_ADD       ,FT_NORM,zoom_font_sin   );
-    SETHK(CS,VK_NUMPAD0   ,FT_NORM,zoom_font_sreset);
+    SETSCK(C,VK_SUBTRACT   ,FT_NORM,zoom_font_out   );
+    SETSCK(C,VK_ADD        ,FT_NORM,zoom_font_in    );
+    SETSCK(C,VK_NUMPAD0    ,FT_NORM,zoom_font_reset );
+    SETSCK(C,VK_OEM_MINUS  ,FT_NORM,zoom_font_out   );
+    SETSCK(C,VK_OEM_PLUS   ,FT_NORM,zoom_font_in    );
+    SETSCK(C,'0'				   ,FT_NORM,zoom_font_reset );
+    SETSCK(CS,VK_SUBTRACT  ,FT_NORM,zoom_font_sout  );
+    SETSCK(CS,VK_ADD       ,FT_NORM,zoom_font_sin   );
+    SETSCK(CS,VK_NUMPAD0   ,FT_NORM,zoom_font_sreset);
   }
+#undef S 
+#undef A 
+#undef C 
+#undef W 
+#undef AS
+#undef CS
+#undef WS
+#undef SETSCK
   if(cfg.key_commands){
     char * s= cs__wcstoutf(cfg.key_commands);
-    pstrhk(s);
+    pstrsck(s);
     free(s);
   }
 

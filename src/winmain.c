@@ -59,6 +59,7 @@ char * home;
 char * cmd;
 bool icon_is_from_shortcut = false;
 
+static HFONT wguifont=0, guifnt = 0;
 HINSTANCE inst;
 HWND wnd;
 HIMC imc;
@@ -2087,7 +2088,7 @@ show_iconwarn(wchar * winmsg)
 #define dont_debug_mouse_messages
 #define dont_debug_hook
 
-static void win_global_keyboard_hook(bool on);
+static void win_global_keyboard_hook(bool on,bool autooff);
 
 static LPARAM
 screentoclient(HWND wnd, LPARAM lp)
@@ -2115,6 +2116,29 @@ void win_tog_partline(){
 void win_tog_scrollbar(){
   cterm->show_scrollbar = !cterm->show_scrollbar;
   win_update_scrollbar(true);
+}
+WPARAM win_set_font(HWND hwnd){//set font for gui,user do not release it;
+  static int cfsize=0;
+  int font_height;
+  int size = cfg.gui_font_size;
+  // dup'ed from win_init_fonts()
+  HDC dc = GetDC(hwnd);
+  if (cfg.handle_dpichanged && per_monitor_dpi_aware)
+    font_height = size > 0 ? MulDiv(size, dpi, 72) : -size;
+  else
+    font_height = size > 0 ? MulDiv(size, GetDeviceCaps(dc, LOGPIXELSY), 72) : size;
+  ReleaseDC(hwnd, dc);
+  if(cfsize!=font_height ||!guifnt){
+    cfsize=font_height;
+    if(guifnt)DeleteObject(guifnt);
+    guifnt = CreateFontW(font_height, 0, 0, 0, cfg.font.weight, 
+                      false, false, false,
+                      DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+                      DEFAULT_QUALITY, FIXED_PITCH | FF_DONTCARE,
+                      cfg.font.name);
+  }
+  SendMessage(hwnd, WM_SETFONT, (WPARAM)guifnt, MAKELPARAM(1, 1));
+  return (WPARAM)guifnt;
 }
 static LRESULT CALLBACK
 win_proc(HWND wnd, UINT message, WPARAM wp, LPARAM lp)
@@ -2656,11 +2680,13 @@ static struct {
 #endif
 
     when WM_ACTIVATE:
-      if ((wp & 0xF) != WA_INACTIVE) {
+      if ((wp & 0xF) == WA_INACTIVE) {
+        term_set_focus(false, true);
+        win_global_keyboard_hook(1,1);
+      } else {
         flash_taskbar(false);  /* stop */
         term_set_focus(true, true);
-      } else {
-        term_set_focus(false, true);
+        win_global_keyboard_hook(1,0);
       }
       win_update_transparency(cfg.opaque_when_focused);
       win_key_reset();
@@ -2856,6 +2882,10 @@ static struct {
       }
     }
 
+    when WM_SETFONT:
+        wguifont=(HFONT)wp;
+    when WM_GETFONT:
+        return (WPARAM)wguifont;
     when WM_GETDPISCALEDSIZE: {
       // here we could adjust the RECT passed to WM_DPICHANGED ...
 #ifdef debug_dpi
@@ -2973,8 +3003,6 @@ static struct {
 #endif
       if (wp & 0xFF) {
         // Set up implicit startup hotkey as defined via Windows shortcut
-        if (!hotkey)
-          win_global_keyboard_hook(true);
         hotkey = wp & 0xFF;
         ushort mods = wp >> 8;
         hotkey_mods = !!(mods & HOTKEYF_SHIFT) * MDK_SHIFT
@@ -2983,7 +3011,6 @@ static struct {
       }
       else {
         hotkey = 0;
-        win_global_keyboard_hook(false);
       }
   }
 
@@ -2996,57 +3023,80 @@ static struct {
 
 HWND g_hWnd = NULL;             //窗口句柄
 HHOOK g_hlowKeyHook = NULL;     //低级键盘钩子句柄
-static DWORD spid,stid;
-#define BUF_SIZE 4096
+//static DWORD spid,stid;
+#define KH_MAPSIZE 4096
 const char *szmmname="minttyz/keyhook";
-int pmapmem(){
-  HANDLE hMapFile = CreateFileMapping(INVALID_HANDLE_VALUE,
-         NULL, PAGE_READWRITE, 0, BUF_SIZE, szmmname) ;
-  if(hMapFile == NULL){
-    return 1 ;
-  }
-
-  LPCTSTR pBuf = (LPCTSTR)MapViewOfFile(hMapFile, FILE_MAP_ALL_ACCESS, 0, 0, BUF_SIZE) ;
-  if(pBuf == NULL){
-    CloseHandle(hMapFile) ; 
-    return 2 ;
+int pmapmem(int flg){
+  static HANDLE hMapFile=0 ;
+  static char*pBuf=NULL;
+  int nnew=0;
+  if(flg){
+    hMapFile = OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE,szmmname) ;
+    if(!hMapFile ){
+      hMapFile = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, KH_MAPSIZE , szmmname) ;
+      nnew=1;
+      if(hMapFile == NULL){
+        return 1 ;
+      }
+    }
+    pBuf = (char*)MapViewOfFile(hMapFile, FILE_MAP_ALL_ACCESS, 0, 0, KH_MAPSIZE) ;
+    if(pBuf == NULL){
+      CloseHandle(hMapFile) ; 
+      return 2 ;
+    }
+    if(nnew){
+      memset(pBuf,0,KH_MAPSIZE);
+    }
+  }else{
   }
   return 0;
 }
+extern int lwinkey,rwinkey;
 static LRESULT CALLBACK
 hookprockbll(int nCode, WPARAM wParam, LPARAM lParam)
 {
   int isself=GetForegroundWindow() == wnd;
-  LPKBDLLHOOKSTRUCT kbdll = (LPKBDLLHOOKSTRUCT)lParam;
-  uint mods,key = kbdll->vkCode;
-  if(hotkey&&key == hotkey){
-    mods=get_mods();
-    if(wParam==WM_KEYDOWN && mods == hotkey_mods){
-      if (isself && IsWindowVisible(wnd)) {
-        ShowWindow(wnd, SW_SHOW);  // in case it was started with -w hide
-        ShowWindow(wnd, SW_MINIMIZE);
-      }
-      else {
+  if(!isself){
+    LPKBDLLHOOKSTRUCT kbdll = (LPKBDLLHOOKSTRUCT)lParam;
+    if(hotkey&&kbdll->vkCode == hotkey&&wParam==WM_KEYDOWN ){
+      if(get_mods() == hotkey_mods){
         ShowWindow(wnd, SW_MINIMIZE);
         ShowWindow(wnd, SW_RESTORE);
+        return 1;
       }
-      return 1;
     }
-  }
-  if (cterm->shortcut_override
-    ||!isself
-    ||nCode != HC_ACTION
-    )
-    return CallNextHookEx(kb_hook, nCode, wParam, lParam);
-  int ret=0;
-  //keybd_event('Z', 0, 0, 0)　;//　表示模拟按下Z键
-  //keybd_event('Z', 0, 2, 0)　;//　表示模拟弹起Z键
-  if(wParam==WM_KEYDOWN){ 
-    mods=get_mods();
-    if(mods&MDK_WIN){
-      LPARAM lp = 1|(LPARAM)kbdll->flags << 24 | (LPARAM)kbdll->scanCode << 16;
-      ret=win_whotkey(key, lp);
-      if(ret)return 1;
+  }else{
+    LPKBDLLHOOKSTRUCT kbdll = (LPKBDLLHOOKSTRUCT)lParam;
+    uint key = kbdll->vkCode;
+    if(hotkey&&key == hotkey&&wParam==WM_KEYDOWN ){
+      if(get_mods()== hotkey_mods){
+        ShowWindow(wnd, SW_SHOW);  // in case it was started with -w hide
+        ShowWindow(wnd, SW_MINIMIZE);
+        return 1;
+      }
+    }
+    if (nCode != HC_ACTION
+      ||cterm->shortcut_override
+      )
+      return CallNextHookEx(kb_hook, nCode, wParam, lParam);
+    int ret=0;
+    int mods=get_mods();
+    //keybd_event('Z', 0, 0, 0)　;//　表示模拟按下Z键
+    //keybd_event('Z', 0, 2, 0)　;//　表示模拟弹起Z键
+    switch(wParam){
+      when WM_KEYDOWN: {
+        if(key==VK_LWIN)lwinkey=1;
+        else if(key==VK_RWIN)rwinkey=1;
+        mods=get_mods();
+        if(mods&MDK_WIN){
+          LPARAM lp = 1|(LPARAM)kbdll->flags << 24 | (LPARAM)kbdll->scanCode << 16;
+          ret=win_whotkey(key, lp);
+          if(ret)return 1;
+        }
+      }
+      when WM_KEYUP: 
+          if(key==VK_LWIN)lwinkey=0;
+          else if(key==VK_RWIN)rwinkey=0;
     }
   }
   return CallNextHookEx(kb_hook, nCode, wParam, lParam);
@@ -3054,17 +3104,24 @@ hookprockbll(int nCode, WPARAM wParam, LPARAM lParam)
 static void
 hook_windows(int id, HOOKPROC hookproc, bool global)
 {
-  spid=getpid();
-  stid=GetCurrentThreadId();
   kb_hook = SetWindowsHookExW(id, hookproc, 0, global ? 0 : GetCurrentThreadId());
 }
 static void
-win_global_keyboard_hook(bool on)
+win_global_keyboard_hook(bool on,bool autooff)
 {
-  if (on)
-    hook_windows(WH_KEYBOARD_LL, hookprockbll, true);
-  else if (kb_hook)
+  int global=1;
+  (void)hook_windows;
+  //spid=getpid(); stid=GetCurrentThreadId();
+  if(autooff){
+    if(!hotkey)on=0;
+  }
+  if (on){
+    if(!kb_hook)
+      kb_hook = SetWindowsHookExW(WH_KEYBOARD_LL, hookprockbll,0, global ? 0 : GetCurrentThreadId());
+  }else if (kb_hook){
     UnhookWindowsHookEx(kb_hook);
+    kb_hook=NULL;
+  }
 }
 
 bool
@@ -3969,12 +4026,6 @@ opts[] = {
   {"lf",         required_argument, 0, OPT_LF},
   {"sl",         required_argument, 0, OPT_SL},
   {0, 0, 0, 0}
-};
-
-//设置g_hWnd共享，禁止dll拷贝
-struct mtkhinf{
-  int magic;
-  int hooking;
 };
 int
 main(int argc, char *argv[])
@@ -5098,13 +5149,8 @@ main(int argc, char *argv[])
   cterm->rows0 = term_rows;
   cterm->cols0 = term_cols;
 
-#ifdef always_hook_keyboard
-  // Install keyboard hook if we configure an explicit startup hotkey...
-  // not implemented
-  if (hotkey_configured ...)
-    win_global_keyboard_hook(true);
-#endif
-
+  win_update_shortcuts();
+  win_global_keyboard_hook(true,0);
   if (report_winpid) {
     DWORD wpid = -1;
     DWORD parent = GetWindowThreadProcessId(wnd, &wpid);
@@ -5112,9 +5158,7 @@ main(int argc, char *argv[])
     printf("%d %d\n", getpid(), (int)wpid);
     fflush(stdout);
   }
-  
-  win_global_keyboard_hook(true);
-
+  win_set_font(wnd);
   // Message loop.
   for (;;) {
     MSG msg;
@@ -5129,4 +5173,5 @@ main(int argc, char *argv[])
     if(win_tab_should_die())break;
   }
   win_tab_clean();
+  win_global_keyboard_hook(0,0);
 }

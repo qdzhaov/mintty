@@ -70,7 +70,7 @@ const config default_cfg = {
   .cursor_type = CUR_LINE,
   .cursor_blinks = true,
   // Text
-  .font = {.name = W("Lucida Console"), .size = 9, .weight = 400, .isbold = false},
+  .font = {.name = W("Lucida Console"), .size = 16, .weight = 400, .isbold = false},
   .fontfams[1] = {.name = W(""), .weight = 400, .isbold = false},
   .fontfams[2] = {.name = W(""), .weight = 400, .isbold = false},
   .fontfams[3] = {.name = W(""), .weight = 400, .isbold = false},
@@ -110,6 +110,7 @@ const config default_cfg = {
   .zoom_shortcuts = true,
   .zoom_font_with_window = true,
   .alt_fn_shortcuts = true,
+  .win_shortcuts = true,
   .ctrl_shift_shortcuts = false,
   .ctrl_exchange_shift = false,
   .ctrl_controls = true,
@@ -219,6 +220,7 @@ const config default_cfg = {
   .tab_bar_show = 1,
   .indicator = 1,
   .tab_font_size= 24 ,
+  .gui_font_size= 24 ,
   .col_spacing = 0,
   .row_spacing = 0,
   .padding = 1,
@@ -325,12 +327,13 @@ options[] = {
 
   // Text
   {"Font", OPT_WSTRING, offcfg(font.name)},
-  {"FontChoice", OPT_WSTRING, offcfg(font_choice)},
-  {"FontSample", OPT_WSTRING, offcfg(font_sample)},
   {"FontSize", OPT_INT | OPT_LEGACY, offcfg(font.size)},
   {"FontHeight", OPT_INT, offcfg(font.size)},
   {"FontWeight", OPT_INT, offcfg(font.weight)},
   {"FontIsBold", OPT_BOOL, offcfg(font.isbold)},
+
+  {"FontChoice", OPT_WSTRING, offcfg(font_choice)},
+  {"FontSample", OPT_WSTRING, offcfg(font_sample)},
   {"ShowHiddenFonts", OPT_BOOL, offcfg(show_hidden_fonts)},
   {"FontSmoothing", OPT_FONTSMOOTH, offcfg(font_smoothing)},
   {"BoldAsFont", OPT_BOOL, offcfg(bold_as_font)},
@@ -380,6 +383,7 @@ options[] = {
   {"ZoomShortcuts", OPT_BOOL, offcfg(zoom_shortcuts)},
   {"ZoomFontWithWindow", OPT_BOOL, offcfg(zoom_font_with_window)},
   {"AltFnShortcuts", OPT_BOOL, offcfg(alt_fn_shortcuts)},
+  {"WinShortcuts", OPT_BOOL, offcfg(win_shortcuts)},
   {"CtrlShiftShortcuts", OPT_BOOL, offcfg(ctrl_shift_shortcuts)},
   {"CtrlExchangeShift", OPT_BOOL, offcfg(ctrl_exchange_shift)},
   {"CtrlControls", OPT_BOOL, offcfg(ctrl_controls)},
@@ -508,6 +512,7 @@ options[] = {
   {"tab_bar_show", OPT_BOOL, offcfg(tab_bar_show)},
   {"indicator", OPT_BOOL, offcfg(indicator)},
   {"tab_font_size", OPT_BOOL, offcfg(tab_font_size)},
+  {"gui_font_size", OPT_BOOL, offcfg(gui_font_size)},
   {"ColSpacing", OPT_INT, offcfg(col_spacing)},
   {"RowSpacing", OPT_INT, offcfg(row_spacing)},
   {"Padding", OPT_INT, offcfg(padding)},
@@ -3506,6 +3511,11 @@ setup_config_box(controlbox * b)
     //__ Options - Keys:
     s, _("&Alt+Fn shortcuts"),
     dlg_stdcheckbox_handler, &new_cfg.alt_fn_shortcuts
+  );
+  ctrl_checkbox(
+    //__ Options - Keys:
+    s, _("&Win+x shortcuts"),
+    dlg_stdcheckbox_handler, &new_cfg.win_shortcuts
   );
   ctrl_checkbox(
     //__ Options - Keys:

@@ -735,7 +735,8 @@ open_popup_menu(bool use_text_cursor, string menucfg, mod_keys mods)
   else
     GetCursorPos(&p);
 
-  TrackPopupMenu(
+  TrackPopupMenu
+  (
     ctxmenu, TPM_LEFTALIGN | TPM_TOPALIGN | TPM_RIGHTBUTTON,
     p.x, p.y, 0, wnd, null
   );
@@ -1061,7 +1062,7 @@ win_get_locator_info(int *x, int *y, int *buttons, bool by_pixels)
 
   *buttons = button_state;
 }
-#include "hkdef.h"
+#include "sckdef.h"
 
 
 typedef enum {
@@ -1148,55 +1149,6 @@ vk_name(uint key)
 #endif
 
 // key names for user-definable functions
-static struct {
-  uchar vkey;
-  char unmod;
-  string nam;
-} vktab[] = {
-  {VK_CANCEL, 0, "Break"},
-  {VK_BACK, 1, "Back"},
-  {VK_TAB, 0, "Tab"},
-  {VK_RETURN, 0, "Enter"},
-  {VK_PAUSE, 1, "Pause"},
-  {VK_ESCAPE, 0, "Esc"},
-  {VK_SPACE, 0, "Space"},
-  {VK_SNAPSHOT, 1, "PrintScreen"},
-  {VK_LWIN, 1, "LWin"},
-  {VK_RWIN, 1, "RWin"},
-  {VK_APPS, 1, "Menu"},
-  {VK_NUMLOCK, 1, "NumLock"},
-  {VK_CAPITAL, 1, "CapsLock"},
-  {VK_SCROLL, 1, "ScrollLock"},
-  // exotic keys:
-  {VK_SELECT, 1, "Select"},
-  {VK_PRINT, 1, "Print"},
-  {VK_EXECUTE, 1, "Exec"},
-  {VK_HELP, 1, "Help"},
-  {VK_SLEEP, 1, "Sleep"},
-  {VK_ATTN, 1, "Attn"},
-  {VK_CRSEL, 1, "CrSel"},
-  {VK_EXSEL, 1, "ExSel"},
-  {VK_EREOF, 1, "ErEof"},
-  {VK_PLAY, 1, "Play"},
-  {VK_ZOOM, 1, "Zoom"},
-  // cursor keys, editing keypad, and numeric keypad application keys
-  {VK_INSERT, 2, "Insert"},
-  {VK_DELETE, 2, "Delete"},
-  {VK_HOME, 2, "Home"},
-  {VK_END, 2, "End"},
-  {VK_PRIOR, 2, "Prior"},
-  {VK_NEXT, 2, "Next"},
-  {VK_LEFT, 2, "Left"},
-  {VK_RIGHT, 2, "Right"},
-  {VK_UP, 2, "Up"},
-  {VK_DOWN, 2, "Down"},
-  {VK_CLEAR, 2, "Begin"},
-  {VK_DIVIDE, 3, "Divide"},
-  {VK_MULTIPLY, 3, "Multiply"},
-  {VK_SUBTRACT, 3, "Subtract"},
-  {VK_ADD, 3, "Add"},
-};
-
 static int
 win_key_nullify(uchar vk)
 {
@@ -1402,6 +1354,7 @@ user_function(wstring commands, int n)
 {
   pick_key_function(commands, 0, n, 0, 0, 0, 0);
 }
+int lwinkey=0,rwinkey=0;
 bool 
 win_whotkey(WPARAM wp, LPARAM lp){
   (void)lp;
@@ -1436,19 +1389,25 @@ win_whotkey(WPARAM wp, LPARAM lp){
   bool hyper = hyper_key && is_key_down(hyper_key);
   mods |= super * MDK_SUPER | hyper * MDK_HYPER;
   if(!win)return 0;
-  int ret=1;
-  switch(key){
-    when VK_LEFT or 'H':  
-        if (shift) win_tab_move(-1);
-        else win_tab_change(-1);
-    when VK_RIGHT or 'M': 
-        if (shift) win_tab_move(1);
-        else win_tab_change(1);
-    otherwise:
-        ret=0;
+  int kmask=sckwmask[key];//assume winkey not to here 
+  int modt=packmod(mods);
+  if(kmask&(1<<modt)){
+    bool lshift = is_key_down(VK_RSHIFT);
+    bool rshift = is_key_down(VK_RSHIFT);
+    mod_keys modl = lshift* MDK_SHIFT
+        | lalt  * MDK_ALT
+        | lctrl * MDK_CTRL
+        | lwin *  MDK_WIN
+        ;
+    mod_keys modr = rshift* MDK_SHIFT
+        | ralt  * MDK_ALT
+        | rctrl * MDK_CTRL
+        | rwin *  MDK_WIN
+        ;
+    int moda=mods|(modl<<8)|(modr<<16);
+    if(sckw_run(key,moda))return 1;
   }
-  return ret;
-
+  return 0;
 }
 bool
 win_key_down(WPARAM wp, LPARAM lp)
@@ -1543,17 +1502,16 @@ win_key_down(WPARAM wp, LPARAM lp)
   }
   bool numlock = kbd[VK_NUMLOCK] & 1;
   bool shift = is_key_down(VK_SHIFT);
-  // bool lshift = is_key_down(VK_RSHIFT);
-  // bool rshift = is_key_down(VK_RSHIFT);
   bool lalt = is_key_down(VK_LMENU);
   bool ralt = is_key_down(VK_RMENU);
   bool alt = lalt | ralt;
   trace_alt("alt %d lalt %d ralt %d\n", alt, lalt, ralt);
   bool rctrl = is_key_down(VK_RCONTROL);
   bool ctrl = lctrl | rctrl;
-  bool lwin=(is_key_down(VK_LWIN) && key != VK_LWIN);
-  bool rwin=(is_key_down(VK_RWIN) && key != VK_RWIN);
-  bool win =lwin|rwin; 
+  //win key not to here,and win key not used
+  //bool lwin=(is_key_down(VK_LWIN) && key != VK_LWIN);
+  //bool rwin=(is_key_down(VK_RWIN) && key != VK_RWIN);
+  //bool win =lwin|rwin; 
   bool ctrl_lalt_altgr = cfg.ctrl_alt_is_altgr & ctrl & lalt & !ralt;
   //bool altgr0 = ralt | ctrl_lalt_altgr;
   // Alt/AltGr detection and handling could do with a complete revision 
@@ -1561,15 +1519,13 @@ win_key_down(WPARAM wp, LPARAM lp)
   // so another hack is added.
   bool lctrl0 = is_key_down(VK_LCONTROL);
   bool altgr0 = (ralt & lctrl0) | ctrl_lalt_altgr;
-
-  bool external_hotkey = false;
+  bool external_hotkey ;
   if (ralt && !scancode && cfg.external_hotkeys) {
     // Support external hot key injection by overriding disabled Alt+Fn
     // and fix buggy StrokeIt (#833).
     trace_alt("ralt = false\n");
     ralt = false;
-    if (cfg.external_hotkeys > 1)
-      external_hotkey = true;
+    if (cfg.external_hotkeys > 1) external_hotkey = true;
   }
 
   bool altgr = ralt | ctrl_lalt_altgr;
@@ -1581,9 +1537,9 @@ win_key_down(WPARAM wp, LPARAM lp)
   trace_alt("alt %d lalt %d ralt %d altgr %d\n", alt, lalt, ralt, altgr);
 
   mod_keys mods = shift * MDK_SHIFT
-                | alt * MDK_ALT
-                | ctrl * MDK_CTRL
-                | win * MDK_WIN
+                | alt   * MDK_ALT
+                | ctrl  * MDK_CTRL
+                //| win   * MDK_WIN
                 ;
   bool super = super_key && is_key_down(super_key);
   bool hyper = hyper_key && is_key_down(hyper_key);
@@ -1607,13 +1563,6 @@ win_key_down(WPARAM wp, LPARAM lp)
   alt_state_t old_alt_state = alt_state;
   if (alt_state > ALT_NONE)
     alt_state = ALT_CANCELLED;
-
-  // Exit when pressing Enter or Escape while holding the window open after
-  // the child process has died.
-  if ((key == VK_RETURN || key == VK_ESCAPE) && 
-    !mods && !child_is_alive(cterm)){
-    win_tab_clean();
-  }
 
   static LONG last_tabk_time = 0;
   switch(tabctrling){
@@ -1868,285 +1817,28 @@ win_key_down(WPARAM wp, LPARAM lp)
     if (step)
       return true;
   }
-
-  bool allow_shortcut = true;
-
   if (!cterm->shortcut_override) {
-    // user-defined shortcuts
-    //test: W("-:'foo';A+F3:;A+F5:flipscreen;A+F9:\"f9\";C+F10:\"f10\";p:paste;d:`date`;o:\"oo\";ö:\"öö\";€:\"euro\";~:'tilde';[:'[[';µ:'µµ'")
-    if (*cfg.key_commands) {
-      /* Look up a function tag for either of
-         * (modified) special key (like Tab, Pause, ...)
-         * (modified) function key
-         * Ctrl+Shift-modified character (letter or other layout key)
-         Arguably, Ctrl+Shift-character assignments could be 
-         overridden by modify_other_keys mode, but we stay consistent 
-         with xterm here, where the Translations resource takes 
-         priority over modifyOtherKeys mode.
-       */
-      char * tag = 0;
-      mod_keys mod0 = 0;
-      int vki = -1;
-      for (uint i = 0; i < lengthof(vktab); i++)
-        if (key == vktab[i].vkey) {
-          vki = i;
-          break;
-        }
-      bool keypad = vktab[vki].vkey == VK_RETURN
-                    ? extended
-                    : vktab[vki].unmod == 2
-                      ? !extended
-                      : vktab[vki].unmod == 3;
-      bool editpad = !keypad && vktab[vki].unmod >= 2;
-      if (vki >= 0 && !altgr
-          && (mods || vktab[vki].unmod || extended)
-          && (!editpad || !cterm->app_cursor_keys)
-          && (!keypad || !cterm->app_keypad)
-         )
-      {
-        tag = asform("%s%s%s%s%s%s%s%s%s",
-                     ctrl ? "C" : "",
-                     alt ? "A" : "",
-                     shift ? "S" : "",
-                     win ? "W" : "",
-                     super ? "U" : "",
-                     hyper ? "Y" : "",
-                     mods ? "+" : "",
-                     keypad ? "KP_" : "",
-                     vktab[vki].nam);
-      }
-      else if (VK_F1 <= key && key <= VK_F24) {
-        tag = asform("%s%s%s%s%s%s%sF%d",
-                     ctrl ? "C" : "",
-                     alt ? "A" : "",
-                     shift ? "S" : "",
-                     win ? "W" : "",
-                     super ? "U" : "",
-                     hyper ? "Y" : "",
-                     mods ? "+" : "",
-                     key - VK_F1 + 1);
-      }
-      else if (
-               // !cterm->modify_other_keys &&
-               (mods & (MDK_CTRL | MDK_SHIFT))
-                == (cfg.ctrl_exchange_shift
-                                     ? MDK_CTRL
-                                     : (MDK_CTRL | MDK_SHIFT))
-               || (mods & MDK_WIN)
-              )
-      {
-        uchar kbd0[256];
-        GetKeyboardState(kbd0);
-        wchar wbuf[4];
-        int wlen = ToUnicode(key, scancode, kbd0, wbuf, lengthof(wbuf), 0);
-        wchar w1 = wlen > 0 ? *wbuf : 0;
-        kbd0[VK_SHIFT] = 0;
-        wlen = ToUnicode(key, scancode, kbd0, wbuf, lengthof(wbuf), 0);
-        wchar w2 = wlen > 0 ? *wbuf : 0;
-#ifdef debug_def_keys
-        printf("VK_*CONTROL %d %d/%d *ctrl %d %d/%d -> %04X; -SHIFT %04X\n",
-               is_key_down(VK_CONTROL), is_key_down(VK_LCONTROL), is_key_down(VK_RCONTROL),
-               ctrl, lctrl, rctrl,
-               w1, w2);
-#endif
-        if (!w1 || w1 == w2) {
-          kbd0[VK_SHIFT] = 0;
-          kbd0[VK_LCONTROL] = 0;
-          if (!altgr)
-            kbd0[VK_CONTROL] = 0;
-          wlen = ToUnicode(key, scancode, kbd0, wbuf, lengthof(wbuf), 0);
-#ifdef debug_def_keys
-          printf("            %d %d/%d *ctrl %d %d/%d -> %d %04X\n",
-                 is_key_down(VK_CONTROL), is_key_down(VK_LCONTROL), is_key_down(VK_RCONTROL),
-                 ctrl, lctrl, rctrl,
-                 wlen, *wbuf);
-#endif
-          if (wlen == 1 || wlen == 2) {
-            wbuf[wlen] = 0;
-            char * keytag = cs__wcstoutf(wbuf);
-            tag = asform("%s%s%s%s%s%s",
-                         alt ? "A" : "",
-                         win ? "W" : "",
-                         super ? "U" : "",
-                         hyper ? "Y" : "",
-                         (alt | win | super | hyper) ? "+" : "",
-                         keytag);
-            mod0 |= MDK_CTRL | MDK_SHIFT;
-            free(keytag);
-          }
-        }
-#ifdef debug_def_keys
-        printf("key %04X <%s>\n", *wbuf, tag);
-#endif
-
-        if (wlen < 0) {
-          // Ugly hack to clear dead key state, a la Michael Kaplan.
-          memset(kbd0, 0, sizeof kbd0);
-          uint scancode = MapVirtualKey(VK_DECIMAL, 0);
-          wchar dummy;
-          while (ToUnicode(VK_DECIMAL, scancode, kbd0, &dummy, 1, 0) < 0);
-        }
-      }
-      if (tag) {
-        int ret = pick_key_function(cfg.key_commands, tag, 0, key, mods, mod0, scancode);
-        free(tag);
-        if (ret == true)
-          return true;
-        if (ret == -1)
-          allow_shortcut = false;
-      }
-    }
-
-    // If a user-defined key definition overrides a built-in shortcut 
-    // but does not assign its own, the key shall be handled as a key, 
-    // (with mods); for subsequent blocks of shortcut handling, we 
-    // achieve this by simply jumping over them (infamous goto), 
-    // but there are a few cases handled beyond, embedded in general 
-    // key handling, which are then guarded by further usage of the 
-    // allow_shortcut flag (Alt+Enter, Ctrl+Tab, Alt+Space).
-    if (allow_shortcut){
-      int res;
-      res=0;
-      switch(key){
-        when VK_RETURN:
-          if (cfg.window_shortcuts && alt && !altgr)
-          {
-            trace_resize(("--- Alt-Enter (shift %d ctrl %d)", shift, ctrl));
-            send_syscommand((shift && !ctrl) ? IDM_FULLSCREEN_ZOOM : IDM_FULLSCREEN);
-            return true;
-          }
-        when VK_INSERT:
-            // Copy&paste
-            if (cfg.clip_shortcuts && !alt) {
-              if (ctrl){ term_copy(); return true; }
-              if (shift){ win_paste(); return true; }
-            }
-        when VK_F1 ... VK_F24:
-            if(shift&&key==VK_F12){
-              if (cfg.clip_shortcuts && !alt) {
-                if (ctrl){ term_copy(); return true; }
-                if (shift){ win_paste(); return true; }
-              }
-            }
-            // Alt+Fn shortcuts
-            if ((cfg.alt_fn_shortcuts || external_hotkey)
-              && alt && !altgr
-              )
-            {
-              if (!ctrl) {
-                res=1;
-                switch (key) {
-                  when VK_F2:  newwin(key,mods);
-                  when VK_F3:  send_syscommand(IDM_SEARCH);
-                  when VK_F4:  app_close();//SendMessage(wnd, WM_CLOSE, 0, 0); 
-                  when VK_F8:  send_syscommand(IDM_RESET);
-                  when VK_F10: send_syscommand(IDM_DEFSIZE_ZOOM);
-                  when VK_F11: send_syscommand(IDM_FULLSCREEN);
-                  when VK_F12: send_syscommand(IDM_FLIPSCREEN);
-                  otherwise : res=0;
-                }
-                if(res)return 1;
-              }
-            }
-
-        when 'A' ... 'Z':
-            // Ctrl+Shift+letter shortcuts
-            if (cfg.ctrl_shift_shortcuts  &&
-              mods == (cfg.ctrl_exchange_shift ? MDK_CTRL : (MDK_CTRL | MDK_SHIFT))
-              ) {
-              res=1;
-              switch (key) {
-                when 'A': term_select_all();
-                when 'C': term_copy();
-                when 'V': win_paste();
-                when 'I': open_popup_menu(true, "ls", mods);
-                when 'N': send_syscommand(IDM_NEW);
-                //when 'W': send_syscommand(SC_CLOSE);
-                when 'R': send_syscommand(IDM_RESET);
-                when 'D': send_syscommand(IDM_DEFSIZE);
-                when 'F': send_syscommand(cfg.zoom_font_with_window ? IDM_FULLSCREEN_ZOOM : IDM_FULLSCREEN);
-                when 'S': send_syscommand(IDM_FLIPSCREEN);
-                when 'H': send_syscommand(IDM_SEARCH);
-                when 'T': win_tab_create();
-                when 'W': win_close();
-                when 'P': cycle_pointer_style();
-                when 'O': win_tog_scrollbar();
-                otherwise: res=0;
-              }
-              if(res)return 1;
-            } 
-        when VK_CLEAR or VK_PRIOR ... VK_DOWN:
-            // Scrollback and Selection via keyboard
-            if (!cterm->on_alt_screen || cterm->show_other_screen) {
-
-              mod_keys scroll_mod = cfg.scroll_mod ?: 128;
-              if (cfg.pgupdn_scroll && (key == VK_PRIOR || key == VK_NEXT) &&
-                !(mods & ~scroll_mod))
-                mods ^= scroll_mod;
-              if (mods == scroll_mod) {
-                WPARAM scroll=0;
-                switch (key) {
-                  when VK_HOME:  scroll = SB_TOP;
-                  when VK_END:   scroll = SB_BOTTOM;
-                  when VK_PRIOR: scroll = SB_PAGEUP;
-                  when VK_NEXT:  scroll = SB_PAGEDOWN;
-                  when VK_UP:    scroll = SB_LINEUP;
-                  when VK_DOWN:  scroll = SB_LINEDOWN;
-                  when VK_LEFT:  scroll = SB_PRIOR;
-                  when VK_RIGHT: scroll = SB_NEXT;
-                  when VK_CLEAR: kb_select(key,mods); return true;
-                }
-                if (scroll&&!cterm->app_scrollbar){ // prevent recursion
-                  SendMessage(wnd, WM_VSCROLL, scroll, 0);
-                  return true;
-                }
-              }
-            }
-        when VK_NUMPAD0 ...VK_DIVIDE or VK_OEM_MINUS or VK_OEM_PLUS or '0':     
-            // Font zooming
-            if (cfg.zoom_shortcuts && (mods & ~MDK_SHIFT) == MDK_CTRL) {
-              int zoom=-10000;
-              res=1;
-              switch (key) {
-                // numeric keypad keys:
-                // -- handle these ahead, i.e. here
-                when VK_SUBTRACT:  zoom = -1;
-                when VK_ADD:       zoom = 1;
-                when VK_NUMPAD0:   zoom = 0;
-                // Shift+VK_NUMPAD0 would be VK_INSERT but don't mangle that!
-                // normal keys:
-                when VK_OEM_MINUS: zoom = -1; mods &= ~MDK_SHIFT;
-                when VK_OEM_PLUS:  zoom = 1; mods &= ~MDK_SHIFT;
-                when '0':          zoom = 0;
-                otherwise: res=0;
-              }
-              if(zoom>=-1){
-                win_zoom_font(zoom, mods & MDK_SHIFT);
-                return true;
-              }
-            }
-      }
-      if(res)return 1;
+    int kmask=sckmask[key];//assume winkey not to here 
+    int modt=packmod(mods);
+    if(kmask&(1<<modt)){
+      bool lshift = is_key_down(VK_RSHIFT);
+      bool rshift = is_key_down(VK_RSHIFT);
+      (void)external_hotkey ;// todo:external_hotkey is not process now
+      //assume winkey not to here 
+      mod_keys modl = lshift* MDK_SHIFT
+          | lalt  * MDK_ALT
+          | lctrl * MDK_CTRL
+          ;
+      mod_keys modr = rshift* MDK_SHIFT
+          | ralt  * MDK_ALT
+          | rctrl * MDK_CTRL
+          ;
+      int moda=mods|(modl<<8)|(modr<<16);
+      if(sck_run(key,moda))return 1;
     }
   }
-
-
-  // Context and window menus
-  if (key == VK_APPS && !*cfg.key_menu) {
-    if (shift)
-      send_syscommand(SC_KEYMENU);
-    else {
-      win_show_mouse();
-			win_popup_menu(key,mods);
-    }
-    return true;
-  }
-
-  // we might consider super and hyper for mods here but we need to filter 
-  // them anyway during user-defined key detection (using the '*' prefix)
-  //mods |= super * MDK_SUPER | hyper * MDK_HYPER;
-
-
+  //==========================================
+  // process key ,do not check shortcut here
   // Keycode buffers
   char buf[32];
   int len = 0;
@@ -2549,10 +2241,6 @@ static struct {
         ctrl_ch(cterm->backspace_sends_bs ? CDEL : CTRL('_'));
     when VK_TAB:
       if (!ctrl) shift ? csi('Z') : ch('\t');
-      else if (allow_shortcut && cfg.switch_shortcuts) {
-        win_switch(shift, lctrl & rctrl);
-        return true;
-      }
       else
         cterm->modify_other_keys ? other_code('\t') : mod_csi('I');
     when VK_ESCAPE:
@@ -2625,8 +2313,6 @@ static struct {
       else
         app_pad_code(key - VK_NUMPAD0 + '0');
     when 'A' ... 'Z' or ' ': {
-      bool check_menu = key == VK_SPACE && !cterm->shortcut_override
-                        && cfg.window_shortcuts && alt && !altgr && !ctrl;
       //// support Ctrl+Shift+AltGr combinations (esp. Ctrl+Shift+@)
       //bool modaltgr = (mods & ~MDK_ALT) == (cfg.ctrl_exchange_shift ? MDK_CTRL : (MDK_CTRL | MDK_SHIFT));
       // support Ctrl+AltGr combinations (esp. Ctrl+@ and Ctrl+Shift+@)
@@ -2634,18 +2320,6 @@ static struct {
 #ifdef debug_key
       printf("-- mods %X alt %d altgr %d/%d ctrl %d lctrl %d/%d (modf %d comp %d)\n", mods, alt, altgr, altgr0, ctrl, lctrl, lctrl0, cterm->modify_other_keys, comp_state);
 #endif
-      if (allow_shortcut && check_menu) {
-        send_syscommand(SC_KEYMENU);
-        return true;
-      }
-      if(shift && ctrl){
-        int res=0;
-        switch(key){
-          when 'T': win_tab_create();res=1;
-          when 'W': win_close(); res=1;
-        }
-        if(res)return 1;
-      }
       if (altgr_key())
         trace_key("altgr");
       else if (!modaltgr && !cfg.altgr_is_alt && altgr0 && !cterm->modify_other_keys)

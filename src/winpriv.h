@@ -66,6 +66,7 @@ extern void win_flush_background(bool clearbg);
 extern void win_paint(void);
 
 extern void win_init_fonts(int size);
+WPARAM win_set_font(HWND hwnd);//set font for gui,user do not release it;
 extern wstring win_get_font(uint findex);
 extern void win_change_font(uint findex, wstring fn);
 extern void win_font_cs_reconfig(bool font_changed);
@@ -105,6 +106,7 @@ extern void win_key_reset(void);
 extern void provide_input(wchar);
 extern bool win_key_down(WPARAM, LPARAM);
 extern bool win_whotkey(WPARAM, LPARAM);
+extern void win_update_shortcuts();
 extern bool win_key_up(WPARAM, LPARAM);
 extern void do_win_key_toggle(int vk, bool on);
 extern void win_csi_seq(char * pre, char * suf);

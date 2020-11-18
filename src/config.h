@@ -101,6 +101,7 @@ typedef struct {
   bool zoom_shortcuts;
   bool zoom_font_with_window;
   bool alt_fn_shortcuts;
+  bool win_shortcuts;
   bool ctrl_shift_shortcuts;
   bool ctrl_exchange_shift;
   bool ctrl_controls;
@@ -209,6 +210,7 @@ typedef struct {
   string menu_title_ctrl_r;
   int geom_sync;
   int tab_font_size,tab_bar_show,indicator;
+  int gui_font_size; 
   int col_spacing, row_spacing;
   int padding,partline;
   int ligatures;
