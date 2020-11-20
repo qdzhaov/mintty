@@ -424,6 +424,7 @@ static void lock_title() { cfg.title_settable = false; }
 static void clear_title() { win_set_title(W("")); }
 static void refresh() { win_invalidate_all(false); }
 //static void scroll_key(int key) { SendMessage(wnd, WM_VSCROLL, key, 0); }
+static int  vtabclose    (){if(!child_is_alive(cterm)) {win_tab_clean();return 1;}return 0;}
 static void scroll_top	 (){SendMessage(wnd, WM_VSCROLL,SB_TOP      ,0);}      
 static void scroll_end	 (){SendMessage(wnd, WM_VSCROLL,SB_BOTTOM   ,0);}   
 static void scroll_pgup	 (){SendMessage(wnd, WM_VSCROLL,SB_PAGEUP   ,0);}   
@@ -432,15 +433,29 @@ static void scroll_lnup	 (){SendMessage(wnd, WM_VSCROLL,SB_LINEUP   ,0);}
 static void scroll_lndn	 (){SendMessage(wnd, WM_VSCROLL,SB_LINEDOWN ,0);} 
 static void scroll_prev	 (){SendMessage(wnd, WM_VSCROLL,SB_PRIOR    ,0);}    
 static void scroll_next	 (){SendMessage(wnd, WM_VSCROLL,SB_NEXT     ,0);}     
-static void tab_prev	   (){win_tab_change(-1);}
-static void tab_next	   (){win_tab_change( 1);}
-static void tab_move_prev(){win_tab_move  (-1);}
-static void tab_move_next(){win_tab_move  ( 1);}
-static int  vtabclose    (){if(!child_is_alive(cterm)) {win_tab_clean();return 1;}return 0;}
+void tab_prev	    (){win_tab_change(-1);}
+void tab_next	    (){win_tab_change( 1);}
+void tab_move_prev(){win_tab_move  (-1);}
+void tab_move_next(){win_tab_move  ( 1);}
+void new_tab_def(){new_tab(IDSS_DEF);}
+void new_tab_wsl(){new_tab(IDSS_WSL);}
+void new_tab_cyg(){new_tab(IDSS_CYG);}
+void new_tab_cmd(){new_tab(IDSS_CMD);}
+void new_tab_psh(){new_tab(IDSS_PSH);}
+void new_tab_usr(){new_tab(IDSS_USR);}
+void new_win_wsl(){new_win(IDSS_WSL,0);}
+void new_win_cyg(){new_win(IDSS_CYG,0);}
+void new_win_cmd(){new_win(IDSS_CMD,0);}
+void new_win_psh(){new_win(IDSS_PSH,0);}
+void new_win_usr(){new_win(IDSS_USR,0);}
+void new_win_def(){new_win(IDSS_DEF,0);}
 static void win_hide() { ShowWindow(wnd, IsIconic(wnd) ?SW_RESTORE: SW_MINIMIZE ); }
 static void super_down(uint key, mod_keys mods) { super_key = key; (void)mods; }
 static void hyper_down(uint key, mod_keys mods) { hyper_key = key; (void)mods; }
-static void win_ctrlmode(){tabctrling=2;}
+static void win_ctrlmode(){
+  if(tabctrling!=3)tabctrling=3;else tabctrling=0;
+  last_tabk_time=GetMessageTime();
+}
 static uint mflags_lock_title() { return cfg.title_settable ? MF_ENABLED : MF_GRAYED; }
 static uint mflags_copy() { return cterm->selected ? MF_ENABLED : MF_GRAYED; }
 static uint mflags_kb_select() { return cterm->selection_pending; }
@@ -991,7 +1006,7 @@ void pstrsck(char*ssck){
           }
       otherwise: 
       {
-        struct function_def * fd = function_def(cmd);
+        struct function_def * fd = function_def(paramp);
           if(fd)setsck(mod_cmd,key,fd->type,fd->f);
       }
     }
@@ -1047,7 +1062,7 @@ void win_update_shortcuts(){
   }
   if(cfg.win_shortcuts ){
     SETSCK(W ,'Q'        ,FT_NORM,app_close    );
-    SETSCK(W ,'T'        ,FT_NORM,win_tab_create);
+    SETSCK(W ,'T'        ,FT_NORM,new_tab_def  );
     SETSCK(W ,'W'        ,FT_NORM,win_close    );
     SETSCK(W ,'X'        ,FT_NORM,win_ctrlmode );
     SETSCK(W ,'Z'        ,FT_NORM,win_hide     );
@@ -1082,7 +1097,7 @@ void win_update_shortcuts(){
     SETSCK(CS,'F'     ,FT_NORM,IDM_FULLSCREEN_ZOOM );
     SETSCK(CS,'S'     ,FT_CMD ,IDM_FLIPSCREEN);
     SETSCK(CS,'H'     ,FT_CMD ,IDM_SEARCH);
-    SETSCK(CS,'T'     ,FT_NORM,win_tab_create);
+    SETSCK(CS,'T'     ,FT_NORM,new_tab_def);
     SETSCK(CS,'W'     ,FT_NORM,win_close);
     SETSCK(CS,'P'     ,FT_NORM,cycle_pointer_style);
     SETSCK(CS,'O'     ,FT_NORM,win_tog_scrollbar);

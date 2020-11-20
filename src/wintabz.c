@@ -103,9 +103,6 @@ static STab *tab_by_term(STerm* Term) {
 }
 
 static const char* g_home;
-static const char* g_cmd;
-static char** g_argv;
-#define VFREE(p) if(p){free(p);p=NULL;}
 #define ZNEW(T) (T*)malloc(sizeof(T))
 static void tab_init(STab*tab){
     memset(tab,0,sizeof(*tab));
@@ -136,7 +133,7 @@ static STab*vtab(){
     }
     return NULL;
 }
-static void newtab(
+static void newtab(SessDef*sd,
     unsigned short rows, unsigned short cols,
     unsigned short width, unsigned short height, 
     const char* cwd,const char* title) {
@@ -144,7 +141,7 @@ static void newtab(
     win_tab_v(tab);
     term_reset(1);
     term_resize(rows, cols);
-    tab->terminal->child.cmd = g_cmd;
+    tab->terminal->child.cmd = sd->cmd;
     tab->terminal->child.home = g_home;
     const wchar * ws=NULL;
     wchar *ws1=NULL;
@@ -157,36 +154,34 @@ static void newtab(
     }else if( cfg.title&&*cfg.title){
       ws=cfg.title;
     }else{
-      st=g_cmd;
+      st=sd->cmd;
       size = cs_mbstowcs(NULL, st, 0) + 1;
       ws=ws1 = (wchar *)malloc(size * sizeof(wchar));  // includes terminating NUL
       cs_mbstowcs(ws1, st, size);
     }
     win_tab_set_title(tab->terminal, ws);
     struct winsize wsz={rows, cols, width, height};
-    child_create(tab->terminal, g_argv, &wsz, cwd);
+    child_create(tab->terminal, sd, &wsz, cwd);
     if(ws1)free(ws1);
 }
 
 static void set_tab_bar_visibility();
 
 void win_tab_set_argv(char** argv) {
-    g_argv = argv;
+  (void)argv;
 }
 
-void win_tab_init(const char* home,const  char* cmd,char** argv,const  int width, int height, const char* title) {
+void win_tab_init(const char* home,SessDef*sd,const  int width, int height, const char* title) {
     g_home = home;
-    g_cmd = cmd;
-    g_argv = argv;
-    newtab(cfg.rows, cfg.cols, width, height, NULL, title);
+    newtab(sd,cfg.rows, cfg.cols, width, height, NULL, title);
     set_tab_bar_visibility();
 }
-void win_tab_create() {
+void win_tab_create(SessDef*sd){
     STerm* t = tabs[active_tab]->terminal;
     char cwd_path[256];
     sprintf(cwd_path,"/proc/%d/cwd",child_get_pid(t) ); 
     char* cwd = realpath(cwd_path, 0);
-    newtab(t->rows, t->cols, t->cols * cell_width, t->rows * cell_height, cwd, NULL);
+    newtab(sd,t->rows, t->cols, t->cols * cell_width, t->rows * cell_height, cwd, NULL);
     free(cwd);
     win_tab_go(ntabs - 1);
     set_tab_bar_visibility();

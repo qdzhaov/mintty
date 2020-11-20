@@ -19,6 +19,8 @@
 #include <sys/cygwin.h>  // cygwin_internal
 #endif
 
+extern bool clipboard_token;
+
 static DWORD WINAPI
 shell_exec_thread(void *data)
 {
