@@ -13,7 +13,9 @@
 
 #include <winnls.h>
 #include <usp10.h>  // Uniscribe
-
+//winmain
+extern char * home;
+extern int ini_width, ini_height; 
 
 #define dont_debug_bold 1
 

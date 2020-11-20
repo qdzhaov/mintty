@@ -22,22 +22,23 @@
  * winctrls.c: routines to self-manage the controls in a dialog box.
  */
 
-#define GAPBETWEEN 3
-#define GAPWITHIN 1
-#define GAPXBOX 7
-#define GAPYBOX 4
-#define DLGWIDTH 168
-#define STATICHEIGHT 8
-#define TITLEHEIGHT 12
-#define CHECKBOXHEIGHT 8
-#define RADIOHEIGHT 8
-#define EDITHEIGHT 12
-#define LISTHEIGHT 11
-#define LISTINCREMENT 8
-#define COMBOHEIGHT 12
-#define PUSHBTNHEIGHT 14
-#define PROGBARHEIGHT 14
+#define SC(a) (heightsc*(a)/100)
+#define GAPBETWEEN    SC(3)
+#define GAPWITHIN     SC(1)
+#define GAPXBOX       SC(6)
+#define GAPYBOX       SC(2)
 
+#define STATICHEIGHT   SC(12)
+#define TITLEHEIGHT    SC(15)
+#define CHECKBOXHEIGHT SC(12)
+#define RADIOHEIGHT    SC(12)
+#define EDITHEIGHT     SC(15)
+#define LISTHEIGHT     SC(13)
+#define LISTINCREMENT  SC(12)
+#define COMBOHEIGHT    SC(15)
+#define PUSHBTNHEIGHT  SC(18)
+#define PROGBARHEIGHT  SC(18)
+int heightsc=1;
 void
 ctrlposinit(ctrlpos * cp, HWND wnd, int leftborder, int rightborder,
             int topborder)
@@ -49,11 +50,9 @@ ctrlposinit(ctrlpos * cp, HWND wnd, int leftborder, int rightborder,
   cp->ypos = topborder;
   GetClientRect(wnd, &r);
   r2.left = r2.top = 0;
-  r2.right = 4;
-  r2.bottom = 8;
-  MapDialogRect(wnd, &r2);
+  r2.right = (4);
   cp->dlu4inpix = r2.right;
-  cp->width = (r.right * 4) / (r2.right) - 2 * GAPBETWEEN;
+  cp->width = (r.right )  - 2 * GAPBETWEEN;
   cp->xoff = leftborder;
   cp->width -= leftborder + rightborder;
 }
@@ -87,7 +86,6 @@ doctl(control * ctrl,
   */
 
   r.left += cp->xoff;
-  MapDialogRect(cp->wnd, &r);
 
  /*
   * We can pass in cp->wnd == null, to indicate a dry run
@@ -166,10 +164,8 @@ static void
 beginbox(ctrlpos * cp, char *name, int idbox)
 {
   cp->boxystart = cp->ypos;
-  if (!name)
-    cp->boxystart -= STATICHEIGHT / 2;
-  if (name)
-    cp->ypos += STATICHEIGHT;
+  if (name) cp->ypos += STATICHEIGHT;
+  else cp->boxystart -= STATICHEIGHT / 2;
   cp->ypos += GAPYBOX;
   cp->width -= 2 * GAPXBOX;
   cp->xoff += GAPXBOX;
@@ -217,8 +213,8 @@ editbox(control * ctrl, ctrlpos * cp, int password, char * text,
   r.top = cp->ypos;
   r.bottom = EDITHEIGHT;
   doctl(ctrl, cp, r, "EDIT",
-        WS_CHILD | WS_VISIBLE | WS_TABSTOP | ES_AUTOHSCROLL | (password ?
-                                                               ES_PASSWORD : 0),
+        WS_CHILD | WS_VISIBLE | WS_TABSTOP 
+        | ES_AUTOHSCROLL | (password ?  ES_PASSWORD : 0),
         WS_EX_CLIENTEDGE, "", editid);
   cp->ypos += EDITHEIGHT + GAPBETWEEN;
 }

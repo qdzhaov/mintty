@@ -58,12 +58,14 @@ static controlbox *ctrlbox;
  * which change from panel to panel.
  */
 static winctrls ctrls_base, ctrls_panel;
-
+extern int heightsc;
+#define SC(a) (heightsc*(a)/100)
 windlg dlg;
 wstring dragndrop;
 
-static int dialog_height;  // dummy
-
+static int dialog_height,dialog_width,ldpi=72;  
+#define DLGH 28
+#define DLGW 35
 enum {
   IDCX_TVSTATIC = 1001,
   IDCX_TREEVIEW,
@@ -134,7 +136,7 @@ create_controls(HWND wnd, char *path)
    /*
     * Here we must create the basic standard controls.
     */
-    ctrlposinit(&cp, wnd, 3, 3, dialog_height - 17);
+    ctrlposinit(&cp, wnd, SC(3), SC(3), SC(dialog_height- 24));
     wc = &ctrls_base;
     base_id = IDCX_STDBASE;
   }
@@ -142,7 +144,8 @@ create_controls(HWND wnd, char *path)
    /*
     * Otherwise, we're creating the controls for a particular panel.
     */
-    ctrlposinit(&cp, wnd, 69, 3, 3);
+    //ctrlposinit(&cp, wnd, SC(3), SC(3), SC(-15));//for subwin
+    ctrlposinit(&cp, wnd, SC(69), SC(3), SC(3));//
     wc = &ctrls_panel;
     base_id = IDCX_PANELBASE;
   }
@@ -155,30 +158,7 @@ create_controls(HWND wnd, char *path)
     winctrl_layout(wc, &cp, s, &base_id);
   }
 }
-
-static void
-determine_geometry(HWND wnd)
-{
-  // determine height in dialog box coordinates
-  // as was configured in res.rc (IDD_MAINBOX) and applied magically
-  RECT r;
-  GetClientRect(wnd, &r);
-
-  RECT normr;
-  normr.left = 0;
-  normr.top = 0;
-  normr.right = 100;
-  normr.bottom = 100;
-  MapDialogRect(config_wnd, &normr);
-#ifdef debug_geometry
-  printf("dialog %ldx%ld scale %ldx%ld\n", r.right - r.left, r.bottom - r.top, normr.right, normr.bottom);
-#endif
-
-  dialog_height = 100 * (r.bottom - r.top) / normr.bottom;
-}
-
 #ifdef debug_dialog_crash
-
 static char * debugopt = 0;
 static char * debugtag = "none";
 
@@ -460,6 +440,7 @@ static void OnVScroll(HWND wnd,UINT nSBCode, int nPos)
   SetScrollInfo(wnd,SB_VERT,&si,SIF_ALL);
 }
 static HFONT cfdfont=0;
+static HWND subwin;
 static INT_PTR CALLBACK
 config_dialog_proc(HWND wnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -500,11 +481,13 @@ config_dialog_proc(HWND wnd, UINT msg, WPARAM wParam, LPARAM lParam)
     when WM_GETFONT: return (WPARAM)cfdfont;
     when WM_INITDIALOG: {
       win_set_font(wnd);
-      SetWindowPos(wnd,0,0,0,
-                   240*cfg.gui_font_size*dpi/500,
-                   190*cfg.gui_font_size*dpi/500,
-                   SWP_NOMOVE|SWP_NOZORDER);
-      SetWindowLong(wnd, GWL_STYLE,GetWindowLong(wnd, GWL_STYLE)|WS_VSCROLL ); 
+      RECT r,r2;
+      GetClientRect(wnd,&r);
+      GetWindowRect(wnd,&r2);
+      int x,y,w,h;
+      x=0;w=SC(dialog_width)+r2.right-r2.left-r.right;
+      y=0;h=SC(dialog_height)+r2.bottom-r2.top-r.bottom; 
+      SetWindowPos(wnd,0,0,0,w,h , SWP_NOMOVE|SWP_NOZORDER);
       ctrlbox = ctrl_new_box();
       setup_config_box(ctrlbox);
       windlg_init();
@@ -514,21 +497,20 @@ config_dialog_proc(HWND wnd, UINT msg, WPARAM wParam, LPARAM lParam)
       windlg_add_tree(&ctrls_panel);
       copy_config("dialog", &new_cfg, &file_cfg);
 
-      RECT r;
       GetWindowRect(GetParent(wnd), &r);
       dlg.wnd = wnd;
 
       GetClientRect(wnd,&r);
-      SCROLLINFO si;
-      memset(&si,0,sizeof(si));
-      si.cbSize = sizeof(SCROLLINFO);
-      si.fMask = SIF_ALL;
-      si.nPos = 0;
-      si.nMin = 0;
-      si.nMax = r.bottom;
-      si.nPage=1;
-      si.nTrackPos=0;
-      SetScrollInfo(wnd,SB_VERT, &si,1);
+      //SCROLLINFO si;
+      //memset(&si,0,sizeof(si));
+      //si.cbSize = sizeof(SCROLLINFO);
+      //si.fMask = SIF_ALL;
+      //si.nPos = 0;
+      //si.nMin = 0;
+      //si.nMax = r.bottom;
+      //si.nPage=1;
+      //si.nTrackPos=0;
+      //SetScrollInfo(wnd,SB_VERT, &si,1);
      /*
       * Create the actual GUI widgets.
       */
@@ -541,18 +523,19 @@ config_dialog_proc(HWND wnd, UINT msg, WPARAM wParam, LPARAM lParam)
      /*
       * Create the tree view.
       */
-      r.left = 3;
-      r.right = r.left + 64;
-      r.top = 3;
-      r.bottom = r.top + dialog_height - 26;
-      MapDialogRect(wnd, &r);
+      x = SC( 3); w = SC(64); 
+      y = SC( 3); h = SC(dialog_height - 30);
       HWND treeview =
         CreateWindowExA(WS_EX_CLIENTEDGE, WC_TREEVIEWA, "",
                        WS_CHILD | WS_VISIBLE | WS_TABSTOP | TVS_HASLINES |
                        TVS_DISABLEDRAGDROP | TVS_HASBUTTONS | TVS_LINESATROOT
-                       | TVS_SHOWSELALWAYS, r.left, r.top, r.right - r.left,
-                       r.bottom - r.top, wnd, (HMENU) IDCX_TREEVIEW, inst,
+                       | TVS_SHOWSELALWAYS, x,y,w,h , wnd, (HMENU) IDCX_TREEVIEW, inst,
                        null);
+      x = SC( 70); w = SC(dialog_width -73);
+      y = SC(  3); h = SC(dialog_height - 30);
+      subwin=wnd;
+      //subwin = CreateWindowExA(WS_EX_CLIENTEDGE, "STATIC", "",
+      //                 WS_CHILD | WS_VISIBLE|WS_VSCROLL ,x,y,w,h,wnd, 0, inst, null);
       win_set_font(treeview);
 
 
@@ -625,7 +608,6 @@ config_dialog_proc(HWND wnd, UINT msg, WPARAM wParam, LPARAM lParam)
         }
       }
     }
-      SetWindowLong(wnd, GWL_STYLE,GetWindowLong(wnd, GWL_STYLE)|WS_VSCROLL ); 
 
 #ifdef darken_dialog_elements
     when WM_CTLCOLORDLG      // dialog background
@@ -730,7 +712,7 @@ config_dialog_proc(HWND wnd, UINT msg, WPARAM wParam, LPARAM lParam)
         debug("WM_NOTIFY: cleanup");
 
         // here we need the correct DIALOG_HEIGHT already
-        create_controls(wnd, (char *) item.lParam);
+        create_controls(subwin, (char *) item.lParam);
         debug("WM_NOTIFY: create");
         dlg_refresh(null); /* set up control values */
         debug("WM_NOTIFY: refresh");
@@ -838,7 +820,12 @@ win_open_config(void)
     });
     initialised = true;
   }
-  dialog_height=DIALOG_HEIGHT;
+  HDC dc = GetDC(wnd);
+  ldpi= GetDeviceCaps(dc, LOGPIXELSY) ;
+  ReleaseDC(wnd, dc);
+  heightsc=cfg.gui_font_size*100*ldpi/(720);
+  dialog_width  = DLGW*10;//cfg.gui_font_size*72/ldpi;
+  dialog_height = DLGH*10;//cfg.gui_font_size*72/ldpi;
 
   hook_windows(scale_options);
   config_wnd = CreateDialog(inst, MAKEINTRESOURCE(IDD_MAINBOX), wnd, config_dialog_proc);
@@ -848,7 +835,7 @@ win_open_config(void)
   // value(s) (here DIALOG_HEIGHT) is already needed before this point, 
   // as the callback config_dialog_proc sets up dialog box controls.
   // How insane is that resource concept! Shouldn't I know my own geometry?
-  determine_geometry(config_wnd);  // dummy call
+
 
   // Set title of Options dialog explicitly to facilitate I18N
   //__ Options: dialog title
@@ -861,7 +848,7 @@ win_open_config(void)
   win_dark_mode(config_wnd);
 
   ShowWindow(config_wnd, SW_SHOW);
-
+  win_update_shortcuts();
   set_dpi_auto_scaling(false);
 }
 
@@ -991,17 +978,17 @@ win_show_about(void)
 {
 #if CYGWIN_VERSION_API_MINOR < 74
   char * aboutfmt = newn(char, 
-    strlen(VERSION_TEXT) + strlen(COPYRIGHT) + strlen(LICENSE_TEXT) + strlen(_(WARRANTY_TEXT)) + strlen(_(ABOUT_TEXT)) + 11);
-  sprintf(aboutfmt, "%s\n%s\n%s\n%s\n\n%s", 
-           VERSION_TEXT, COPYRIGHT, LICENSE_TEXT, _(WARRANTY_TEXT), _(ABOUT_TEXT));
+    strlen(VERSION_TEXT) + strlen(COPYRIGHT) + strlen(LICENSE_TEXT) +strlen(RELEASEINFO) + strlen(_(WARRANTY_TEXT)) + strlen(_(ABOUT_TEXT)) + 11);
+  sprintf(aboutfmt, "%s\n%s\n%s\n%s\n%s\n\n%s", 
+           VERSION_TEXT, COPYRIGHT, LICENSE_TEXT,RELEASEINFO, _(WARRANTY_TEXT), _(ABOUT_TEXT));
   char * abouttext = newn(char, strlen(aboutfmt) + strlen(WEBSITE));
   sprintf(abouttext, aboutfmt, WEBSITE);
 #else
   DWORD win_version = GetVersion();
   uint build = HIWORD(win_version);
   char * aboutfmt =
-    asform("%s [Windows %u]\n%s\n%s\n%s\n\n%s", 
-           VERSION_TEXT, build, COPYRIGHT, LICENSE_TEXT, _(WARRANTY_TEXT), _(ABOUT_TEXT));
+    asform("%s [Windows %u]\n%s\n%s\n%s\n%s\n\n%s", 
+           VERSION_TEXT, build, COPYRIGHT, LICENSE_TEXT,RELEASEINFO, _(WARRANTY_TEXT), _(ABOUT_TEXT));
   char * abouttext = asform(aboutfmt, WEBSITE);
 #endif
   free(aboutfmt);

@@ -9,6 +9,7 @@
 #include "child.h"
 #include "charset.h"
 
+extern int line_scale;
 typedef struct {
   size_t capacity;  // number of items allocated for text/cattrs
   size_t len;    // number of actual items at text/cattrs (inc. null terminator)

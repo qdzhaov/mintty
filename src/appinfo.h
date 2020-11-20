@@ -11,7 +11,7 @@
 
 // needed for res.rc
 #define APPDESC "Terminal"
-#define AUTHOR  "Andy Koppe / Thomas Wolff"
+#define AUTHOR  "Andy Koppe / Thomas Wolff/Wei Zhao"
 #define YEAR    "2013/2020"
 
 #ifndef NDEBUG
@@ -58,6 +58,9 @@
 #define VERSION_TEXT \
   APPNAME " " VERSION " (" STRINGIFY(TARGET) ")"
 #endif
+
+#define RELEASEINFO \
+  "released at https://gitee.com/qdzhaov/mintty"
 
 #define LICENSE_TEXT \
   "License GPLv3+: GNU GPL version 3 or later"

@@ -14,6 +14,7 @@
 #include <langinfo.h>
 #endif
 
+extern int lines_scrolled;
 STerm dterm={0};
 STerm *cterm=&dterm;
 
@@ -29,9 +30,13 @@ enum {
   PARTIAL_UPDATE = 1,
   FULL_UPDATE = 2
 };
-
+//ZZ 
 static int markpos = 0;
 static bool markpos_valid = false;
+
+static char * * links = 0;
+static int nlinks = 0;
+static int linkid = 0;
 
 const cattr CATTR_DEFAULT =
             {.attr = ATTR_DEFAULT,
@@ -50,10 +55,6 @@ termchar basic_erase_char =
 
 
 #define dont_debug_hyperlinks
-
-static char * * links = 0;
-static int nlinks = 0;
-static int linkid = 0;
 
 int
 putlink(char * link)
@@ -575,11 +576,11 @@ term_set_search(wchar * needle)
 }
 
 #ifdef dynamic_casefolding
+
 static struct {
   uint code, fold;
 } * case_folding;
 static int case_foldn = 0;
-
 static void
 init_case_folding()
 {

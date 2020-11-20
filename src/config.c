@@ -25,6 +25,7 @@
 
 #define dont_support_blurred
 
+extern char * home;
 
 string config_dir = 0;
 static wstring rc_filename = 0;
@@ -219,8 +220,8 @@ const config default_cfg = {
   .geom_sync = 0,
   .tab_bar_show = 1,
   .indicator = 1,
-  .tab_font_size= 24 ,
-  .gui_font_size= 24 ,
+  .tab_font_size= 16 ,
+  .gui_font_size= 12 ,
   .col_spacing = 0,
   .row_spacing = 0,
   .padding = 1,
