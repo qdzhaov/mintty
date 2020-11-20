@@ -21,6 +21,11 @@
 #include <sys/cygwin.h>  // cygwin_internal
 #endif
 
+extern char * home;
+extern bool report_child_pid;
+extern bool icon_is_from_shortcut;
+extern wstring shortcut;
+extern bool kb_input;
 #if CYGWIN_VERSION_API_MINOR >= 93
 #include <pty.h>
 #else
@@ -40,7 +45,7 @@ int forkpty(int *, char *, struct termios *, struct winsize *);
 // http://www.tldp.org/LDP/abs/html/exitcodes.html
 #define mexit 126
 
-static int win_fd;
+static int win_fd=-1;
 static int log_fd = -1;
 bool logging = false;
 #if CYGWIN_VERSION_API_MINOR >= 66
@@ -210,12 +215,14 @@ child_update_charset(STerm *pterm   )
 }
 
 void
-child_create(struct STerm* pterm,
-             char *argv[], struct winsize *winp, const char* path)
+child_create(struct STerm* pterm,SessDef*sd,
+             struct winsize *winp, const char* path)
 {
   pid_t pid;
   (pterm->child.pty_fd   ) = -1;
   win_tab_v(pterm->tab);
+  char**argv=sd->argv;
+  char*cmd=sd->cmd;
   trace_dir(asform("child_create: %s", getcwd(malloc(MAX_PATH), MAX_PATH)));
 
   // xterm and urxvt ignore SIGHUP, so let's do the same.
@@ -385,8 +392,7 @@ child_create(struct STerm* pterm,
     }
   }
 
-  win_fd = open("/dev/windows", O_RDONLY);
-
+  if(win_fd==-1) win_fd = open("/dev/windows", O_RDONLY);
   if (cfg.logging) {
     // option Logging=yes => initially open log file if configured
     open_logfile(false);
@@ -432,9 +438,9 @@ static void vprocclose(STerm* pterm){
         if (code == 0) err = false;
         if ((code || cfg.exit_write) /*&& cfg.hold != HOLD_START*/)
           //__ %1$s: client command (e.g. shell) terminated, %2$i: exit code
-          asprintf(&s, _("%s: Exit %i"), cmd, code);
+          asprintf(&s, _("%s: Exit %i"), pterm->child.cmd, code);
       } else if (WIFSIGNALED(status))
-        asprintf(&s, "%s: %s", cmd, strsignal(WTERMSIG(status)));
+        asprintf(&s, "%s: %s", pterm->child.cmd, strsignal(WTERMSIG(status)));
 
       if (!s && cfg.exit_write) {
         //__ default inline notification if ExitWrite=yes
@@ -1027,9 +1033,11 @@ setenvi(char * env, int val)
 /*
   Called from Alt+F2 (or session launcher via child_launch).
  */
+extern SessDef main_sd;
 static void
-do_child_fork(STerm* pterm,int argc, char *argv[], int moni, bool launch, bool config_size)
+do_child_fork(SessDef*sd, int moni, bool launch, bool config_size)
 {
+  char**argv=sd->argv;
   trace_dir(asform("do_child_fork: %s", getcwd(malloc(MAX_PATH), MAX_PATH)));
 #ifdef control_AltF2_size_via_token
   void reset_fork_mode()
@@ -1037,7 +1045,6 @@ do_child_fork(STerm* pterm,int argc, char *argv[], int moni, bool launch, bool c
     clone_size_token = true;
   }
 #endif
-
   pid_t clone = fork();
 
   if (cfg.daemonize) {
@@ -1063,16 +1070,19 @@ do_child_fork(STerm* pterm,int argc, char *argv[], int moni, bool launch, bool c
   }
 
   if (clone == 0) {  // prepare child process to spawn new terminal
-    if ((pterm->child.pty_fd   ) >= 0)
-      close((pterm->child.pty_fd   ));
+    if ((cterm->child.pty_fd   ) >= 0)
+      close((cterm->child.pty_fd   ));
     if (log_fd >= 0)
       close(log_fd);
     close(win_fd);
 
-    if ((pterm->child.child_dir) && *(pterm->child.child_dir)) {
-      string set_dir = (pterm->child.child_dir);
+
+
+
+    if ((cterm->child.child_dir) && *(cterm->child.child_dir)) {
+      string set_dir = (cterm->child.child_dir);
       if (support_wsl) {
-        wchar * wcd = cs__utftowcs((pterm->child.child_dir));
+        wchar * wcd = cs__utftowcs((cterm->child.child_dir));
 #ifdef debug_wsl
         printf("fork wsl <%ls>\n", wcd);
 #endif
@@ -1105,7 +1115,7 @@ do_child_fork(STerm* pterm,int argc, char *argv[], int moni, bool launch, bool c
 #ifdef add_child_parameters
     // add child parameters
     int newparams = 0;
-    char * * newargv = malloc((argc + newparams + 1) * sizeof(char *));
+    char * * newargv = malloc((sd->argc + newparams + 1) * sizeof(char *));
     int i = 0, j = 0;
     bool addnew = true;
     while (1) {
@@ -1114,11 +1124,11 @@ do_child_fork(STerm* pterm,int argc, char *argv[], int moni, bool launch, bool c
         // insert additional parameters here
         newargv[j++] = "-o";
         static char parbuf1[28];  // static to prevent #530
-        sprintf(parbuf1, "Rows=%d", pterm->rows);
+        sprintf(parbuf1, "Rows=%d", cterm->rows);
         newargv[j++] = parbuf1;
         newargv[j++] = "-o";
         static char parbuf2[31];  // static to prevent #530
-        sprintf(parbuf2, "Columns=%d", pterm->cols);
+        sprintf(parbuf2, "Columns=%d", cterm->cols);
         newargv[j++] = parbuf2;
       }
       newargv[j] = argv[i];
@@ -1129,13 +1139,12 @@ do_child_fork(STerm* pterm,int argc, char *argv[], int moni, bool launch, bool c
     }
     argv = newargv;
 #else
-    (void) argc;
 #endif
 
     // provide environment to clone size
     if (!config_size) {
-      setenvi("MINTTY_ROWS", pterm->rows0);
-      setenvi("MINTTY_COLS", pterm->cols0);
+      setenvi("MINTTY_ROWS", cterm->rows0);
+      setenvi("MINTTY_COLS", cterm->cols0);
       // provide environment to maximise window
       if (win_is_fullscreen)
         setenvi("MINTTY_MAXIMIZE", 2);
@@ -1151,28 +1160,14 @@ do_child_fork(STerm* pterm,int argc, char *argv[], int moni, bool launch, bool c
 
     //setenv("MINTTY_CHILD", "1", true);
 
-#if CYGWIN_VERSION_DLL_MAJOR >= 1005
-    if (shortcut) {
-      trace_dir(asform("Starting <%s>", cs__wcstoutf(shortcut)));
-      shell_exec(shortcut);
-      //show_info("Started");
-      sleep(5);  // let starting settle, or it will fail; 1s normally enough
-      exit(0);
-    }
-
-    trace_dir(asform("Starting exe <%s %s>", argv[0], argv[1]));
-    execv("/proc/self/exe", argv);
-#else
     // /proc/self/exe isn't available before Cygwin 1.5, so use argv[0] instead.
     // Strip enclosing quotes if present.
-    char *path = argv[0];
-    int len = strlen(path);
-    if (path[0] == '"' && path[len - 1] == '"') {
-      path = strdup(path + 1);
-      path[len - 2] = 0;
-    }
-    execvp(path, argv);
-#endif
+    int na;
+    for(na=0;argv[na];na++);
+    char ** new_argv = newn(char *, na+2);
+    new_argv[0]=main_sd.cmd;
+    for(na=0;argv[na];na++)new_argv[na+1]=argv[na];
+    execvp(main_sd.cmd, new_argv);
     exit(mexit);
   }
   //reset_fork_mode();
@@ -1182,17 +1177,18 @@ do_child_fork(STerm* pterm,int argc, char *argv[], int moni, bool launch, bool c
   Called from Alt+F2.
  */
 void
-child_fork(STerm* pterm,int argc, char *argv[], int moni, bool config_size)
+child_fork(SessDef*sd, int moni, bool config_size)
 {
-  do_child_fork(pterm,argc, argv, moni, false, config_size);
+  do_child_fork(sd, moni, false, config_size);
 }
-
 /*
   Called from session launcher.
  */
 void
-child_launch(STerm* pterm,int n, int argc, char * argv[], int moni)
+child_launch(int n, SessDef*sd, int moni)
 {
+  int argc=sd->argc;
+  char **argv=sd->argv;
   if (*cfg.session_commands) {
     char * cmds = cs__wcstombs(cfg.session_commands);
     char * cmdp = cmds;
@@ -1224,7 +1220,8 @@ child_launch(STerm* pterm,int n, int argc, char * argv[], int moni)
           }
         }
         new_argv[argc] = 0;
-        do_child_fork(pterm,argc, new_argv, moni, true, true);
+        SessDef nsd={argc,sd->cmd,new_argv};
+        do_child_fork(&nsd, moni, true, true);
         free(new_argv);
         break;
       }

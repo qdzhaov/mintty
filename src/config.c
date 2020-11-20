@@ -25,6 +25,7 @@
 
 #define dont_support_blurred
 
+extern char * home;
 
 string config_dir = 0;
 static wstring rc_filename = 0;
