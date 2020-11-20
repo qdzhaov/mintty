@@ -1,18 +1,28 @@
 # enhanced mintty #
 branch from github.com/mintty/mintty 3.4.3  
+Please report bugs or suggest enhancements via the 
+   [github issue tracker](https://github.com/qdzhaov/mintty/issues).
+or [gitee  issue tracker](https://gitee.com/qdzhaov/mintty/issues).
+
 ## main enhancement: ##
 + surport multiple Tab followed fatty,  
 + Add control mode,So can release many hotkeys,it's helpfull for tmux+vim  
 + surport partline last line can be partline,usrful for tmux   
 + Control config dialog fontsize  
-+ Surport Win+key as shortcuts key  
++ Surport Win+key as shortcuts key,all confict key with windows,will overide it.  
++ Surport WSL/CYGWIN/COMMAND/POWERSHELL session
 + optimize shortcuts key  
   easy use ,easy read,high effcient  
   user define shortcuts easy an high effcient  
-  Todo: update/apply shortcut when config change  
-  Todo: user define shortcuts in config dialog
-  Todo: add user define shortcuts for every function
-  Todo: add fast start cygwin,mysys,wsl 
++ TODO:
+  Todo: user define shortcuts in config dialog  
+  Todo: add user define shortcuts for every function  
+  Todo: have many global vars,decrease it  
+  Todo: add fast start surport  
+  Todo: verify all global variable (include static,member of config ) is term independ.  
++ Important:   
+  the golbal variable is term depend,should be in parameter,term is used many many times,  
+  I can't modify it,I use global pointer cterm,be sure it pointer to correct term.  
 ## tab control shortcuts ## 
 ```
 win+Left        prevtab  
@@ -22,6 +32,7 @@ win+Shift+Right tabmovetoNext
 win+Q           Quit  
 win+w           CloseTab  
 win+T           newtab  
+win+X           Enter Control mode
 win+Z           minisize  
 ```
 ## enter control mode:  

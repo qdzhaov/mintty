@@ -2,7 +2,7 @@
 #define CHILD_H
 
 #include <termios.h>
-
+enum IDSS{ IDSS_DEF=0, IDSS_WSL , IDSS_CYG , IDSS_CMD , IDSS_PSH , IDSS_USR };
 typedef struct STerm STerm;
 #define TAB_NTITLE 16
 #define TAB_LTITLE 128
@@ -14,10 +14,15 @@ typedef struct STab {
         bool attention;
     } info;
 }STab ;
+typedef struct SessDef{
+  int argc;
+  char*cmd;
+  char**argv;
+}SessDef;
 STab**win_tabs();
 typedef struct SChild SChild;
 extern void child_update_charset(STerm* pterm);
-extern void child_create(STerm* pterm, char *argv[], struct winsize *winp, const char* path);
+extern void child_create(STerm* pterm, SessDef*sd, struct winsize *winp, const char* path);
 extern void toggle_logging(void);
 extern bool logging;
 extern void child_proc(void);
@@ -42,8 +47,59 @@ extern wstring child_conv_path(STerm* pterm,wstring, bool adjust_dir);
 extern void setenvi(char * env, int val);
 
 extern void child_set_fork_dir(STerm* pterm,char *);
-extern void child_launch(STerm* pterm,int n, int argc, char * argv[], int moni);
-extern void child_fork(STerm* pterm,int argc, char * argv[], int moni, bool config_size);
+extern void child_launch(int n, SessDef*sd, int moni);
+extern void child_fork(SessDef*sd, int moni, bool config_size);
 extern void user_command(STerm* pterm,wstring commands, int n);
 
+//========= for wintab 
+extern void win_tog_scrollbar();
+extern void win_tog_partline();
+extern STerm* win_tab_active_term() ;
+extern void win_tab_show();
+extern void win_tab_indicator();
+extern void win_tab_init(const char* home,SessDef*sd,const  int width, int height, const char* title) ;
+extern void win_tab_create(SessDef*sd) ;
+extern void win_tab_clean() ;
+extern bool win_tab_should_die();
+extern int  win_tab_active();     
+extern int  win_tab_count() ;
+extern void win_tab_for_each(void (*cb)(STerm* pterm));
+extern void win_tab_paint(HDC dc);
+extern void win_tab_attention(STerm* pterm) ;
+extern void win_tab_change(int change) ;
+extern void win_tab_go(int index) ;
+extern void win_tab_mouse_click(int x) ;
+extern void win_tab_move(int amount) ;
+extern void win_tab_set_argv(char** argv) ;
+typedef struct STab STab;
+extern void win_tab_push(STab *tab);
+extern void win_tab_pop();
+extern void win_tab_v(STab *tab);
+extern void win_tab_actv();
+
+extern void     win_tab_save_title(STerm* pterm);
+extern void     win_tab_restore_title(STerm* pterm);
+extern void     win_tab_set_title(STerm* pterm, const wchar_t* title) ;
+extern wchar_t* win_tab_get_title(unsigned int idx) ;
+extern void     win_tab_title_push(STerm* pterm) ;
+extern wchar_t* win_tab_title_pop(STerm* pterm) ;
+
+void tab_prev	    ();
+void tab_next	    ();
+void tab_move_prev();
+void tab_move_next();
+void new_tab_def();
+void new_tab_wsl();
+void new_tab_cyg();
+void new_tab_cmd();
+void new_tab_psh();
+void new_tab_usr();
+void new_win_wsl();
+void new_win_cyg();
+void new_win_cmd();
+void new_win_psh();
+void new_win_usr();
+void new_win_def();
+void new_win(int idss,int moni);
+void new_tab(int idss);
 #endif

@@ -861,7 +861,7 @@ win_open_config(void)
   win_dark_mode(config_wnd);
 
   ShowWindow(config_wnd, SW_SHOW);
-
+  win_update_shortcuts();
   set_dpi_auto_scaling(false);
 }
 

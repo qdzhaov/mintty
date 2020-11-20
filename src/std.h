@@ -139,7 +139,11 @@ extern wchar * wloctext(string msg);
 
 
 extern void strset(string *sp, string s);
+extern void stradd(string *sp, string s);
 extern void wstrset(wstring *sp, wstring s);
+extern void wstradd(wstring *sp, wstring s);
+extern int  vwasprintf(wchar **buf, const wchar *fmt, va_list va);
+extern wchar*awsform(const wchar *fmt, ...);
 
 
 #define when break; case
@@ -158,5 +162,7 @@ extern void wstrset(wstring *sp, wstring s);
 
 #define sgn(x) ({ typeof(x) x_ = (x); (x_ > 0) - (x_ < 0); })
 #define sqr(x) ({ typeof(x) x_ = (x); x_ * x_; })
+
+#define VFREE(p) if(p)free(p)
 
 #endif

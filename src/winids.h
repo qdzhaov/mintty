@@ -60,8 +60,21 @@
 #define IDM_TOGVT220KB      0x0480
 #define IDM_HTML            0x0490
 #define IDM_KEY_DOWN_UP     0x04A0
+
+#define IDM_NEWWSLT         0x0500
+#define IDM_NEWCYGT         0x0510
+#define IDM_NEWCMDT         0x0520
+#define IDM_NEWPSHT         0x0530
+#define IDM_NEWUSRT         0x0540
+
+#define IDM_NEWWSLW         0x0580
+#define IDM_NEWCYGW         0x0590
+#define IDM_NEWCMDW         0x05A0
+#define IDM_NEWPSHW         0x05B0
+#define IDM_NEWUSRW         0x05C0
                                 
 #define IDM_USERCOMMAND     0x1000
+#define IDM_SESSIONCMD      0x2000
 #define IDM_SESSIONCOMMAND  0x4000
 #define IDM_SYSMENUFUNCTION 0x7000
 #define IDM_CTXMENUFUNCTION 0xA000

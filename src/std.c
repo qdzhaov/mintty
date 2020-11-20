@@ -8,6 +8,12 @@ strset(string *sp, string s)
   uint size = strlen(s) + 1;
   *sp = memcpy(renewn((char *)*sp, size), s, size);
 }
+void
+stradd(string *sp, string s)
+{
+  uint size = strlen(*sp)+strlen(s) + 1;
+  *sp = strcat(renewn((char *)*sp, size), s);
+}
 
 void
 wstrset(wstring *sp, wstring s)
@@ -16,6 +22,12 @@ wstrset(wstring *sp, wstring s)
   *sp = memcpy(renewn((wchar *)*sp, size), s, size * sizeof(wchar));
 }
 
+void
+wstradd(wstring *sp, wstring s)
+{
+  uint size = wcslen(*sp)+wcslen(s) + 1;
+  *sp = wcscat(renewn((wchar *)*sp, size), s);
+}
 
 char *
 tmpdir()
@@ -54,7 +66,6 @@ vasprintf(char **buf, const char *fmt, va_list va)
     *buf = 0;
   return len;
 }
-
 int
 asprintf(char **buf, const char *fmt, ...)
 {
@@ -67,6 +78,41 @@ asprintf(char **buf, const char *fmt, ...)
 
 #endif
 
+int
+vaswprintf(wchar **buf, const wchar *fmt, va_list va)
+{
+  va_list va2;
+  va_copy(va2, va);
+  int len = vswprintf(0, 0, fmt, va2);
+  va_end(va2);
+  if (len > 0) {
+    *buf = malloc((len + 1)*sizeof(wchar));
+    if (*buf)
+      vswprintf(*buf, len + 1, fmt, va);
+  }
+  else
+    *buf = 0;
+  return len;
+}
+int
+aswprintf(wchar **buf, const wchar *fmt, ...)
+{
+  va_list va;
+  va_start(va, fmt);
+  int len = vaswprintf(buf, fmt, va);
+  va_end(va);
+  return len;
+}
+wchar *
+awsform(const wchar *fmt, ...)
+{
+  wchar *ws = 0;
+  va_list va;
+  va_start(va, fmt);
+  vaswprintf(&ws, fmt, va);
+  va_end(va);
+  return ws;
+}
 char *
 asform(const char *fmt, ...)
 {

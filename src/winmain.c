@@ -8,8 +8,7 @@
 FILE * mtlog = 0;
 #endif
 //#define debug_hook
-char * mintty_debug;
-
+char *mintty_debug;
 #define dont_debug_resize
 #include "winpriv.h"
 #include "winsearch.h"
@@ -55,8 +54,10 @@ typedef UINT_PTR uintptr_t;
 #endif
 
 
+extern LOGFONT lfont;
+extern bool click_focus_token;//wintext
 char * home;
-char * cmd;
+char *minttypath=NULL;
 bool icon_is_from_shortcut = false;
 
 static HFONT wguifont=0, guifnt = 0;
@@ -64,9 +65,15 @@ HINSTANCE inst;
 HWND wnd;
 HIMC imc;
 ATOM class_atom;
-
-static char **main_argv;
-static int main_argc;
+SessDef sessdefs[]={
+  {0,0,0},
+  {1,"wsl",(char*[]){"wsl",0}},
+  {0,0    ,(char*[]){0    ,0}},
+  {1,"cmd",(char*[]){"cmd",0}},
+  {1,"powershell",(char*[]){"powershell",0}},
+  {0,0,0}
+}; 
+SessDef main_sd={0};
 static bool invoked_from_shortcut = false;
 wstring shortcut = 0;
 static bool invoked_with_appid = false;
@@ -613,7 +620,7 @@ win_launch(int n)
   HMONITOR mon = MonitorFromWindow(wnd, MONITOR_DEFAULTTONEAREST);
   int x, y;
   int moni = search_monitors(&x, &y, mon, true, 0);
-  child_launch(cterm,n, main_argc, main_argv, moni);
+  child_launch(n, &main_sd, moni);
 }
 
 
@@ -2346,23 +2353,25 @@ static struct {
         when IDM_SEARCH: win_open_search();
         when IDM_FLIPSCREEN: term_flip_screen();
         when IDM_OPTIONS: win_open_config();
-        when IDM_NEW: {
-          HMONITOR mon = MonitorFromWindow(wnd, MONITOR_DEFAULTTONEAREST);
-          int x, y;
-          int moni = search_monitors(&x, &y, mon, true, 0);
-          child_fork(cterm,main_argc, main_argv, moni, get_mods() & MDK_SHIFT);
-        }
-        when IDM_NEW_MONI: {
-          int moni = lp;
-          child_fork(cterm,main_argc, main_argv, moni, get_mods() & MDK_SHIFT);
-        }
+        when IDM_NEW: new_win_def();
+        when IDM_NEW_MONI: new_win(IDSS_DEF,lp);
         when IDM_COPYTITLE: win_copy_title();
-        when IDM_NEWTAB: win_tab_create();
-        when IDM_KILLTAB: child_terminate(cterm);
-        when IDM_PREVTAB: win_tab_change(-1);
-        when IDM_NEXTTAB: win_tab_change(+1);
-        when IDM_MOVELEFT: win_tab_move(-1);
-        when IDM_MOVERIGHT: win_tab_move(+1);
+        when IDM_NEWWSLT: new_tab_wsl();
+        when IDM_NEWCYGT: new_tab_cyg();
+        when IDM_NEWCMDT: new_tab_cmd();
+        when IDM_NEWPSHT: new_tab_psh();
+        when IDM_NEWUSRT: new_tab_usr();
+        when IDM_NEWWSLW: new_win_wsl();
+        when IDM_NEWCYGW: new_win_cyg();
+        when IDM_NEWCMDW: new_win_cmd();
+        when IDM_NEWPSHW: new_win_psh();
+        when IDM_NEWUSRW: new_win_usr();
+        when IDM_NEWTAB : new_tab_def();
+        when IDM_KILLTAB: win_close();
+        when IDM_PREVTAB  : tab_prev	   ();
+        when IDM_NEXTTAB  : tab_next	   ();
+        when IDM_MOVELEFT : tab_move_prev();
+        when IDM_MOVERIGHT: tab_move_next();
         when IDM_KEY_DOWN_UP: {
           bool on = lp & 0x10000;
           int vk = lp & 0xFFFF;
@@ -2667,7 +2676,6 @@ static struct {
 
     when WM_MOUSEACTIVATE:
       // prevent accidental selection on activation (#717)
-      printf("mouse active\n");
       if (LOWORD(lp) == HTCLIENT && HIWORD(lp) == WM_LBUTTONDOWN)
         if (!getenv("ConEmuPID"))
 #ifdef suppress_click_on_focus_at_message_level
@@ -3051,7 +3059,8 @@ int pmapmem(int flg){
   }
   return 0;
 }
-extern int lwinkey,rwinkey;
+extern int lwinkey,rwinkey,winkey;
+extern ULONG last_wink_time;
 static LRESULT CALLBACK
 hookprockbll(int nCode, WPARAM wParam, LPARAM lParam)
 {
@@ -3079,24 +3088,24 @@ hookprockbll(int nCode, WPARAM wParam, LPARAM lParam)
       ||cterm->shortcut_override
       )
       return CallNextHookEx(kb_hook, nCode, wParam, lParam);
-    int ret=0;
-    int mods=get_mods();
     //keybd_event('Z', 0, 0, 0)　;//　表示模拟按下Z键
     //keybd_event('Z', 0, 2, 0)　;//　表示模拟弹起Z键
+    ULONG msgt=GetMessageTime();
+    if(msgt-last_wink_time>5000)winkey=lwinkey=rwinkey=0;
     switch(wParam){
       when WM_KEYDOWN: {
-        if(key==VK_LWIN)lwinkey=1;
-        else if(key==VK_RWIN)rwinkey=1;
-        mods=get_mods();
-        if(mods&MDK_WIN){
+        if(key==VK_LWIN)     {winkey=lwinkey=1;last_wink_time=msgt ;return 1;}
+        else if(key==VK_RWIN){winkey=rwinkey=1;last_wink_time=msgt ;return 1;}
+        if(winkey){  
           LPARAM lp = 1|(LPARAM)kbdll->flags << 24 | (LPARAM)kbdll->scanCode << 16;
-          ret=win_whotkey(key, lp);
-          if(ret)return 1;
+          win_whotkey(key, lp);
+          //if(ret)
+          return 1;
         }
       }
       when WM_KEYUP: 
-          if(key==VK_LWIN)lwinkey=0;
-          else if(key==VK_RWIN)rwinkey=0;
+        if(key==VK_LWIN){winkey=lwinkey=0;return 1;}
+        else if(key==VK_RWIN){winkey=rwinkey=0;return 1;}
     }
   }
   return CallNextHookEx(kb_hook, nCode, wParam, lParam);
@@ -3154,7 +3163,7 @@ report_pos(void)
     cols = (placement.rcNormalPosition.right - placement.rcNormalPosition.left - norm_extra_width - 2 * PADDING) / cell_width;
     rows = (placement.rcNormalPosition.bottom - placement.rcNormalPosition.top - norm_extra_height - 2 * PADDING - OFFSET) / cell_height;
 
-    printf("%s", main_argv[0]);
+    printf("%s", main_sd.argv[0]);
     printf(*report_geom == 'o' ? " -o Columns=%d -o Rows=%d" : " -s %d,%d", cols, rows);
     printf(*report_geom == 'o' ? " -o X=%d -o Y=%d" : " -p %d,%d", x, y);
     char * winstate = 0;
@@ -3393,7 +3402,91 @@ regclose(HKEY key)
   if (key)
     RegCloseKey(key);
 }
-
+typedef struct SessionDef{
+  int type;
+  wchar*name;
+  wchar*cmd;
+}SessionDef;
+char *shells[]={
+  "/bin/bash",
+  "/bin/zsh",
+  0
+};
+static int listShell(int maxsh,SessionDef*pshs,struct passwd *pw){
+  char*cmd,**p;
+  int ind=0;
+  cmd = getenv("SHELL");
+  cmd = cmd ? strdup(cmd) :
+#if CYGWIN_VERSION_DLL_MAJOR >= 1005
+      (pw && pw->pw_shell && *pw->pw_shell) ? strdup(pw->pw_shell) :
+#endif
+      "/bin/sh";
+  if(access(cmd,0)) {
+    pshs[ind].type=0;
+    pshs[ind].name=wcsdup(W("cygwin")); 
+    pshs[ind].cmd=cs__utftowcs(cmd);
+    ind++;
+  }
+  for(p=shells;*p;p++){
+    if(strcmp(cmd,*p)){
+      if(access(*p,0)) {
+        char *s,*t;
+        t=strrchr(*p,'/');
+        if(!t)t=*p;
+        else t=t+1;
+        s=asform("Cyg %s",cmd ,t);
+        pshs[ind].type=0;
+        pshs[ind].name=cs__utftowcs(s);
+        pshs[ind].cmd=cs__utftowcs(cmd);
+        VFREE(s);
+        ind++;
+      }
+      if(ind>=maxsh)break;
+    }
+  }
+  return ind; 
+};
+static int
+listwsl(int maxdn,SessionDef*pdn){
+  static wstring lxsskeyname = W("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Lxss");
+  HKEY lxss = regopen(HKEY_CURRENT_USER, lxsskeyname);
+  if (!lxss) return 0;
+  wchar * dd = getregstr(HKEY_CURRENT_USER, lxsskeyname, W("DefaultDistribution"));
+  wchar * ddn = getregstr(lxss, dd, W("lxsskeyname"));
+  VFREE(dd);
+  DWORD nsubkeys = 0;
+  DWORD maxlensubkey;
+  DWORD ret;
+  int ind=0;
+  wchar * dn = getregstr(lxss, ddn, W("DistributionName"));
+  pdn[ind].type=1;
+  pdn[ind].name=wcsdup(_W("Wsl"));
+  pdn[ind++].cmd=dn;
+  // prepare enumeration of distributions
+  ret = RegQueryInfoKeyW(
+    lxss, NULL, NULL, NULL, &nsubkeys, &maxlensubkey, 
+    NULL, NULL, NULL, NULL, NULL, NULL);
+  // enumerate the distribution subkeys
+  DWORD keylen = maxlensubkey + 2;
+  wchar subkey[keylen];
+  for (uint i = 0; i < nsubkeys; i++) {
+    ret = RegEnumKeyW(lxss, i, subkey, keylen);
+    if (ret == ERROR_SUCCESS) {
+      if (!wcscmp(subkey, ddn)) { 
+        dn = getregstr(lxss, subkey, W("DistributionName"));
+        wchar*s=awsform(W("Wsl:%s"),dn);
+        pdn[ind].type=1;
+        pdn[ind].name=s;
+        pdn[ind++].cmd=dn;
+        VFREE(s);
+      }
+      if(ind>=maxdn)break;
+    }
+  }
+  regclose(lxss);
+  VFREE(ddn);
+  return ind;
+}
 static int
 getlxssinfo(bool list, wstring wslname, uint * wsl_ver,
             char ** wsl_guid, wstring * wsl_rootfs, wstring * wsl_icon)
@@ -4027,11 +4120,44 @@ opts[] = {
   {"sl",         required_argument, 0, OPT_SL},
   {0, 0, 0, 0}
 };
+void pcygargv(int login){
+    char*cmd;
+    cmd = getenv("SHELL");
+    if(cmd){
+      cmd = strdup(cmd) ;
+    }
+#if CYGWIN_VERSION_DLL_MAJOR >= 1005
+    else{
+      struct passwd *pw = getpwuid(getuid());
+      if(pw && pw->pw_shell && *pw->pw_shell) {
+        cmd=strdup(pw->pw_shell) ;
+      }
+    }
+#endif
+    if(!cmd)cmd="/bin/sh";
+    // Determine the program name argument.
+    char *slash = strrchr(cmd, '/');
+    char *arg0 = slash ? slash + 1 : cmd;
+
+    // Prepend '-' if a login shell was requested.
+    if (login)
+      arg0 = asform("-%s", arg0);
+    // Create new argument array.
+    sessdefs[IDSS_CYG].argc=1;
+    sessdefs[IDSS_CYG].cmd=cmd;
+    sessdefs[IDSS_CYG].argv[0]=arg0;
+    sessdefs[IDSS_CYG].argv[1]=0;
+}
 int
 main(int argc, char *argv[])
 {
-  main_argv = argv;
-  main_argc = argc;
+  char buf[1024];
+  (void)listShell;
+  (void)listwsl;
+  main_sd.argc=argc;
+  main_sd.argv=argv;
+  main_sd.cmd=strdup(realpath(argv[0],buf));
+  for(int i=3;i<FD_SETSIZE;i++)close(i);	
   mintty_debug = getenv("MINTTY_DEBUG") ?: "";
 #ifdef debuglog
   mtlog = fopen("/tmp/mtlog", "a");
@@ -4535,6 +4661,7 @@ main(int argc, char *argv[])
 
   // Work out what to execute.
   argv += optind;
+  char *cmd;
   if (wsl_guid && wsl_launch) {
     argc -= optind;
 #ifdef wslbridge2
@@ -4681,27 +4808,14 @@ main(int argc, char *argv[])
   else if (*argv && (argv[1] || strcmp(*argv, "-")))
     cmd = *argv;
   else {  // argv is only "-"
-    // Look up the user's shell.
-    cmd = getenv("SHELL");
-    cmd = cmd ? strdup(cmd) :
-#if CYGWIN_VERSION_DLL_MAJOR >= 1005
-      (pw && pw->pw_shell && *pw->pw_shell) ? strdup(pw->pw_shell) :
-#endif
-      "/bin/sh";
-
-    // Determine the program name argument.
-    char *slash = strrchr(cmd, '/');
-    char *arg0 = slash ? slash + 1 : cmd;
-
-    // Prepend '-' if a login shell was requested.
-    if (*argv)
-      arg0 = asform("-%s", arg0);
-
-    // Create new argument array.
-    argv = newn(char *, 2);
-    argv[0] = arg0;
-    argv[1] = 0;
+    pcygargv(*argv!=0);
+    cmd=sessdefs[IDSS_CYG].cmd;
+    argv=sessdefs[IDSS_CYG].argv;
   }
+  if(sessdefs[IDSS_CYG].argc==0) pcygargv(0);
+  sessdefs[0].argc=1;
+  sessdefs[0].cmd=cmd;
+  sessdefs[0].argv=argv;
 
   // Load icon if specified.
   HICON large_icon = 0, small_icon = 0;
@@ -4977,14 +5091,16 @@ main(int argc, char *argv[])
   // win_tab_create. Would be cleaner and no need for win_tab_set_argv etc
 
   if (current_tab_size == 0) {
-    win_tab_init(home, cmd, argv, term_width, term_height, tablist_title[0]);
+    SessDef nsd={argc,cmd,argv};
+    win_tab_init(home, &nsd,term_width, term_height, tablist_title[0]);
   }
   else {
     for (int i = 0; i < current_tab_size; i++) {
       if (tablist[i] != NULL) {
         char *tabexec = tablist[i];
         char *tab_argv[4] = { cmd, "-c", tabexec, NULL };
-        win_tab_init(home, cmd, tab_argv, term_width, term_height, tablist_title[i]);
+        SessDef nsd={3,cmd,tab_argv};
+        win_tab_init(home, &nsd, term_width, term_height, tablist_title[i]);
       }
     }
 
@@ -5174,4 +5290,18 @@ main(int argc, char *argv[])
   }
   win_tab_clean();
   win_global_keyboard_hook(0,0);
+}
+void new_tab(int idss){
+  if(idss<IDSS_USR)
+    win_tab_create(&sessdefs[idss]); 
+}
+void new_win(int idss,int moni){
+  if(moni<=0){
+    int x, y;
+    HMONITOR mon = MonitorFromWindow(wnd, MONITOR_DEFAULTTONEAREST);
+    moni = search_monitors(&x, &y, mon, true, 0);
+  }
+  int shift=get_mods() & MDK_SHIFT;
+  if(idss<IDSS_USR)
+    child_fork(&sessdefs[idss], 0, shift); 
 }
