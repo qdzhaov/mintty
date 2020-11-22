@@ -2,23 +2,23 @@
 #define CHILD_H
 
 #include <termios.h>
-enum IDSS{ IDSS_DEF=0, IDSS_WSL , IDSS_CYG , IDSS_CMD , IDSS_PSH , IDSS_USR };
+enum IDSS{IDSS_CUR=-1, IDSS_DEF=0, IDSS_WSL , IDSS_CYG , IDSS_CMD , IDSS_PSH , IDSS_USR };
 typedef struct STerm STerm;
 #define TAB_NTITLE 16
 #define TAB_LTITLE 128
-typedef struct STab {
-    struct STerm*  terminal;
-    struct {
-        wchar_t titles[TAB_LTITLE][TAB_NTITLE];
-        uint titles_i;
-        bool attention;
-    } info;
-}STab ;
 typedef struct SessDef{
   int argc;
+  char*title;
   char*cmd;
   char**argv;
 }SessDef;
+typedef struct STab {
+  wchar_t titles[TAB_LTITLE][TAB_NTITLE];
+  uint titles_i;
+  bool attention;
+  SessDef sd;
+  struct STerm*  terminal;
+}STab ;
 STab**win_tabs();
 typedef struct SChild SChild;
 extern void child_update_charset(STerm* pterm);
@@ -57,11 +57,11 @@ extern void win_tog_partline();
 extern STerm* win_tab_active_term() ;
 extern void win_tab_show();
 extern void win_tab_indicator();
-extern void win_tab_init(const char* home,SessDef*sd,const  int width, int height, const char* title) ;
+extern void win_tab_init(const char* home,SessDef*sd,const  int width, int height) ;
 extern void win_tab_create(SessDef*sd) ;
 extern void win_tab_clean() ;
 extern bool win_tab_should_die();
-extern int  win_tab_active();     
+extern STab*win_tab_active();     
 extern int  win_tab_count() ;
 extern void win_tab_for_each(void (*cb)(STerm* pterm));
 extern void win_tab_paint(HDC dc);

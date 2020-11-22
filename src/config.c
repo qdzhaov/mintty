@@ -115,6 +115,7 @@ const config default_cfg = {
   .ctrl_shift_shortcuts = false,
   .ctrl_exchange_shift = false,
   .ctrl_controls = true,
+  .hkwinkeyall=0,
   .compose_key = 0,
   .key_prtscreen = "",	// VK_SNAPSHOT
   .key_pause = "",	// VK_PAUSE

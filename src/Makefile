@@ -127,7 +127,7 @@ ifeq ($(DEBUG), 1)
   CFLAGS += -g
 else
   CPPFLAGS += -DNDEBUG
-  CFLAGS += -fomit-frame-pointer -O2
+  CFLAGS += -fomit-frame-pointer -O2 -g
 # support cygwin debug package:
 #  CFLAGS += -g # not needed; -ggdb and more injected by cygport
 #  do not LDFLAGS += -s

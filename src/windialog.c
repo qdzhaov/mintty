@@ -64,6 +64,7 @@ windlg dlg;
 wstring dragndrop;
 
 static int dialog_height,dialog_width,ldpi=72;  
+#define USECTLWND
 #define DLGH 28
 #define DLGW 35
 enum {
@@ -144,8 +145,11 @@ create_controls(HWND wnd, char *path)
    /*
     * Otherwise, we're creating the controls for a particular panel.
     */
-    //ctrlposinit(&cp, wnd, SC(3), SC(3), SC(-15));//for subwin
+#ifdef USECTLWND
+    ctrlposinit(&cp, wnd, SC(3), SC(3), SC(-15));//for ctlwnd
+#else
     ctrlposinit(&cp, wnd, SC(69), SC(3), SC(3));//
+#endif
     wc = &ctrls_panel;
     base_id = IDCX_PANELBASE;
   }
@@ -157,6 +161,17 @@ create_controls(HWND wnd, char *path)
     controlset *s = ctrlbox->ctrlsets[index];
     winctrl_layout(wc, &cp, s, &base_id);
   }
+#ifdef USECTLWND
+  SCROLLINFO si = {
+    .cbSize = sizeof si,
+    .fMask = SIF_ALL,
+    .nMin = 0,
+    .nMax = cp.ypos,
+    .nPage = SC(dialog_height - 30),
+    .nPos = 0
+  };
+  SetScrollInfo(dlg.ctlwnd,SB_VERT, &si,1);
+#endif
 }
 #ifdef debug_dialog_crash
 static char * debugopt = 0;
@@ -377,6 +392,53 @@ unhook_windows()
   hooked_window_activated = false;
 }
 
+static void OnVScroll(HWND wnd,UINT nSBCode, int nPos) 
+{
+  SCROLLINFO si;
+  memset(&si,0,sizeof(si));
+  si.cbSize = sizeof(SCROLLINFO);
+  si.fMask = SIF_ALL;
+  if(!GetScrollInfo(wnd,SB_VERT,&si)) return;
+  int sy;
+  switch (nSBCode)
+  {
+    when SB_BOTTOM  : nPos = si.nMax;
+    when SB_TOP     : nPos = si.nMin;
+    when SB_LINEUP  : nPos =si.nPos -10; if (nPos<si.nMin) nPos = si.nMin;
+    when SB_LINEDOWN: nPos =si.nPos +10; if (nPos>si.nMax) nPos = si.nMax;
+    when SB_PAGEUP  : nPos =si.nPos -50; if (nPos<si.nMin) nPos = si.nMin;
+    when SB_PAGEDOWN: nPos =si.nPos +50; if (nPos>si.nMax) nPos = si.nMax;
+    when SB_ENDSCROLL: nPos =si.nPos ;
+    when SB_THUMBPOSITION: sy=si.nPos-nPos;
+    when SB_THUMBTRACK   : sy=si.nPos-nPos;
+    otherwise: nPos=si.nPos;
+  }
+  sy=si.nPos-nPos; si.nPos=nPos;
+  RECT r;
+  ScrollWindowEx(wnd,0,sy,0,0,0,&r,SW_SCROLLCHILDREN);//SW_INVALIDATE|SW_ERASE);
+  InvalidateRect(wnd,&r,1);
+  SetScrollInfo(wnd,SB_VERT,&si,SIF_POS);
+}
+static LRESULT CALLBACK
+swnd_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR uid, DWORD_PTR data)
+{
+  (void)uid; (void)data;
+  switch (msg) {
+		when WM_VSCROLL: OnVScroll(hwnd,LOWORD(wParam),HIWORD(wParam));
+    when WM_COMMAND or WM_DRAWITEM: {
+      debug("WM_COMMAND");
+      int ret = winctrl_handle_command(msg, wParam, lParam);
+      debug("WM_COMMAND: handle");
+      if (dlg.ended) {
+        DestroyWindow(wnd);
+        debug("WM_COMMAND: Destroy");
+      }
+      debug("WM_COMMAND: end");
+      return ret;
+    }
+  }
+  return DefSubclassProc(hwnd, msg, wParam, lParam);
+}
 
 #define dont_debug_messages
 
@@ -414,33 +476,7 @@ tree_proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp, UINT_PTR uid, DWORD_PTR dat
  * (Being a dialog procedure, in general it returns 0 if the default
  * dialog processing should be performed, and 1 if it should not.)
  */
-static void OnVScroll(HWND wnd,UINT nSBCode, int nPos) 
-{
-  SCROLLINFO si;
-  memset(&si,0,sizeof(si));
-  si.cbSize = sizeof(SCROLLINFO);
-  si.fMask = SIF_ALL;
-  if(!GetScrollInfo(wnd,SB_VERT,&si)) return;
-  int sy;
-  switch (nSBCode)
-  {
-    when SB_BOTTOM  : nPos = si.nMax;
-    when SB_TOP     : nPos = si.nMin;
-    when SB_LINEUP  : nPos -= 10; if (nPos<si.nMin) nPos = si.nMin;
-    when SB_LINEDOWN: nPos += 10; if (nPos>si.nMax) nPos = si.nMax;
-    when SB_PAGEUP  : nPos -= 50; if (nPos<si.nMin) nPos = si.nMin;
-    when SB_PAGEDOWN: nPos += 50; if (nPos>si.nMax) nPos = si.nMax;
-    when SB_ENDSCROLL:;
-    when SB_THUMBPOSITION: sy=si.nPos-nPos;
-    when SB_THUMBTRACK   : sy=si.nPos-nPos;
-    otherwise: nPos=si.nPos;
-  }
-  sy=si.nPos-nPos; si.nPos=nPos;
-  ScrollWindowEx(wnd,0,sy,0,0,0,0,SW_INVALIDATE);
-  SetScrollInfo(wnd,SB_VERT,&si,SIF_ALL);
-}
 static HFONT cfdfont=0;
-static HWND subwin;
 static INT_PTR CALLBACK
 config_dialog_proc(HWND wnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -476,7 +512,7 @@ config_dialog_proc(HWND wnd, UINT msg, WPARAM wParam, LPARAM lParam)
 #endif
 
   switch (msg) {
-		when WM_VSCROLL: OnVScroll(wnd,LOWORD(wParam),HIWORD(wParam));
+		when WM_VSCROLL: OnVScroll(dlg.ctlwnd,LOWORD(wParam),HIWORD(wParam));
     when WM_SETFONT: cfdfont=(HFONT)wParam;
     when WM_GETFONT: return (WPARAM)cfdfont;
     when WM_INITDIALOG: {
@@ -497,20 +533,6 @@ config_dialog_proc(HWND wnd, UINT msg, WPARAM wParam, LPARAM lParam)
       windlg_add_tree(&ctrls_panel);
       copy_config("dialog", &new_cfg, &file_cfg);
 
-      GetWindowRect(GetParent(wnd), &r);
-      dlg.wnd = wnd;
-
-      GetClientRect(wnd,&r);
-      //SCROLLINFO si;
-      //memset(&si,0,sizeof(si));
-      //si.cbSize = sizeof(SCROLLINFO);
-      //si.fMask = SIF_ALL;
-      //si.nPos = 0;
-      //si.nMin = 0;
-      //si.nMax = r.bottom;
-      //si.nPage=1;
-      //si.nTrackPos=0;
-      //SetScrollInfo(wnd,SB_VERT, &si,1);
      /*
       * Create the actual GUI widgets.
       */
@@ -519,6 +541,30 @@ config_dialog_proc(HWND wnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
       SendMessage(wnd, WM_SETICON, (WPARAM) ICON_BIG,
                   (LPARAM) LoadIcon(inst, MAKEINTRESOURCE(IDI_MAINICON)));
+
+      dlg.wnd = wnd;
+
+      x = SC( 70); w = SC(dialog_width -70)-1;
+      y = SC(  3); h = SC(dialog_height - 30);
+#ifdef USECTLWND
+      dlg.ctlwnd = CreateWindowExA(WS_EX_CLIENTEDGE, "SWND", "",
+                       WS_CHILD | WS_VISIBLE|WS_VSCROLL ,x,y,w,h,wnd, 0, inst, null);
+      SCROLLINFO si = {
+        .cbSize = sizeof si,
+        .fMask = SIF_ALL ,
+        .nMin = 0,
+        .nMax = SC(dialog_height - 30)*2,
+        //滚动块自身的长短，通常有如下关系：其长度/滚动条长度（含两个箭头）=nPage/(nMax+2)，
+        //另外nPage取值-1时，滚动条会不见了。
+        .nPage = SC(dialog_height - 30),
+        .nPos = 0
+      };
+      SetScrollInfo(dlg.ctlwnd,SB_VERT, &si,1);
+      SetWindowSubclass(dlg.ctlwnd , swnd_proc, 0, 0); 
+#else
+      (void)swnd_proc;  
+      dlg.ctlwnd=wnd;
+#endif
 
      /*
       * Create the tree view.
@@ -531,14 +577,8 @@ config_dialog_proc(HWND wnd, UINT msg, WPARAM wParam, LPARAM lParam)
                        TVS_DISABLEDRAGDROP | TVS_HASBUTTONS | TVS_LINESATROOT
                        | TVS_SHOWSELALWAYS, x,y,w,h , wnd, (HMENU) IDCX_TREEVIEW, inst,
                        null);
-      x = SC( 70); w = SC(dialog_width -73);
-      y = SC(  3); h = SC(dialog_height - 30);
-      subwin=wnd;
-      //subwin = CreateWindowExA(WS_EX_CLIENTEDGE, "STATIC", "",
-      //                 WS_CHILD | WS_VISIBLE|WS_VSCROLL ,x,y,w,h,wnd, 0, inst, null);
+
       win_set_font(treeview);
-
-
       treeview_faff tvfaff;
       tvfaff.treeview = treeview;
       memset(tvfaff.lastat, 0, sizeof(tvfaff.lastat));
@@ -702,7 +742,7 @@ config_dialog_proc(HWND wnd, UINT msg, WPARAM wParam, LPARAM lParam)
        /* Destroy all controls in the currently visible panel. */
         for (winctrl *c = ctrls_panel.first; c; c = c->next) {
           for (int k = 0; k < c->num_ids; k++) {
-            HWND item = GetDlgItem(wnd, c->base_id + k);
+            HWND item = GetDlgItem(dlg.ctlwnd, c->base_id + k);
             if (item)
               DestroyWindow(item);
           }
@@ -710,9 +750,9 @@ config_dialog_proc(HWND wnd, UINT msg, WPARAM wParam, LPARAM lParam)
         debug("WM_NOTIFY: Destroy");
         winctrl_cleanup(&ctrls_panel);
         debug("WM_NOTIFY: cleanup");
-
+        OnVScroll(dlg.ctlwnd,SB_TOP,0);
         // here we need the correct DIALOG_HEIGHT already
-        create_controls(subwin, (char *) item.lParam);
+        create_controls(dlg.ctlwnd, (char *) item.lParam);
         debug("WM_NOTIFY: create");
         dlg_refresh(null); /* set up control values */
         debug("WM_NOTIFY: refresh");
@@ -790,7 +830,7 @@ scale_options(int nCode, WPARAM wParam, LPARAM lParam)
   //return CallNextHookEx(0, nCode, wParam, lParam);
   return 0;  // 0: let default dialog box procedure process the message
 }
-
+#define SWND_CLASS "SWND"
 void
 win_open_config(void)
 {
@@ -815,7 +855,20 @@ win_open_config(void)
       .hInstance = inst,
       .hIcon = null,
       .hCursor = LoadCursor(null, IDC_ARROW),
-      .hbrBackground = (HBRUSH)(COLOR_BACKGROUND + 1),
+      .hbrBackground = (HBRUSH)(COLOR_WINDOW),
+      .lpszMenuName = null
+    });
+    RegisterClassW(&(WNDCLASSW){
+      .lpszClassName = W(SWND_CLASS),
+      //.lpfnWndProc = DefWindowProcA ,
+      .lpfnWndProc = DefDlgProcW,
+      .style = CS_DBLCLKS,
+      .cbClsExtra = 0,
+      .cbWndExtra = DLGWINDOWEXTRA + 2 * sizeof(LONG_PTR),
+      .hInstance = inst,
+      .hIcon = null,
+      .hCursor = LoadCursor(null, IDC_ARROW),
+      .hbrBackground = (HBRUSH)(COLOR_WINDOW),
       .lpszMenuName = null
     });
     initialised = true;

@@ -105,6 +105,7 @@ typedef struct {
   bool ctrl_shift_shortcuts;
   bool ctrl_exchange_shift;
   bool ctrl_controls;
+  bool hkwinkeyall;
   char compose_key;
   string key_prtscreen;	// VK_SNAPSHOT
   string key_pause;	// VK_PAUSE

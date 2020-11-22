@@ -1221,7 +1221,7 @@ child_launch(int n, SessDef*sd, int moni)
           }
         }
         new_argv[argc] = 0;
-        SessDef nsd={argc,sd->cmd,new_argv};
+        SessDef nsd={argc,0,sd->cmd,new_argv};
         do_child_fork(&nsd, moni, true, true);
         free(new_argv);
         break;

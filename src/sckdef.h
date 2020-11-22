@@ -437,7 +437,7 @@ void tab_prev	    (){win_tab_change(-1);}
 void tab_next	    (){win_tab_change( 1);}
 void tab_move_prev(){win_tab_move  (-1);}
 void tab_move_next(){win_tab_move  ( 1);}
-void new_tab_def(){new_tab(IDSS_DEF);}
+void new_tab_def(){new_tab(IDSS_CUR);}
 void new_tab_wsl(){new_tab(IDSS_WSL);}
 void new_tab_cyg(){new_tab(IDSS_CYG);}
 void new_tab_cmd(){new_tab(IDSS_CMD);}
@@ -712,7 +712,7 @@ static int fundef_run(char*cmd,uint key, mod_keys mods){
   struct function_def * fundef = function_def(cmd);
   if (fundef) {
     switch(fundef->type){
-      when FT_CMD :send_syscommand(fundef->cmd);
+      when FT_CMD :PostMessage(wnd, WM_SYSCOMMAND, fundef->cmd, 0); 
       when FT_NORM:fundef->fct();
       when FT_KEY :fundef->fct_key(key,mods);
       when FT_NORV:return fundef->fctv();
@@ -1062,7 +1062,7 @@ void win_update_shortcuts(){
   }
   if(cfg.win_shortcuts ){
     SETSCK(W ,'Q'        ,FT_NORM,app_close    );
-    SETSCK(W ,'T'        ,FT_NORM,new_tab_def  );
+    SETSCK(W ,'T'        ,FT_CMD ,IDM_NEWTAB   );
     SETSCK(W ,'W'        ,FT_NORM,win_close    );
     SETSCK(W ,'X'        ,FT_NORM,win_ctrlmode );
     SETSCK(W ,'Z'        ,FT_NORM,win_hide     );

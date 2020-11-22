@@ -66,14 +66,15 @@ HWND wnd;
 HIMC imc;
 ATOM class_atom;
 SessDef sessdefs[]={
-  {0,0,0},
-  {1,"wsl",(char*[]){"wsl",0}},
-  {0,0    ,(char*[]){0    ,0}},
-  {1,"cmd",(char*[]){"cmd",0}},
-  {1,"powershell",(char*[]){"powershell",0}},
-  {0,0,0}
+  {0,0,0,0},
+  {1,0,"wsl",(char*[]){"wsl",0}},
+  {0,0,0    ,(char*[]){0    ,0}},
+  {1,0,"cmd",(char*[]){"cmd",0}},
+  {1,0,"powershell",(char*[]){"powershell",0}},
+  {0,0,0,0}
 }; 
 SessDef main_sd={0};
+SessDef cursd={0};
 static bool invoked_from_shortcut = false;
 wstring shortcut = 0;
 static bool invoked_with_appid = false;
@@ -130,6 +131,9 @@ static bool wsltty_appx = true;
 static bool wsltty_appx = false;
 #endif
 
+extern int lwinkey,rwinkey,winkey;
+extern ULONG last_wink_time;
+static uint pressedkey=-1,pkeys,pwinkey;
 
 static HBITMAP caretbm;
 
@@ -2560,6 +2564,7 @@ static struct {
 
     when WM_KEYDOWN or WM_SYSKEYDOWN:
       //printf("[%ld] WM_KEY %02X\n", mtime(), (int)wp);
+      if(wp==pressedkey){ pressedkey=-1; return 0; }
       if (win_key_down(wp, lp))
         return 0;
 
@@ -3056,8 +3061,6 @@ int pmapmem(int flg){
   }
   return 0;
 }
-extern int lwinkey,rwinkey,winkey;
-extern ULONG last_wink_time;
 static LRESULT CALLBACK
 hookprockbll(int nCode, WPARAM wParam, LPARAM lParam)
 {
@@ -3083,6 +3086,7 @@ hookprockbll(int nCode, WPARAM wParam, LPARAM lParam)
     }
     if (nCode != HC_ACTION
       ||cterm->shortcut_override
+      ||(kbdll->flags&0x10)
       )
       return CallNextHookEx(kb_hook, nCode, wParam, lParam);
     //keybd_event('Z', 0, 0, 0)　;//　表示模拟按下Z键
@@ -3091,18 +3095,38 @@ hookprockbll(int nCode, WPARAM wParam, LPARAM lParam)
     if(msgt-last_wink_time>5000)winkey=lwinkey=rwinkey=0;
     switch(wParam){
       when WM_KEYDOWN: {
-        if(key==VK_LWIN)     {winkey=lwinkey=1;last_wink_time=msgt ;return 1;}
-        else if(key==VK_RWIN){winkey=rwinkey=1;last_wink_time=msgt ;return 1;}
+        if(key==VK_LWIN)     {winkey=lwinkey=1;pwinkey=key;last_wink_time=msgt ;return 1;}
+        else if(key==VK_RWIN){winkey=rwinkey=1;pwinkey=key;last_wink_time=msgt ;return 1;}
         if(winkey){  
           LPARAM lp = 1|(LPARAM)kbdll->flags << 24 | (LPARAM)kbdll->scanCode << 16;
-          win_whotkey(key, lp);
-          //if(ret)
+          pressedkey=key;
+          pkeys=1;
+          if((!win_whotkey(key, lp))&&(cfg.hkwinkeyall==0)){
+            keybd_event(pwinkey,0,2,0);
+            keybd_event(key,kbdll->scanCode,0,0);
+            keybd_event(key,kbdll->scanCode,2,0);
+            keybd_event(pwinkey,0,2,0);
+          }
           return 1;
         }
       }
-      when WM_KEYUP: 
-        if(key==VK_LWIN){winkey=lwinkey=0;return 1;}
-        else if(key==VK_RWIN){winkey=rwinkey=0;return 1;}
+      when WM_KEYUP:{ 
+        if(winkey){
+          int iwk=0;
+          if(key==VK_LWIN){ winkey=lwinkey=0;iwk=1; }
+          else if(key==VK_RWIN){winkey=rwinkey=0;iwk=1;}
+          if(iwk){
+            if(pkeys==0){
+              if(cfg.hkwinkeyall==0){
+                keybd_event(VK_LWIN,0,0,0);
+                keybd_event(VK_LWIN,0,2,0);
+              }
+            }
+            pkeys=0;
+          }
+          return 1; 
+        }
+      }
     }
   }
   return CallNextHookEx(kb_hook, nCode, wParam, lParam);
@@ -3717,7 +3741,7 @@ select_WSL(char * wsl)
   if (!err) {
     // set --title
     if (cfg.title_settable)
-      set_arg_option("Title", strdup(wsl && *wsl ? wsl : "WSL"));
+      cursd.title= strdup(wsl && *wsl ? wsl : "WSL");
     // set --icon if WSL specific icon exists
     if (wsl_icon) {
       if (!icon_is_from_shortcut && waccess(wsl_icon, R_OK))
@@ -4145,100 +4169,9 @@ void pcygargv(int login){
     sessdefs[IDSS_CYG].argv[0]=arg0;
     sessdefs[IDSS_CYG].argv[1]=0;
 }
-int
-main(int argc, char *argv[])
-{
-  char buf[1024];
-  (void)listShell;
-  (void)listwsl;
-  main_sd.argc=argc;
-  main_sd.argv=argv;
-  main_sd.cmd=strdup(realpath(argv[0],buf));
-  for(int i=3;i<FD_SETSIZE;i++)close(i);	
-  mintty_debug = getenv("MINTTY_DEBUG") ?: "";
-#ifdef debuglog
-  mtlog = fopen("/tmp/mtlog", "a");
-  {
-    char timbuf [22];
-    struct timeval now;
-    gettimeofday(& now, 0);
-    strftime(timbuf, sizeof (timbuf), "%Y-%m-%d %H:%M:%S", localtime(& now.tv_sec));
-    fprintf(mtlog, "[%s.%03d] %s\n", timbuf, (int)now.tv_usec / 1000, argv[0]);
-    fflush(mtlog);
-  }
-#endif
-  init_config();
-  cs_init();
-
-  // Determine home directory.
-  home = getenv("HOME");
-#if CYGWIN_VERSION_DLL_MAJOR >= 1005
-  // Before Cygwin 1.5, the passwd structure is faked.
-  struct passwd *pw = getpwuid(getuid());
-#endif
-  home = home ? strdup(home) :
-#if CYGWIN_VERSION_DLL_MAJOR >= 1005
-    (pw && pw->pw_dir && *pw->pw_dir) ? strdup(pw->pw_dir) :
-#endif
-    asform("/home/%s", getlogin());
-
-  // Set size and position defaults.
-  STARTUPINFOW sui;
-  GetStartupInfoW(&sui);
-  cfg.window = sui.dwFlags & STARTF_USESHOWWINDOW ? sui.wShowWindow : SW_SHOW;
-  cfg.x = cfg.y = CW_USEDEFAULT;
-  invoked_from_shortcut = sui.dwFlags & STARTF_TITLEISLINKNAME;
-  invoked_with_appid = sui.dwFlags & STARTF_TITLEISAPPID;
-  // shortcut or AppId would be found in sui.lpTitle
-# ifdef debuglog
-  fprintf(mtlog, "shortcut %d %ls\n", invoked_from_shortcut, sui.lpTitle);
-# endif
-
-  // Options triggered via wsl*.exe
-#if CYGWIN_VERSION_API_MINOR >= 74
-  char * exename = *argv;
-  const char * exebasename = strrchr(exename, '/');
-  if (exebasename)
-    exebasename ++;
-  else
-    exebasename = exename;
-  if (0 == strncmp(exebasename, "wsl", 3)) {
-    char * exearg = strchr(exebasename, '-');
-    if (exearg)
-      exearg ++;
-    int err = select_WSL(exearg);
-    if (err)
-      option_error(__("WSL distribution '%s' not found"), exearg ?: _("(Default)"), err);
-    else {
-      wsl_launch = true;
-      wsltty_appx = true;
-    }
-  }
-
-  char * getlocalappdata(void)
-  {
-    // get appx-redirected system dir, as investigated by Biswapriyo Nath
-#ifndef KF_FLAG_FORCE_APP_DATA_REDIRECTION
-#define KF_FLAG_FORCE_APP_DATA_REDIRECTION 0x00080000
-#endif
-    HMODULE shell = load_sys_library("shell32.dll");
-    HRESULT (WINAPI *pSHGetKnownFolderPath)(const GUID*, DWORD, HANDLE, wchar**) =
-      (void *)GetProcAddress(shell, "SHGetKnownFolderPath");
-    if (!pSHGetKnownFolderPath)
-      return 0;
-    wchar * wlappdata;
-    long hres = pSHGetKnownFolderPath(&FOLDERID_LocalAppData, KF_FLAG_FORCE_APP_DATA_REDIRECTION, 0, &wlappdata);
-    if (hres)
-      return 0;
-    else
-      return path_win_w_to_posix(wlappdata);
-  }
-
-  char * lappdata = 0;
-  if (wsltty_appx)
-    lappdata = getlocalappdata();
-#endif
-
+static char * lappdata = 0;
+static STARTUPINFOW sui;
+int LoadConfig(){
   // Load config files
   // try global config file
   load_config("/etc/minttyrc", true);
@@ -4267,7 +4200,6 @@ main(int argc, char *argv[])
     load_config(rc_file, 2);
     delete(rc_file);
   }
-
   if (getenv("MINTTY_ICON")) {
     //cfg.icon = strdup(getenv("MINTTY_ICON"));
     cfg.icon = cs__utftowcs(getenv("MINTTY_ICON"));
@@ -4302,12 +4234,8 @@ main(int argc, char *argv[])
     // referred shortcut actually runs the same binary as we're running.
     // If that's not the case, we should unset MINTTY_SHORTCUT here.
   }
-  char *tablist[32];
-  char *tablist_title[32];
-  int current_tab_size = 0;
-  
-  for (int i = 0; i < 32; i++)
-    tablist_title[i] = NULL;
+  int argc=main_sd.argc;
+  char**argv=main_sd.argv;
 
   for (;;) {
     int opt = cfg.short_long_opts
@@ -4413,14 +4341,10 @@ main(int argc, char *argv[])
           ;
         else
           option_error(__("Syntax error in size argument '%s'"), optarg, 0);
-      when 'b':
-        tablist[current_tab_size] = optarg;
-        current_tab_size++;
       when 't':
-        tablist_title[current_tab_size] = optarg;
-        set_arg_option("Title", optarg);
+        cursd.title=strdup(optarg);
       when 'T':
-        set_arg_option("Title", optarg);
+        cursd.title=strdup(optarg);
         cfg.title_settable = false;
       when '':
         set_arg_option("TabBar", strdup("1"));
@@ -4597,8 +4521,105 @@ main(int argc, char *argv[])
         chdir(home);
     }
   }
-
   finish_config();
+  return 0;
+}
+int
+main(int argc, char *argv[])
+{
+  char buf[1024];
+  char *pt;
+  (void)listShell;
+  (void)listwsl;
+  main_sd.argc=argc;
+  main_sd.argv=argv;
+  pt=realpath(argv[0],buf);
+  main_sd.cmd=strdup(pt?:argv[0]);
+  for(int i=3;i<FD_SETSIZE;i++)close(i);	
+  mintty_debug = getenv("MINTTY_DEBUG") ?: "";
+#ifdef debuglog
+  mtlog = fopen("/tmp/mtlog", "a");
+  {
+    char timbuf [22];
+    struct timeval now;
+    gettimeofday(& now, 0);
+    strftime(timbuf, sizeof (timbuf), "%Y-%m-%d %H:%M:%S", localtime(& now.tv_sec));
+    fprintf(mtlog, "[%s.%03d] %s\n", timbuf, (int)now.tv_usec / 1000, argv[0]);
+    fflush(mtlog);
+  }
+#endif
+  init_config();
+  cs_init();
+
+  // Determine home directory.
+  home = getenv("HOME");
+#if CYGWIN_VERSION_DLL_MAJOR >= 1005
+  // Before Cygwin 1.5, the passwd structure is faked.
+  struct passwd *pw = getpwuid(getuid());
+#endif
+  home = home ? strdup(home) :
+#if CYGWIN_VERSION_DLL_MAJOR >= 1005
+    (pw && pw->pw_dir && *pw->pw_dir) ? strdup(pw->pw_dir) :
+#endif
+    asform("/home/%s", getlogin());
+
+  // Set size and position defaults.
+  GetStartupInfoW(&sui);
+  cfg.window = sui.dwFlags & STARTF_USESHOWWINDOW ? sui.wShowWindow : SW_SHOW;
+  cfg.x = cfg.y = CW_USEDEFAULT;
+  invoked_from_shortcut = sui.dwFlags & STARTF_TITLEISLINKNAME;
+  invoked_with_appid = sui.dwFlags & STARTF_TITLEISAPPID;
+  // shortcut or AppId would be found in sui.lpTitle
+# ifdef debuglog
+  fprintf(mtlog, "shortcut %d %ls\n", invoked_from_shortcut, sui.lpTitle);
+# endif
+
+  // Options triggered via wsl*.exe
+#if CYGWIN_VERSION_API_MINOR >= 74
+  char * exename = *argv;
+  const char * exebasename = strrchr(exename, '/');
+  if (exebasename)
+    exebasename ++;
+  else
+    exebasename = exename;
+  if (0 == strncmp(exebasename, "wsl", 3)) {
+    char * exearg = strchr(exebasename, '-');
+    if (exearg)
+      exearg ++;
+    int err = select_WSL(exearg);
+    if (err)
+      option_error(__("WSL distribution '%s' not found"), exearg ?: _("(Default)"), err);
+    else {
+      wsl_launch = true;
+      wsltty_appx = true;
+    }
+  }
+
+  char * getlocalappdata(void)
+  {
+    // get appx-redirected system dir, as investigated by Biswapriyo Nath
+#ifndef KF_FLAG_FORCE_APP_DATA_REDIRECTION
+#define KF_FLAG_FORCE_APP_DATA_REDIRECTION 0x00080000
+#endif
+    HMODULE shell = load_sys_library("shell32.dll");
+    HRESULT (WINAPI *pSHGetKnownFolderPath)(const GUID*, DWORD, HANDLE, wchar**) =
+      (void *)GetProcAddress(shell, "SHGetKnownFolderPath");
+    if (!pSHGetKnownFolderPath)
+      return 0;
+    wchar * wlappdata;
+    long hres = pSHGetKnownFolderPath(&FOLDERID_LocalAppData, KF_FLAG_FORCE_APP_DATA_REDIRECTION, 0, &wlappdata);
+    if (hres)
+      return 0;
+    else
+      return path_win_w_to_posix(wlappdata);
+  }
+
+  if (wsltty_appx)
+    lappdata = getlocalappdata();
+#endif
+
+  LoadConfig();
+
   if(cfg.partline>6)cfg.partline=6;
   int term_rows = cfg.rows;
   int term_cols = cfg.cols;
@@ -5088,23 +5109,11 @@ main(int argc, char *argv[])
   // TODO: should refactor win_tab_init to just initialize tabs-system and
   // create tabls with separate function (more general version of
   // win_tab_create. Would be cleaner and no need for win_tab_set_argv etc
-
-  if (current_tab_size == 0) {
-    SessDef nsd={argc,cmd,argv};
-    win_tab_init(home, &nsd,term_width, term_height, tablist_title[0]);
-  }
-  else {
-    for (int i = 0; i < current_tab_size; i++) {
-      if (tablist[i] != NULL) {
-        char *tabexec = tablist[i];
-        char *tab_argv[4] = { cmd, "-c", tabexec, NULL };
-        SessDef nsd={3,cmd,tab_argv};
-        win_tab_init(home, &nsd, term_width, term_height, tablist_title[i]);
-      }
-    }
-
-    win_tab_set_argv(argv);
-  }
+  for(argc=0;argv[argc];argc++);
+  cursd.argc=argc;
+  cursd.cmd=cmd;
+  cursd.argv=argv;
+  win_tab_init(home, &cursd,term_width, term_height);
   if (per_monitor_dpi_aware) {
     if (cfg.x != (int)CW_USEDEFAULT) {
       // The first SetWindowPos actually set x and y
@@ -5291,7 +5300,9 @@ main(int argc, char *argv[])
   win_global_keyboard_hook(0,0);
 }
 void new_tab(int idss){
-  if(idss<IDSS_USR)
+  if(idss<0){
+    win_tab_create(&win_tab_active()->sd); 
+  }else  if(idss<IDSS_USR)
     win_tab_create(&sessdefs[idss]); 
 }
 void new_win(int idss,int moni){
