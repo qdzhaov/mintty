@@ -101,11 +101,4 @@ typedef enum {
 extern cattr apply_attr_colour(cattr a, attr_colour_mode mode);
 
 extern struct STerm* win_tab_active_term() ;
-// Wrap GDI object for automatic release
-typedef struct {
-    HDC tdc;
-    HGDIOBJ old;
-}SGDIObj;
-#define VSELGDIOBJ(s,d,o) SGDIObj s;s.tdc = d; s.old = SelectObject(d, o); 
-#define VDELGDIOBJ(s) DeleteObject(SelectObject(s.tdc, s.old)); 
 #endif

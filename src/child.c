@@ -324,7 +324,6 @@ child_create(struct STerm* pterm,SessDef*sd,
 #endif
     attr.c_lflag |= ECHOE | ECHOK | ECHOCTL | ECHOKE;
     tcsetattr(0, TCSANOW, &attr);
-
     if (path) chdir(path);
     // Invoke command
     execvp(cmd, argv);

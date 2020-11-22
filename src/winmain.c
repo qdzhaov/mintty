@@ -2122,6 +2122,7 @@ in_client_area(HWND wnd, LPARAM lp)
 }
 void win_tog_partline(){
   cterm->usepartline=!cterm->usepartline; 
+  if(cterm->usepartline&&cfg.partline==0)cfg.partline=4;
   win_adapt_term_size(0,0);
 }
 void win_tog_scrollbar(){
@@ -5106,14 +5107,13 @@ main(int argc, char *argv[])
     trace_winsize("-p");
   }
 
-  // TODO: should refactor win_tab_init to just initialize tabs-system and
-  // create tabls with separate function (more general version of
-  // win_tab_create. Would be cleaner and no need for win_tab_set_argv etc
+
   for(argc=0;argv[argc];argc++);
   cursd.argc=argc;
   cursd.cmd=cmd;
   cursd.argv=argv;
   win_tab_init(home, &cursd,term_width, term_height);
+
   if (per_monitor_dpi_aware) {
     if (cfg.x != (int)CW_USEDEFAULT) {
       // The first SetWindowPos actually set x and y
