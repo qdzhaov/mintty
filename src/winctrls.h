@@ -57,6 +57,7 @@ typedef struct {
  */
 typedef struct {
   HWND wnd;    /* the wnd of the dialog box */
+  HWND ctlwnd;    /* the wnd of the dialog box */
   winctrls *controltrees[8];    /* can have several of these */
   int nctrltrees;
   control *focused; /* which ctrl has focus now/before */

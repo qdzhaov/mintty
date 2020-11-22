@@ -1527,7 +1527,7 @@ select_font(winctrl *c)
 
   CHOOSEFONTW cf;
   cf.lStructSize = sizeof(cf);
-  cf.hwndOwner = dlg.wnd;
+  cf.hwndOwner = dlg.ctlwnd;
   cf.lpLogFont = &lf;
   cf.lpfnHook = fonthook;
   cf.lCustData = (LPARAM)c;  // does not work
@@ -1603,7 +1603,7 @@ dlg_text_paint(control *ctrl)
                     DEFAULT_QUALITY, FIXED_PITCH | FF_DONTCARE,
                     new_cfg.font.name);
   if (ctrl->type == CTRL_BUTTON) {
-    HWND wnd = GetDlgItem(dlg.wnd, c->base_id);
+    HWND wnd = GetDlgItem(dlg.ctlwnd, c->base_id);
     SendMessage(wnd, WM_SETFONT, (WPARAM)fnt, MAKELPARAM(false, 0));
     SetWindowTextW(wnd, *new_cfg.font_sample ? new_cfg.font_sample : _W("Ferqœm’4€"));
   }
@@ -1695,7 +1695,7 @@ winctrl_handle_command(UINT msg, WPARAM wParam, LPARAM lParam)
             * double-check that the button in wParam is actually
             * checked before generating an event.
             */
-            if (IsDlgButtonChecked(dlg.wnd, LOWORD(wParam)))
+            if (IsDlgButtonChecked(dlg.ctlwnd, LOWORD(wParam)))
               ctrl->handler(ctrl, EVENT_VALCHANGE);
         }
       when CTRL_CHECKBOX:
@@ -1733,7 +1733,7 @@ winctrl_handle_command(UINT msg, WPARAM wParam, LPARAM lParam)
         else if (id >= 2 && (note == BN_SETFOCUS || note == BN_KILLFOCUS))
           winctrl_set_focus(ctrl, note == BN_SETFOCUS);
         else if (note == LBN_DBLCLK) {
-          SetCapture(dlg.wnd);
+          SetCapture(dlg.ctlwnd);
           ctrl->handler(ctrl, EVENT_ACTION);
         }
         else if (note == LBN_SELCHANGE)
@@ -1748,13 +1748,13 @@ winctrl_handle_command(UINT msg, WPARAM wParam, LPARAM lParam)
               ctrl->handler(ctrl, EVENT_UNFOCUS);
             when CBN_SELCHANGE: {
               int index = SendDlgItemMessage(
-                            dlg.wnd, c->base_id + 1, CB_GETCURSEL, 0, 0);
+                            dlg.ctlwnd, c->base_id + 1, CB_GETCURSEL, 0, 0);
               int wlen = SendDlgItemMessageW(
-                          dlg.wnd, c->base_id + 1, CB_GETLBTEXTLEN, index, 0);
+                          dlg.ctlwnd, c->base_id + 1, CB_GETLBTEXTLEN, index, 0);
               wchar wtext[wlen + 1];
               SendDlgItemMessageW(
-                dlg.wnd, c->base_id + 1, CB_GETLBTEXT, index, (LPARAM) wtext);
-              SetDlgItemTextW(dlg.wnd, c->base_id + 1, wtext);
+                dlg.ctlwnd, c->base_id + 1, CB_GETLBTEXT, index, (LPARAM) wtext);
+              SetDlgItemTextW(dlg.ctlwnd, c->base_id + 1, wtext);
               ctrl->handler(ctrl, EVENT_SELCHANGE);
             }
             when CBN_EDITCHANGE:
@@ -1783,7 +1783,7 @@ winctrl_handle_command(UINT msg, WPARAM wParam, LPARAM lParam)
     static CHOOSECOLOR cc;
     static DWORD custom[16] = { 0 };    /* zero initialisers */
     cc.lStructSize = sizeof(cc);
-    cc.hwndOwner = dlg.wnd;
+    cc.hwndOwner = dlg.ctlwnd;
     cc.hInstance = (HWND) inst;
     cc.lpCustColors = custom;
     cc.rgbResult = dlg.coloursel_result;
@@ -1808,7 +1808,7 @@ dlg_radiobutton_set(control *ctrl, int whichbutton)
 {
   winctrl *c = ctrl->plat_ctrl;
   assert(c && c->ctrl->type == CTRL_RADIO);
-  CheckRadioButton(dlg.wnd, c->base_id + 1,
+  CheckRadioButton(dlg.ctlwnd, c->base_id + 1,
                    c->base_id + c->ctrl->radio.nbuttons,
                    c->base_id + 1 + whichbutton);
 }
@@ -1820,7 +1820,7 @@ dlg_radiobutton_get(control *ctrl)
   int i;
   assert(c && c->ctrl->type == CTRL_RADIO);
   for (i = 0; i < c->ctrl->radio.nbuttons; i++)
-    if (IsDlgButtonChecked(dlg.wnd, c->base_id + 1 + i))
+    if (IsDlgButtonChecked(dlg.ctlwnd, c->base_id + 1 + i))
       return i;
   assert(!"No radio button was checked?!");
   return 0;
@@ -1831,7 +1831,7 @@ dlg_checkbox_set(control *ctrl, bool checked)
 {
   winctrl *c = ctrl->plat_ctrl;
   assert(c && c->ctrl->type == CTRL_CHECKBOX);
-  CheckDlgButton(dlg.wnd, c->base_id, checked);
+  CheckDlgButton(dlg.ctlwnd, c->base_id, checked);
 }
 
 bool
@@ -1839,7 +1839,7 @@ dlg_checkbox_get(control *ctrl)
 {
   winctrl *c = ctrl->plat_ctrl;
   assert(c && c->ctrl->type == CTRL_CHECKBOX);
-  return IsDlgButtonChecked(dlg.wnd, c->base_id);
+  return IsDlgButtonChecked(dlg.ctlwnd, c->base_id);
 }
 
 void
@@ -1855,7 +1855,7 @@ dlg_editbox_set(control *ctrl, string text)
 
   winctrl *c = ctrl->plat_ctrl;
   assert(c && c->ctrl->type == CTRL_EDITBOX);
-  SetDlgItemTextA(dlg.wnd, c->base_id + 1, text);
+  SetDlgItemTextA(dlg.ctlwnd, c->base_id + 1, text);
 }
 
 void
@@ -1866,10 +1866,10 @@ dlg_editbox_set_w(control *ctrl, wstring text)
          (c->ctrl->type == CTRL_EDITBOX
          ||c->ctrl->type == CTRL_LISTBOX));
   if (c->ctrl->type != CTRL_LISTBOX) {
-    SetDlgItemTextW(dlg.wnd, c->base_id + 1, text);
+    SetDlgItemTextW(dlg.ctlwnd, c->base_id + 1, text);
   }
   else {
-    HWND wnd = GetDlgItem(dlg.wnd, c->base_id + 1);
+    HWND wnd = GetDlgItem(dlg.ctlwnd, c->base_id + 1);
     int len = wcslen(text);
     wchar * buf = newn(wchar, len + 1);
     int n = SendMessageW(wnd, LB_GETCOUNT, 0, (LPARAM)0);
@@ -1896,7 +1896,7 @@ dlg_editbox_get(control *ctrl, string *text_p)
   assert(c &&
          (c->ctrl->type == CTRL_EDITBOX
          ||c->ctrl->type == CTRL_LISTBOX));
-  HWND wnd = GetDlgItem(dlg.wnd, c->base_id + 1);
+  HWND wnd = GetDlgItem(dlg.ctlwnd, c->base_id + 1);
   int size = GetWindowTextLength(wnd) + 1;
   char *text = (char *)*text_p;
   text = renewn(text, size);
@@ -1911,7 +1911,7 @@ dlg_editbox_get_w(control *ctrl, wstring *text_p)
   assert(c &&
          (c->ctrl->type == CTRL_EDITBOX
          ||c->ctrl->type == CTRL_LISTBOX));
-  HWND wnd = GetDlgItem(dlg.wnd, c->base_id + 1);
+  HWND wnd = GetDlgItem(dlg.ctlwnd, c->base_id + 1);
   wchar *text = (wchar *)*text_p;
   if (c->ctrl->type != CTRL_LISTBOX) {
     // handle single-line editbox (with optional popup list)
@@ -1923,7 +1923,7 @@ dlg_editbox_get_w(control *ctrl, wstring *text_p)
     // (case CBN_SELCHANGE) also uses the Unicode function versions 
     // SendDlgItemMessageW and SetDlgItemTextW
     GetWindowTextW(wnd, text, size);
-    //GetDlgItemTextW(dlg.wnd, c->base_id + 1, text, size);  // same
+    //GetDlgItemTextW(dlg.ctlwnd, c->base_id + 1, text, size);  // same
   }
   else {
     // handle multi-line listbox
@@ -1947,7 +1947,7 @@ dlg_listbox_clear(control *ctrl)
            c->ctrl->editbox.has_list)));
   msg = (c->ctrl->type == CTRL_LISTBOX &&
          c->ctrl->listbox.height != 0 ? LB_RESETCONTENT : CB_RESETCONTENT);
-  SendDlgItemMessage(dlg.wnd, c->base_id + 1, msg, 0, 0);
+  SendDlgItemMessage(dlg.ctlwnd, c->base_id + 1, msg, 0, 0);
 }
 
 void
@@ -1969,7 +1969,7 @@ dlg_listbox_add(control *ctrl, string text)
            c->ctrl->editbox.has_list)));
   msg = (c->ctrl->type == CTRL_LISTBOX &&
          c->ctrl->listbox.height != 0 ? LB_ADDSTRING : CB_ADDSTRING);
-  SendDlgItemMessage(dlg.wnd, c->base_id + 1, msg, 0, (LPARAM) text);
+  SendDlgItemMessage(dlg.ctlwnd, c->base_id + 1, msg, 0, (LPARAM) text);
 }
 
 void
@@ -1983,7 +1983,7 @@ dlg_listbox_add_w(control *ctrl, wstring text)
            c->ctrl->editbox.has_list)));
   msg = (c->ctrl->type == CTRL_LISTBOX &&
          c->ctrl->listbox.height != 0 ? LB_ADDSTRING : CB_ADDSTRING);
-  SendDlgItemMessageW(dlg.wnd, c->base_id + 1, msg, 0, (LPARAM) text);
+  SendDlgItemMessageW(dlg.ctlwnd, c->base_id + 1, msg, 0, (LPARAM) text);
 }
 
 int
@@ -1996,10 +1996,10 @@ dlg_listbox_getcur(control *ctrl)
            c->ctrl->editbox.has_list)));
   int idx;
   if (c->ctrl->type == CTRL_LISTBOX)
-    idx = SendDlgItemMessage(dlg.wnd, c->base_id + 1, LB_GETCURSEL, 0, 0);
+    idx = SendDlgItemMessage(dlg.ctlwnd, c->base_id + 1, LB_GETCURSEL, 0, 0);
   else
-    idx = SendDlgItemMessage(dlg.wnd, c->base_id + 1, CB_GETCURSEL, 0, 0);
-  //HWND wnd = GetDlgItem(dlg.wnd, c->base_id + 1);
+    idx = SendDlgItemMessage(dlg.ctlwnd, c->base_id + 1, CB_GETCURSEL, 0, 0);
+  //HWND wnd = GetDlgItem(dlg.ctlwnd, c->base_id + 1);
   //idx = SendMessage(wnd, LB_/CB_GETCURSEL, 0, (LPARAM)0);
   return idx;
 }
@@ -2042,7 +2042,7 @@ dlg_fontsel_set(control *ctrl, font_spec *fs)
   wchar * wbuf = newn(wchar, wsize);
   wcscpy(wbuf, fs->name);
   wcscat(wbuf, wstylestr);
-  SetDlgItemTextW(dlg.wnd, c->base_id + 1, wbuf);
+  SetDlgItemTextW(dlg.ctlwnd, c->base_id + 1, wbuf);
   free(wbuf);
   free(wstylestr);
   free(stylestr);
@@ -2067,7 +2067,7 @@ dlg_set_focus(control *ctrl)
     when CTRL_FONTSELECT: id = c->base_id + 2;
     when CTRL_RADIO:
       id = c->base_id + ctrl->radio.nbuttons;
-      while (id > 1 && IsDlgButtonChecked(dlg.wnd, id))
+      while (id > 1 && IsDlgButtonChecked(dlg.ctlwnd, id))
         --id;
      /*
       * In the theoretically-unlikely case that no button was selected, 
@@ -2075,7 +2075,7 @@ dlg_set_focus(control *ctrl)
       */
     otherwise: id = c->base_id;
   }
-  SetFocus(GetDlgItem(dlg.wnd, id));
+  SetFocus(GetDlgItem(dlg.ctlwnd, id));
 }
 
 /*
@@ -2134,7 +2134,7 @@ windlg_init(void)
   dlg.nctrltrees = 0;
   dlg.ended = false;
   dlg.focused = null;
-  dlg.wnd = null;
+  dlg.ctlwnd = null;
 }
 
 void

@@ -36,7 +36,7 @@ STerm* win_tab_active_term() {
 }
 
 int win_tab_count() { return ntabs; }
-int win_tab_active() { return active_tab; }
+STab*win_tab_active() { return tabs[active_tab]; }
 
 static void update_window_state() {
     win_update_menus(0);
@@ -75,7 +75,7 @@ void win_tab_go(int index) {
         term_set_focus(*tab == active,1);
     }
     win_tab_actv();
-    active->info.attention = false;
+    active->attention = false;
     update_window_state();
     invalidate_tabs();
 }
@@ -139,6 +139,13 @@ static void newtab(SessDef*sd,
     const char* cwd,const char* title) {
     STab* tab = vtab();
     win_tab_v(tab);
+    tab->sd.argc=sd->argc;
+    tab->sd.cmd=strdup(sd->cmd);
+    tab->sd.argv=newn(char*,sd->argc+1);
+    for(int i=0;sd->argv[i];i++){
+      tab->sd.argv[i]=strdup(sd->argv[i]);
+    }
+    tab->sd.argv[sd->argc]=0;
     term_reset(1);
     term_resize(rows, cols);
     tab->terminal->child.cmd = sd->cmd;
@@ -215,40 +222,40 @@ void win_tab_clean() {
 }
 
 void win_tab_attention(STerm*pterm) {
-    tab_by_term(pterm)->info.attention = true;
+    tab_by_term(pterm)->attention = true;
     invalidate_tabs();
 }
 
 void win_tab_set_title(STerm*pterm, const wchar_t* title) {
     STab* tab = tab_by_term(pterm);
-    if (wcscmp(tab->info.titles[tab->info.titles_i] , title)) {
-        wcsncpy(tab->info.titles[tab->info.titles_i] , title,TAB_LTITLE-1);
+    if (wcscmp(tab->titles[tab->titles_i] , title)) {
+        wcsncpy(tab->titles[tab->titles_i] , title,TAB_LTITLE-1);
         invalidate_tabs();
     }
     if (pterm == win_tab_active_term()) {
-        win_set_title((wchar *)tab->info.titles[tab->info.titles_i]);
+        win_set_title((wchar *)tab->titles[tab->titles_i]);
     }
 }
 
 wchar_t* win_tab_get_title(unsigned int idx) {
-    return tabs[idx]->info.titles[tabs[idx]->info.titles_i];
+    return tabs[idx]->titles[tabs[idx]->titles_i];
 }
 
 void win_tab_title_push(STerm*pterm) {
     STab* tab = tab_by_term(pterm);
-    int oi=tab->info.titles_i;
-    tab->info.titles_i++;
-    if (tab->info.titles_i == TAB_NTITLE)
-        tab->info.titles_i = 0;
-    wcsncpy(tab->info.titles[tab->info.titles_i] , tab->info.titles[oi],TAB_LTITLE-1);
+    int oi=tab->titles_i;
+    tab->titles_i++;
+    if (tab->titles_i == TAB_NTITLE)
+        tab->titles_i = 0;
+    wcsncpy(tab->titles[tab->titles_i] , tab->titles[oi],TAB_LTITLE-1);
 }
 
 wchar_t* win_tab_title_pop(STerm*pterm) {
     STab* tab = tab_by_term(pterm);
-    if (!tab->info.titles_i)
-        tab->info.titles_i = TAB_NTITLE;
+    if (!tab->titles_i)
+        tab->titles_i = TAB_NTITLE;
     else
-        tab->info.titles_i--;
+        tab->titles_i--;
     return win_tab_get_title(active_tab);
 }
 
@@ -319,7 +326,7 @@ static void paint_tab(HDC dc, int x0,int width, int tabh, const STab* tab) {
     MoveToEx(dc, x0, tabh, NULL);
     LineTo(dc, x0, 0);
     LineTo(dc, x0+width, 0);
-    TextOutW(dc, x0+width/2, (tabh - gtab_font_size()) / 2, tab->info.titles[tab->info.titles_i], wcslen(tab->info.titles[tab->info.titles_i]));
+    TextOutW(dc, x0+width/2, (tabh - gtab_font_size()) / 2, tab->titles[tab->titles_i], wcslen(tab->titles[tab->titles_i]));
 }
 
 static int tab_paint_width = 0;
@@ -388,7 +395,7 @@ void win_tab_paint(HDC dc) {
         HGDIOBJ activebrush = CreateSolidBrush(active_bg);
         FillRect(bufdc, &tabrect, activebrush);
         DeleteObject(activebrush);
-      } else if (tabs[i]->info.attention) {
+      } else if (tabs[i]->attention) {
         HGDIOBJ activebrush = CreateSolidBrush(attention_bg);
         FillRect(bufdc, &tabrect, activebrush);
         DeleteObject(activebrush);

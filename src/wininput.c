@@ -34,7 +34,7 @@ static int transparency_pending = 0;
 
 static int fundef_stat(char*cmd);
 static int fundef_run(char*cmd,uint key, mod_keys mods);
-
+extern void LoadConfig();
 static inline void
 show_last_error()
 {
@@ -1627,10 +1627,10 @@ win_key_down(WPARAM wp, LPARAM lp)
           int res=1;
           int zoom=-10000;
           switch (key) {
-            when VK_LEFT or 'H':  
+            when VK_LEFT :  
                 if (shift) win_tab_move(-1);
                 else win_tab_change(-1);
-            when VK_RIGHT or 'L': 
+            when VK_RIGHT:  
                 if (shift) win_tab_move(1);
                 else win_tab_change(1);
             when '1' ... '9':
@@ -1644,6 +1644,7 @@ win_key_down(WPARAM wp, LPARAM lp)
             when 'I': win_tab_indicator();
             when 'K': win_tog_partline();
             when 'O': win_tog_scrollbar();
+            when 'L': LoadConfig();
             when 'M': open_popup_menu(true, "Wb|l|s", mods);
             when 'N': send_syscommand(IDM_NEW);
             when 'P': cycle_pointer_style();

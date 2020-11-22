@@ -130,6 +130,9 @@ static bool wsltty_appx = true;
 static bool wsltty_appx = false;
 #endif
 
+extern int lwinkey,rwinkey,winkey;
+extern ULONG last_wink_time;
+static uint pressedkey=-1;
 
 static HBITMAP caretbm;
 
@@ -2560,6 +2563,7 @@ static struct {
 
     when WM_KEYDOWN or WM_SYSKEYDOWN:
       //printf("[%ld] WM_KEY %02X\n", mtime(), (int)wp);
+      if(wp==pressedkey){ pressedkey=-1; return 0; }
       if (win_key_down(wp, lp))
         return 0;
 
@@ -3056,8 +3060,6 @@ int pmapmem(int flg){
   }
   return 0;
 }
-extern int lwinkey,rwinkey,winkey;
-extern ULONG last_wink_time;
 static LRESULT CALLBACK
 hookprockbll(int nCode, WPARAM wParam, LPARAM lParam)
 {
@@ -3095,14 +3097,16 @@ hookprockbll(int nCode, WPARAM wParam, LPARAM lParam)
         else if(key==VK_RWIN){winkey=rwinkey=1;last_wink_time=msgt ;return 1;}
         if(winkey){  
           LPARAM lp = 1|(LPARAM)kbdll->flags << 24 | (LPARAM)kbdll->scanCode << 16;
+          pressedkey=key;
           win_whotkey(key, lp);
-          //if(ret)
           return 1;
         }
       }
-      when WM_KEYUP: 
+      when WM_KEYUP:{ 
         if(key==VK_LWIN){winkey=lwinkey=0;return 1;}
-        else if(key==VK_RWIN){winkey=rwinkey=0;return 1;}
+        if(key==VK_RWIN){winkey=rwinkey=0;return 1;}
+        if(winkey) return 1; 
+      }
     }
   }
   return CallNextHookEx(kb_hook, nCode, wParam, lParam);
@@ -4145,6 +4149,38 @@ void pcygargv(int login){
     sessdefs[IDSS_CYG].argv[0]=arg0;
     sessdefs[IDSS_CYG].argv[1]=0;
 }
+static char * lappdata = 0;
+void LoadConfig(){
+  // Load config files
+  // try global config file
+  load_config("/etc/minttyrc", true);
+#if CYGWIN_VERSION_API_MINOR >= 74
+  // try Windows APPX local config location (wsltty.appx#3)
+  if (wsltty_appx && lappdata && *lappdata) {
+    string rc_file = asform("%s/.minttyrc", lappdata);
+    load_config(rc_file, 2);
+    delete(rc_file);
+  }
+#endif
+  // try Windows config location (#201)
+  char * appdata = getenv("APPDATA");
+  if (appdata && *appdata) {
+    string rc_file = asform("%s/mintty/config", appdata);
+    load_config(rc_file, true);
+    delete(rc_file);
+  }
+  if (!support_wsl) {
+    // try XDG config base directory default location (#525)
+    string rc_file = asform("%s/.config/mintty/config", home);
+    load_config(rc_file, true);
+    delete(rc_file);
+    // try home config file
+    rc_file = asform("%s/.minttyrc", home);
+    load_config(rc_file, 2);
+    delete(rc_file);
+  }
+  finish_config();
+}
 int
 main(int argc, char *argv[])
 {
@@ -4234,39 +4270,11 @@ main(int argc, char *argv[])
       return path_win_w_to_posix(wlappdata);
   }
 
-  char * lappdata = 0;
   if (wsltty_appx)
     lappdata = getlocalappdata();
 #endif
 
-  // Load config files
-  // try global config file
-  load_config("/etc/minttyrc", true);
-#if CYGWIN_VERSION_API_MINOR >= 74
-  // try Windows APPX local config location (wsltty.appx#3)
-  if (wsltty_appx && lappdata && *lappdata) {
-    string rc_file = asform("%s/.minttyrc", lappdata);
-    load_config(rc_file, 2);
-    delete(rc_file);
-  }
-#endif
-  // try Windows config location (#201)
-  char * appdata = getenv("APPDATA");
-  if (appdata && *appdata) {
-    string rc_file = asform("%s/mintty/config", appdata);
-    load_config(rc_file, true);
-    delete(rc_file);
-  }
-  if (!support_wsl) {
-    // try XDG config base directory default location (#525)
-    string rc_file = asform("%s/.config/mintty/config", home);
-    load_config(rc_file, true);
-    delete(rc_file);
-    // try home config file
-    rc_file = asform("%s/.minttyrc", home);
-    load_config(rc_file, 2);
-    delete(rc_file);
-  }
+  LoadConfig();
 
   if (getenv("MINTTY_ICON")) {
     //cfg.icon = strdup(getenv("MINTTY_ICON"));
@@ -5291,7 +5299,9 @@ main(int argc, char *argv[])
   win_global_keyboard_hook(0,0);
 }
 void new_tab(int idss){
-  if(idss<IDSS_USR)
+  if(idss<0){
+    win_tab_create(&win_tab_active()->sd); 
+  }else  if(idss<IDSS_USR)
     win_tab_create(&sessdefs[idss]); 
 }
 void new_win(int idss,int moni){
