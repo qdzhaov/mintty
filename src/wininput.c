@@ -448,11 +448,11 @@ win_update_menus(bool callback)
   //__ Context menu:
   modify_menu(ctxmenu, IDM_TABBAR   , CKED(cfg.tab_bar_show)  , _W("Tabbar(&H)"),    null);
   //__ Context menu:
-  modify_menu(ctxmenu, IDM_SCROLLBAR, scrollbar_checked       , _W("Scrollbar(&O)"), null);
+  modify_menu(ctxmenu, IDM_SCROLLBAR, scrollbar_checked       , _W("Scrollbar(&B)"), null);
   //__ Context menu:
   modify_menu(ctxmenu, IDM_PARTLINE , CKED(cterm->usepartline), _W("PartLine(&K)"),  null);
   //__ Context menu:
-  modify_menu(ctxmenu, IDM_INDICATOR, CKED(cfg.indicator)     , _W("Indicator(&I)"), null);
+  modify_menu(ctxmenu, IDM_INDICATOR, CKED(cfg.indicator)     , _W("Indicator(&J)"), null);
 
   uint fullscreen_checked = win_is_fullscreen ? MF_CHECKED : MF_UNCHECKED;
   //__ Context menu:
@@ -658,14 +658,14 @@ win_init_menus(void)
   AppendMenuW(smenu,  MF_ENABLED, IDM_NEWCMDT, _W("CMD"         ));
   AppendMenuW(smenu,  MF_ENABLED, IDM_NEWPSHT, _W("PowerShell"  ));
   AppendMenuW(smenu,  MF_ENABLED, IDM_NEWUSRT, _W("faststart"   ));
-  InsertMenuW(sysmenu,0,MF_BYPOSITION|MF_POPUP,   (UINT_PTR)(smenu), L"New &Tab");
+  InsertMenuW(sysmenu,0,MF_BYPOSITION|MF_POPUP,   (UINT_PTR)(smenu), _W("New &Tab"));
   smenu = CreatePopupMenu();
   AppendMenuW(smenu,  MF_ENABLED, IDM_NEWWSLW, _W("WSL"         ));
   AppendMenuW(smenu,  MF_ENABLED, IDM_NEWCYGW, _W("Cygwin"      ));
   AppendMenuW(smenu,  MF_ENABLED, IDM_NEWCMDW, _W("CMD"         ));
   AppendMenuW(smenu,  MF_ENABLED, IDM_NEWPSHW, _W("PowerShell"  ));
   AppendMenuW(smenu,  MF_ENABLED, IDM_NEWUSRW, _W("faststart"   ));
-  InsertMenuW(sysmenu,1,MF_BYPOSITION|MF_POPUP,   (UINT_PTR)(smenu), L"New &Win");
+  InsertMenuW(sysmenu,1,MF_BYPOSITION|MF_POPUP,   (UINT_PTR)(smenu), _W("New &Win"));
   InsertMenuW(sysmenu,2,MF_BYPOSITION|MF_ENABLED, IDM_NEW, 0);
   InsertMenuW(sysmenu, 3,MF_BYPOSITION|MF_ENABLED, IDM_NEWTAB, _W("New tab\tCtrl+Shift+T"));
   InsertMenuW(sysmenu, 4,MF_BYPOSITION|MF_ENABLED, IDM_KILLTAB, _W("Kill tab"));
@@ -1633,26 +1633,38 @@ win_key_down(WPARAM wp, LPARAM lp)
             when VK_RIGHT:  
                 if (shift) win_tab_move(1);
                 else win_tab_change(1);
-            when '1' ... '9':
-                win_tab_go(key-'1');
+            when '1' ... '9': win_tab_go(key-'1');
+            
             when ' ': kb_select(0,mods); tabctrling=0;
             when 'A': term_select_all();
             when 'C': term_copy();
+            when 'V': win_paste();
+            when 'I': term_save_image();
+            
             when 'D': send_syscommand(IDM_DEFSIZE);
             when 'F': send_syscommand(cfg.zoom_font_with_window ? IDM_FULLSCREEN_ZOOM : IDM_FULLSCREEN);
-            when 'G': win_tab_show();
-            when 'I': win_tab_indicator();
-            when 'K': win_tog_partline();
-            when 'O': win_tog_scrollbar();
-            when 'L': LoadConfig();
-            when 'M': open_popup_menu(true, "Wb|l|s", mods);
-            when 'N': send_syscommand(IDM_NEW);
-            when 'P': cycle_pointer_style();
             when 'R': send_syscommand(IDM_RESET);
             when 'S': send_syscommand(IDM_SEARCH);
             when 'T': new_tab_def();
-            when 'V': win_paste();
             when 'W': win_close();
+            when 'N': send_syscommand(IDM_NEW);
+            when 'O': win_open_config();
+            when 'M': open_popup_menu(true, "Wb|l|s", mods);
+
+            when 'B': win_tog_scrollbar();
+            when 'H': win_tab_show();
+            when 'J': win_tab_indicator();
+            when 'K': win_tog_partline();
+
+            when 'L': LoadConfig();
+            when 'P': cycle_pointer_style();
+            //when 'E':
+            //when 'G':
+            //when 'Q':
+            //when 'U':
+            //when 'X':
+            //when 'Y':
+            //when 'Z':
             when VK_SUBTRACT:  zoom = -1;
             when VK_ADD:       zoom = 1;
             when VK_NUMPAD0:   zoom = 0;
@@ -1660,8 +1672,7 @@ win_key_down(WPARAM wp, LPARAM lp)
             when VK_OEM_PLUS:  zoom = 1; mods &= ~MDK_SHIFT;
             when '0':          zoom = 0;
             when VK_SHIFT :    res=-1;
-            when VK_CONTROL or 
-                VK_ESCAPE: res=-1;tabctrling=0;
+            when VK_ESCAPE: res=-1;tabctrling=0;
             otherwise: res=0;
           }
           if(zoom>=-1){

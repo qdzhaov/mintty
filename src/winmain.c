@@ -67,7 +67,7 @@ HIMC imc;
 ATOM class_atom;
 SessDef sessdefs[]={
   {0,0,0,0},
-  {1,0,"wsl",(char*[]){"wsl",0}},
+  {1,0,"/bin/wslbridge2",(char*[]){"/bin/wslbridge2",0}},
   {0,0,0    ,(char*[]){0    ,0}},
   {1,0,"cmd",(char*[]){"cmd",0}},
   {1,0,"powershell",(char*[]){"powershell",0}},

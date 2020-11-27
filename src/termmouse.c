@@ -33,11 +33,11 @@ sel_spread_word(pos p, bool forward)
 
   for (;;) {
     wchar c = get_char(line, p.x);
-    if (cterm->mouse_state != MS_OPENING && *cfg.word_chars_excl)
+    if (iswalnum(c)) ret_p = p;
+    else if (cterm->mouse_state != MS_OPENING && *cfg.word_chars_excl){
       if (strchr(cfg.word_chars_excl, c))
         break;
-    if (iswalnum(c))
-      ret_p = p;
+    }
     else if (cterm->mouse_state != MS_OPENING && *cfg.word_chars) {
       if (!strchr(cfg.word_chars, c))
         break;
@@ -533,6 +533,9 @@ term_mouse_click(mouse_button b, mod_keys mods, pos p, int count)
     else if ((mods & (MDK_CTRL | MDK_ALT)) != (MDK_CTRL | MDK_ALT)) {
       // Only clicks for selecting and extending should get here.
       p = get_selpoint(box_pos(p));
+      //MS_SEL_CHAR = -1, 
+      //MS_SEL_WORD = -2, 
+      //MS_SEL_LINE = -3,
       cterm->mouse_state = -count;
       cterm->sel_rect = alt;
       if (b != MBT_LEFT || shift_or_ctrl)

@@ -389,6 +389,7 @@ options[] = {
   {"CtrlShiftShortcuts", OPT_BOOL, offcfg(ctrl_shift_shortcuts)},
   {"CtrlExchangeShift", OPT_BOOL, offcfg(ctrl_exchange_shift)},
   {"CtrlControls", OPT_BOOL, offcfg(ctrl_controls)},
+  {"hkwinkeyall", OPT_MOD, offcfg(hkwinkeyall)},
   {"ComposeKey", OPT_MOD, offcfg(compose_key)},
   {"Key_PrintScreen", OPT_STRING, offcfg(key_prtscreen)},
   {"Key_Pause", OPT_STRING, offcfg(key_pause)},
@@ -836,12 +837,9 @@ parse_colour(string s, colour *cp)
 {
   uint r, g, b;
   float c, m, y, k = 0;
-  if (sscanf(s, "%u,%u,%u", &r, &g, &b) == 3)
-    ;
-  else if (sscanf(s, "#%2x%2x%2x", &r, &g, &b) == 3)
-    ;
-  else if (sscanf(s, "rgb:%2x/%2x/%2x", &r, &g, &b) == 3)
-    ;
+  if (sscanf(s, "#%2x%2x%2x", &r, &g, &b) == 3) ;
+  else if (sscanf(s, "%u,%u,%u", &r, &g, &b) == 3) ;
+  else if (sscanf(s, "rgb:%2x/%2x/%2x", &r, &g, &b) == 3) ;
   else if (sscanf(s, "rgb:%4x/%4x/%4x", &r, &g, &b) == 3)
     r >>= 8, g >>= 8, b >>= 8;
   else if (sscanf(s, "cmy:%f/%f/%f", &c, &m, &y) == 3

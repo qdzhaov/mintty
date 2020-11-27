@@ -547,6 +547,7 @@ child_proc(void)
             } while (len < sizeof buf);
 
           if (len > 0) {
+            buf[len]=0;
             term_write(buf, len);
             // accelerate keyboard echo if (unechoed) keyboard input is pending
             if (kb_input) {
