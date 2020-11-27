@@ -78,6 +78,12 @@ term_push_cmd(char c)
   return true;
 }
 
+static void
+enable_progress(void)
+{
+  cterm->lines[cterm->curs.y]->lattr |= LATTR_PROGRESS;
+}
+
 /*
  * Move the cursor to a given position, clipping at boundaries.
  * We may or may not want to clip at the scroll margin: marg_clip is
@@ -2648,14 +2654,17 @@ do_csi(uchar c)
       }
       else
         move(curs->x - arg0_def1, curs->y, 1);
+      enable_progress();
     when 'E':        /* CNL: move down N lines and CR */
       move(0, curs->y + arg0_def1, 1);
     when 'F':        /* CPL: move up N lines and CR */
       move(0, curs->y - arg0_def1, 1);
-    when 'G' or '`': /* CHA or HPA: set horizontal position */
-      move((curs->origin ? cterm->marg_left : 0) + arg0_def1 - 1,
-           curs->y, 
-           curs->origin ? 2 : 0);
+    when 'G' or '`': { /* CHA or HPA: set horizontal position */
+      short x = (curs->origin ? cterm->marg_left : 0) + arg0_def1 - 1;
+      if (x < curs->x)
+        enable_progress();
+      move(x, curs->y, curs->origin ? 2 : 0);
+    }
     when 'd':        /* VPA: set vertical position */
       move(curs->x,
            (curs->origin ? cterm->marg_top : 0) + arg0_def1 - 1,
@@ -2923,6 +2932,7 @@ do_csi(uchar c)
           curs->x--;
         while (curs->x > 0 && !cterm->tabs[curs->x]);
       }
+      enable_progress();
     }
     when CPAIR('$', 'w'):     /* DECTABSR: tab stop report */
       if (arg0 == 2) {
@@ -3185,6 +3195,30 @@ do_csi(uchar c)
         cterm->repeat_rate = arg0;
     when CPAIR('%', 'q'):  /* setup progress indicator on taskbar icon */
       set_taskbar_progress(arg0, cterm->csi_argc > 1 ? arg1 : -1);
+    when 'y':  /* DECTST */
+      if (arg0 == 4) {
+        cattr attr = (cattr)
+                     {.attr = ATTR_DEFFG | (TRUE_COLOUR << ATTR_BGSHIFT),
+                      .truefg = 0, .truebg = 0, .ulcolr = (colour)-1,
+                      .link = -1
+                     };
+        switch (arg1) {
+          when 10: attr.truebg = RGB(0, 0, 255);
+          when 11: attr.truebg = RGB(255, 0, 0);
+          when 12: attr.truebg = RGB(0, 255, 0);
+          when 13: attr.truebg = RGB(255, 255, 255);
+          otherwise: return;
+        }
+        for (int i = 0; i < cterm->rows; i++) {
+          termline *line = cterm->lines[i];
+          for (int j = 0; j < cterm->cols; j++) {
+            line->chars[j] =
+              (termchar) {.cc_next = 0, .chr = ' ', attr};
+          }
+          line->lattr = LATTR_NORM;
+        }
+        cterm->disptop = 0;
+      }
   }
 }
 
@@ -4080,6 +4114,9 @@ term_print_finish(void)
 static void
 term_do_write(const char *buf, uint len)
 {
+  //check e.g. if progress indication is following by CR
+  //printf("[%ld] write %02X...%02X\n", mtime(), *buf, buf[len - 1]);
+
   // Reset cursor blinking.
   cterm->cblinker = 1;
   term_schedule_cblink();

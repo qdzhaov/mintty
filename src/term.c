@@ -1678,11 +1678,11 @@ emoji_tags(int i)
 #endif
 
 struct emoji_seq {
-  wchar * efn;  // image filename
-  void * buf;   // cached image
-  int buflen;   // cached image
-  echar chs[8]; // code points
-  char * name;  // short name in emoji-sequences.txt, emoji-zwj-sequences.txt
+  wchar * efn;   // image filename
+  void * buf;    // cached image
+  int buflen;    // cached image
+  echar chs[10]; // code points
+  char * name;   // short name in emoji-sequences.txt, emoji-zwj-sequences.txt
 };
 
 struct emoji_seq emoji_seqs[] = {
@@ -2542,16 +2542,26 @@ term_paint(void)
       if (cterm->detect_progress) {
         int j = cterm->cols;
         while (--j > 0) {
-          if (chars[j].chr == '%' ||
+          if (chars[j].chr == '%'
+#ifdef detect_percentage_only_at_line_end
+              ||
+              // check empty space indication in chars;
+              // note: TATTR_CLEAR is already cleared in newchars
               (!(chars[j].attr.attr & TATTR_CLEAR)
                // note: TATTR_CLEAR is already cleared in newchars
                && !wcschr(W(")"), chars[j].chr)
+               // accept anything after %
+               && 0
+               // accept termination chars after percentage indication
+               && !wcschr(W(")]."), chars[j].chr)
               )
+#endif
+               // note: TATTR_CLEAR is already cleared in newchars
              )
             break;
         }
         int p = 0;
-        if (chars[j].chr == '%') {
+        if (chars[j].chr == '%' && (displine->lattr & LATTR_PROGRESS)) {
           int f = 1;
           while (--j >= 0) {
             if (chars[j].chr >= '0' && chars[j].chr <= '9') {
