@@ -1,7 +1,7 @@
 #ifndef CHILD_H
 #define CHILD_H
 
-#include <termios.h>
+struct winsize;
 enum IDSS{IDSS_CUR=-1, IDSS_DEF=0, IDSS_WSL , IDSS_CYG , IDSS_CMD , IDSS_PSH , IDSS_USR };
 typedef struct STerm STerm;
 #define TAB_NTITLE 16

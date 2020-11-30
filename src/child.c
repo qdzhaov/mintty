@@ -20,6 +20,7 @@
 #ifdef __CYGWIN__
 #include <sys/cygwin.h>  // cygwin_internal
 #endif
+#include <termios.h>
 
 extern char * home;
 extern bool report_child_pid;
@@ -407,27 +408,23 @@ child_tty(STerm* pterm)
 #define patch_319
 static void vprocclose(STerm* pterm){
   if (pterm->child.pid) {
-    int status;
+    int status,tc=0 ;
     if (waitpid(pterm->child.pid, &status, WNOHANG) == pterm->child.pid) {
       pterm->child.pid = 0;
       // Decide whether we want to exit now or later
-      if ((pterm->child.killed   ) || cfg.hold == HOLD_NEVER)
-        win_tab_clean();
+      if ((pterm->child.killed   ) || cfg.hold == HOLD_NEVER)tc=1;
       else if (cfg.hold == HOLD_START) {
-        if (WIFSIGNALED(status) || WEXITSTATUS(status) != mexit)
-          win_tab_clean();
+        if (WIFSIGNALED(status) || WEXITSTATUS(status) != mexit)tc=1;
       }
       else if (cfg.hold == HOLD_ERROR) {
         if (WIFEXITED(status)) {
-          if (WEXITSTATUS(status) == 0)
-            win_tab_clean();
+          if (WEXITSTATUS(status) == 0)tc=1;
         }
         else {
           const int error_sigs =
               1 << SIGILL | 1 << SIGTRAP | 1 << SIGABRT | 1 << SIGFPE |
               1 << SIGBUS | 1 << SIGSEGV | 1 << SIGPIPE | 1 << SIGSYS;
-          if (!(error_sigs & 1 << WTERMSIG(status)))
-            win_tab_clean();
+          if (!(error_sigs & 1 << WTERMSIG(status)))tc=1;
         }
       }
       char *s = 0;
@@ -454,9 +451,9 @@ static void vprocclose(STerm* pterm){
         if (err && support_wsl)
           term_write(wsl_post, strlen(wsl_post));
       }
-
       if (cfg.exit_title && *cfg.exit_title)
         win_prefix_title(cfg.exit_title);
+      if(tc) win_tab_clean();
     }
   }
 }

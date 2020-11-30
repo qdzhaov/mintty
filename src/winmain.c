@@ -8,7 +8,7 @@
 FILE * mtlog = 0;
 #endif
 //#define debug_hook
-char *mintty_debug;
+char * mintty_debug;
 #define dont_debug_resize
 #include "winpriv.h"
 #include "winsearch.h"
@@ -20,6 +20,7 @@ char *mintty_debug;
 #include "charset.h"
 #include "tek.h"
 
+#include <termios.h>
 #include <locale.h>
 #include <getopt.h>
 #if CYGWIN_VERSION_API_MINOR < 74
