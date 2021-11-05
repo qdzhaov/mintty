@@ -23,18 +23,8 @@
 
 #############################################################################
 DEBUG ?=0
-
+#TARGET=x86_64-w64-mingw32
 .PHONY: exe src pkg zip pdf clean
-
-BINFOLDER = ../bin
-#BINDIR = $(BINFOLDER)/$(TARGET)
-ifeq ($(DEBUG), 1)
-BINDIR = $(BINFOLDER)/$(platform)g
-NAME := minttyg
-else
-BINDIR = $(BINFOLDER)/$(platform)
-NAME := mintty
-endif
 
 ifdef TARGET
   CC := $(TARGET)-gcc
@@ -44,6 +34,7 @@ else
   RC := windres
   TARGET := $(shell $(CC) -dumpmachine)
 endif
+
 
 ifeq ($(TARGET), i686-pc-cygwin)
   platform := cygwin32
@@ -64,10 +55,23 @@ else ifeq ($(TARGET), i686-pc-msys)
 else ifeq ($(TARGET), x86_64-pc-msys)
   platform := msys64
   zip_files := ../docs/readme-msys.html
+else ifeq ($(TARGET), x86_64-w64-mingw32)
+  platform := mingw
+  zip_files := ../docs/readme-msys.html
+  $(msg Target '$(TARGET)' '$(platform)' )
 else
   $(error Target '$(TARGET)' not supported)
 endif
-
+BINFOLDER = ../bin
+#BINDIR = $(BINFOLDER)/$(TARGET)
+ifeq ($(DEBUG), 1)
+BINDIR = $(BINFOLDER)/$(platform)g
+NAME := minttyg
+else
+BINDIR = $(BINFOLDER)/$(platform)
+NAME := mintty
+endif
+$(info make for $(TARGET) $(platform) )
 CPPFLAGS := -DTARGET=$(TARGET)
 ifdef VERSION_SUFFIX
 CPPFLAGS += -DVERSION_SUFFIX="$(VERSION_SUFFIX)"
@@ -96,6 +100,14 @@ rc_srcs := $(wildcard *.rc)
 objs := $(c_srcs:.c=.o) $(rc_srcs:.rc=.o)
 bins := $(patsubst %.o,$(BINDIR)/%.o,$(objs))
 
+ifeq ($(platform), mingw)
+  # ensure avoidance of trampolines (a gcc mechanism to implement 
+  # some nested functions) as they cause some security software to choke
+  #SECUR=-Wtrampolines
+	CFLAGS += -DMINGW
+	MWLIB =  -lwsock32
+endif
+$(info make for $(CFLAGS)  )
 ifneq ($(platform), msys)
   # ensure avoidance of trampolines (a gcc mechanism to implement 
   # some nested functions) as they cause some security software to choke
@@ -118,7 +130,7 @@ ifneq ($(platform), msys)
 endif
 extralibs=$(scriptlib) $(downldlib) $(emojilib)
 LDFLAGS := -L$(shell $(CC) -print-file-name=w32api) -static-libgcc
-LDLIBS := -mwindows $(extralibs) -lcomctl32 -limm32 -lwinmm -lwinspool -lole32 -luuid
+LDLIBS := -mwindows $(extralibs) -lcomctl32 -limm32 -lwinmm -lwinspool -lole32 -luuid $(MWLIB)
 #override LDFLAGS += -L$(shell $(CC) -print-file-name=w32api) -static-libgcc
 #override LDLIBS += -mwindows $(extralibs) -lcomctl32 -limm32 -lwinmm -lwinspool -lole32 -luuid
 
@@ -159,8 +171,8 @@ $(BINDIR)/%.o: %.c
 	$(CC) -c $(DEPOPT) $(CCFLAGS) $(CPPFLAGS) -fstack-check $< -o $(BINDIR)/$*.o
 
 $(BINDIR)/%.o: %.rc %.h %.mft
-	$(RC) -c 65001 --preprocessor '$(CC) -E -xc -DRC_INVOKED $(DEPOPT) $(CPPFLAGS)' $< $(BINDIR)/$*.o
-	-mv $*.d $(BINDIR)/
+	$(RC)   $< $(BINDIR)/$*.o
+	#-mv $*.d $(BINDIR)/
 
 exe := $(NAME).exe
 exe: $(exe)

@@ -122,7 +122,7 @@ show_menu_info(HMENU menu)
 }
 
 static void
-append_commands(HMENU menu, wstring commands, UINT_PTR idm_cmd, bool add_icons, bool sysmenu)
+append_commands(HMENU menu, wstring commands, UINT_PTR idm_cmd, bool add_icons, bool is_sysmenu)
 {
   char * cmds = cs__wcstoutf(commands);
   char * cmdp = cmds;
@@ -134,7 +134,7 @@ append_commands(HMENU menu, wstring commands, UINT_PTR idm_cmd, bool add_icons, 
   char * paramp;
   while ((paramp = strchr(cmdp, ':'))) {
     *paramp++ = '\0';
-    if (sysmenu)
+    if (is_sysmenu)
       InsertMenuW(menu, SC_CLOSE, MF_ENABLED, idm_cmd + n, _W(cmdp));
     else
       AppendMenuW(menu, MF_ENABLED, idm_cmd + n, _W(cmdp));
@@ -344,33 +344,19 @@ win_update_menus(bool callback)
     else
       return _W(label);  // use our localization
   }
-  if(1){
-    DeleteMenu(sysmenu,SC_RESTORE ,0);
-    DeleteMenu(sysmenu,SC_MOVE    ,0);
-    DeleteMenu(sysmenu,SC_SIZE    ,0);
-    DeleteMenu(sysmenu,SC_MINIMIZE,0);
-    DeleteMenu(sysmenu,SC_MAXIMIZE,0);
-  }else{
-    modify_menu(sysmenu, SC_RESTORE , 0, itemlabel(__("&Restore")), null);
-    modify_menu(sysmenu, SC_MOVE    , 0, itemlabel(__("&Move")), null);
-    modify_menu(sysmenu, SC_SIZE    , 0, itemlabel(__("&Size")), null);
-    modify_menu(sysmenu, SC_MINIMIZE, 0, itemlabel(__("Mi&nimize")), null);
-    modify_menu(sysmenu, SC_MAXIMIZE, 0, itemlabel(__("Ma&ximize")), null);
-  }
-  modify_menu(sysmenu, SC_CLOSE, 0, itemlabel(__("&Close")),
-    alt_fn ? W("Alt+F4") : ct_sh ? W("Ctrl+Shift+W") : null
-  );
-  uint switch_move_enabled = win_tab_count() == 1;
-  EnableMenuItem(sysmenu, IDM_PREVTAB, switch_move_enabled);
-  EnableMenuItem(sysmenu, IDM_NEXTTAB, switch_move_enabled);
-  EnableMenuItem(sysmenu, IDM_MOVELEFT, switch_move_enabled);
-  EnableMenuItem(sysmenu, IDM_MOVERIGHT, switch_move_enabled);
+    modify_menu(sysmenu, SC_CLOSE, 0, itemlabel(__("&Close")),
+                alt_fn ? W("Alt+F4") : ct_sh ? W("Ctrl+Shift+W") : null
+               );
+    uint switch_move_enabled = win_tab_count() == 1;
+    EnableMenuItem(sysmenu, IDM_PREVTAB, switch_move_enabled);
+    EnableMenuItem(sysmenu, IDM_NEXTTAB, switch_move_enabled);
+    EnableMenuItem(sysmenu, IDM_MOVELEFT, switch_move_enabled);
+    EnableMenuItem(sysmenu, IDM_MOVERIGHT, switch_move_enabled);
 
-  //__ System menu:
-  modify_menu(sysmenu, IDM_NEW, 0, _W("Ne&w"),
-    alt_fn ? W("Alt+F2") : ct_sh ? W("Ctrl+Shift+N") : null
-  );
-
+    //__ System menu:
+    modify_menu(sysmenu, IDM_NEW, 0, _W("Ne&w"),
+                alt_fn ? W("Alt+F2") : ct_sh ? W("Ctrl+Shift+N") : null
+               );
   uint sel_enabled = cterm->selected ? MF_ENABLED : MF_GRAYED;
   EnableMenuItem(ctxmenu, IDM_OPEN, sel_enabled);
   //__ Context menu:
@@ -468,14 +454,13 @@ win_update_menus(bool callback)
 
   uint options_enabled = config_wnd ? MF_GRAYED : MF_ENABLED;
   EnableMenuItem(ctxmenu, IDM_OPTIONS, options_enabled);
-  EnableMenuItem(sysmenu, IDM_OPTIONS, options_enabled);
+    EnableMenuItem(sysmenu, IDM_OPTIONS, options_enabled);
 
-  // refresh remaining labels to facilitate (changed) localization
-  //__ Context menu:
-  modify_menu(sysmenu, IDM_COPYTITLE, 0, _W("Copy T&itle"), null);
-  //__ Context menu:
-  modify_menu(sysmenu, IDM_OPTIONS, 0, _W("&Options..."), null);
-
+    // refresh remaining labels to facilitate (changed) localization
+    //__ Context menu:
+    modify_menu(sysmenu, IDM_COPYTITLE, 0, _W("Copy T&itle"), null);
+    //__ Context menu:
+    modify_menu(sysmenu, IDM_OPTIONS, 0, _W("&Options..."), null);
   // update user-defined menu functions (checked/enabled)
   void
   check_commands(HMENU menu, wstring commands, UINT_PTR idm_cmd)
@@ -641,17 +626,33 @@ win_init_menus(void)
 #ifdef debug_modify_menu
   printf("win_init_menus\n");
 #endif
-
   HMENU smenu;
   sysmenu = GetSystemMenu(wnd, false);
 
+  InsertMenuW(sysmenu, 0,MF_BYPOSITION|MF_SEPARATOR, 0, 0);
+  InsertMenuW(sysmenu, 0,MF_BYPOSITION|MF_ENABLED, IDM_MOVERIGHT, _W("Next to right\tWin+Shift+->"));
+  InsertMenuW(sysmenu, 0,MF_BYPOSITION|MF_ENABLED, IDM_MOVELEFT, _W("Move to left\tWin+Shift+<-"));
+  InsertMenuW(sysmenu, 0,MF_BYPOSITION|MF_ENABLED, IDM_NEXTTAB, _W("Next tab\tWin+->"));
+  InsertMenuW(sysmenu, 0,MF_BYPOSITION|MF_ENABLED, IDM_PREVTAB, _W("Previous tab\tWin+<-"));
+
+  InsertMenuW(sysmenu, 0,MF_BYPOSITION|MF_ENABLED, IDM_KILLTAB, _W("Kill tab"));
+  InsertMenuW(sysmenu, 0,MF_BYPOSITION|MF_ENABLED, IDM_NEWTAB, _W("New tab\tCtrl+Shift+T"));
+  InsertMenuW(sysmenu, 0,MF_BYPOSITION|MF_ENABLED, IDM_NEW, 0);
   if (*cfg.sys_user_commands)
     append_commands(sysmenu, cfg.sys_user_commands, IDM_SYSMENUFUNCTION, false, true);
   else {
-    InsertMenuW(sysmenu, SC_CLOSE, MF_ENABLED, IDM_COPYTITLE, _W("&Copy Title"));
-    InsertMenuW(sysmenu, SC_CLOSE, MF_ENABLED, IDM_OPTIONS, _W("&Options..."));
+    InsertMenuW(sysmenu,0, MF_BYPOSITION|MF_ENABLED, IDM_COPYTITLE, _W("&Copy Title"));
+    InsertMenuW(sysmenu,0, MF_BYPOSITION|MF_ENABLED, IDM_OPTIONS, _W("&Options..."));
   }
-  InsertMenuW(sysmenu, SC_CLOSE, MF_SEPARATOR, 0, 0);
+  InsertMenuW(sysmenu, 0, MF_BYPOSITION|MF_SEPARATOR, 0, 0);
+  smenu = CreatePopupMenu();
+  AppendMenuW(smenu,  MF_ENABLED, IDM_NEWWSLW, _W("WSL"         ));
+  AppendMenuW(smenu,  MF_ENABLED, IDM_NEWCYGW, _W("Cygwin"      ));
+  AppendMenuW(smenu,  MF_ENABLED, IDM_NEWCMDW, _W("CMD"         ));
+  AppendMenuW(smenu,  MF_ENABLED, IDM_NEWPSHW, _W("PowerShell"  ));
+  AppendMenuW(smenu,  MF_ENABLED, IDM_NEWUSRW, _W("faststart"   ));
+  InsertMenuW(sysmenu, 0,MF_BYPOSITION|MF_POPUP,   (UINT_PTR)(smenu), _W("New &Win"));
+
   smenu = CreatePopupMenu();
   AppendMenuW(smenu,  MF_ENABLED, IDM_NEWWSLT, _W("WSL"         ));
   AppendMenuW(smenu,  MF_ENABLED, IDM_NEWCYGT, _W("Cygwin"      ));
@@ -659,21 +660,14 @@ win_init_menus(void)
   AppendMenuW(smenu,  MF_ENABLED, IDM_NEWPSHT, _W("PowerShell"  ));
   AppendMenuW(smenu,  MF_ENABLED, IDM_NEWUSRT, _W("faststart"   ));
   InsertMenuW(sysmenu,0,MF_BYPOSITION|MF_POPUP,   (UINT_PTR)(smenu), _W("New &Tab"));
-  smenu = CreatePopupMenu();
-  AppendMenuW(smenu,  MF_ENABLED, IDM_NEWWSLW, _W("WSL"         ));
-  AppendMenuW(smenu,  MF_ENABLED, IDM_NEWCYGW, _W("Cygwin"      ));
-  AppendMenuW(smenu,  MF_ENABLED, IDM_NEWCMDW, _W("CMD"         ));
-  AppendMenuW(smenu,  MF_ENABLED, IDM_NEWPSHW, _W("PowerShell"  ));
-  AppendMenuW(smenu,  MF_ENABLED, IDM_NEWUSRW, _W("faststart"   ));
-  InsertMenuW(sysmenu,1,MF_BYPOSITION|MF_POPUP,   (UINT_PTR)(smenu), _W("New &Win"));
-  InsertMenuW(sysmenu,2,MF_BYPOSITION|MF_ENABLED, IDM_NEW, 0);
-  InsertMenuW(sysmenu, 3,MF_BYPOSITION|MF_ENABLED, IDM_NEWTAB, _W("New tab\tCtrl+Shift+T"));
-  InsertMenuW(sysmenu, 4,MF_BYPOSITION|MF_ENABLED, IDM_KILLTAB, _W("Kill tab"));
-  InsertMenuW(sysmenu, 5,MF_BYPOSITION|MF_SEPARATOR, 0, 0);
-  InsertMenuW(sysmenu, 6,MF_BYPOSITION|MF_ENABLED, IDM_PREVTAB, _W("Previous tab\tWin+<-"));
-  InsertMenuW(sysmenu, 7,MF_BYPOSITION|MF_ENABLED, IDM_NEXTTAB, _W("Next tab\tWin+->"));
-  InsertMenuW(sysmenu, 8,MF_BYPOSITION|MF_ENABLED, IDM_MOVELEFT, _W("Move to left\tWin+Shift+<-"));
-  InsertMenuW(sysmenu, 9,MF_BYPOSITION|MF_ENABLED, IDM_MOVERIGHT, _W("Next to right\tWin+Shift+->"));
+  if(0){
+    DeleteMenu(sysmenu,SC_RESTORE ,0);
+    DeleteMenu(sysmenu,SC_MOVE    ,0);
+    DeleteMenu(sysmenu,SC_SIZE    ,0);
+    DeleteMenu(sysmenu,SC_MINIMIZE,0);
+    DeleteMenu(sysmenu,SC_MAXIMIZE,0);
+  }
+
   sysmenulen = GetMenuItemCount(sysmenu);
 }
 

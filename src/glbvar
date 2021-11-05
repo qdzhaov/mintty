@@ -1,0 +1,10 @@
+#!/bin/sh
+fn=winpriv.h
+vars="inst wnd imc config_wnd class_atom colours cell_width \
+  cell_height font_ambig_wide line_scale PADDING OFFSET show_charinfo\
+  support_wsl wsl_basepath report_child_pid ini_width ini_height\
+  win_is_fullscreen clipboard_token dpi per_monitor_dpi_aware \
+  click_focus_token last_pos lines_scrolled kb_input kb_trace"
+  for v in $vars;do
+    echo $v `grep -w  $v *.[ch]|wc -l`
+  done

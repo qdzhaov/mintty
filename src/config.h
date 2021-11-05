@@ -211,10 +211,10 @@ typedef struct {
   string menu_title_ctrl_l;
   string menu_title_ctrl_r;
   int geom_sync;
-  int tab_font_size,tab_bar_show,indicator;
+  int tab_font_size,tab_bar_show,indicator,indicatory,indicatorx;
   int gui_font_size; 
   int col_spacing, row_spacing;
-  int padding,partline;
+  int padding,partline,usepartline;
   int ligatures;
   int ligatures_support;
   int handle_dpichanged;

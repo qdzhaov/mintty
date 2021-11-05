@@ -3282,8 +3282,7 @@ draw:;
           bezier[i].y--;
       PolyBezier(dc, (const POINT *)bezier, 1 + rep * 3);
     }
-    oldpen = SelectObject(dc, oldpen);
-    DeleteObject(oldpen);
+    DeleteObject(SelectObject(dc, oldpen));
 
     SelectClipRgn(dc, ur);
   }
@@ -3321,8 +3320,7 @@ draw:;
         LineTo(dc, x + ulen * char_width, y + uloff - l);
       }
     }
-    oldpen = SelectObject(dc, oldpen);
-    DeleteObject(oldpen);
+    DeleteObject(SelectObject(dc, oldpen));
   }
 
  /* Overline */
@@ -3334,8 +3332,7 @@ draw:;
       MoveToEx(dc, x, y + l, null);
       LineTo(dc, x + ulen * char_width, y + l);
     }
-    oldpen = SelectObject(dc, oldpen);
-    DeleteObject(oldpen);
+    DeleteObject(SelectObject(dc, oldpen));
   }
 
   int dxs_[len];
@@ -3608,8 +3605,7 @@ draw:;
         xl += char_width;
         xr += char_width;
       }
-      oldpen = SelectObject(dc, oldpen);
-      DeleteObject(oldpen);
+      DeleteObject(SelectObject(dc, oldpen));
     }
   }
   else if ((graph >= 0x80 && !graph_vt52) || powerline) {  // drawn graphics
@@ -3860,8 +3856,7 @@ draw:;
       MoveToEx(dc, x, y + yoff + l, null);
       LineTo(dc, x + len * char_width, y + yoff + l);
     }
-    oldpen = SelectObject(dc, oldpen);
-    DeleteObject(oldpen);
+    DeleteObject(SelectObject(dc, oldpen));
   }
   else if (graph) {  // VT100 box drawing characters ┘┐┌└┼ ─ ├┤┴┬│
     HPEN oldpen = SelectObject(dc, CreatePen(PS_SOLID, 0, fg));
@@ -3903,8 +3898,7 @@ draw:;
         }
       }
     }
-    oldpen = SelectObject(dc, oldpen);
-    DeleteObject(oldpen);
+    DeleteObject(SelectObject(dc, oldpen));
   }
 
  /* Strikeout */
@@ -3920,8 +3914,7 @@ draw:;
       MoveToEx(dc, x, y + soff + l, null);
       LineTo(dc, x + ulen * char_width, y + soff + l);
     }
-    oldpen = SelectObject(dc, oldpen);
-    DeleteObject(oldpen);
+    DeleteObject(SelectObject(dc, oldpen));
   }
 
   if (origtext)

@@ -68,10 +68,11 @@ HIMC imc;
 ATOM class_atom;
 SessDef sessdefs[]={
   {0,0,0,0},
-  {1,0,"/bin/wslbridge2",(char*[]){"/bin/wslbridge2",0}},
-  {0,0,0    ,(char*[]){0    ,0}},
-  {1,0,"cmd",(char*[]){"cmd",0}},
-  {1,0,"powershell",(char*[]){"powershell",0}},
+  {1,"Wsl"        ,"wsl"             ,(char*[]){"wsl" ,0}},
+  // {1,"Wsl"        ,"/bin/wslbridge2" ,(char*[]){"/bin/wslbridge2" ,0}},
+  {0,"CygWin"     ,0                 ,(char*[]){0                 ,0}},
+  {1,"CMD"        ,"cmd"             ,(char*[]){"cmd"             ,0}},
+  {1,"PowerShell" ,"powershell"      ,(char*[]){"powershell"      ,0}},
   {0,0,0,0}
 }; 
 SessDef main_sd={0};
@@ -3453,40 +3454,6 @@ char *shells[]={
   "/bin/zsh",
   0
 };
-static int listShell(int maxsh,SessionDef*pshs,struct passwd *pw){
-  char*cmd,**p;
-  int ind=0;
-  cmd = getenv("SHELL");
-  cmd = cmd ? strdup(cmd) :
-#if CYGWIN_VERSION_DLL_MAJOR >= 1005
-      (pw && pw->pw_shell && *pw->pw_shell) ? strdup(pw->pw_shell) :
-#endif
-      "/bin/sh";
-  if(access(cmd,0)) {
-    pshs[ind].type=0;
-    pshs[ind].name=wcsdup(W("cygwin")); 
-    pshs[ind].cmd=cs__utftowcs(cmd);
-    ind++;
-  }
-  for(p=shells;*p;p++){
-    if(strcmp(cmd,*p)){
-      if(access(*p,0)) {
-        char *s,*t;
-        t=strrchr(*p,'/');
-        if(!t)t=*p;
-        else t=t+1;
-        s=asform("Cyg %s",cmd ,t);
-        pshs[ind].type=0;
-        pshs[ind].name=cs__utftowcs(s);
-        pshs[ind].cmd=cs__utftowcs(cmd);
-        VFREE(s);
-        ind++;
-      }
-      if(ind>=maxsh)break;
-    }
-  }
-  return ind; 
-};
 static int
 listwsl(int maxdn,SessionDef*pdn){
   static wstring lxsskeyname = W("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Lxss");
@@ -4549,7 +4516,6 @@ main(int argc, char *argv[])
 {
   char buf[1024];
   char *pt;
-  (void)listShell;
   (void)listwsl;
   main_sd.argc=argc;
   main_sd.argv=argv;
@@ -4573,6 +4539,7 @@ main(int argc, char *argv[])
 
   // Determine home directory.
   home = getenv("HOME");
+
 #if CYGWIN_VERSION_DLL_MAJOR >= 1005
   // Before Cygwin 1.5, the passwd structure is faked.
   struct passwd *pw = getpwuid(getuid());

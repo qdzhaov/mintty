@@ -1,0 +1,47 @@
+CS+T W+T  new tab
+A+space  sys_menu
+A+enter  tog fullscreen
+W+<- W+-> change table
+WS+<- WS+->
+ S+<-  S+->
+CS+<- CS+->
+S+Ins S+F12
+
+
+CS-A select all
+CS-p Paste
+CS-I Image
+CS-S A+F3 Search
+CS-B scroll Bar
+CS-H TabBar
+CS-K PartLine 
+CS-J Indicator
+CS-1 ... '9': win_tab_go(key-'1');
+CS-space : kb_select(0,mods); 
+CS-A: term_select_all();
+CS-C: term_copy();
+CS-V: win_paste();
+CS-I: term_save_image();
+CS-D: send_syscommand(IDM_DEFSIZE);
+CS-F: send_syscommand(cfg.zoom_font_with_window ? IDM_FULLSCREEN_ZOOM : IDM_FULLSCREEN);
+CS-R: send_syscommand(IDM_RESET);
+CS-S: send_syscommand(IDM_SEARCH);
+CS-T: new_tab_def();
+CS-W: win_close();
+CS-N: send_syscommand(IDM_NEW);
+CS-O: win_open_config();
+CS-M: open_popup_menu(true, "Wb|l|s", mods);
+CS-B: win_tog_scrollbar();
+CS-H: win_tab_show();
+CS-J: win_tab_indicator();
+CS-K: win_tog_partline();
+CS-L: LoadConfig();
+CS-P: cycle_pointer_style();
+CS-KSUBTRACT   :zoom = -1;
+CS-VK_ADD      :zoom = 1;
+CS-VK_NUMPAD0  :zoom = 0;
+CS-VK_OEM_MINUS:zoom = -1; mods &= ~MDK_SHIFT;
+CS-VK_OEM_PLUS :zoom = 1; mods &= ~MDK_SHIFT;
+CS-0           :zoom = 0;
+CS-VK_SHIFT    :res=-1;
+CS-VK_ESCAPE   :res=-1;

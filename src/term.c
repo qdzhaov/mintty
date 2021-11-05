@@ -30,7 +30,7 @@ enum {
   PARTIAL_UPDATE = 1,
   FULL_UPDATE = 2
 };
-//ZZ 
+
 static int markpos = 0;
 static bool markpos_valid = false;
 

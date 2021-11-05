@@ -33,7 +33,7 @@ void win_tab_save_title(STerm*pterm) { win_tab_title_push(pterm); }
 void win_tab_restore_title(STerm*pterm) { win_tab_set_title(pterm, win_tab_title_pop(pterm)); }
 void win_tab_change(int change) { win_tab_go(rel_index(change)); }
 void win_tab_pop(){ if(stabs_i){ win_tab_v(stabs[--stabs_i]); } }
-void win_tab_actv(){ if(tabs)win_tab_v( tabs[active_tab]); stabs_i=0; }
+void win_tab_actv(){ if(tabs)win_tab_v( tabs[active_tab]);}
 wchar_t* win_tab_get_title(unsigned int idx) { return tabs[idx]->titles[tabs[idx]->titles_i]; }
 void win_tab_indicator(){ cfg.indicator=!cfg.indicator; set_tab_bar_visibility(); }
 void win_tab_show(){ cfg.tab_bar_show=!cfg.tab_bar_show; set_tab_bar_visibility(); } 
@@ -179,15 +179,15 @@ static void newtab(SessDef*sd,struct winsize *wsz, const char* cwd ){
   STab* tab = vtab();
   win_tab_v(tab);
   tab->sd.argc=sd->argc;
+  tab->sd.cmd=strdup(sd->cmd);
   if(sd->title)tab->sd.title=strdup(sd->title);
   else tab->sd.title=0;
-  tab->sd.cmd=strdup(sd->cmd);
   tab->sd.argv=newn(char*,sd->argc+1);
   for(int i=0;sd->argv[i];i++){
     tab->sd.argv[i]=strdup(sd->argv[i]);
   }
   tab->sd.argv[sd->argc]=0;
-  cterm->usepartline=cfg.partline!=0; 
+  cterm->usepartline=cfg.usepartline!=0; 
   term_reset(1);
   term_resize(wsz->ws_row, wsz->ws_col);
   tab->terminal->child.cmd = sd->cmd;
@@ -283,6 +283,7 @@ static void InitGdi(HDC dc,int fsize,int width,int tabh){
   }
   if(tp.otabw<width||tp.otabh<tabh){
     if(tp.otabw){
+      SelectObject(tp.bdc, tp.obuf);
       DeleteObject(tp.dcbuf);
     } 
     tp.dcbuf=CreateCompatibleBitmap(dc, width, tabh);
@@ -294,11 +295,13 @@ static void InitGdi(HDC dc,int fsize,int width,int tabh){
     tp.fgpen=CreatePen(PS_SOLID, 0, fg);
     tp.activebrush = CreateSolidBrush(active_bg);
     tp.attentionbrush = CreateSolidBrush(attention_bg);
+
     tp.obrush = SelectObject(tp.bdc, tp.bgbrush);
     tp.open = SelectObject(tp.bdc, tp.fgpen);
   }
   if(fsize!=tp.ofsize){
     if(tp.ofsize){
+      SelectObject(tp.bdc, tp.ofont);
       DeleteObject(tp.normfont);
       DeleteObject(tp.boldfont);
     }
@@ -307,19 +310,31 @@ static void InitGdi(HDC dc,int fsize,int width,int tabh){
     tp.boldfont=CreateFont(fsize*10/8,0,0,0,FW_BOLD  ,0,0,0,1,0,0,CLEARTYPE_QUALITY,0,0);
     tp.ofont  =SelectObject( tp.bdc, tp.normfont);
   }
-  //  SelectObject(tp.bdc,tp.open  );
-  //  SelectObject(tp.bdc,tp.ofont);
-  //  SelectObject(tp.bdc,tp.obuf  );
-  //  SelectObject(tp.bdc,tp.obrush);
 }
 static void paint_tab(HDC dc, int x0,int width, int tabh, const STab* tab) {
   MoveToEx(dc, x0, tabh, NULL);
   LineTo(dc, x0, 0);
   LineTo(dc, x0+width, 0);
-  TextOutW(dc, x0+width/2, (tabh - gtab_font_size()) / 2, tab->titles[tab->titles_i], wcslen(tab->titles[tab->titles_i]));
+  const wchar *ts=tab->titles[tab->titles_i];
+  int tl=wcslen(ts);
+  SIZE sw;
+  GetTextExtentPoint32W(dc,ts,tl,&sw);
+  if(sw.cx<width){
+    TextOutW(dc, x0+width/2, (tabh - gtab_font_size()) / 2,ts , tl);
+  }else{
+    int tlt=tl*width/sw.cx;
+    TextOutW(dc, x0+width/2, (tabh - gtab_font_size()) / 2,ts+tl-tlt,tlt);
+  }
 }
 
-static const wchar*GState(){
+void win_tab_paint(HDC dc) {
+  RECT r;
+  GetClientRect(wnd, &r);
+  int width = r.right-r.left - 2 * PADDING;
+  int tabh=gtab_height();
+  int tabfs=gtab_font_size();
+  RECT tabrect;
+
   if (tab_bar_visible||cfg.indicator){
     State[0]=' ';
     State[1]=cterm->selection_pending?'S':' ';
@@ -337,21 +352,12 @@ static const wchar*GState(){
       Statel=0;
     }
   }
-  return State;
-} 
-void win_tab_paint(HDC dc) {
-  RECT r;
-  GetClientRect(wnd, &r);
-  int width = r.right-r.left - 2 * PADDING;
-  int tabh=gtab_height();
-  int tabfs=gtab_font_size();
-  GState();
   InitGdi(dc,tabfs,width,tabh);
   if (tab_bar_visible){
     SelectObject(tp.bdc, tp.bgbrush);
-    RECT tabrect;
+    const int iwid=tabfs*5;
     const unsigned int preferred_width = 200 * dpi/96;
-    const int tabwidth = ((width) / (ntabs+1)) > preferred_width ? preferred_width : width / ntabs;
+    const int tabwidth = ((width-iwid) / (ntabs)) > preferred_width ? preferred_width : (width-iwid) / (ntabs);
     const int loc_tabheight = tabh-2;
     tab_paint_width = tabwidth;
     SelectObject(tp.bdc, tp.fgpen);
@@ -372,13 +378,12 @@ void win_tab_paint(HDC dc) {
 
       if (active) {
         SelectObject( tp.bdc, tp.boldfont);
-        paint_tab(tp.bdc, x0,tabwidth, loc_tabheight, tabs[i]);
-        SelectObject( tp.bdc, tp.normfont);
       } else {
         MoveToEx(tp.bdc, x0, loc_tabheight, NULL);
         LineTo(tp.bdc, x0+tabwidth, loc_tabheight);
-        paint_tab(tp.bdc, x0,tabwidth, loc_tabheight, tabs[i]);
       }
+      paint_tab(tp.bdc, x0,tabwidth, loc_tabheight, tabs[i]);
+      if (active) SelectObject( tp.bdc, tp.normfont);
     }
     x0=(int)ntabs*tabwidth;
     SetRect(&tabrect, x0, 0, width+1 , loc_tabheight+1);
@@ -407,11 +412,18 @@ void win_tab_paint(HDC dc) {
     SetBkMode(dc, OPAQUE);
     SetTextAlign(dc, TA_LEFT|TA_TOP);
     wchar s[20];
-    wsprintfW(s,_W("  %d/%d %s"),active_tab,ntabs ,State);
+    if(ntabs>1){
+      wsprintfW(s,_W("  %d/%d %s"),active_tab,ntabs ,State);
+    }else{
+      wsprintfW(s,_W(" %s"),State);
+    }
     int sl=wcslen(s);
     SIZE sw;
     GetTextExtentPoint32W(dc,s,sl,&sw);
-    TextOutW(dc,width - sw.cx, (tabh - tabfs) / 2,s, sl  );
+    int x0=width - sw.cx-cfg.indicatorx,y0=cfg.indicatory;
+    SetRect(&tabrect, x0, y0, x0+sw.cx, y0+tabh);
+    FillRect(tp.bdc, &tabrect, tp.bgbrush);
+    TextOutW(dc,x0, (y0+tabh - tabfs) / 2,s, sl  );
     SelectObject( dc, ofont);
   } 
 }

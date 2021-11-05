@@ -327,8 +327,16 @@ child_create(struct STerm* pterm,SessDef*sd,
     tcsetattr(0, TCSANOW, &attr);
     if (path) chdir(path);
     // Invoke command
-    execvp(cmd, argv);
 
+    if(strcasecmp(cmd,"wsl")==0){
+      bool ex1= access("/bin/wslbridge2.exe", R_OK);
+      bool ex2= access("/bin/wslbridge2-backend", R_OK);
+      if(ex1==0&&ex2==0){
+        cmd="/bin/wslbridge2.exe";
+      }
+    }
+    //fprintf(stderr, "execvp cmd:%s\n",cmd);
+    execvp(cmd, argv);
     // If we get here, exec failed.
     fprintf(stderr, "\033]701;C.UTF-8\007");
     fprintf(stderr, "\033[30;41m\033[K");
