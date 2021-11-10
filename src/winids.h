@@ -3,6 +3,11 @@
 
 #define IDD_MAINBOX      100
 #define IDI_MAINICON     200
+#define IDI_CYGWIN       201
+#define IDI_CMD          202
+#define IDI_POWERSHELL   203
+#define IDI_WSL          204
+#define IDI_UBUNTU       205
 
 /* From MSDN: In the WM_SYSCOMMAND message, the four low-order bits of
  * wParam are used by Windows, and should be masked off, so we shouldn't
