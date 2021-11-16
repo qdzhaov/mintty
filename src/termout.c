@@ -675,6 +675,7 @@ write_return(void)
     cterm->curs.x = 0;
   else
     cterm->curs.x = cterm->marg_left;
+  enable_progress();
 }
 
 static void
@@ -982,30 +983,36 @@ write_char(wchar c, int width)
 
 #define dont_debug_scriptfonts
 
-static struct {
+struct rangefont {
   ucschar first, last;
   uchar font;
   char * scriptname;
-} scriptfonts[] = {
+};
+static struct rangefont scriptfonts[] = {
 #include "scripts.t"
 };
+static struct rangefont blockfonts[] = {
+#include "blocks.t"
+};
 static bool scriptfonts_init = false;
+static bool use_blockfonts = false;
 
 static void
-mapfont(char * script, uchar f)
+mapfont(struct rangefont * ranges, uint len, char * script, uchar f)
 {
-  for (uint i = 0; i < lengthof(scriptfonts); i++)
-    if (0 == strcmp(scriptfonts[i].scriptname, script))
-      scriptfonts[i].font = f;
+  for (uint i = 0; i < len; i++) {
+    if (0 == strcmp(ranges[i].scriptname, script))
+      ranges[i].font = f;
+  }
   if (0 == strcmp(script, "CJK")) {
-    mapfont("Han", f);
-    mapfont("Hangul", f);
-    mapfont("Katakana", f);
-    mapfont("Hiragana", f);
-    mapfont("Bopomofo", f);
-    mapfont("Kanbun", f);
-    mapfont("Fullwidth", f);
-    mapfont("Halfwidth", f);
+    mapfont(ranges, len, "Han", f);
+    mapfont(ranges, len, "Hangul", f);
+    mapfont(ranges, len, "Katakana", f);
+    mapfont(ranges, len, "Hiragana", f);
+    mapfont(ranges, len, "Bopomofo", f);
+    mapfont(ranges, len, "Kanbun", f);
+    mapfont(ranges, len, "Fullwidth", f);
+    mapfont(ranges, len, "Halfwidth", f);
   }
 }
 
@@ -1026,7 +1033,10 @@ cfg_apply(char * conf, char * item)
       *sepp = '\0';
 
     if (!item || !strcmp(cmdp, item)) {
-      mapfont(cmdp, atoi(paramp));
+      if (*cmdp == '|')
+        mapfont(blockfonts, lengthof(blockfonts), cmdp + 1, atoi(paramp));
+      else
+        mapfont(scriptfonts, lengthof(scriptfonts), cmdp, atoi(paramp));
     }
 
     if (sepp) {
@@ -1051,6 +1061,7 @@ init_scriptfonts(void)
     char * cfg_scriptfonts = cs__wcstombs(cfg.font_choice);
     cfg_apply(cfg_scriptfonts, 0);
     free(cfg_scriptfonts);
+    use_blockfonts = wcschr(cfg.font_choice, '|');
   }
   scriptfonts_init = true;
 }
@@ -1064,6 +1075,24 @@ scriptfont(ucschar ch)
     init_scriptfonts();
 
   int i, j, k;
+
+  if (use_blockfonts) {
+    i = -1;
+    j = lengthof(blockfonts);
+    while (j - i > 1) {
+      k = (i + j) / 2;
+      if (ch < blockfonts[k].first)
+        j = k;
+      else if (ch > blockfonts[k].last)
+        i = k;
+      else {
+        uchar f = blockfonts[k].font;
+        if (f)
+          return f;
+        break;
+      }
+    }
+  }
 
   i = -1;
   j = lengthof(scriptfonts);
@@ -1087,8 +1116,8 @@ write_ucschar(wchar hwc, wchar wc, int width)
   ucschar c = hwc ? combine_surrogates(hwc, wc) : wc;
   uchar cf = scriptfont(c);
 #ifdef debug_scriptfonts
-  if (c && cf)
-    printf("scriptfont %04X: %d\n", c, cf);
+  if (c && (cf || c > 0xFF))
+    printf("write_ucschar %04X scriptfont %d\n", c, cf);
 #endif
   if (cf && cf <= 10 && !(attr & FONTFAM_MASK))
     cterm->curs.attr.attr = attr | ((cattrflags)cf << ATTR_FONTFAM_SHIFT);
@@ -1143,6 +1172,13 @@ contains(string s, int i)
 
 static short prev_state = 0;
 
+static void
+tek_gin_fin(void)
+{
+  if (tek_mode == TEKMODE_GIN)
+    tek_mode = TEKMODE_ALPHA;
+}
+
 /* Process Tek mode ESC control */
 static void
 tek_esc(char c)
@@ -1178,11 +1214,12 @@ tek_esc(char c)
     when CTRL('W'):   /* ETB: Make Copy */
       term_save_image();
       tek_bypass = false;
+      tek_gin_fin();
     when CTRL('X'):   /* CAN: Set Bypass */
       tek_bypass = true;
     when CTRL('Z'):   /* SUB: Gin mode */
-      tek_mode = TEKMODE_GIN;
       tek_gin();
+      tek_mode = TEKMODE_GIN;
       cterm->state = NORMAL;
       tek_bypass = true;
     when 0x1C:   /* FS: Special Plot mode */
@@ -1231,17 +1268,21 @@ tek_ctrl(char c)
     when '\a':   /* BEL: Bell */
       write_bell();
       tek_bypass = false;
+      tek_gin_fin();
     when '\b' or '\t' or '\v':     /* BS or HT or VT */
       if (tek_mode == TEKMODE_ALPHA)
         tek_write(c, -2);
     when '\n':   /* LF: Line feed */
       tek_bypass = false;
       tek_write(c, -2);
+      tek_gin_fin();
     when '\r':   /* CR: Carriage return */
       tek_mode = TEKMODE_ALPHA;
       cterm->state = NORMAL;
       tek_bypass = false;
       tek_write(c, -2);
+    when CTRL('O'):   /* SI */
+      tek_gin_fin();
     when 0x1C:   /* FS: Point Plot mode */
       tek_mode = TEKMODE_POINT_PLOT;
       cterm->state = TEK_ADDRESS0;
@@ -1271,6 +1312,7 @@ do_ctrl(char c)
     when '\e':   /* ESC: Escape */
       cterm->state = ESCAPE;
       cterm->esc_mod = 0;
+      return true;  // keep preceding char for REP
     when '\a':   /* BEL: Bell */
       write_bell();
     when '\b':     /* BS: Back space */
@@ -1310,6 +1352,7 @@ do_ctrl(char c)
     otherwise:
       return false;
   }
+  last_char = 0;  // cancel preceding char for REP
   return true;
 }
 
@@ -1346,7 +1389,7 @@ do_vt52(uchar c)
       move(0, 0, 0);
     when 'I':  /* Reverse line feed. */
       if (curs->y == cterm->marg_top)
-        term_do_scroll(cterm->marg_top, cterm->marg_bot, -1, true);
+        term_do_scroll(cterm->marg_top, cterm->marg_bot, -1, false);
       else if (curs->y > 0)
         curs->y--;
       curs->wrapnext = false;
@@ -1433,8 +1476,8 @@ lookup_cset(ushort nrc_code, uchar csmask, bool enabled)
     {'0', 1, 1, CSET_LINEDRW},	// DEC Special Line Drawing
     {'>', 1, 1, CSET_TECH},		// DEC Technical
     {'U', 1, 1, CSET_OEM},		// OEM Codepage 437
-    {'<', 1, 1, CSET_DECSUPP},	// DEC Supplementary (VT200)
-    {CPAIR('%', '5'), 1, 1, CSET_DECSPGR},	// DEC Supplementary Graphics (VT300)
+    {'<', 1, 1, CSET_DECSUPP},	// DEC User-preferred Supplemental (VT200)
+    {CPAIR('%', '5'), 1, 1, CSET_DECSPGR},	// DEC Supplementary (VT300)
     // definitions for NRC support:
     {'4', 1, 0, CSET_NL},	// Dutch
     {'C', 1, 0, CSET_FI},	// Finnish
@@ -1461,7 +1504,7 @@ lookup_cset(ushort nrc_code, uchar csmask, bool enabled)
     {CPAIR('"', '?'), 1, 1, CSET_DEC_Greek_Supp},
     {CPAIR('"', '4'), 1, 1, CSET_DEC_Hebrew_Supp},
     {CPAIR('%', '0'), 1, 1, CSET_DEC_Turkish_Supp},
-    {CPAIR('&', '4'), 1, 0, CSET_NRCS_Cyrillic},
+    {CPAIR('&', '4'), 1, 1, CSET_DEC_Cyrillic},
     {CPAIR('"', '>'), 1, 0, CSET_NRCS_Greek},
     {CPAIR('%', '='), 1, 0, CSET_NRCS_Hebrew},
     {CPAIR('%', '2'), 1, 0, CSET_NRCS_Turkish},
@@ -1514,6 +1557,7 @@ do_esc(uchar c)
     if (cs) {
       curs->csets[gi] = cs;
       term_update_cs();
+      last_char = 0;  // cancel preceding char for REP
       return;
     }
   }
@@ -1525,6 +1569,7 @@ do_esc(uchar c)
       memset(cterm->csi_argv, 0, sizeof(cterm->csi_argv));
       memset(cterm->csi_argv_defined, 0, sizeof(cterm->csi_argv_defined));
       cterm->esc_mod = 0;
+      return;  // keep preceding char for REP
     when ']':  /* OSC: operating system command */
       cterm->state = OSC_START;
     when 'P':  /* DCS: device control string */
@@ -1548,7 +1593,7 @@ do_esc(uchar c)
       }
     when 'M':  /* RI: reverse index - backwards LF */
       if (curs->y == cterm->marg_top)
-        term_do_scroll(cterm->marg_top, cterm->marg_bot, -1, true);
+        term_do_scroll(cterm->marg_top, cterm->marg_bot, -1, false);
       else if (curs->y > 0)
         curs->y--;
       curs->wrapnext = false;
@@ -1568,15 +1613,16 @@ do_esc(uchar c)
         cterm->marg_top = curs->y;
     when 'm':  /* HP Memory Unlock */
       cterm->marg_top = 0;
-    when CPAIR('#', '8'):    /* DECALN: fills screen with Es :-) */
+    when CPAIR('#', '8'): {  /* DECALN: fills screen with Es :-) */
       cterm->curs.origin = false;
       cterm->curs.wrapnext = false;
-      cterm->curs.attr = CATTR_DEFAULT;
       cterm->marg_top = 0;
       cterm->marg_bot = cterm->rows - 1;
       cterm->marg_left = 0;
       cterm->marg_right = cterm->cols - 1;
       move(0, 0, 0);
+      cattr savattr = cterm->curs.attr;
+      cterm->curs.attr = CATTR_DEFAULT;
       for (int i = 0; i < cterm->rows; i++) {
         termline *line = cterm->lines[i];
         for (int j = 0; j < cterm->cols; j++) {
@@ -1585,7 +1631,9 @@ do_esc(uchar c)
         }
         line->lattr = LATTR_NORM;
       }
+      cterm->curs.attr = savattr;
       cterm->disptop = 0;
+    }
     when CPAIR('#', '3'):  /* DECDHL: 2*height, top */
       if (!cterm->lrmargmode) {
         cterm->lines[curs->y]->lattr &= LATTR_BIDIMASK;
@@ -1639,7 +1687,14 @@ do_esc(uchar c)
         insdel_column(cterm->marg_left, true, 1);
       else
         move(curs->x + 1, curs->y, 1);
+    when 'V':  /* Start of Guarded Area (SPA) */
+      cterm->curs.attr.attr |= ATTR_PROTECTED;
+      cterm->iso_guarded_area = true;
+    when 'W':  /* End of Guarded Area (EPA) */
+      cterm->curs.attr.attr &= ~ATTR_PROTECTED;
+      cterm->iso_guarded_area = true;
   }
+  last_char = 0;  // cancel preceding char for REP
 }
 
 static void
@@ -2001,6 +2056,12 @@ set_modes(bool state)
         when 25: /* DECTCEM: enable/disable cursor */
           cterm->cursor_on = state;
           // Should we set cterm->cursor_invalid or call term_invalidate ?
+#ifdef end_suspend_output_by_enabling_cursor
+          if (state) {
+            cterm->suspend_update = false;
+            do_update();
+          }
+#endif
         when 30: /* Show/hide scrollbar */
           if (state != cterm->show_scrollbar) {
             cterm->show_scrollbar = state;
@@ -2034,7 +2095,7 @@ set_modes(bool state)
             cterm->marg_right = cterm->cols - 1;
           }
         when 80: /* DECSDM: SIXEL display mode */
-          cterm->sixel_display = !state;
+          cterm->sixel_display = state;
         when 1000: /* VT200_MOUSE */
           cterm->mouse_mode = state ? MM_VT200 : 0;
           win_update_mouse();
@@ -2154,6 +2215,12 @@ set_modes(bool state)
             cterm->curs.bidimode &= ~LATTR_BIDISEL;
           else
             cterm->curs.bidimode |= LATTR_BIDISEL;
+        when 2026:
+          cterm->suspend_update = state ? 150 : 0;
+          if (!state) {
+            do_update();
+            usleep(1000);  // flush update
+          }
       }
     }
     else { /* SM/RM: set/reset mode */
@@ -2240,7 +2307,7 @@ get_mode(bool privatemode, int arg)
       when 69: /* DECLRMM: enable left and right margin mode DECSLRM */
         return 2 - cterm->lrmargmode;
       when 80: /* DECSDM: SIXEL display mode */
-        return 2 - !cterm->sixel_display;
+        return 2 - cterm->sixel_display;
       when 1000: /* VT200_MOUSE */
         return 2 - (cterm->mouse_mode == MM_VT200);
       when 1002: /* BTN_EVENT_MOUSE */
@@ -2524,6 +2591,7 @@ do_winop(void)
         win_maximise(0);
         win_set_chars(rows0, cols0);
       }
+      usleep(1000);
     }
     when 10:
       if (cterm->csi_argc != 2)
@@ -2535,6 +2603,7 @@ do_winop(void)
         win_maximise(-2);
       else if (arg1 == 1 || arg1 == 0)
         win_maximise(arg1 ? 2 : 0);
+      usleep(1000);
     when 11: child_write(cterm,win_is_iconic() ? "\e[2t" : "\e[1t", 4);
     when 13: {
       int x, y;
@@ -2577,7 +2646,9 @@ do_winop(void)
 static void
 set_taskbar_progress(int state, int percent)
 {
-  if (state == 0) {  // disable progress indication
+  //printf("set_taskbar_progress (%d) %d %d%%\n", cterm->detect_progress, state, percent);
+  if (state == 0 && percent < 0) {  // disable progress indication
+    // skipping this if percent < 0 to allow percent-only setting with state 0
     taskbar_progress(-9);
     cterm->detect_progress = 0;
   }
@@ -2585,9 +2656,18 @@ set_taskbar_progress(int state, int percent)
     taskbar_progress(-8);
     cterm->detect_progress = 0;
   }
+  else if (state == 10) {  // reset to default
+    cterm->detect_progress = cfg.progress_bar;
+    taskbar_progress(-9);
+  }
   else if (state <= 3) {
-    taskbar_progress(- state);
+    if (state > 0)
+      taskbar_progress(- state);
     if (percent >= 0) {
+      // if we disable (above), then request percentage only (here), 
+      // colour will be 1/green regardless of previous/configured setting;
+      // to improve this, we'd have to introduce another variable,
+      // cterm->previous_progress
       taskbar_progress(percent);
       cterm->detect_progress = 0;
     }
@@ -2618,8 +2698,9 @@ do_csi(uchar c)
       cattr cur_attr = cterm->curs.attr;
       cterm->curs.attr = last_attr;
       wchar h = last_high, c = last_char;
-      for (int i = 0; i < arg0_def1; i++)
-        write_ucschar(h, c, last_width);
+      if (last_char)
+        for (int i = 0; i < arg0_def1; i++)
+          write_ucschar(h, c, last_width);
       cterm->curs.attr = cur_attr;
     }
     when 'A':        /* CUU: move up N lines */
@@ -2685,14 +2766,31 @@ do_csi(uchar c)
       else if (arg0 <= 2) {
         bool above = arg0 == 1 || arg0 == 2;
         bool below = arg0 == 0 || arg0 == 2;
-        term_erase(cterm->esc_mod, false, above, below);
+        term_erase(cterm->esc_mod | cterm->iso_guarded_area, false, above, below);
       }
     when 'K' or CPAIR('?', 'K'):  /* EL/DECSEL: (selective) erase in line */
       if (arg0 <= 2) {
         bool right = arg0 == 0 || arg0 == 2;
         bool left  = arg0 == 1 || arg0 == 2;
-        term_erase(cterm->esc_mod, true, left, right);
+        term_erase(cterm->esc_mod | cterm->iso_guarded_area, true, left, right);
       }
+    when 'X': {      /* ECH: write N spaces w/o moving cursor */
+      termline *line = cterm->lines[curs->y];
+      int cols = min(line->cols, line->size);
+      int n = min(arg0_def1, cols - curs->x);
+      if (n > 0) {
+        int p = curs->x;
+        term_check_boundary(curs->x, curs->y);
+        term_check_boundary(curs->x + n, curs->y);
+        while (n--) {
+          if (!cterm->iso_guarded_area ||
+              !(line->chars[p].attr.attr & ATTR_PROTECTED)
+             )
+            line->chars[p] = cterm->erase_char;
+          p++;
+        }
+      }
+    }
     when 'L':        /* IL: insert lines */
       if (curs->y >= cterm->marg_top && curs->y <= cterm->marg_bot
        && curs->x >= cterm->marg_left && curs->x <= cterm->marg_right
@@ -2892,9 +2990,12 @@ do_csi(uchar c)
     when 'T':        /* SD: Scroll down */
       /* Avoid clash with unsupported hilight mouse tracking mode sequence */
       if (cterm->csi_argc <= 1) {
-        term_do_scroll(cterm->marg_top, cterm->marg_bot, -arg0_def1, true);
+        term_do_scroll(cterm->marg_top, cterm->marg_bot, -arg0_def1, false);
         curs->wrapnext = false;
       }
+    when CPAIR('+', 'T'):     /* unscroll (kitty) */
+      term_do_scroll(cterm->marg_top, cterm->marg_bot, -arg0_def1, true);
+      curs->wrapnext = false;
     when CPAIR('*', '|'):     /* DECSNLS */
      /*
       * Set number of lines on screen
@@ -2910,18 +3011,6 @@ do_csi(uchar c)
       */
       win_set_chars(cterm->rows, arg0 ?: cfg.cols);
       cterm->selected = false;
-    when 'X': {      /* ECH: write N spaces w/o moving cursor */
-      termline *line = cterm->lines[curs->y];
-      int cols = min(line->cols, line->size);
-      int n = min(arg0_def1, cols - curs->x);
-      if (n > 0) {
-        int p = curs->x;
-        term_check_boundary(curs->x, curs->y);
-        term_check_boundary(curs->x + n, curs->y);
-        while (n--)
-          line->chars[p++] = cterm->erase_char;
-      }
-    }
     when 'x':        /* DECREQTPARM: report terminal characteristics */
       if (arg0 <= 1)
         child_printf(cterm,"\e[%u;1;1;120;120;1;0x", arg0 + 2);
@@ -2971,8 +3060,12 @@ do_csi(uchar c)
       cterm->cursor_size = arg0;
     when CPAIR('"', 'q'):  /* DECSCA: select character protection attribute */
       switch (arg0) {
-        when 0 or 2: cterm->curs.attr.attr &= ~ATTR_PROTECTED;
-        when 1: cterm->curs.attr.attr |= ATTR_PROTECTED;
+        when 0 or 2:
+          cterm->curs.attr.attr &= ~ATTR_PROTECTED;
+          cterm->iso_guarded_area = false;
+        when 1:
+          cterm->curs.attr.attr |= ATTR_PROTECTED;
+          cterm->iso_guarded_area = false;
       }
     when 'n':        /* DSR: device status report */
       if (arg0 == 6)  // CPR
@@ -2980,7 +3073,7 @@ do_csi(uchar c)
                      curs->y + 1 - (curs->origin ? cterm->marg_top : 0),
                      curs->x + 1 - (curs->origin ? cterm->marg_left : 0));
       else if (arg0 == 5)
-        child_write(cterm,"\e[0n", 4);
+        child_write(cterm,"\e[0n", 4); // "in good operating condition"
     when CPAIR('?', 'n'):  /* DSR, DEC specific */
       switch (arg0) {
         when 6:  // DECXCPR
@@ -2989,6 +3082,8 @@ do_csi(uchar c)
                        curs->x + 1 - (curs->origin ? cterm->marg_left : 0));
         when 15:
           child_printf(cterm,"\e[?%un", 11 - !!*cfg.printer);
+        when 26:  // Keyboard Report
+          child_printf(cterm,"\e[?27;0;%cn", cterm->has_focus ? '0' : '8');
         // DEC Locator
         when 53 or 55:
           child_printf(cterm,"\e[?53n");
@@ -3106,27 +3201,124 @@ do_csi(uchar c)
       }
     when CPAIR('$', 'r')  /* DECCARA: VT420 Change Attributes in Area */
       or CPAIR('$', 't'): {  /* DECRARA: VT420 Reverse Attributes in Area */
-      cattrflags a1 = 0, a2 = 0;
-      for (uint i = 4; i < cterm->csi_argc; i++)
+      cattrflags a1 = 0, a2 = 0, ac = 0, af = 0;
+      for (uint i = 4; i < cterm->csi_argc; i++) {
+        int sub_pars = 0;
+        if (cterm->csi_argv[i] & SUB_PARS)
+          for (uint j = i + 1; j < cterm->csi_argc; j++) {
+            sub_pars++;
+            if (cterm->csi_argv[j] & SUB_PARS)
+              cterm->csi_argv[j] &= ~SUB_PARS;
+            else
+              break;
+          }
         switch (cterm->csi_argv[i]) {
-          when 0: a2 = ATTR_BOLD | ATTR_UNDER | ATTR_BLINK | ATTR_REVERSE;
+          when 0: a2 = ATTR_BOLD | ATTR_UNDER | ATTR_BLINK | ATTR_REVERSE
+                  | ATTR_DIM | ATTR_ITALIC | ATTR_BLINK2 | ATTR_STRIKEOUT
+                  ;
           when 1: a1 |= ATTR_BOLD;
           when 4: a1 |= ATTR_UNDER;
+                  a2 |= UNDER_MASK;
           when 5: a1 |= ATTR_BLINK;
           when 7: a1 |= ATTR_REVERSE;
-          when 22: a2 |= ATTR_BOLD;
-          when 24: a2 |= ATTR_UNDER;
-          when 25: a2 |= ATTR_BLINK;
+          when 22: a2 |= ATTR_BOLD | ATTR_DIM | ATTR_SHADOW;
+          when 24: a2 |= UNDER_MASK;
+          when 25: a2 |= ATTR_BLINK | ATTR_BLINK2;
           when 27: a2 |= ATTR_REVERSE;
-          //when 2: a1 |= ATTR_DIM;
-          //when 3: a1 |= ATTR_ITALIC;
-          //when 6: a1 |= ATTR_BLINK2;
-          //when 8: a1 |= ATTR_INVISIBLE;
-          //when 9: a1 |= ATTR_STRIKEOUT;
+          // extensions
+          when 1 | SUB_PARS:
+                  if (i + 1 < cterm->csi_argc && cterm->csi_argv[i + 1] == 1)
+                    a1 |= ATTR_SHADOW;
+          when 2: a1 |= ATTR_DIM;
+          when 3: a1 |= ATTR_ITALIC;
+          when 23: a2 |= ATTR_ITALIC;
+          when 4 | SUB_PARS:
+                  if (i + 1 < cterm->csi_argc) {
+                    a2 |= UNDER_MASK;
+                    switch (cterm->csi_argv[i + 1]) {
+                      when 0:
+                        ;
+                      when 1:
+                        a1 |= ATTR_UNDER;
+                      when 2:
+                        a1 |= ATTR_DOUBLYUND;
+                      when 3:
+                        a1 |= ATTR_CURLYUND;
+                      when 4:
+                        a1 |= ATTR_BROKENUND;
+                      when 5:
+                        a1 |= ATTR_BROKENUND | ATTR_DOUBLYUND;
+                    }
+                  }
+          when 6: a1 |= ATTR_BLINK2;
+          when 8: a1 |= ATTR_INVISIBLE;
+          when 28: a2 |= ATTR_INVISIBLE;
+          when 9: a1 |= ATTR_STRIKEOUT;
+          when 29: a2 |= ATTR_STRIKEOUT;
+          when 21: a1 |= ATTR_DOUBLYUND;
+                   a2 |= UNDER_MASK;
+          when 51 or 52: a1 |= ATTR_FRAMED;
+          when 54: a2 |= ATTR_FRAMED;
+          when 53: a1 |= ATTR_OVERL;
+          when 55: a2 |= ATTR_OVERL;
+          when 73: a1 |= ATTR_SUPERSCR;
+          when 74: a1 |= ATTR_SUBSCR;
+          when 75: a2 |= ATTR_SUPERSCR | ATTR_SUBSCR;
+          // colour
+          when 30 ... 37:
+                   a2 |= ATTR_FGMASK;
+                   ac = (cterm->csi_argv[i] - 30) << ATTR_FGSHIFT;
+          when 40 ... 47:
+                   a2 |= ATTR_BGMASK;
+                   ac = (cterm->csi_argv[i] - 40) << ATTR_BGSHIFT;
+          when 90 ... 97:
+                   a2 |= ATTR_FGMASK;
+                   ac = (cterm->csi_argv[i] - 90 + 8 + ANSI0) << ATTR_FGSHIFT;
+          when 100 ... 107:
+                   a2 |= ATTR_BGMASK;
+                   ac = (cterm->csi_argv[i] - 100 + 8 + ANSI0) << ATTR_BGSHIFT;
+          when 39: a2 |= ATTR_FGMASK;
+                   ac = ATTR_DEFFG;
+          when 49: a2 |= ATTR_BGMASK;
+                   ac = ATTR_DEFBG;
+          when 59: a2 |= ATTR_ULCOLOUR;
+          when 38 | SUB_PARS:
+            if (sub_pars == 2 && cterm->csi_argv[i + 1] == 5) {
+              a2 |= ATTR_FGMASK;
+              ac = ((cterm->csi_argv[i + 2] & 0xFF) << ATTR_FGSHIFT);
+            }
+            // true colour not implemented
+          when 48 | SUB_PARS:
+            if (sub_pars == 2 && cterm->csi_argv[i + 1] == 5) {
+              a2 |= ATTR_BGMASK;
+              ac = ((cterm->csi_argv[i + 2] & 0xFF) << ATTR_BGSHIFT);
+            }
+            // true colour not implemented
+          when 58 | SUB_PARS:
+            if (sub_pars == 2 && cterm->csi_argv[i + 1] == 5) {
+              // underline colour not implemented
+              //a1 |= ATTR_ULCOLOUR;
+              //ul = cterm->csi_argv[i + 2] & 0xFF;
+            }
+          // font
+          when 10 ... 20:
+            if (cterm->csi_argv[i] == 11 && !*cfg.fontfams[1].name)
+              continue;
+            a2 |= FONTFAM_MASK;
+            af = (cattrflags)(cterm->csi_argv[i] - 10) << ATTR_FONTFAM_SHIFT;
         }
+        i += sub_pars;
+      }
+      // withdraw cancelled changes
       a1 &= ~a2;
+#ifdef debug_deccara
       if (c == 'r')
-        attr_rect(a1, a2, 0, arg0_def1, arg1 ?: 1,
+        printf("-%16llX\n+%16llX\n", a1, a2);
+      else
+        printf("^%16llX\n", a1);
+#endif
+      if (c == 'r')
+        attr_rect(a1 | ac | af, a2, 0, arg0_def1, arg1 ?: 1,
                   cterm->csi_argv[2] ?: urows, cterm->csi_argv[3] ?: ucols);
       else
         attr_rect(0, 0, a1, arg0_def1, arg1 ?: 1,
@@ -3219,7 +3411,54 @@ do_csi(uchar c)
         }
         cterm->disptop = 0;
       }
+#ifdef suspend_display_update_via_CSI
+    when CPAIR('&', 'q'):  /* suspend display update (ms) */
+      cterm->suspend_update = min(arg0, cterm->rows * cterm->cols / 8);
+      //printf("susp = %d\n", cterm->suspend_update);
+      if (cterm->suspend_update == 0) {
+        do_update();
+        // mysteriously, a delay here makes the output flush 
+        // more likely to happen, yet not reliably...
+        usleep(1000);
+      }
+#endif
+    when CPAIR(',', '~'): {  /* DECPS: VT520 Play Sound */
+      // CSI vol[:tone];duration[1/32s];note;... ,~
+      uint i = 0;
+      uint volarg = cterm->csi_argv[0];
+      if (volarg & SUB_PARS) {
+        volarg &= ~SUB_PARS;
+        ++i;
+        cterm->play_tone = cterm->csi_argv[1];
+      }
+
+      uint ms = cterm->csi_argv[++i] * 1000 / 32;
+
+      float vol = 0.0;
+      if (volarg <= 7)
+        vol = (float)volarg / 7.0;
+      else if (volarg <= 100)
+        vol = (float)volarg / 100.0;
+
+      static float freq_C5_C7[26] =
+          {0.0, 523.2511, 554.3653, 587.3295, 622.2540, 659.2551, 698.4565, 
+           739.9888, 783.9909, 830.6094, 880.0000, 932.3275, 987.7666, 
+           1046.502, 1108.731, 1174.659, 1244.508, 1318.510, 1396.913, 
+           1479.978, 1567.982, 1661.219, 1760.000, 1864.655, 1975.533, 
+           2093.005};
+
+      while (++i < cterm->csi_argc)
+        if (cterm->csi_argv[i] <= 25)
+          win_beep(cterm->play_tone, vol, freq_C5_C7[cterm->csi_argv[i]], ms);
+        else if (cterm->csi_argv[i] >= 41 && cterm->csi_argv[i] <= 137) {
+          uint freqi = ((cterm->csi_argv[i] - 41) % 12 + 1);
+          float freq = freq_C5_C7[freqi] * (1 << (cterm->csi_argv[i] - 41) / 12) / 32;
+          win_beep(cterm->play_tone, vol, freq, ms);
+        }
+    }
   }
+
+  last_char = 0;  // cancel preceding char for REP
 }
 
 /*
@@ -3283,280 +3522,308 @@ do_dcs(void)
 
   switch (cterm->dcs_cmd) {
 
-  when CPAIR('!', 'u'):  // DECAUPSS
-    if (cterm->state == DCS_ESCAPE) {
-      ushort nrc_code = 0;
-      if (cterm->cmd_len == 1)
-        nrc_code = *s;
-      else if (cterm->cmd_len == 2)
-        nrc_code = CPAIR(s[0], s[1]);
-      term_cset cs = lookup_cset(nrc_code, 7, false);
-      if (cs) {
-        cterm->curs.decsupp = cs;
-        term_update_cs();
-        return;
+    when CPAIR('!', 'u'):  // DECAUPSS
+      if (cterm->state == DCS_ESCAPE) {
+        ushort nrc_code = 0;
+        if (cterm->cmd_len == 1)
+          nrc_code = *s;
+        else if (cterm->cmd_len == 2)
+          nrc_code = CPAIR(s[0], s[1]);
+        term_cset cs = lookup_cset(nrc_code, 7, false);
+        if (cs) {
+          cterm->curs.decsupp = cs;
+          term_update_cs();
+          return;
+        }
       }
-    }
 
-  when 'q': {
-   sixel_state_t * st = (sixel_state_t *)cterm->imgs.parser_state;
-   int status = -1;
+    when 'q': {
+      sixel_state_t * st = (sixel_state_t *)cterm->imgs.parser_state;
+      int status = -1;
 
-   switch (cterm->state) {
-    when DCS_PASSTHROUGH:
-      if (!st)
-        return;
-      status = sixel_parser_parse(st, (unsigned char *)s, cterm->cmd_len);
-      if (status < 0) {
+      switch (cterm->state) {
+        when DCS_PASSTHROUGH:
+            if (!st)
+              return;
+        status = sixel_parser_parse(st, (unsigned char *)s, cterm->cmd_len);
+        if (status < 0) {
+          sixel_parser_deinit(st);
+          //printf("free state 1 %p\n", cterm->imgs.parser_state);
+          free(cterm->imgs.parser_state);
+          cterm->imgs.parser_state = NULL;
+          cterm->state = DCS_IGNORE;
+          return;
+        }
+
+        when DCS_ESCAPE:
+            if (!st)
+              return;
+        status = sixel_parser_parse(st, (unsigned char *)s, cterm->cmd_len);
+        if (status < 0) {
+          sixel_parser_deinit(st);
+          //printf("free state 2 %p\n", cterm->imgs.parser_state);
+          free(cterm->imgs.parser_state);
+          cterm->imgs.parser_state = NULL;
+          return;
+        }
+
+        unsigned char * pixels = sixel_parser_finalize(st);
+        //printf("sixel_parser_finalize %p\n", pixels);
         sixel_parser_deinit(st);
-        //printf("free state 1 %p\n", cterm->imgs.parser_state);
-        free(cterm->imgs.parser_state);
-        cterm->imgs.parser_state = NULL;
-        cterm->state = DCS_IGNORE;
-        return;
-      }
+        if (!pixels) {
+          //printf("free state 3 %p\n", cterm->imgs.parser_state);
+          free(cterm->imgs.parser_state);
+          cterm->imgs.parser_state = NULL;
+          return;
+        }
 
-    when DCS_ESCAPE:
-      if (!st)
-        return;
-      status = sixel_parser_parse(st, (unsigned char *)s, cterm->cmd_len);
-      if (status < 0) {
-        sixel_parser_deinit(st);
-        //printf("free state 2 %p\n", cterm->imgs.parser_state);
-        free(cterm->imgs.parser_state);
-        cterm->imgs.parser_state = NULL;
-        return;
-      }
+        short left = cterm->curs.x;
+        short top = cterm->virtuallines + (cterm->sixel_display ? 0: cterm->curs.y);
+        int width = (st->image.width -1 ) / st->grid_width + 1;
+        int height = (st->image.height -1 ) / st->grid_height + 1;
+        int pixelwidth = st->image.width;
+        int pixelheight = st->image.height;
+        //printf("w %d/%d %d h %d/%d %d\n", pixelwidth, st->grid_width, width, pixelheight, st->grid_height, height);
 
-      unsigned char * pixels = sixel_parser_finalize(st);
-      //printf("sixel_parser_finalize %p\n", pixels);
-      sixel_parser_deinit(st);
-      if (!pixels) {
-        //printf("free state 3 %p\n", cterm->imgs.parser_state);
-        free(cterm->imgs.parser_state);
-        cterm->imgs.parser_state = NULL;
-        return;
-      }
+        imglist * img;
+        if (!winimg_new(&img, 0, pixels, 0, left, top, width, height, pixelwidth, pixelheight, false, 0, 0, 0, 0, cterm->curs.attr.attr & (ATTR_BLINK | ATTR_BLINK2))) {
+          free(pixels);
+          sixel_parser_deinit(st);
+          //printf("free state 4 %p\n", cterm->imgs.parser_state);
+          free(cterm->imgs.parser_state);
+          cterm->imgs.parser_state = NULL;
+          return;
+        }
+        img->cwidth = st->max_x;
+        img->cheight = st->max_y;
 
-      short left = cterm->curs.x;
-      short top = cterm->virtuallines + (cterm->sixel_display ? 0: cterm->curs.y);
-      int width = (st->image.width -1 ) / st->grid_width + 1;
-      int height = (st->image.height -1 ) / st->grid_height + 1;
-      int pixelwidth = st->image.width;
-      int pixelheight = st->image.height;
-      //printf("w %d/%d %d h %d/%d %d\n", pixelwidth, st->grid_width, width, pixelheight, st->grid_height, height);
+        fill_image_space(img);
 
-      imglist * img;
-      if (!winimg_new(&img, 0, pixels, 0, left, top, width, height, pixelwidth, pixelheight, false, 0, 0, 0, 0)) {
-        free(pixels);
-        sixel_parser_deinit(st);
-        //printf("free state 4 %p\n", cterm->imgs.parser_state);
-        free(cterm->imgs.parser_state);
-        cterm->imgs.parser_state = NULL;
-        return;
-      }
-      img->cwidth = st->max_x;
-      img->cheight = st->max_y;
-
-      fill_image_space(img);
-
-      // add image to image list;
-      // replace previous for optimisation in some cases
-      if (cterm->imgs.first == NULL) {
-        cterm->imgs.first = cterm->imgs.last = img;
-      } else {
-        // try some optimization: replace existing images if overwritten
+        // add image to image list;
+        // replace previous for optimisation in some cases
+        if (cterm->imgs.first == NULL) {
+          cterm->imgs.first = cterm->imgs.last = img;
+        } else {
+          // try some optimization: replace existing images if overwritten
 #ifdef debug_sixel_list
-        printf("do_dcs checking imglist\n");
+          printf("do_dcs checking imglist\n");
 #endif
 #ifdef replace_images
 #warning do not replace images in the list anymore
-        // with new flicker-reduce strategy of rendering overlapped images,
-        // new images should always be added to the end of the queue;
-        // completely overlayed images should be collected for removal 
-        // during the rendering loop (winimgs_paint),
-        // or latest when they are scrolled out of the scrollback buffer
-        for (imglist * cur = cterm->imgs.first; cur; cur = cur->next) {
-          if (cur->pixelwidth == cur->width * st->grid_width &&
+          // with new flicker-reduce strategy of rendering overlapped images,
+          // new images should always be added to the end of the queue;
+          // completely overlayed images should be collected for removal 
+          // during the rendering loop (winimgs_paint),
+          // or latest when they are scrolled out of the scrollback buffer
+          for (imglist * cur = cterm->imgs.first; cur; cur = cur->next) {
+            if (cur->pixelwidth == cur->width * st->grid_width &&
               cur->pixelheight == cur->height * st->grid_height)
-          {
-            // if same size, replace
-            if (img->top == cur->top && img->left == cur->left &&
+            {
+              // if same size, replace
+              if (img->top == cur->top && img->left == cur->left &&
                 img->width == cur->width &&
                 img->height == cur->height)
-            {
+              {
 #ifdef debug_sixel_list
-              printf("img replace\n");
+                printf("img replace\n");
 #endif
-              memcpy(cur->pixels, img->pixels, img->pixelwidth * img->pixelheight * 4);
-              cur->imgi = img->imgi;
-              winimg_destroy(img);
-              return;
-            }
-            // if new image within area of previous image, ...
+                memcpy(cur->pixels, img->pixels, img->pixelwidth * img->pixelheight * 4);
+                cur->imgi = img->imgi;
+                winimg_destroy(img);
+                return;
+              }
+              // if new image within area of previous image, ...
 #ifdef handle_overlay_images
 #warning this creates some crash conditions...
-            if (img->top >= cur->top && img->left >= cur->left &&
+              if (img->top >= cur->top && img->left >= cur->left &&
                 img->left + img->width <= cur->left + cur->width &&
                 img->top + img->height <= cur->top + cur->height)
-            {
-              // inject new img into old structure;
-              // copy img data in stripes, for unknown reason
-              for (y = 0; y < img->pixelheight; ++y) {
-                memcpy(cur->pixels +
+              {
+                // inject new img into old structure;
+                // copy img data in stripes, for unknown reason
+                for (y = 0; y < img->pixelheight; ++y) {
+                  memcpy(cur->pixels +
                          ((img->top - cur->top) * st->grid_height + y) * cur->pixelwidth * 4 +
                          (img->left - cur->left) * st->grid_width * 4,
-                       img->pixels + y * img->pixelwidth * 4,
-                       img->pixelwidth * 4);
+                         img->pixels + y * img->pixelwidth * 4,
+                         img->pixelwidth * 4);
+                }
+                cur->imgi = img->imgi;
+                winimg_destroy(img);
+                return;
               }
-              cur->imgi = img->imgi;
-              winimg_destroy(img);
-              return;
-            }
 #endif
+            }
+          }
+#endif
+          // append image to list
+          img->prev = cterm->imgs.last;
+          cterm->imgs.last->next = img;
+          cterm->imgs.last = img;
+        }
+
+otherwise: {
+             /* parser status initialization */
+             colour fg = win_get_colour(FG_COLOUR_I);
+             colour bg = win_get_colour(BG_COLOUR_I);
+             if (!st) {
+               st = cterm->imgs.parser_state = calloc(1, sizeof(sixel_state_t));
+               //printf("alloc state %d -> %p\n", (int)sizeof(sixel_state_t), st);
+               sixel_parser_set_default_color(st);
+             }
+             status = sixel_parser_init(st, fg, bg, cterm->private_color_registers);
+             if (status < 0)
+               return;
+           }
+      }
+    }
+
+    when CPAIR('$', 'q'):
+      switch (cterm->state) {
+        when DCS_ESCAPE: {     // DECRQSS
+          cattr attr = cterm->curs.attr;
+          if (!strcmp(s, "m")) { // SGR
+            char buf[90], *p = buf;
+            p += sprintf(p, "\eP1$r0");
+
+            if (attr.attr & ATTR_BOLD)
+              p += sprintf(p, ";1");
+            if (attr.attr & ATTR_DIM)
+              p += sprintf(p, ";2");
+            if (attr.attr & ATTR_SHADOW)
+              p += sprintf(p, ";1:2");
+            if (attr.attr & ATTR_ITALIC)
+              p += sprintf(p, ";3");
+
+            if (attr.attr & ATTR_BROKENUND)
+              if (attr.attr & ATTR_DOUBLYUND)
+                p += sprintf(p, ";4:5");
+              else
+                p += sprintf(p, ";4:4");
+            else if ((attr.attr & UNDER_MASK) == ATTR_CURLYUND)
+              p += sprintf(p, ";4:3");
+            else if (attr.attr & ATTR_UNDER)
+              p += sprintf(p, ";4");
+
+            if (attr.attr & ATTR_BLINK)
+              p += sprintf(p, ";5");
+            if (attr.attr & ATTR_BLINK2)
+              p += sprintf(p, ";6");
+            if (attr.attr & ATTR_REVERSE)
+              p += sprintf(p, ";7");
+            if (attr.attr & ATTR_INVISIBLE)
+              p += sprintf(p, ";8");
+            if (attr.attr & ATTR_OVERSTRIKE)
+              p += sprintf(p, ";8:7");
+            if (attr.attr & ATTR_STRIKEOUT)
+              p += sprintf(p, ";9");
+            if ((attr.attr & UNDER_MASK) == ATTR_DOUBLYUND)
+              p += sprintf(p, ";21");
+            if (attr.attr & ATTR_FRAMED)
+              p += sprintf(p, ";51;52");
+            if (attr.attr & ATTR_OVERL)
+              p += sprintf(p, ";53");
+            if (attr.attr & ATTR_SUPERSCR)
+              p += sprintf(p, ";73");
+            if (attr.attr & ATTR_SUBSCR)
+              p += sprintf(p, ";74");
+
+            if (cterm->curs.oem_acs)
+              p += sprintf(p, ";%u", 10 + cterm->curs.oem_acs);
+            else {
+              uint ff = (attr.attr & FONTFAM_MASK) >> ATTR_FONTFAM_SHIFT;
+              if (ff)
+                p += sprintf(p, ";%u", 10 + ff);
+            }
+
+            uint fg = (attr.attr & ATTR_FGMASK) >> ATTR_FGSHIFT;
+            if (fg != FG_COLOUR_I) {
+              if (fg >= TRUE_COLOUR)
+                //p += sprintf(p, ";38;2;%u;%u;%u", attr.truefg & 0xFF, 
+                //             (attr.truefg >> 8) & 0xFF, (attr.truefg >> 16) & 0xFF);
+                p += sprintf(p, ";38:2::%u:%u:%u", attr.truefg & 0xFF, 
+                             (attr.truefg >> 8) & 0xFF, (attr.truefg >> 16) & 0xFF);
+              else if (fg < 16)
+                p += sprintf(p, ";%u", (fg < 8 ? 30 : 90) + (fg & 7));
+              else
+                //p += sprintf(p, ";38;5;%u", fg);
+                p += sprintf(p, ";38:5:%u", fg);
+            }
+
+            uint bg = (attr.attr & ATTR_BGMASK) >> ATTR_BGSHIFT;
+            if (bg != BG_COLOUR_I) {
+              if (bg >= TRUE_COLOUR)
+                //p += sprintf(p, ";48;2;%u;%u;%u", attr.truebg & 0xFF, 
+                //             (attr.truebg >> 8) & 0xFF, (attr.truebg >> 16) & 0xFF);
+                p += sprintf(p, ";48:2::%u:%u:%u", attr.truebg & 0xFF, 
+                             (attr.truebg >> 8) & 0xFF, (attr.truebg >> 16) & 0xFF);
+              else if (bg < 16)
+                p += sprintf(p, ";%u", (bg < 8 ? 40 : 100) + (bg & 7));
+              else
+                //p += sprintf(p, ";48;5;%u", bg);
+                p += sprintf(p, ";48:5:%u", bg);
+            }
+
+            if (attr.attr & ATTR_ULCOLOUR) {
+              p += sprintf(p, ";58:2::%u:%u:%u", attr.ulcolr & 0xFF, 
+                           (attr.ulcolr >> 8) & 0xFF, (attr.ulcolr >> 16) & 0xFF);
+            }
+
+            p += sprintf(p, "m\e\\");  // m for SGR, followed by ST
+
+            child_write(cterm,buf, p - buf);
+          } else if (!strcmp(s, "r")) {  // DECSTBM (scrolling region margins)
+            child_printf(cterm,"\eP1$r%u;%ur\e\\", cterm->marg_top + 1, cterm->marg_bot + 1);
+          } else if (!strcmp(s, "s")) {  // DECSLRM (left and right margins)
+            child_printf(cterm,"\eP1$r%u;%us\e\\", cterm->marg_left + 1, cterm->marg_right + 1);
+          } else if (!strcmp(s, "\"p")) {  // DECSCL (conformance level)
+            child_printf(cterm,"\eP1$r%u;%u\"p\e\\", 65, 1);  // report as VT500 S7C1T
+          } else if (!strcmp(s, "\"q")) {  // DECSCA (protection attribute)
+            child_printf(cterm,"\eP1$r%u\"q\e\\", (attr.attr & ATTR_PROTECTED) != 0);
+          } else if (!strcmp(s, " q")) {  // DECSCUSR (cursor style)
+            child_printf(cterm,"\eP1$r%u q\e\\", 
+                         (cterm->cursor_type >= 0 ? cterm->cursor_type * 2 : 0) + 1
+                         + !(cterm->cursor_blinks & 1));
+          } else if (!strcmp(s, "t") && cterm->rows >= 24) {  // DECSLPP (lines)
+            child_printf(cterm,"\eP1$r%ut\e\\", cterm->rows);
+          } else if (!strcmp(s, "$|")) {  // DECSCPP (columns)
+            child_printf(cterm,"\eP1$r%u$|\e\\", cterm->cols);
+          } else if (!strcmp(s, "*|")) {  // DECSNLS (lines)
+            child_printf(cterm,"\eP1$r%u*|\e\\", cterm->rows);
+          } else {
+            child_printf(cterm,"\eP0$r%s\e\\", s);
           }
         }
-#endif
-        // append image to list
-        img->prev = cterm->imgs.last;
-        cterm->imgs.last->next = img;
-        cterm->imgs.last = img;
-      }
-
-    otherwise: {
-      /* parser status initialization */
-      colour fg = win_get_colour(FG_COLOUR_I);
-      colour bg = win_get_colour(BG_COLOUR_I);
-      if (!st) {
-        st = cterm->imgs.parser_state = calloc(1, sizeof(sixel_state_t));
-        //printf("alloc state %d -> %p\n", (int)sizeof(sixel_state_t), st);
-        sixel_parser_set_default_color(st);
-      }
-      status = sixel_parser_init(st, fg, bg, cterm->private_color_registers);
-      if (status < 0)
+otherwise:
         return;
-    }
-   }
-  }
-
-  when CPAIR('$', 'q'):
-    switch (cterm->state) {
-    when DCS_ESCAPE: {     // DECRQSS
-      cattr attr = cterm->curs.attr;
-      if (!strcmp(s, "m")) { // SGR
-        char buf[90], *p = buf;
-        p += sprintf(p, "\eP1$r0");
-
-        if (attr.attr & ATTR_BOLD)
-          p += sprintf(p, ";1");
-        if (attr.attr & ATTR_DIM)
-          p += sprintf(p, ";2");
-        if (attr.attr & ATTR_SHADOW)
-          p += sprintf(p, ";1:2");
-        if (attr.attr & ATTR_ITALIC)
-          p += sprintf(p, ";3");
-
-        if (attr.attr & ATTR_BROKENUND)
-          if (attr.attr & ATTR_DOUBLYUND)
-            p += sprintf(p, ";4:5");
-          else
-            p += sprintf(p, ";4:4");
-        else if ((attr.attr & UNDER_MASK) == ATTR_CURLYUND)
-          p += sprintf(p, ";4:3");
-        else if (attr.attr & ATTR_UNDER)
-          p += sprintf(p, ";4");
-
-        if (attr.attr & ATTR_BLINK)
-          p += sprintf(p, ";5");
-        if (attr.attr & ATTR_BLINK2)
-          p += sprintf(p, ";6");
-        if (attr.attr & ATTR_REVERSE)
-          p += sprintf(p, ";7");
-        if (attr.attr & ATTR_INVISIBLE)
-          p += sprintf(p, ";8");
-        if (attr.attr & ATTR_OVERSTRIKE)
-          p += sprintf(p, ";8:7");
-        if (attr.attr & ATTR_STRIKEOUT)
-          p += sprintf(p, ";9");
-        if ((attr.attr & UNDER_MASK) == ATTR_DOUBLYUND)
-          p += sprintf(p, ";21");
-        if (attr.attr & ATTR_FRAMED)
-          p += sprintf(p, ";51;52");
-        if (attr.attr & ATTR_OVERL)
-          p += sprintf(p, ";53");
-        if (attr.attr & ATTR_SUPERSCR)
-          p += sprintf(p, ";73");
-        if (attr.attr & ATTR_SUBSCR)
-          p += sprintf(p, ";74");
-
-        if (cterm->curs.oem_acs)
-          p += sprintf(p, ";%u", 10 + cterm->curs.oem_acs);
-        else {
-          uint ff = (attr.attr & FONTFAM_MASK) >> ATTR_FONTFAM_SHIFT;
-          if (ff)
-            p += sprintf(p, ";%u", 10 + ff);
-        }
-
-        uint fg = (attr.attr & ATTR_FGMASK) >> ATTR_FGSHIFT;
-        if (fg != FG_COLOUR_I) {
-          if (fg >= TRUE_COLOUR)
-            //p += sprintf(p, ";38;2;%u;%u;%u", attr.truefg & 0xFF, 
-            //             (attr.truefg >> 8) & 0xFF, (attr.truefg >> 16) & 0xFF);
-            p += sprintf(p, ";38:2::%u:%u:%u", attr.truefg & 0xFF, 
-                         (attr.truefg >> 8) & 0xFF, (attr.truefg >> 16) & 0xFF);
-          else if (fg < 16)
-            p += sprintf(p, ";%u", (fg < 8 ? 30 : 90) + (fg & 7));
-          else
-            //p += sprintf(p, ";38;5;%u", fg);
-            p += sprintf(p, ";38:5:%u", fg);
-        }
-
-        uint bg = (attr.attr & ATTR_BGMASK) >> ATTR_BGSHIFT;
-        if (bg != BG_COLOUR_I) {
-          if (bg >= TRUE_COLOUR)
-            //p += sprintf(p, ";48;2;%u;%u;%u", attr.truebg & 0xFF, 
-            //             (attr.truebg >> 8) & 0xFF, (attr.truebg >> 16) & 0xFF);
-            p += sprintf(p, ";48:2::%u:%u:%u", attr.truebg & 0xFF, 
-                         (attr.truebg >> 8) & 0xFF, (attr.truebg >> 16) & 0xFF);
-          else if (bg < 16)
-            p += sprintf(p, ";%u", (bg < 8 ? 40 : 100) + (bg & 7));
-          else
-            //p += sprintf(p, ";48;5;%u", bg);
-            p += sprintf(p, ";48:5:%u", bg);
-        }
-
-        if (attr.attr & ATTR_ULCOLOUR) {
-          p += sprintf(p, ";58:2::%u:%u:%u", attr.ulcolr & 0xFF, 
-                       (attr.ulcolr >> 8) & 0xFF, (attr.ulcolr >> 16) & 0xFF);
-        }
-
-        p += sprintf(p, "m\e\\");  // m for SGR, followed by ST
-
-        child_write(cterm,buf, p - buf);
-      } else if (!strcmp(s, "r")) {  // DECSTBM (scrolling region margins)
-        child_printf(cterm,"\eP1$r%u;%ur\e\\", cterm->marg_top + 1, cterm->marg_bot + 1);
-      } else if (!strcmp(s, "s")) {  // DECSLRM (left and right margins)
-        child_printf(cterm,"\eP1$r%u;%us\e\\", cterm->marg_left + 1, cterm->marg_right + 1);
-      } else if (!strcmp(s, "\"p")) {  // DECSCL (conformance level)
-        child_printf(cterm,"\eP1$r%u;%u\"p\e\\", 65, 1);  // report as VT500 S7C1T
-      } else if (!strcmp(s, "\"q")) {  // DECSCA (protection attribute)
-        child_printf(cterm,"\eP1$r%u\"q\e\\", (attr.attr & ATTR_PROTECTED) != 0);
-      } else if (!strcmp(s, " q")) {  // DECSCUSR (cursor style)
-        child_printf(cterm,"\eP1$r%u q\e\\", 
-                     (cterm->cursor_type >= 0 ? cterm->cursor_type * 2 : 0) + 1
-                     + !(cterm->cursor_blinks & 1));
-      } else if (!strcmp(s, "t") && cterm->rows >= 24) {  // DECSLPP (lines)
-        child_printf(cterm,"\eP1$r%ut\e\\", cterm->rows);
-      } else if (!strcmp(s, "$|")) {  // DECSCPP (columns)
-        child_printf(cterm,"\eP1$r%u$|\e\\", cterm->cols);
-      } else if (!strcmp(s, "*|")) {  // DECSNLS (lines)
-        child_printf(cterm,"\eP1$r%u*|\e\\", cterm->rows);
-      } else {
-        child_printf(cterm,"\eP0$r%s\e\\", s);
       }
-    }
-    otherwise:
-      return;
+
+    // https://gitlab.com/gnachman/iterm2/-/wikis/synchronized-updates-spec
+    // Begin synchronized update (BSU): ESC P = 1 s Parameters ST
+    // End synchronized update (ESU): ESC P = 2 s Parameters ST
+    when CPAIR('=', 's'): {
+      //printf("DCS =[%u]%u;%us cterm->state %d <%s>\n", cterm->csi_argc, cterm->csi_argv[0], cterm->csi_argv[1], cterm->state, s);
+      int susp = -1;
+      if (cterm->csi_argv[0] == 1) {
+        // calculate default and max timeout
+        //susp = cterm->rows * cterm->cols / (10 + cfg.display_speedup);
+        susp = 420;  // limit of user-requested delay
+        // limit timeout if requested
+        if (cterm->csi_argc > 1 && cterm->csi_argv[1])
+          susp = min((int)cterm->csi_argv[1], susp);
+        else
+          susp = 150;  // constant default
+      }
+      else if (cterm->csi_argv[0] == 2)
+        susp = 0;
+      if (susp < 0)
+        return;
+
+      cterm->suspend_update = susp;
+      if (susp == 0) {
+        do_update();
+        //usleep(1000);  // flush update not needed here...
+      }
     }
 
   }
@@ -3582,11 +3849,11 @@ do_osc_control:
     if (osc % 100 == 5) {
       if (i == 0)
         i = BOLD_COLOUR_I;
+      else if (i == 2)
+        i = BLINK_COLOUR_I;
 #ifdef other_color_substitutes
       else if (i == 1)
         i = UNDERLINE_COLOUR_I;
-      else if (i == 2)
-        i = BLINK_COLOUR_I;
       else if (i == 3)
         i = REVERSE_COLOUR_I;
       else if (i == 4)
@@ -3729,9 +3996,12 @@ do_cmd(void)
     when 5:   do_colour_osc(true, 5, false);
     when 6 or 106: {
       int col, on;
-      if (sscanf(cterm->cmd_buf, "%u;%u", &col, &on) == 2)
+      if (sscanf(cterm->cmd_buf, "%u;%u", &col, &on) == 2) {
         if (col == 0)
           cterm->enable_bold_colour = on;
+        else if (col == 2)
+          cterm->enable_blink_colour = on;
+      }
     }
     when 104: do_colour_osc(true, 4, true);
     when 105: do_colour_osc(true, 5, true);
@@ -3865,6 +4135,15 @@ do_cmd(void)
           }
         }
       }
+    when 22: {  // set mouse pointer style
+      wchar * ps = cs__mbstowcs(s);
+      set_cursor_style(cterm->mouse_mode || cterm->locator_1_enabled, ps);
+      free(ps);
+    }
+    when 7750:
+      set_arg_option("Emojis", strdup(s));
+      clear_emoji_data();
+      win_invalidate_all(false);
     when 8: {  // hyperlink attribute
       char * link = s;
       char * url = strchr(s, ';');
@@ -4013,7 +4292,7 @@ do_cmd(void)
           imglist * img;
           short left = cterm->curs.x;
           short top = cterm->virtuallines + cterm->curs.y;
-          if (winimg_new(&img, name, data, datalen, left, top, width, height, pixelwidth, pixelheight, pAR, crop_x, crop_y, crop_width, crop_height)) {
+          if (winimg_new(&img, name, data, datalen, left, top, width, height, pixelwidth, pixelheight, pAR, crop_x, crop_y, crop_width, crop_height, cterm->curs.attr.attr & (ATTR_BLINK | ATTR_BLINK2))) {
             fill_image_space(img);
 
             if (cterm->imgs.first == NULL) {
@@ -4031,6 +4310,33 @@ do_cmd(void)
         else
           free(data);
       }
+    }
+    when 440: {  // Audio / sound file output
+      // experimental, for a proposal see
+      // https://gitlab.freedesktop.org/terminal-wg/specifications/-/issues/14
+      char * p = s;
+      uint opt = 0;
+      while (p) {
+        char * pn = strchr(p, ':');
+        if (pn)
+          *pn++ = 0;
+        if (p != s) {
+          // handle parameter p
+          //printf("OSC 440 <%s> param <%s>\n", s, p);
+#define SND_ASYNC	0x0001
+#define SND_LOOP	0x0008
+#define SND_NOSTOP	0x0010
+          if (0 == strcmp(p, "async"))
+            opt |= SND_ASYNC;
+          if (0 == strcmp(p, "nostop"))
+            opt |= SND_NOSTOP;
+          if (0 == strcmp(p, "loop"))
+            opt |= SND_LOOP | SND_ASYNC;
+        }
+        // proceed to next or end
+        p = pn;
+      }
+      win_sound(s, opt);
     }
     when 9: {
 typedef struct {
@@ -4072,6 +4378,8 @@ typedef struct {
       len = scanenum(s, &state,
                      (paramap[]){
                                  {"off", 0},
+                                 {"default", 10},
+                                 {"", 10},
                                  {"green", 1},
                                  {"yellow", 2},
                                  {"red", 3},
@@ -4165,7 +4473,7 @@ term_do_write(const char *buf, uint len)
         if (cterm->curs.oem_acs && !memchr("\e\n\r\b", c, 4)) {
           if (cterm->curs.oem_acs == 2)
             c |= 0x80;
-          write_char(cs_btowc_glyph(c), 1);
+          write_ucschar(0, cs_btowc_glyph(c), 1);
           continue;
         }
 
@@ -4176,15 +4484,16 @@ term_do_write(const char *buf, uint len)
           cset = cterm->curs.cset_single;
           cterm->curs.cset_single = CSET_ASCII;
         }
-        else if (cterm->decnrc_enabled
-         && cterm->curs.gr && cterm->curs.csets[cterm->curs.gr] != CSET_ASCII
-         && !cterm->curs.oem_acs && !cterm->curs.utf
-         && c >= 0x80 && c < 0xFF) {
+        else if (cterm->curs.gr
+              //&& (cterm->decnrc_enabled || !cterm->decnrc_enabled)
+              && cterm->curs.csets[cterm->curs.gr] != CSET_ASCII
+              && !cterm->curs.oem_acs && !cterm->curs.utf
+              && c >= 0x80 && c < 0xFF
+                )
+        {
           // tune C1 behaviour to mimic xterm
           if (c < 0xA0)
             continue;
-          // TODO: if we'd ever support 96 character sets (other than 'A')
-          // 0xFF should be handled specifically
 
           c &= 0x7F;
           cset = cterm->curs.csets[cterm->curs.gr];
@@ -4262,73 +4571,13 @@ term_do_write(const char *buf, uint len)
           continue;
         }
 
-        // Control characters
-        if (wc < 0x20 || wc == 0x7F) {
-          if (!do_ctrl(wc) && c == wc) {
-            wc = cs_btowc_glyph(c);
-            if (wc != c)
-              write_char(wc, 1);
-            else if (cfg.printable_controls > 1)
-              goto goon;
-          }
-          continue;
-          goon:;
-        }
-
         // Non-characters
         if (wc == 0xFFFE || wc == 0xFFFF) {
           write_error();
           continue;
         }
 
-        cattrflags asav = cterm->curs.attr.attr;
-
         // Everything else
-        int width;
-        if (cterm->wide_indic && wc >= 0x0900 && indicwide(wc))
-          width = 2;
-        else if (cterm->wide_extra && wc >= 0x2000 && extrawide(wc)) {
-          width = 2;
-          if (win_char_width(wc, cterm->curs.attr.attr) < 2)
-            cterm->curs.attr.attr |= TATTR_EXPAND;
-        }
-        else {
-#if HAS_LOCALES
-          if (cfg.charwidth % 10)
-            width = xcwidth(wc);
-          else
-            width = wcwidth(wc);
-#ifdef support_triple_width
-          // do not handle triple-width here
-          //if (cterm->curs.width)
-          //  width = cterm->curs.width % 10;
-#endif
-# ifdef hide_isolate_marks
-          // force bidi isolate marks to be zero-width;
-          // however, this is inconsistent with locale width
-          if (wc >= 0x2066 && wc <= 0x2069)
-            width = 0;  // bidi isolate marks
-# endif
-#else
-          width = xcwidth(wc);
-#endif
-        }
-        if (width < 0 && cfg.printable_controls) {
-          if (wc >= 0x80 && wc < 0xA0)
-            width = 1;
-          else if (wc < ' ' && cfg.printable_controls > 1)
-            width = 1;
-        }
-
-        if (width == 2
-            // && wcschr(W("〈〉《》「」『』【】〒〓〔〕〖〗〘〙〚〛"), wc)
-            && wc >= 0x3008 && wc <= 0x301B && (wc | 1) != 0x3013
-            && win_char_width(wc, cterm->curs.attr.attr) < 2
-            // ensure symmetric handling of matching brackets
-            && win_char_width(wc ^ 1, cterm->curs.attr.attr) < 2)
-        {
-          cterm->curs.attr.attr |= TATTR_EXPAND;
-        }
 
         wchar NRC(wchar * map)
         {
@@ -4339,6 +4588,8 @@ term_do_write(const char *buf, uint len)
           else
             return wc;
         }
+
+        cattrflags asav = cterm->curs.attr.attr;
 
         switch (cset) {
           when CSET_VT52DRW:  // VT52 "graphics" mode
@@ -4489,7 +4740,7 @@ term_do_write(const char *buf, uint len)
               wc = W(" ¡¢£￿¥￿§¨©ª«￿￿İ￿°±²³￿µ¶·￿¹º»¼½ı¿ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏĞÑÒÓÔÕÖŒØÙÚÛÜŸŞßàáâãäåæçèéêëìíîïğñòóôõöœøùúûüÿş")
                    [c - ' '];
             }
-          when CSET_NRCS_Cyrillic:
+          when CSET_DEC_Cyrillic:
             if (c >= ' ' && c <= 0x7F) {
               wc = W(" ￿￿￿￿￿￿￿￿￿￿￿￿￿￿￿￿￿￿￿￿￿￿￿￿￿￿￿￿￿￿￿юабцдефгхийклмнопярстужвьызшэщчъЮАБЦДЕФГХИЙКЛМНОПЯРСТУЖВЬЫЗШЭЩЧЪ")
                    [c - ' '];
@@ -4512,6 +4763,7 @@ term_do_write(const char *buf, uint len)
           otherwise: ;
         }
 
+        // Some more special graphic renderings
         if (wc >= 0x2580 && wc <= 0x259F) {
           // Block Elements (U+2580-U+259F)
           // ▀▁▂▃▄▅▆▇█▉▊▋▌▍▎▏▐░▒▓▔▕▖▗▘▙▚▛▜▝▞▟
@@ -4532,6 +4784,72 @@ term_do_write(const char *buf, uint len)
         }
 #endif
 
+        // Determine width of character to be rendered
+        int width;
+        if (cterm->wide_indic && wc >= 0x0900 && indicwide(wc))
+          width = 2;
+        else if (cterm->wide_extra && wc >= 0x2000 && extrawide(wc)) {
+          width = 2;
+          // Note: this check is currently not implemented for
+          // non-BMP characters (see case if is_low_surrogate(wc) above)
+          if (win_char_width(wc, cterm->curs.attr.attr) < 2)
+            cterm->curs.attr.attr |= TATTR_EXPAND;
+        }
+        else {
+#if HAS_LOCALES
+          if (cfg.charwidth % 10)
+            width = xcwidth(wc);
+          else
+            width = wcwidth(wc);
+#ifdef support_triple_width
+          // do not handle triple-width here
+          //if (cterm->curs.width)
+          //  width = cterm->curs.width % 10;
+#endif
+# ifdef hide_isolate_marks
+          // force bidi isolate marks to be zero-width;
+          // however, this is inconsistent with locale width
+          if (wc >= 0x2066 && wc <= 0x2069)
+            width = 0;  // bidi isolate marks
+# endif
+#else
+          width = xcwidth(wc);
+#endif
+        }
+        if (width < 0 && cfg.printable_controls) {
+          if (wc >= 0x80 && wc < 0xA0)
+            width = 1;
+          else if (wc < ' ' && cfg.printable_controls > 1)
+            width = 1;
+        }
+
+        // Auto-expanded glyphs
+        if (width == 2
+            // && wcschr(W("〈〉《》「」『』【】〒〓〔〕〖〗〘〙〚〛"), wc)
+            && wc >= 0x3008 && wc <= 0x301B && (wc | 1) != 0x3013
+            && win_char_width(wc, cterm->curs.attr.attr) < 2
+            // ensure symmetric handling of matching brackets
+            && win_char_width(wc ^ 1, cterm->curs.attr.attr) < 2)
+        {
+          cterm->curs.attr.attr |= TATTR_EXPAND;
+        }
+
+        // Control characters
+        if (wc < 0x20 || wc == 0x7F) {
+          if (!do_ctrl(wc) && c == wc) {
+            wc = cs_btowc_glyph(c);
+            if (wc != c)
+              write_ucschar(0, wc, 1);
+            else if (cfg.printable_controls > 1)
+              goto goon;
+          }
+          cterm->curs.attr.attr = asav;
+          continue;
+
+          goon:;
+        }
+
+        // Finally, write it and restore cursor attribute
         write_ucschar(0, wc, width);
         cterm->curs.attr.attr = asav;
       } // end term_write switch (cterm->state) when NORMAL
@@ -4555,7 +4873,10 @@ term_do_write(const char *buf, uint len)
         tek_esc(c);
 
       when TEK_ADDRESS0 or TEK_ADDRESS:
-        if (c < ' ')
+        if (c == '\a' && tek_mode == TEKMODE_GRAPH0 && cterm->state == TEK_ADDRESS0) {
+          tek_mode= TEKMODE_GRAPH;
+        }
+        else if (c < ' ')
           tek_ctrl(c);
         else if (tek_mode == TEKMODE_SPECIAL_PLOT && cterm->state == TEK_ADDRESS0) {
           cterm->state = TEK_ADDRESS;
@@ -4767,6 +5088,11 @@ term_do_write(const char *buf, uint len)
         cterm->cmd_num = -1;
         cterm->cmd_len = 0;
         cterm->dcs_cmd = 0;
+        // use csi_arg vars also for DCS parameters
+        cterm->csi_argc = 0;
+        memset(cterm->csi_argv, 0, sizeof(cterm->csi_argv));
+        memset(cterm->csi_argv_defined, 0, sizeof(cterm->csi_argv_defined));
+
         switch (c) {
           when '@' ... '~':  /* DCS cmd final byte */
             cterm->dcs_cmd = c;
@@ -4794,13 +5120,23 @@ term_do_write(const char *buf, uint len)
         switch (c) {
           when '@' ... '~':  /* DCS cmd final byte */
             cterm->dcs_cmd = cterm->dcs_cmd << 8 | c;
+            if (cterm->csi_argv[cterm->csi_argc])
+              cterm->csi_argc ++;
             do_dcs();
             cterm->state = DCS_PASSTHROUGH;
           when '\e':
             cterm->state = DCS_ESCAPE;
             cterm->esc_mod = 0;
-          when '0' ... '9' or ';' or ':':  /* DCS parameter */
-            cterm->state = DCS_PARAM;
+          when '0' ... '9':  /* DCS parameter */
+            //printf("DCS param %c\n", c);
+            if (cterm->csi_argc < 2) {
+              uint i = cterm->csi_argc;
+              cterm->csi_argv[i] = 10 * cterm->csi_argv[i] + c - '0';
+            }
+          when ';' or ':':  /* DCS parameter separator */
+            //printf("DCS param sep %c\n", c);
+            if (cterm->csi_argc + 1 < lengthof(cterm->csi_argv))
+              cterm->csi_argc ++;
           when '<' ... '?':
             cterm->dcs_cmd = cterm->dcs_cmd << 8 | c;
             cterm->state = DCS_PARAM;
@@ -4912,6 +5248,8 @@ term_write(const char *buf, uint len)
     can grow up to a configurable size.
   */
   if (term_selecting() && cfg.suspbuf_max > 0) {
+    // || cterm->no_scroll ? -> more reliably handled in child_proc
+
     // if buffer size would be exceeded, flush; prevent uint overflow
     if (len > cfg.suspbuf_max - cterm->suspbuf_pos)
       term_flush();

@@ -58,16 +58,17 @@ typedef enum {
   SEL_COLOUR_I         = 279,
   SEL_TEXT_COLOUR_I    = 280,
 
-  // configured Bold colour
+  // configured attribute substitution colours
   BOLD_COLOUR_I = 281,
+  BLINK_COLOUR_I = 282,
 
   // Tektronix colours
-  TEK_FG_COLOUR_I      = 282,
-  TEK_BG_COLOUR_I      = 283,
-  TEK_CURSOR_COLOUR_I  = 284,
+  TEK_FG_COLOUR_I      = 283,
+  TEK_BG_COLOUR_I      = 284,
+  TEK_CURSOR_COLOUR_I  = 285,
 
   // Number of colours
-  COLOUR_NUM = 285,
+  COLOUR_NUM = 286,
 
   // True Colour indicator
   // assert (TRUE_COLOUR % 4) == 0 so that checking x >= TRUE_COLOUR
@@ -142,9 +143,9 @@ enum {
   FONTFAM_MASK    = 0x000F000000000000u,
   ATTR_FONTFAM_SHIFT = 48,
 
-  TATTR_WIDE       = 0x40000000u,
-  TATTR_NARROW     = 0x80000000u,
-  TATTR_EXPAND     = 0x0000000100000000u,
+  TATTR_WIDE      = 0x40000000u,
+  TATTR_NARROW    = 0x80000000u,
+  TATTR_EXPAND    = 0x0000000100000000u,
   TATTR_EMOJI     = 0x1000000000000000u,
 
   TATTR_COMBINING = 0x0000000200000000u, /* combining characters */
@@ -163,12 +164,13 @@ enum {
 
   TATTR_SELECTED  = 0x2000000000000000u, /* highlighted */
   TATTR_CLEAR     = 0x4000000000000000u, /* erased / unwritten */
+  TATTR_OVERHANG  = 0x0080000000000000u, /* visual double-width overhang */
 
   DATTR_STARTRUN  = 0x8000000000000000u, /* start of redraw run */
   DATTR_MASK      = TATTR_RIGHTCURS | TATTR_PASCURS | TATTR_ACTCURS
                     | DATTR_STARTRUN
   // unassigned bits:
-  //                0x0080000000000000u
+  // - none
 };
 
 /* Line attributes.
@@ -309,7 +311,7 @@ typedef enum {
   CSET_DEC_Greek_Supp		= '?' + 0x80,
   CSET_DEC_Hebrew_Supp		= '4' + 0x80,
   CSET_DEC_Turkish_Supp		= '0' + 0x80,
-  CSET_NRCS_Cyrillic		= '&' + 0x80,
+  CSET_DEC_Cyrillic		= '&' + 0x80,
   CSET_NRCS_Greek		= '>' + 0x80,
   CSET_NRCS_Hebrew		= '=' + 0x80,
   CSET_NRCS_Turkish		= '2' + 0x80,
@@ -398,6 +400,9 @@ typedef struct imglist {
   int cwidth, cheight;
   // image: cropping
   int crop_x, crop_y, crop_width, crop_height;
+
+  // text attributes to be considered (blinking)
+  int attr;
 } imglist;
 
 typedef struct {
@@ -478,6 +483,10 @@ typedef struct STerm {
   char * suspbuf;         /* suspend output during selection buffer */
   uint suspbuf_size, suspbuf_pos;
 
+  int suspend_update;
+  short no_scroll;
+  short scroll_mode;
+
   bool rvideo;            /* global reverse video flag */
   bool cursor_on;         /* cursor enabled flag */
   bool deccolm_allowed;   /* DECCOLM sequence for 80/132 cols allowed? */
@@ -505,6 +514,7 @@ typedef struct STerm {
   bool focus_reported;
   bool in_vbell;
 
+  int play_tone;
   term_bell bell, marginbell;
   bool margin_bell;
   bool ring_enabled;
@@ -537,6 +547,7 @@ typedef struct STerm {
   bool wide_extra;
   bool disable_bidi;
   bool enable_bold_colour;
+  bool enable_blink_colour;
 
   bool sixel_display;        // true if sixel scrolling mode is off
   bool sixel_scrolls_right;  // on: sixel scrolling leaves cursor to right of graphic
@@ -568,6 +579,9 @@ typedef struct STerm {
 
   uchar *tabs;
   bool newtab;
+
+  bool iso_guarded_area;  // global distinction of ISO Guarded Area
+                          // as protected (xterm-like simplification)
 
   int detect_progress;
 

@@ -16,7 +16,7 @@ extern void setup_config_box(controlbox *);
 
 #include <commctrl.h>
 
-# define debug_dialog_crash
+# define nodebug_dialog_crash
 
 #ifdef debug_dialog_crash
 #include <signal.h>
@@ -430,7 +430,8 @@ swnd_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR uid, DWORD
       int ret = winctrl_handle_command(msg, wParam, lParam);
       debug("WM_COMMAND: handle");
       if (dlg.ended) {
-        DestroyWindow(wnd);
+        PostMessage(hwnd, WM_CLOSE,0 , 0);
+        //DestroyWindow(hwnd);
         debug("WM_COMMAND: Destroy");
       }
       debug("WM_COMMAND: end");
@@ -439,8 +440,6 @@ swnd_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR uid, DWORD
   }
   return DefSubclassProc(hwnd, msg, wParam, lParam);
 }
-
-#define dont_debug_messages
 
 #define dont_darken_dialog_elements
 
@@ -470,6 +469,8 @@ tree_proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp, UINT_PTR uid, DWORD_PTR dat
   return DefSubclassProc(hwnd, msg, wp, lp);
 }
 #endif
+
+#define dont_debug_messages
 
 /*
  * This function is the configuration box.
@@ -577,7 +578,6 @@ config_dialog_proc(HWND wnd, UINT msg, WPARAM wParam, LPARAM lParam)
                        TVS_DISABLEDRAGDROP | TVS_HASBUTTONS | TVS_LINESATROOT
                        | TVS_SHOWSELALWAYS, x,y,w,h , wnd, (HMENU) IDCX_TREEVIEW, inst,
                        null);
-
       win_set_font(treeview);
       treeview_faff tvfaff;
       tvfaff.treeview = treeview;
@@ -680,6 +680,11 @@ config_dialog_proc(HWND wnd, UINT msg, WPARAM wParam, LPARAM lParam)
 #endif
 #endif
 
+    when WM_DPICHANGED:
+      if (*cfg.options_font || cfg.options_fontsize != DIALOG_FONTSIZE)
+        // rescaling does not work, so better drop the Options dialog
+        DestroyWindow(wnd);
+
     when WM_CLOSE:
       DestroyWindow(wnd);
 
@@ -764,7 +769,8 @@ config_dialog_proc(HWND wnd, UINT msg, WPARAM wParam, LPARAM lParam)
       int ret = winctrl_handle_command(msg, wParam, lParam);
       debug("WM_COMMAND: handle");
       if (dlg.ended) {
-        DestroyWindow(wnd);
+        PostMessage(wnd, WM_CLOSE,0 , 0);
+        //DestroyWindow(wnd);
         debug("WM_COMMAND: Destroy");
       }
       debug("WM_COMMAND: end");
@@ -824,6 +830,9 @@ scale_options(int nCode, WPARAM wParam, LPARAM lParam)
       int scale_options_width = atoi(_("100"));
       if (scale_options_width >= 80 && scale_options_width <= 200)
         cs->cx = cs->cx * scale_options_width / 100;
+      // scale Options dialog with custom font
+      cs->cx = scale_dialog(cs->cx);
+      cs->cy = scale_dialog(cs->cy);
     }
   }
 

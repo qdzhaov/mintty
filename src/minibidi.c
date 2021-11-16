@@ -600,6 +600,8 @@ do_bidi(bool autodir, int paragraphLevel, bool explicitRTL, bool box_mirror,
  /* Initialize types, levels */
   uchar types[count];
   uchar levels[count];
+  // workaround for gcc 11 warning anomaly
+  types[0] = 0;
 
 #define dont_debug_bidi
 

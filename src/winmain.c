@@ -29,6 +29,9 @@ typedef UINT_PTR uintptr_t;
 #endif
 #include <pwd.h>
 
+#include <dlfcn.h>
+#include <math.h>
+
 #include <mmsystem.h>  // PlaySound for MSys
 #include <shellapi.h>
 #include <windowsx.h>  // GET_X_LPARAM, GET_Y_LPARAM
@@ -95,14 +98,18 @@ int ini_width, ini_height;
 
 // State
 bool win_is_fullscreen;
+static bool is_init = false;
+bool win_is_always_on_top = false;
 static bool go_fullscr_on_max;
 static bool resizing;
 static bool moving = false;
 static bool wm_user = false;
 static bool disable_poschange = true;
+static bool poschanging = false;
 static int zoom_token = 0;  // for heuristic handling of Shift zoom (#467, #476)
 static bool default_size_token = false;
 bool clipboard_token = false;
+bool keep_screen_on = false;
 
 // Options
 static string border_style = 0;
@@ -295,12 +302,6 @@ uint dpi = 96;
 // DPI handling V2
 static bool is_in_dpi_change = false;
 
-#ifndef WM_DPICHANGED
-#define WM_DPICHANGED 0x02E0
-#endif
-#ifndef WM_GETDPISCALEDSIZE
-#define WM_GETDPISCALEDSIZE 0x02E4
-#endif
 const int Process_System_DPI_Aware = 1;
 const int Process_Per_Monitor_DPI_Aware = 2;
 static HRESULT (WINAPI * pGetProcessDpiAwareness)(HANDLE hprocess, int * value) = 0;
@@ -404,6 +405,18 @@ void
 win_set_timer(void (*cb)(void), uint ticks)
 { SetTimer(wnd, (UINT_PTR)cb, ticks, null); }
 
+void
+win_keep_screen_on(bool on)
+{
+  keep_screen_on = on;
+  if (on)
+    SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED /*| ES_AWAYMODE_REQUIRED*/);
+  else
+    SetThreadExecutionState(ES_CONTINUOUS);
+}
+/*
+ * removed tab code here
+ * */
 /*
    Window system colour configuration.
    Applicable to current window if switched via WM_SETFOCUS/WM_KILLFOCUS.
@@ -893,6 +906,14 @@ win_set_zorder(bool top)
                SWP_NOMOVE | SWP_NOSIZE);
 }
 
+void
+win_toggle_on_top(void)
+{
+  win_is_always_on_top = !win_is_always_on_top;
+  SetWindowPos(wnd, win_is_always_on_top ? HWND_TOPMOST : HWND_NOTOPMOST,
+               0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+}
+
 bool
 win_is_iconic(void)
 {
@@ -1008,6 +1029,7 @@ win_set_pixels(int height, int width)
     return;
 
   int sy = win_search_visible() ? SEARCHBAR_HEIGHT : 0;
+  // set window size
   SetWindowPos(wnd, null, 0, 0,
                width + extra_width + 2 * PADDING,
                height + extra_height + OFFSET + 2 * PADDING + sy,
@@ -1161,6 +1183,7 @@ make_fullscreen(void)
   MONITORINFO mi;
   get_my_monitor_info(&mi);
   RECT fr = mi.rcMonitor;
+  // set window size
   SetWindowPos(wnd, HWND_TOP, fr.left, fr.top,
                fr.right - fr.left, fr.bottom - fr.top, SWP_FRAMECHANGED);
 }
@@ -1222,6 +1245,7 @@ win_set_geom(int y, int x, int height, int width)
   else if (height > 0)
     term_height = height;
 
+  // set window size
   SetWindowPos(wnd, null, term_x, term_y,
                term_width, term_height,
                SWP_NOACTIVATE | SWP_NOCOPYBITS | SWP_NOZORDER);
@@ -1271,7 +1295,8 @@ win_set_chars(int rows, int cols)
   // which would remove bottom padding and spoil some Windows magic (#629)
   if (rows != cterm->rows || cols != cterm->cols) {
     win_set_pixels(rows * cell_height, cols * cell_width);
-    win_fix_position();
+    if (is_init)  // don't spoil negative position (#1123)
+      win_fix_position();
   }
   trace_winsize("win_set_chars > win_fix_position");
 }
@@ -1289,9 +1314,15 @@ static int last_i = 0;
   ITaskbarList3 * tbl;
   HRESULT hres = CoCreateInstance(&CLSID_TaskbarList, NULL,
                                   CLSCTX_INPROC_SERVER,
-                                  &IID_ITaskbarList, (void **) &tbl);
+                                  &IID_ITaskbarList3, (void **) &tbl);
   if (!SUCCEEDED(hres))
     return;
+
+  hres = tbl->lpVtbl->HrInit(tbl);
+  if (!SUCCEEDED(hres)) {
+    tbl->lpVtbl->Release(tbl);
+    return;
+  }
 
   if (i >= 0)
     hres = tbl->lpVtbl->SetProgressValue(tbl, wnd, i, 100);
@@ -1348,14 +1379,285 @@ flash_border()
   });
 }
 
+
+/*
+ * Play sound.
+ */
+void
+win_sound(char * sound_name, uint options)
+{
+  //printf("win_sound %ld<%s> %d\n", strlen(sound_name), sound_name, options);
+
+  options |= SND_NODEFAULT | SND_FILENAME;
+
+  if (!sound_name || !*sound_name) {
+    PlaySoundW(NULL, NULL, options);
+    return;
+  }
+
+  if (*sound_name == '_') {  // play a Windows system sound
+static struct {
+  UINT type; char * name;
+} ss[] = {
+  {0xFFFFFFFF, ""},
+  {MB_ICONASTERISK, "asterisk"},
+  {MB_ICONASTERISK, "*"},
+  {MB_ICONEXCLAMATION, "exclamation"},
+  {MB_ICONEXCLAMATION, "!"},
+  {MB_ICONERROR, "error"},
+  {MB_ICONHAND, "hand"},
+  {MB_ICONINFORMATION, "information"},
+  {MB_ICONQUESTION, "question"},
+  {MB_ICONQUESTION, "?"},
+  {MB_ICONSTOP, "stop"},
+  {MB_ICONWARNING, "warning"},
+  {MB_OK, "OK"}
+};
+
+    sound_name ++;
+    for (uint i = 0; i < lengthof(ss); i++)
+      if (0 == strcmp(sound_name, ss[i].name)) {
+        MessageBeep(ss[i].type);
+        break;
+      }
+    return;
+  }
+
+  wchar * sound_file = 0;
+  if (strchr(sound_name, '/') || strchr(sound_name, '\\')) {
+    sound_file = path_posix_to_win_w(sound_name);
+  }
+  else {
+    wchar * sound_name_w = cs__mbstowcs(sound_name);
+    if (!strchr(sound_name, '.')) {
+      int len = wcslen(sound_name_w);
+      sound_name_w = renewn(sound_name_w, len + 5);
+      wcscpy(&sound_name_w[len], W(".wav"));
+    }
+    char * sf = get_resource_file(W("sounds"), sound_name_w, false);
+    free(sound_name_w);
+    if (sf) {
+      sound_file = path_posix_to_win_w(sf);
+      free(sf);
+    }
+  }
+
+  if (sound_file && PlaySoundW(sound_file, NULL, options)) {
+    free(sound_file);
+  }
+}
+
+/*
+ * Beep with audio output library libao, for DECPS.
+ */
+static void * libao = 0;
+
+typedef struct {
+  int  bits; /* bits per sample */
+  int  rate; /* samples per second (in a single channel) */
+  int  channels; /* number of audio channels */
+  int  byte_format; /* Byte ordering in sample, see constants below */
+  char *matrix; /* channel input matrix */
+} ao_sample_format;
+
+#define AO_FMT_LITTLE 1
+#define AO_FMT_BIG    2
+#define AO_FMT_NATIVE 4
+
+static void (* ao_initialize) (void);
+static void (* ao_shutdown) (void);
+static int (* ao_default_driver_id) (void);
+static int (* ao_driver_id) (char * name);
+static void * (* ao_open_live) (int driver_id, ao_sample_format * format, void * options);
+static int (* ao_play) (void * device, char * out, u_int32_t buf_size);
+static int (* ao_close) (void * device);
+
+static int ao_driver;
+static void * ao_device;
+static ao_sample_format ao_format;
+
+static bool
+aolib_start(void)
+{
+  if (libao)
+    return true;
+
+  // libao uses dlopen itself, so we have nested invocations of it;
+  // this would crash with default settings and default procedure -
+  // it's necessary to either add flag RTLD_NODELETE to dlopen 
+  // or defer dlcose after ao_initialize (Linux) or ao_shutdown (cygwin)
+  libao = dlopen ("cygao-4.dll", RTLD_LAZY | RTLD_GLOBAL);
+#ifdef fallback_to_mingw_libao
+  if (!libao) {
+    // try MingW version, with proper LD_LIBRARY_PATH contents
+    // (LD_LIBRARY_PATH=/usr/{x86_64,i686}-w64-mingw32/sys-root/mingw/bin)
+    libao = dlopen ("libao-4.dll", RTLD_LAZY | RTLD_GLOBAL);
+    if (!libao)  // try to load directly
+# ifdef __CYGWIN32__
+      libao = dlopen ("/usr/i686-w64-mingw32/sys-root/mingw/bin/libao-4.dll", RTLD_LAZY | RTLD_GLOBAL);
+# else
+      libao = dlopen ("/usr/x86_64-w64-mingw32/sys-root/mingw/bin/libao-4.dll", RTLD_LAZY | RTLD_GLOBAL);
+# endif
+  }
+#endif
+  if (!libao)
+    return false;
+
+  ao_initialize = dlsym(libao, "ao_initialize");
+  ao_shutdown = dlsym(libao, "ao_shutdown");
+  ao_default_driver_id = dlsym(libao, "ao_default_driver_id");
+  ao_driver_id = dlsym(libao, "ao_driver_id");
+  ao_open_live = dlsym(libao, "ao_open_live");
+  ao_play = dlsym(libao, "ao_play");
+  ao_close = dlsym(libao, "ao_close");
+
+  ao_initialize();
+  ao_driver = ao_driver_id("wmm");
+  memset(&ao_format, 0, sizeof(ao_format));
+  ao_format.bits = 16;
+  ao_format.channels = 2;
+  ao_format.rate = 44100;
+  ao_format.byte_format = AO_FMT_LITTLE;
+
+  ao_device = ao_open_live(ao_driver, &ao_format, 0);
+
+  return ao_device;
+}
+
+static void
+aolib_stop(void)
+{
+  if (libao) {
+    ao_close(ao_device);
+    ao_shutdown();
+    dlclose(libao);
+    libao = 0;
+  }
+}
+
+static void
+aolib_beep(uint tone, float vol, float freq, uint ms)
+{
+  int buf_len = ao_format.rate * ms / 1000;
+  int buf_size = ao_format.bits / 8 * ao_format.channels * buf_len;
+  char * buffer = calloc(buf_size, sizeof(char));
+
+  for (int i = 0; i < buf_len; i++) {
+    float sample;
+
+    switch (tone) {
+      when 1:  // sine
+        sample = sin(2 * M_PI * freq * ((float) i / ao_format.rate));
+      when 2: {
+        float s = sin(2 * M_PI * freq * ((float) i / ao_format.rate));
+        sample = 0.5 * (s + fabsf(s));
+      }
+      when 3:
+        sample = 
+            fabsf(sinf(2 * M_PI * freq * ((float) 0.5 * i / ao_format.rate)));
+      when 4:
+        sample = 
+             0.5 *
+             (sin(2 * M_PI * freq * ((float) i / ao_format.rate)) >= 0
+              ? 1 : -1
+             );
+      when 5:
+        sample = 
+             0.5 *
+             (sin(2 * M_PI * freq * ((float) i / ao_format.rate)) >= 0.4
+              ? 1 : -1
+             );
+      otherwise:
+        sample = 0;
+    }
+    // provide an audible stroke to separate the start of each note:
+    sample *= 1.0 - 0.15 * tanh((float)i / 1000.0);
+    // scale float sample to 16 bit int sample:
+    int isample = (int)(sample * vol * 32767.0);
+
+    // in contrast to buf_len calculation above, here the assumption is 
+    // fixed 16 bit samples, two channels
+    buffer[4 * i] = buffer[4 * i + 2] = isample & 0xFF;
+    buffer[4 * i + 1] = buffer[4 * i + 3] = (isample >> 8) & 0xFF;
+  }
+
+  ao_play(ao_device, buffer, buf_size);
+}
+
+/*
+ * Beep for DECPS.
+ */
+void
+win_beep(uint tone, float vol, float freq, uint ms)
+{
+  struct {
+    uint tone;
+    uint ms;
+    float vol;
+    float freq;
+  } params = {tone, ms, vol, freq};
+
+static int beep_pid = -1;
+static int fd[2];
+  if (beep_pid <= 0) {
+    pipe(fd);
+    beep_pid = fork();
+    if (beep_pid == -1) {
+      // error
+      return;
+    }
+    else if (beep_pid > 0) { // parent
+      close(fd[0]);
+    }
+    else { // child
+      close(fd[1]);
+
+#ifdef external_beeper
+      // in case of external beep handling, remap the pipe 
+      // to file descriptor 0 and fork an external beep server; 
+      // but it does not improve the jitter when using Windows Beep
+      close(0);
+      dup2(fd[0], 0);
+      close(fd[0]);
+      // invoke external beeper:
+      execl("minbeep", "minbeep", (char*)0);
+      //handle invocation error...
+      // the external beeper runs:
+      //while (read(0, &params, sizeof(params)) > 0) {
+      //  Beep(params[0], params[1]);
+      //}
+      //exit(0);
+#endif
+
+      while (read(fd[0], &params, sizeof(params)) > 0) {
+        if (params.tone && aolib_start())
+          aolib_beep(params.tone, params.vol, params.freq, params.ms);
+        else
+          Beep((int)(params.freq + 0.5), params.ms);
+      }
+      aolib_stop();
+      exit(0);
+    }
+  }
+
+#ifdef ascii_beeper_pipe
+static FILE * bf = 0;
+  if (!bf)
+    bf = fdopen(fd[1], "w");
+  fprintf(bf, "%f %f %d %d\n", (float)params.ms / 1000.0, params.freq, params.vol, params.tone);
+  fflush(bf);
+  return;
+#endif
+
+  write(fd[1], &params, sizeof(params));
+}
+
 /*
  * Bell.
  */
-void
+static void
 do_win_bell(config * conf, bool margin_bell)
 {
-  do_update();
-
   term_bell * bellstate = margin_bell ? &cterm->marginbell : &cterm->bell;
   unsigned long now = mtime();
 
@@ -1365,6 +1667,8 @@ do_win_bell(config * conf, bool margin_bell)
       )
      )
   {
+    do_update();
+
     bellstate->last_bell = now;
     bellstate->last_vol = bellstate->vol;
 
@@ -1588,7 +1892,8 @@ win_adapt_term_size(bool sync_size_with_font, bool scale_font_with_size)
   if (sync_size_with_font && !win_is_fullscreen) {
     // enforced win_set_chars(cterm->rows, cterm->cols):
     win_set_pixels(cterm->rows * cell_height, cterm->cols * cell_width);
-    win_fix_position();
+    if (is_init)  // don't spoil negative position (#1123)
+      win_fix_position();
     trace_winsize("win_adapt_term_size > win_fix_position");
 
     win_invalidate_all(false);
@@ -1660,6 +1965,11 @@ win_adapt_term_size(bool sync_size_with_font, bool scale_font_with_size)
     struct winsize ws = {rows, cols, cols * cell_width, rows * cell_height};
     child_resize(cterm,&ws);
   }
+  else {  // also notify font size changes; filter identical updates later
+    struct winsize ws = {rows, cols, cols * cell_width, rows * cell_height};
+    child_resize(cterm,&ws);
+  }
+
   win_invalidate_all(false);
 
   win_update_search();
@@ -1681,6 +1991,7 @@ win_fix_taskbar_max(int show_cmd)
     RECT mr = mi.rcMonitor;
     if (mr.top != ar.top || mr.bottom != ar.bottom || mr.left != ar.left || mr.right != ar.right) {
       show_cmd = SW_RESTORE;
+      // set window size
       SetWindowPos(wnd, null, 
                    ar.left, ar.top, ar.right - ar.left, ar.bottom - ar.top, 
                    SWP_NOZORDER);
@@ -1735,9 +2046,8 @@ default_size(void)
 }
 
 void
-win_update_transparency(bool opaque)
+win_update_transparency(int trans, bool opaque)
 {
-  int trans = cfg.transparency;
   if (trans == TR_GLASS)
     trans = 0;
   LONG style = GetWindowLong(wnd, GWL_EXSTYLE);
@@ -1778,6 +2088,7 @@ win_update_scrollbar(bool inner)
 
   default_size_token = true;  // prevent font zooming after Ctrl+Shift+O
   if (inner || IsZoomed(wnd))
+    // set window size
     SetWindowPos(wnd, null, 0, 0, 0, 0,
                  SWP_NOACTIVATE | SWP_NOMOVE |
                  SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
@@ -1793,7 +2104,10 @@ win_update_scrollbar(bool inner)
                  SWP_NOZORDER | SWP_FRAMECHANGED);
   }
 
-  win_fix_position();
+  // confine to screen borders, except in full size (#1126)
+  if (!(win_is_fullscreen || IsZoomed(wnd)))
+    if (is_init)  // don't spoil negative position (#1123)
+      win_fix_position();
 }
 
 void
@@ -1816,14 +2130,14 @@ font_cs_reconfig(bool font_changed)
   //printf("font_cs_reconfig font_changed %d\n", font_changed);
   if(!cterm)return;
   if (font_changed) {
-    win_init_fonts(cfg.font.size);
+    win_init_fonts(cfg.font.size, true);
     if (tek_mode)
       tek_init(false, cfg.tek_glow);
     trace_resize((" (font_cs_reconfig -> win_adapt_term_size)\n"));
     if(cterm)win_adapt_term_size(true, false);
   }
   win_update_scrollbar(true); // assume "inner", shouldn't change anyway
-  win_update_transparency(cfg.opaque_when_focused);
+  win_update_transparency(cfg.transparency, cfg.opaque_when_focused);
   win_update_mouse();
 
   win_font_cs_reconfig(font_changed);
@@ -1961,6 +2275,10 @@ confirm_exit(void)
   // Treat failure to show the dialog as confirmation.
   return !ret || ret == IDOK;
 }
+void win_close() { 
+  if (!cfg.confirm_exit || confirm_exit())
+    child_terminate(cterm); 
+}
 
 void
 app_close()
@@ -1985,6 +2303,83 @@ app_close()
 
   if (!cfg.confirm_exit || confirm_exit())
     child_kill((GetKeyState(VK_SHIFT) & 0x80) != 0);
+}
+
+
+/*
+   Mouse pointer style.
+ */
+
+static struct {
+  void * tag;
+  wchar * name;
+} cursorstyles[] = {
+  {IDC_APPSTARTING, W("appstarting")},
+  {IDC_ARROW, W("arrow")},
+  {IDC_CROSS, W("cross")},
+  {IDC_HAND, W("hand")},
+  {IDC_HELP, W("help")},
+  {IDC_IBEAM, W("ibeam")},
+  {IDC_ICON, W("icon")},
+  {IDC_NO, W("no")},
+  {IDC_SIZE, W("size")},
+  {IDC_SIZEALL, W("sizeall")},
+  {IDC_SIZENESW, W("sizenesw")},
+  {IDC_SIZENS, W("sizens")},
+  {IDC_SIZENWSE, W("sizenwse")},
+  {IDC_SIZEWE, W("sizewe")},
+  {IDC_UPARROW, W("uparrow")},
+  {IDC_WAIT, W("wait")},
+};
+
+static HCURSOR cursors[2] = {0, 0};
+
+HCURSOR
+win_get_cursor(bool appmouse)
+{
+  return cursors[appmouse];
+}
+
+void
+set_cursor_style(bool appmouse, wchar * style)
+{
+  HCURSOR c = 0;
+  if (wcschr(style, '.')) {
+    char * pf = get_resource_file(W("pointers"), style, false);
+    wchar * wpf = 0;
+    if (pf) {
+      wpf = path_posix_to_win_w(pf);
+      free(pf);
+    }
+    if (wpf) {
+      c = LoadImageW(null, wpf, IMAGE_CURSOR, 
+                           0, 0,
+                           LR_DEFAULTSIZE |
+                           LR_LOADFROMFILE | LR_LOADTRANSPARENT);
+      free(wpf);
+    }
+  }
+  if (!c)
+    for (uint i = 0; i < lengthof(cursorstyles); i++)
+      if (0 == wcscmp(style, cursorstyles[i].name)) {
+        c = LoadCursor(null, cursorstyles[i].tag);
+        break;
+      }
+  if (!c)
+    c = LoadCursor(null, appmouse ? IDC_ARROW : IDC_IBEAM);
+
+  if (!IS_INTRESOURCE(cursors[appmouse]))
+    DestroyCursor(cursors[appmouse]);
+  cursors[appmouse] = c;
+  SetClassLongPtr(wnd, GCLP_HCURSOR, (LONG_PTR)c);
+  SetCursor(c);
+}
+
+static void
+win_init_cursors()
+{
+  set_cursor_style(true, W("arrow"));
+  set_cursor_style(false, W("ibeam"));
 }
 
 
@@ -2659,10 +3054,10 @@ static struct {
       if (lp & GCS_RESULTSTR) {
         LONG len = ImmGetCompositionStringW(imc, GCS_RESULTSTR, null, 0);
         if (len > 0) {
-          char buf[len];
+          wchar buf[(len + 1) / 2];
           ImmGetCompositionStringW(imc, GCS_RESULTSTR, buf, len);
-          provide_input(*(wchar *)buf);
-          child_sendw(cterm,(wchar *)buf, len / 2);
+          provide_input(*buf);
+          child_sendw(cterm,buf, len / 2);
         }
         return 1;
       }
@@ -2681,6 +3076,14 @@ static struct {
                    RDW_UPDATENOW | RDW_ALLCHILDREN);
       win_update_search();
       // support tabbar
+      // win_update_tabbar();
+      // update dark mode
+      if (message == WM_WININICHANGE) {
+        // SetWindowTheme will cause an asynchronous WM_THEMECHANGED message,
+        // so guard it by WM_WININICHANGE;
+        // this will switch from Light to Dark mode immediately but not back!
+        //win_dark_mode(wnd);
+      }
 
     when WM_FONTCHANGE:
       font_cs_reconfig(true);
@@ -2719,7 +3122,7 @@ static struct {
         term_set_focus(true, true);
         win_global_keyboard_hook(1,0);
       }
-      win_update_transparency(cfg.opaque_when_focused);
+      win_update_transparency(cfg.transparency, cfg.opaque_when_focused);
       win_key_reset();
 #ifdef adapt_term_size_on_activate
       // support tabbar?
@@ -2877,9 +3280,11 @@ static struct {
 #define WP ((WINDOWPOS *) lp)
 
     when WM_WINDOWPOSCHANGING:
+      poschanging = true;
       trace_resize(("# WM_WINDOWPOSCHANGING %3X (resizing %d) %d %d @ %d %d\n", WP->flags, resizing, WP->cy, WP->cx, WP->y, WP->x));
 
     when WM_WINDOWPOSCHANGED: {
+      poschanging = false;
       if (disable_poschange)
         // avoid premature Window size adaptation (#649?)
         break;
@@ -2906,7 +3311,7 @@ static struct {
           // remaining glitch:
           // start mintty -p @1; move it to other monitor;
           // columns will be less
-          //win_init_fonts(cfg.font.size);
+          //win_init_fonts(cfg.font.size, true);
           font_cs_reconfig(true);
           win_adapt_term_size(true, false);
         }
@@ -2948,6 +3353,7 @@ static struct {
         dpi = new_dpi;
 
         int y = cterm->rows, x = cterm->cols;
+        // set window size
         SetWindowPos(wnd, 0, r->left, r->top, r->right - r->left, r->bottom - r->top,
                      SWP_NOZORDER | SWP_NOACTIVATE);
 
@@ -2995,11 +3401,12 @@ static struct {
           // decrease the window size if moving between monitors repeatedly
           long width = (r->right - r->left) * 20 / 19;
           long height = (r->bottom - r->top) * 20 / 19;
+          // set window size
           SetWindowPos(wnd, 0, r->left, r->top, width, height,
                        SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_NOACTIVATE);
           int y = cterm->rows, x = cterm->cols;
           win_adapt_term_size(false, true);
-          //?win_init_fonts(cfg.font.size);
+          //?win_init_fonts(cfg.font.size, true);
           // try to stabilize terminal size roundtrip
           if (cterm->rows != y || cterm->cols != x) {
             // win_fix_position also clips the window to desktop size
@@ -3015,6 +3422,15 @@ static struct {
       }
       break;
     }
+
+#ifdef debug_stylestuff
+    when WM_STYLECHANGING: {
+      printf("STYLE %08X -> %08X\n", ((STYLESTRUCT *)lp)->styleOld, ((STYLESTRUCT *)lp)->styleNew);
+      //return 0;
+    }
+
+    when WM_ERASEBKGND:
+#endif
 
     when WM_NCHITTEST: {
       LRESULT result = DefWindowProcW(wnd, message, wp, lp);
@@ -3224,11 +3640,24 @@ report_pos(void)
 void
 win_to_top(HWND top_wnd)
 {
+  // this would block if target window is blocked:
+  // BringWindowToTop(top_wnd);
+
+  // this does not work properly (see comments at when WM_USER:)
+  // PostMessage(top_wnd, WM_USER, 0, WIN_TOP);
+
   // one of these works:
-  SetForegroundWindow(top_wnd);
+  int fgok = SetForegroundWindow(top_wnd);
   // SetActiveWindow(top_wnd);
   if (IsIconic(top_wnd))
     ShowWindow(top_wnd, SW_RESTORE);
+
+  //printf("[%p] win_to_top %p ok %d\n", wnd, top_wnd, fgok);
+  if (!fgok ) {
+    // clicked on non-existent tab: clear vanished tab from tabbar
+    win_bell(&cfg);
+    //update_tab_titles();
+  }
 }
 void
 exit_mintty(void)
@@ -3618,7 +4047,7 @@ getlxssinfo(bool list, wstring wslname, uint * wsl_ver,
     if (stat (rootdir, & fstat_buf) == 0 && S_ISDIR (fstat_buf.st_mode)) {
       *wsl_rootfs = rootfs;
     }
-    else {
+    else if (wslname) {
       free(rootfs);
       rootfs = newn(wchar, wcslen(wslname) + 8);
       wcscpy(rootfs, W("\\\\wsl$\\"));
@@ -3685,7 +4114,7 @@ getlxssinfo(bool list, wstring wslname, uint * wsl_ver,
           if (list) {
             getlxssdistinfo(true, lxss, subkey);
           }
-          else if (0 == wcscmp(dn, wslname)) {
+          else if (dn && 0 == wcscmp(dn, wslname)) {
             int err = getlxssdistinfo(false, lxss, subkey);
             regclose(lxss);
             return err;
@@ -3987,6 +4416,24 @@ DEFINE_PROPERTYKEY(PKEY_AppUserModel_StartPinOption, 0x9f4c2855,0x9f79,0x4B39,0x
 
 
 /*
+   Check minimum cygwin version.
+ */
+bool
+cygver_ge(uint v1, uint v2)
+{
+  static uint _v1 = 0, _v2 = 0;
+
+  if (!_v1) {
+    struct utsname name;
+    if (uname(&name) >= 0)
+      sscanf(name.release, "%d.%d.", &_v1, &_v2);
+  }
+
+  return _v1 > v1 || (_v1 == v1 && _v2 >= v2);
+}
+
+
+/*
    Expand window group id (AppID or Class) by placeholders.
  */
 static wchar *
@@ -4057,7 +4504,7 @@ static char help[] =
   "See manual page for further command line options and configuration.\n"
 );
 
-static const char short_opts[] = "+:c:C:eh:i:l:o:p:s:t:T:B:R:uw:HVdD~";
+static const char short_opts[] = "+:c:C:eh:i:l:o:p:s:t:T:B:R:uw:HVdD~P:";
 
 enum {
   OPT_FG       = 0x80,
@@ -4104,6 +4551,7 @@ opts[] = {
   {"WSL",        optional_argument, 0, ''},  // short option not enabled
   {"WSLmode",    optional_argument, 0, ''},  // short option not enabled
 #endif
+  {"pcon",       required_argument, 0, 'P'},
   {"rootfs",     required_argument, 0, ''},  // short option not enabled
   {"dir~",       no_argument,       0, '~'},
   {"help",       no_argument,       0, 'H'},
@@ -4148,7 +4596,7 @@ void pcygargv(int login){
     char *arg0 = slash ? slash + 1 : cmd;
 
     // Prepend '-' if a login shell was requested.
-    if (login)
+    if (login|| (invoked_from_shortcut && cfg.login_from_shortcut))
       arg0 = asform("-%s", arg0);
     // Create new argument array.
     sessdefs[IDSS_CYG].argc=1;
@@ -4478,6 +4926,8 @@ int LoadConfig(){
         dup(tfd);
         close(tfd);
       }
+      when 'P':
+        set_arg_option("ConPTY", optarg);
     }
   }
 
@@ -4559,6 +5009,14 @@ main(int argc, char *argv[])
   // shortcut or AppId would be found in sui.lpTitle
 # ifdef debuglog
   fprintf(mtlog, "shortcut %d %ls\n", invoked_from_shortcut, sui.lpTitle);
+# endif
+  // conclude whether started via Win+R (may be considered to set login mode)
+  //invoked_from_win_r = !invoked_from_shortcut & (sui.dwFlags & STARTF_USESHOWWINDOW);
+# ifdef debug_startupinfo
+  char * sinfo = asform("STARTUPINFO <%s> <%s> %08X %d\n",
+        cs__wcstombs(sui.lpDesktop ?: u""), cs__wcstombs(sui.lpTitle ?: u""),
+        sui.dwFlags, sui.wShowWindow);
+  show_info(sinfo);
 # endif
 
   // Options triggered via wsl*.exe
@@ -4691,7 +5149,7 @@ main(int argc, char *argv[])
 #ifdef wslbridge2
     argc += start_home;
 #endif
-    argc += 6;  // LANG, LC_CTYPE, LC_ALL
+    argc += 10;  // -e parameters
 
     char ** new_argv = newn(char *, argc + 8 + start_home + (wsltty_appx ? 2 : 0));
     char ** pargv = new_argv;
@@ -4727,6 +5185,8 @@ main(int argc, char *argv[])
 #ifdef wslbridge_t
     *pargv++ = "-t";
 #endif
+    *pargv++ = "-e";
+    *pargv++ = "TERM";
     *pargv++ = "-e";
     *pargv++ = "APPDATA";
     if (!cfg.old_locale) {
@@ -4812,9 +5272,9 @@ main(int argc, char *argv[])
     // if called from WSL (mintty/wsltty#76)
     unsetenv("HOME");
   }
-  else if (*argv && (argv[1] || strcmp(*argv, "-")))
+  else if (*argv && (argv[1] || strcmp(*argv, "-")))  // argv is a command
     cmd = *argv;
-  else {  // argv is only "-"
+  else {  // argv is empty or only "-"
     pcygargv(*argv!=0);
     cmd=sessdefs[IDSS_CYG].cmd;
     argv=sessdefs[IDSS_CYG].argv;
@@ -4911,6 +5371,11 @@ main(int argc, char *argv[])
   wstring wclass = W(APPNAME);
   if (*cfg.class)
     wclass = group_id(cfg.class);
+#ifdef prevent_grouping_hidden_tabs
+  // should an explicitly hidden window not be grouped with a "class" of tabs?
+  if (!cfg.window)
+    wclass = cs__utftowcs(asform("%d", getpid()));
+#endif
 
   // Put child command line into window title if we haven't got one already.
   wstring wtitle = cfg.title;
@@ -4963,7 +5428,26 @@ main(int argc, char *argv[])
   //printf("Added %d fonts\n", dynfonts);
 
   // Initialise the fonts, thus also determining their width and height.
-  win_init_fonts(cfg.font.size);
+  if (per_monitor_dpi_aware && pGetDpiForMonitor) {
+    // we cannot avoid double win_init_fonts completely because of 
+    // circular dependencies of various window geometry calculations 
+    // with initial window creation (see comments below);
+    // initial setup esp. of cell_width, cell_height is needed 
+    // in order to prevent their uninitialised usage (#1124); we could also
+    // - set dummy values here, but which ones to ensure proper geometry?
+    // - guard against failing uninitialised cell_ values but that 
+    //   didn't turn out to yield the proper geometry
+    // - init fonts here only if height/size options are set
+    // - move handling of height/size options behind later win_init_fonts?
+    // and in order to further accelerate, we could
+    // - limit font initialisation to the primary font (2nd parameter)
+    // - limit font initialisation further (skip italic etc) for another ½ms
+    win_init_fonts(cfg.font.size, false);
+  }
+  else {
+    // win_init_fonts here as before
+    win_init_fonts(cfg.font.size, true);
+  }
 
   // Reconfigure the charset module now that arguments have been converted,
   // the locale/charset settings have been loaded, and the font width has
@@ -4971,13 +5455,6 @@ main(int argc, char *argv[])
   cs_reconfig();
 
   // Determine window sizes.
-#if 0
-  if (per_monitor_dpi_aware && pGetDpiForMonitor) {
-    HMONITOR mon = MonitorFromWindow(wnd, MONITOR_DEFAULTTONEAREST);
-    uint x;
-    pGetDpiForMonitor(mon, 0, &x, &dpi);  // MDT_EFFECTIVE_DPI
-  }
-#endif
   win_adjust_borders(cell_width * term_cols, cell_height * term_rows);
 
   // Having x == CW_USEDEFAULT but not y still triggers default positioning,
@@ -5018,11 +5495,16 @@ main(int argc, char *argv[])
   if (pEnableNonClientDpiScaling)
     SetWindowTextW(wnd, wtitle);
 
-  // Adapt window position (and maybe size) to special parameters
-  // also select monitor if requested
-  if (center || right || bottom || left || top || maxwidth || maxheight
-      || monitor > 0
-     ) {
+
+  // Adapt window position and size to special parameters:
+  // select monitor if requested (before DPI adjustment!),
+  // adjust size to maxwidth/maxheight - these need to be evaluated twice,
+  // before and again after DPI adjustment, to avoid anomalies;
+  // some circular dependencies prevent a more straight-forward approach:
+  // 1. monitor selection
+  // 2. DPI adjustment
+  // 3. window size consideration for center/right/bottom placement
+  if (maxwidth || maxheight || monitor > 0) {
     MONITORINFO mi;
     get_my_monitor_info(&mi);
     RECT ar = mi.rcWork;
@@ -5049,6 +5531,133 @@ main(int argc, char *argv[])
       ar = monar;
       printpos("mon", x, y, ar);
     }
+
+    if (cfg.x == (int)CW_USEDEFAULT) {
+      if (monitor == 0)
+        win_get_pos(&x, &y);
+      printpos("fix", x, y, ar);
+    }
+
+    if (maxwidth) {
+      x = ar.left;
+      width = ar.right - ar.left;
+    }
+    if (maxheight) {
+      y = ar.top;
+      height = ar.bottom - ar.top;
+    }
+#ifdef debug_resize
+    if (maxwidth || maxheight)
+      printf("max w/h %d %d\n", width, height);
+#endif
+    printpos("fin", x, y, ar);
+
+    // set window size
+    SetWindowPos(wnd, NULL, x, y, width, height,
+                 SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_NOACTIVATE);
+    trace_winsize("-p");
+  }
+
+
+  for(argc=0;argv[argc];argc++);
+  cursd.argc=argc;
+  cursd.cmd=cmd;
+  cursd.argv=argv;
+  win_tab_init(home, &cursd,term_width, term_height);
+
+  if (per_monitor_dpi_aware) {
+    if (cfg.x != (int)CW_USEDEFAULT) {
+      // The first SetWindowPos actually set x and y;
+      // set window size
+      SetWindowPos(wnd, NULL, x, y, width, height,
+                   SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_NOACTIVATE);
+      // Then, we have placed the window on the correct monitor
+      // and we can now interpret width/height in correct DPI.
+      SetWindowPos(wnd, NULL, x, y, width, height,
+                   SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_NOACTIVATE);
+    }
+    // retrieve initial monitor DPI
+    if (pGetDpiForMonitor) {
+      HMONITOR mon = MonitorFromWindow(wnd, MONITOR_DEFAULTTONEAREST);
+      uint x;
+      pGetDpiForMonitor(mon, 0, &x, &dpi);  // MDT_EFFECTIVE_DPI
+#ifdef debug_dpi
+      uint ang, raw;
+      pGetDpiForMonitor(mon, 1, &x, &ang);  // MDT_ANGULAR_DPI
+      pGetDpiForMonitor(mon, 2, &x, &raw);  // MDT_RAW_DPI
+      printf("initial dpi eff %d ang %d raw %d\n", dpi, ang, raw);
+      print_system_metrics(dpi, "initial");
+#endif
+      // recalculate effective font size and adjust window
+      /* Note: it would avoid some problems to consider the DPI 
+         earlier and create the window at its proper size right away
+         but there are some cyclic dependencies among CreateWindow, 
+         monitor selection and the respective DPI to be considered,
+         so we have to adjust here.
+      */
+      /* Note: this used to be guarded by
+         //if (dpi != 96)
+         until 3.5.0
+         but the previous initial call to win_init_fonts above 
+         is now skipped (if per_monitor_dpi_aware...) to avoid its 
+         double invocation, so we need to initialise fonts here always.
+      */
+      {
+        font_cs_reconfig(true);  // calls win_init_fonts(cfg.font.size, true);
+        trace_winsize("dpi > font_cs_reconfig");
+        if (maxwidth || maxheight) {
+          // changed terminal size not yet recorded, 
+          // but window size hopefully adjusted already
+
+          /* Note: this used to be guarded by
+             //if (border_style)
+             but should be done always to avoid maxheight windows to 
+             be covered by the taskbar
+          */
+          {
+            // workaround for caption-less window exceeding borders (#733)
+            RECT wr;
+            GetWindowRect(wnd, &wr);
+            int w = wr.right - wr.left;
+            int h = wr.bottom - wr.top;
+            MONITORINFO mi;
+            get_my_monitor_info(&mi);
+            RECT ar = mi.rcWork;
+            if (maxwidth && ar.right - ar.left < w)
+              w = ar.right - ar.left;
+            if (maxheight && ar.bottom - ar.top < h)
+              h = ar.bottom - ar.top;
+
+            SetWindowPos(wnd, null, 0, 0, w, h,
+                         SWP_NOCOPYBITS | SWP_NOMOVE | SWP_NOZORDER
+                         | SWP_NOACTIVATE);
+          }
+        }
+        else {
+          // consider preset size (term_)
+          win_set_chars(term_rows ?: cfg.rows, term_cols ?: cfg.cols);
+          trace_winsize("dpi > win_set_chars");
+          //?win_set_pixels(term_rows * cell_height, term_cols * cell_width);
+        }
+      }
+    }
+  }
+  disable_poschange = false;
+
+  // Adapt window position (and maybe size) to special parameters,
+  // we need to reconsider maxwidth/maxheight here to accomodate 
+  // circular dependencies of 
+  // positioning, monitor selection, DPI adjustment and window size
+  if (center || right || bottom || left || top || maxwidth || maxheight) {
+    // adjust window size assumption to changed dpi
+    if (dpi != 96) {
+      win_get_pixels(&height, &width, true);
+    }
+
+    MONITORINFO mi;
+    get_my_monitor_info(&mi);
+    RECT ar = mi.rcWork;
+    printpos("cre", x, y, ar);
 
     if (cfg.x == (int)CW_USEDEFAULT) {
       if (monitor == 0)
@@ -5088,79 +5697,18 @@ main(int argc, char *argv[])
 #endif
     printpos("fin", x, y, ar);
 
+    // heuristic adjustment, to prevent off-by-one width/height:
+    if (maxheight && !maxwidth)
+      width += cell_width * 3 / 4;
+    if (maxwidth && !maxheight)
+      height += cell_height * 3 / 4;
+
+    // set window size
     SetWindowPos(wnd, NULL, x, y, width, height,
-      SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_NOACTIVATE);
+                 SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_NOACTIVATE);
     trace_winsize("-p");
   }
 
-
-  for(argc=0;argv[argc];argc++);
-  cursd.argc=argc;
-  cursd.cmd=cmd;
-  cursd.argv=argv;
-  win_tab_init(home, &cursd,term_width, term_height);
-
-  if (per_monitor_dpi_aware) {
-    if (cfg.x != (int)CW_USEDEFAULT) {
-      // The first SetWindowPos actually set x and y
-      SetWindowPos(wnd, NULL, x, y, width, height,
-        SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_NOACTIVATE);
-      // Then, we are placed the windows on the correct monitor and we can
-      // now interpret width/height in correct DPI.
-      SetWindowPos(wnd, NULL, x, y, width, height,
-        SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_NOACTIVATE);
-    }
-    // retrieve initial monitor DPI
-    if (pGetDpiForMonitor) {
-      HMONITOR mon = MonitorFromWindow(wnd, MONITOR_DEFAULTTONEAREST);
-      uint x;
-      pGetDpiForMonitor(mon, 0, &x, &dpi);  // MDT_EFFECTIVE_DPI
-#ifdef debug_dpi
-      uint ang, raw;
-      pGetDpiForMonitor(mon, 1, &x, &ang);  // MDT_ANGULAR_DPI
-      pGetDpiForMonitor(mon, 2, &x, &raw);  // MDT_RAW_DPI
-      printf("initial dpi eff %d ang %d raw %d\n", dpi, ang, raw);
-      print_system_metrics(dpi, "initial");
-#endif
-      // recalculate effective font size and adjust window
-      /* Note: it would avoid some problems to consider the DPI 
-         earlier and create the window at its proper size right away
-         but there are some cyclic dependencies among CreateWindow, 
-         monitor selection and the respective DPI to be considered,
-         so we have to adjust here.
-      */
-      if (dpi != 96) {
-        font_cs_reconfig(true);
-        trace_winsize("dpi > font_cs_reconfig");
-        if (maxwidth || maxheight) {
-          // changed terminal size not yet recorded, 
-          // but window size hopefully adjusted already
-          if (border_style) {
-            // workaround for caption-less window exceeding borders (#733)
-            RECT wr;
-            GetWindowRect(wnd, &wr);
-            int w = wr.right - wr.left;
-            int h = wr.bottom - wr.top;
-            MONITORINFO mi;
-            get_my_monitor_info(&mi);
-            RECT ar = mi.rcWork;
-            if (maxwidth && ar.right - ar.left < w)
-              w = ar.right - ar.left;
-            if (maxheight && ar.bottom - ar.top < h)
-              h = ar.bottom - ar.top;
-            SetWindowPos(wnd, null, 0, 0, w, h,
-                         SWP_NOACTIVATE | SWP_NOCOPYBITS | SWP_NOMOVE | SWP_NOZORDER);
-          }
-        }
-        else {
-          // consider preset size (term_)
-          win_set_chars(term_rows ?: cfg.rows, term_cols ?: cfg.cols);
-          trace_winsize("dpi > win_set_chars");
-        }
-      }
-    }
-  }
-  disable_poschange = false;
 
   if (border_style) {
     LONG style = GetWindowLong(wnd, GWL_STYLE);
@@ -5172,7 +5720,8 @@ main(int argc, char *argv[])
     }
     SetWindowLong(wnd, GWL_STYLE, style);
     SetWindowPos(wnd, null, 0, 0, 0, 0,
-                 SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+                 SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED
+                 | SWP_NOACTIVATE);
     trace_winsize("border_style");
   }
   configure_taskbar(app_id);
@@ -5207,9 +5756,9 @@ main(int argc, char *argv[])
   CreateCaret(wnd, caretbm, 0, 0);
 
   // Initialise various other stuff.
-  win_init_drop_target();
+  win_init_cursors();
   win_init_menus();
-  win_update_transparency(cfg.opaque_when_focused);
+  win_update_transparency(cfg.transparency, cfg.opaque_when_focused);
 
 #ifdef debug_display_monitors_mockup
 #define report_moni true
@@ -5230,10 +5779,32 @@ main(int argc, char *argv[])
   show_cmd = win_fix_taskbar_max(show_cmd);
   // if (run_max == 2) win_maximise(2); // do that later to reduce flickering
 
+  // Ensure -w full to cover taskbar also with -B void (~#1114)
+  //printf("win %d go_full %d run %d show %d\n", cfg.window, go_fullscr_on_max, run_max, show_cmd);
+  if (go_fullscr_on_max)
+    run_max = 2; // ensure fullscreen is full screen
+
   // Scale to background image aspect ratio if requested
   win_get_pixels(&ini_height, &ini_width, false);
   if (*cfg.background == '%')
     scale_to_image_ratio();
+  // Adjust ConPTY support if requested
+  if (cfg.conpty_support != (uchar)-1) {
+    char * env = 0;
+#ifdef __MSYS__
+    env = "MSYS";
+#else
+#ifdef __CYGWIN__
+    env = "CYGWIN";
+#endif
+#endif
+    if (env) {
+      char * val = cfg.conpty_support ? "enable_pcon" : "disable_pcon";
+      val = asform("%s %s", getenv(env) ?: "", val);
+      //printf("%d %s=%s\n", cfg.conpty_support, env, val);
+      setenv(env, val, true);
+    }
+  }
 
   // Create child process.
   //struct winsize ws={term_rows, term_cols, term_width, term_height};
@@ -5247,13 +5818,36 @@ main(int argc, char *argv[])
       // send WM_CLIPBOARDUPDATE
       pAddClipboardFormatListener(wnd);
   }
+#if 0  
+  // Grab the focus into the window.
+  /* Do this before even showing the window in order to evade the 
+     focus delay enforced by child_create() (#1113).
+     (This makes the comment below obsolete but let's keep it just in case.)
+  */
+  SetFocus(wnd);
 
+  // Create child process.
+  /* We could move this below SetFocus() or win_init_drop_target() 
+     in order to further reduce the delay until window display (#1113) 
+     but at a cost:
+     - the window flickers white before displaying its background if this 
+       is moved below ShowWindow()
+     - child terminal size would get wrong with -w max or -w full
+  */
+  child_create(
+    argv,
+    &(struct winsize){term_rows, term_cols, term_cols * cell_width, term_rows * cell_height}
+  );
+#endif
   // Finally show the window.
   ShowWindow(wnd, show_cmd);
   SetFocus(wnd);
   // Cloning fullscreen window
   if (run_max == 2)
     win_maximise(2);
+
+  // Initialise drag-and-drop into window.
+  win_init_drop_target();
 
   // Save the non-maximised window size
   cterm->rows0 = term_rows;
@@ -5269,16 +5863,17 @@ main(int argc, char *argv[])
     fflush(stdout);
   }
   win_set_font(wnd);
+  is_init = true;
   // Message loop.
   for (;;) {
     MSG msg;
     while (PeekMessage(&msg, null, 0, 0, PM_REMOVE)) {
-      if (msg.message == WM_QUIT)
-        return msg.wParam;
-      if (!IsDialogMessage(config_wnd, &msg))
-        // msg has not been processed by IsDialogMessage
+      if (msg.message == WM_QUIT) break; //return msg.wParam;
+      // msg has not been processed by IsDialogMessage
+      if (!(config_wnd&&IsDialogMessage(config_wnd, &msg)))
         DispatchMessage(&msg);
     }
+    if (msg.message == WM_QUIT) break;
     child_proc();
     if(win_tab_should_die())break;
   }
@@ -5299,5 +5894,5 @@ void new_win(int idss,int moni){
   }
   int shift=get_mods() & MDK_SHIFT;
   if(idss<IDSS_USR)
-    child_fork(&sessdefs[idss], 0, shift); 
+    child_fork(&sessdefs[idss], 0, shift,0); 
 }

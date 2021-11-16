@@ -825,15 +825,21 @@ get_mods(void)
 static void
 update_mouse(mod_keys mods)
 {
-  static bool app_mouse;
+  static bool last_app_mouse = false;
+
   bool new_app_mouse =
-    cterm->mouse_mode && !cterm->show_other_screen &&
-    cfg.clicks_target_app ^ ((mods & cfg.click_target_mod) != 0);
-  if (new_app_mouse != app_mouse) {
-    HCURSOR cursor = LoadCursor(null, new_app_mouse ? IDC_ARROW : IDC_IBEAM);
+    (cterm->mouse_mode || cterm->locator_1_enabled)
+    // disable app mouse pointer while showing "other" screen (flipped)
+    && !cterm->show_other_screen
+    // disable app mouse pointer while not targetting app
+    && (cfg.clicks_target_app ^ ((mods & cfg.click_target_mod) != 0));
+
+  if (new_app_mouse != last_app_mouse) {
+    //HCURSOR cursor = LoadCursor(null, new_app_mouse ? IDC_ARROW : IDC_IBEAM);
+    HCURSOR cursor = win_get_cursor(new_app_mouse);
     SetClassLongPtr(wnd, GCLP_HCURSOR, (LONG_PTR)cursor);
     SetCursor(cursor);
-    app_mouse = new_app_mouse;
+    last_app_mouse = new_app_mouse;
   }
 }
 
@@ -1171,6 +1177,22 @@ vk_name(uint key)
 static int
 win_key_nullify(uchar vk)
 {
+  if (!cfg.manage_leds || (cfg.manage_leds < 4 && vk == VK_SCROLL))
+    return 0;
+
+#ifdef heuristic_detection_of_ScrollLock_auto_repeat_glitch
+  if (vk == VK_SCROLL) {
+    int st = GetKeyState(VK_SCROLL);
+    //printf("win_key_nullify st %d key %d\n", cterm->no_scroll || cterm->scroll_mode, st);
+    // heuristic detection of race condition with auto-repeat
+    // without setting KeyFunctions=ScrollLock:toggle-no-scroll;
+    // handled in common with heuristic compensation in win_key_up
+    if ((st & 1) == (cterm->no_scroll || cterm->scroll_mode)) {
+      return 0;  // nothing sent
+    }
+  }
+#endif
+
   INPUT ki[2];
   ki[0].type = INPUT_KEYBOARD;
   ki[1].type = INPUT_KEYBOARD;
@@ -1235,8 +1257,12 @@ pick_key_function(wstring key_commands, char * tag, int n, uint key, mod_keys mo
   printf("key_fun tag <%s> tag0 <%s> mod %X\n", tag ?: "(null)", tag0 ?: "(null)", mod_tag);
 #endif
 
+  int ret = false;
+
   char * paramp;
   while ((tag || n >= 0) && (paramp = strchr(cmdp, ':'))) {
+    ret = false;
+
     *paramp = '\0';
     paramp++;
     char * sepp = strchr(paramp, sepch);
@@ -1266,7 +1292,6 @@ pick_key_function(wstring key_commands, char * tag, int n, uint key, mod_keys mo
 #if defined(debug_def_keys) && debug_def_keys == 1
       printf("tag <%s>: cmd <%s> fct <%s>\n", tag, cmdp, paramp);
 #endif
-      int ret = false;
       wchar * fct = cs__utftowcs(paramp);
 
       if (key == VK_CAPITAL || key == VK_SCROLL || key == VK_NUMLOCK) {
@@ -1281,8 +1306,16 @@ pick_key_function(wstring key_commands, char * tag, int n, uint key, mod_keys mo
         if (!scancode) {
           ret = true;
         }
-        else
-          win_key_nullify(key);
+        else {
+          if (key == VK_SCROLL) {
+#ifdef debug_vk_scroll
+            printf("pick VK_SCROLL\n");
+#endif
+            sync_scroll_lock(cterm->no_scroll || cterm->scroll_mode);
+          }
+          else
+            win_key_nullify(key);
+        }
       }
 
       uint code;
@@ -1346,7 +1379,21 @@ pick_key_function(wstring key_commands, char * tag, int n, uint key, mod_keys mo
             ret=fundef_run(paramp,key,mods);
         }
         free(fct);
+#ifdef common_return_handling
+#warning produces bad behaviour; appends "~" input
+        break;
+#endif
         free(ukey_commands);
+
+        if (key == VK_SCROLL) {
+#ifdef debug_vk_scroll
+          printf("pick VK_SCROLL break scn %d ret %d\n", scancode, ret);
+#endif
+          if (scancode && ret == true /*sic!*/)
+            // don't call this if ret == -1
+            sync_scroll_lock(cterm->no_scroll || cterm->scroll_mode);
+        }
+
         return ret;
       }
     }
@@ -1365,6 +1412,32 @@ pick_key_function(wstring key_commands, char * tag, int n, uint key, mod_keys mo
       break;
   }
   free(ukey_commands);
+
+#ifdef debug_vk_scroll
+  if (key == VK_SCROLL)
+    printf("pick VK_SCROLL return\n");
+#endif
+#ifdef common_return_handling
+  // try to set ScrollLock keyboard LED consistently
+#warning interferes with key functions (see above); does not work anyway
+  if (key == VK_CAPITAL || key == VK_SCROLL || key == VK_NUMLOCK) {
+    // nullify the keyboard state effect implied by the Lock key; 
+    // use fake keyboard events, but avoid the recursion, 
+    // fake events have scancode 0, ignore them also in win_key_up;
+    // alternatively, we could hook the keyboard (low-level) and 
+    // swallow the Lock key, but then it's not handled anymore so 
+    // we'd need to fake its keyboard state effect 
+    // (SetKeyboardState, and handle the off transition...) 
+    // or consider it otherwise, all getting very tricky...
+    if (!scancode) {
+      ret = true;
+    }
+    else
+      if (ret != true)
+        win_key_nullify(key);
+    }
+#endif
+
   return false;
 }
 
@@ -1702,7 +1775,7 @@ win_key_down(WPARAM wp, LPARAM lp)
       when VK_HOME  : set_transparency(previous_transparency);
       when VK_CLEAR : if (win_is_glass_available()) {
                         cfg.transparency = TR_GLASS;
-                        win_update_transparency(false);
+                        win_update_transparency(TR_GLASS, false);
                       }
       when VK_DELETE: set_transparency(0);
       when VK_INSERT: set_transparency(127);
@@ -1848,6 +1921,7 @@ win_key_down(WPARAM wp, LPARAM lp)
     if (step)
       return true;
   }
+  bool allow_shortcut = true;
   if (!cterm->shortcut_override) {
     int kmask=sckmask[key];//assume winkey not to here 
     int modt=packmod(mods);
@@ -1886,7 +1960,12 @@ win_key_down(WPARAM wp, LPARAM lp)
   }
   void other_code(wchar c) {
     trace_key("other");
-    len = sprintf(buf, "\e[%u;%uu", c, mods + 1);
+    if (cfg.format_other_keys)
+      // xterm "formatOtherKeys: 1": CSI 64 ; 2 u
+      len = sprintf(buf, "\e[%u;%uu", c, mods + 1);
+    else
+      // xterm "formatOtherKeys: 0": CSI 2 7 ; 2 ; 64 ~
+      len = sprintf(buf, "\e[27;%u;%u~", mods + 1, c);
   }
   void app_pad_code(char c) {
     void mod_appl_xterm(char c) {len = sprintf(buf, "\eO%u%c", mods + 1, c);}
@@ -1960,15 +2039,13 @@ win_key_down(WPARAM wp, LPARAM lp)
     else if (!app_pad_key(symbol))
       mods ? mod_csi(code) : cterm->app_cursor_keys ? ss3(code) : csi(code);
   }
-
-static struct {
-  unsigned int combined;
-  unsigned int base;
-  unsigned int spacing;
-} comb_subst[] = {
+  static struct {
+    unsigned int combined;
+    unsigned int base;
+    unsigned int spacing;
+  } comb_subst[] = {
 #include "combined.t"
-};
-
+  };
   // Keyboard layout
   bool layout(void) {
     // ToUnicode returns up to 4 wchars according to
@@ -2264,20 +2341,66 @@ static struct {
         esc_if(alt),
         cterm->newline_mode ? ch('\r'), ch('\n') : ch(shift ? '\n' : '\r');
     when VK_BACK:
-      if (!ctrl)
-        esc_if(alt), ch(cterm->backspace_sends_bs ? '\b' : CDEL);
-      else if (cterm->modify_other_keys)
-        other_code(cterm->backspace_sends_bs ? '\b' : CDEL);
-      else
-        ctrl_ch(cterm->backspace_sends_bs ? CDEL : CTRL('_'));
+      if (cfg.old_modify_keys & 1) {
+        if (!ctrl)
+          esc_if(alt), ch(cterm->backspace_sends_bs ? '\b' : CDEL);
+        else if (cterm->modify_other_keys)
+          other_code(cterm->backspace_sends_bs ? '\b' : CDEL);
+        else
+          ctrl_ch(cterm->backspace_sends_bs ? CDEL : CTRL('_'));
+      }
+      else {
+        if (cterm->modify_other_keys > 1 && mods)
+          // perhaps also partially if:
+          // cterm->modify_other_keys == 1 && (mods & ~(MDK_CTRL | MDK_ALT)) ?
+          other_code(cterm->backspace_sends_bs ? '\b' : CDEL);
+        else {
+          esc_if(alt);
+          ch(cterm->backspace_sends_bs ^ ctrl ? '\b' : CDEL);
+        }
+      }
     when VK_TAB:
-      if (!ctrl) shift ? csi('Z') : ch('\t');
-      else
-        cterm->modify_other_keys ? other_code('\t') : mod_csi('I');
+      if (!(cfg.old_modify_keys & 2) && cterm->modify_other_keys > 1 && mods) {
+        // perhaps also partially if:
+        // cterm->modify_other_keys == 1 && (mods & ~(MDK_SHIFT | MDK_ALT)) ?
+        other_code('\t');
+      }
+#ifdef handle_alt_tab
+      else if (alt) {
+        if (cfg.switch_shortcuts) {
+          // does not work as Alt+TAB is not passed here anyway;
+          // could try something with KeyboardHook:
+          // http://www.codeproject.com/Articles/14485/Low-level-Windows-API-hooks-from-C-to-stop-unwante
+          win_switch(shift, true);
+          return true;
+        }
+        else
+          return false;
+      }
+#endif
+      else if (!ctrl) {
+        esc_if(alt);
+        shift ? csi('Z') : ch('\t');
+      }
+      else if (allow_shortcut && cfg.switch_shortcuts) {
+        win_switch(shift, lctrl & rctrl);
+        return true;
+      }
+      //else cterm->modify_other_keys ? other_code('\t') : mod_csi('I');
+      else if ((cfg.old_modify_keys & 4) && cterm->modify_other_keys)
+        other_code('\t');
+      else {
+        esc_if(alt);
+        mod_csi('I');
+      }
+
     when VK_ESCAPE:
-      cterm->app_escape_key
-      ? ss3('[')
-      : ctrl_ch(cterm->escape_sends_fs ? CTRL('\\') : CTRL('['));
+      if (!(cfg.old_modify_keys & 8) && cterm->modify_other_keys > 1 && mods)
+        other_code('\033');
+      else
+        cterm->app_escape_key
+        ? ss3('[')
+        : ctrl_ch(cterm->escape_sends_fs ? CTRL('\\') : CTRL('['));
     when VK_PAUSE:
       if (!vk_special(ctrl & !extended ? cfg.key_break : cfg.key_pause))
         // default cfg.key_pause is CTRL(']')
@@ -2297,6 +2420,13 @@ static struct {
       if (!vk_special(cfg.key_menu))
         return false;
     when VK_SCROLL:
+#ifdef debug_vk_scroll
+      printf("when VK_SCROLL scn %d\n", scancode);
+#endif
+      if (scancode)  // prevent recursion...
+        // sync_scroll_lock() does not work in this case 
+        // if ScrollLock is not defined in KeyFunctions
+        win_key_nullify(VK_SCROLL);
       if (!vk_special(cfg.key_scrlock))
         return false;
     when VK_F1 ... VK_F24:
@@ -2362,6 +2492,10 @@ static struct {
         // catch Shift+space (not losing Alt+ combinations if handled here)
         // only in modify-other-keys mode 2
         modify_other_key();
+      else if (!(cfg.old_modify_keys & 16) && cterm->modify_other_keys > 1 && mods == (MDK_ALT | MDK_SHIFT))
+        // catch this case before char_key
+        trace_key("alt+shift"),
+        modify_other_key();
       else if (char_key())
         trace_key("char");
       else if (cterm->modify_other_keys > 1 || (cterm->modify_other_keys && altgr))
@@ -2405,6 +2539,7 @@ static struct {
 
   if (len) {
     //printf("[%ld] win_key_down %02X\n", mtime(), key); kb_trace = key;
+    clear_scroll_lock();
     provide_input(*buf);
     while (count--)
       child_send(cterm,buf, len);
@@ -2449,10 +2584,14 @@ win_key_up(WPARAM wp, LPARAM lp)
 
   if (key == VK_CANCEL) {
     // in combination with Control, this may be the KEYUP event 
-    // for VK_PAUSE or VK_SCROLL, so there actual state cannot be 
+    // for VK_PAUSE or VK_SCROLL, so their actual state cannot be 
     // detected properly for use as a modifier; let's try to fix this
     super_key = 0;
     hyper_key = 0;
+  }
+  else if (key == VK_SCROLL) {
+    // heuristic compensation of race condition with auto-repeat
+    sync_scroll_lock(cterm->no_scroll || cterm->scroll_mode);
   }
 
   win_update_mouse();
@@ -2473,6 +2612,8 @@ win_key_up(WPARAM wp, LPARAM lp)
         (cfg.compose_key == MDK_CTRL && key == VK_CONTROL) ||
         (cfg.compose_key == MDK_SHIFT && key == VK_SHIFT) ||
         (cfg.compose_key == MDK_ALT && key == VK_MENU)
+        || (cfg.compose_key == MDK_SUPER && key == super_key)
+        || (cfg.compose_key == MDK_HYPER && key == hyper_key)
        )
     {
       if (comp_state >= 0)
@@ -2534,7 +2675,7 @@ win_key_up(WPARAM wp, LPARAM lp)
     if (!transparency_tuned)
       cycle_transparency();
     if (!transparency_pending && cfg.opaque_when_focused)
-      win_update_transparency(true);
+      win_update_transparency(cfg.transparency, false);
   }
 
   if (key == VK_CONTROL && cterm->hovering) {
@@ -2577,9 +2718,13 @@ win_key_up(WPARAM wp, LPARAM lp)
   return true;
 }
 
+// simulate a key press/release sequence
 static int
 win_key_fake(int vk)
 {
+  if (!cfg.manage_leds || (cfg.manage_leds < 4 && vk == VK_SCROLL))
+    return 0;
+
   //printf("-> win_key_fake %02X\n", vk);
   INPUT ki[2];
   ki[0].type = INPUT_KEYBOARD;
@@ -2608,9 +2753,12 @@ do_win_key_toggle(int vk, bool on)
   usleep(delay);
   int st = GetKeyState(vk);  // volatile; save in case of debugging
   int ast = GetAsyncKeyState(vk);  // volatile; save in case of debugging
-  //uchar kbd[256];
-  //GetKeyboardState(kbd);
-  //printf("do_win_key_toggle %02X %d (st %02X as %02X kb %02X)\n", vk, on, st, ast, kbd[vk]);
+#define dont_debug_key_state
+#ifdef debug_key_state
+  uchar kbd[256];
+  GetKeyboardState(kbd);
+  printf("do_win_key_toggle %02X %d (st %02X as %02X kb %02X)\n", vk, on, st, ast, kbd[vk]);
+#endif
   if (((st | ast) & 1) != on) {
     win_key_fake(vk);
     usleep(delay);
@@ -2640,5 +2788,23 @@ win_led(int led, bool set)
       win_key_toggle(led_keys[i], set);
   else if (led <= (int)lengthof(led_keys))
     win_key_toggle(led_keys[led - 1], set);
+}
+
+
+bool
+get_scroll_lock(void)
+{
+  return GetKeyState(VK_SCROLL);
+}
+
+void
+sync_scroll_lock(bool locked)
+{
+  //win_led(3, cterm->no_scroll);
+  //do_win_key_toggle(VK_SCROLL, locked);
+  int st = GetKeyState(VK_SCROLL);
+  //printf("sync_scroll_lock %d key %d\n", locked, st);
+  if (st ^ locked)
+    win_key_fake(VK_SCROLL);
 }
 

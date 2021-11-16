@@ -14,7 +14,7 @@ static HWND search_prev_wnd;
 static HWND search_next_wnd;
 static HWND search_edit_wnd;
 static WNDPROC default_edit_proc;
-static HFONT search_font;
+static HFONT search_font = 0;
 
 static void win_hide_search(void);
 
@@ -61,7 +61,8 @@ current_delta(bool adjust)
 }
 
 static void
-scroll_to_result(result res) {
+scroll_to_result(result res) 
+{
   if (res.len == 0) {
     return;
   }
@@ -106,7 +107,7 @@ edit_proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
           return 0;
         when VK_TAB:
           // FIXME: Still causes beeping...
-          SetFocus(wnd);
+          SetFocus(hwnd);
           return 0;
         when VK_RETURN:
           if (GetKeyState(VK_SHIFT) < 0) {
@@ -332,6 +333,8 @@ win_toggle_search(bool show, bool focus)
     //win_dark_mode(search_edit_wnd);
 #endif
 
+    if (search_font)
+      DeleteObject(search_font);
     search_font = CreateFontW(sf_height, 0, 0, 0, FW_DONTCARE, false, false, false,
                              DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
                              DEFAULT_QUALITY, FIXED_PITCH | FF_DONTCARE,

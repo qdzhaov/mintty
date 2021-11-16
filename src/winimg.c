@@ -244,7 +244,8 @@ bool
 winimg_new(imglist **ppimg, char * id, unsigned char * pixels, uint len,
            int left, int top, int width, int height,
            int pixelwidth, int pixelheight, bool preserveAR,
-           int crop_x, int crop_y, int crop_width, int crop_height)
+           int crop_x, int crop_y, int crop_width, int crop_height,
+           int attr)
 {
   imglist *img = (imglist *)malloc(sizeof(imglist));
   //printf("winimg alloc %d -> [%d]\n", (int)sizeof(imglist), img->imgi);
@@ -272,6 +273,7 @@ winimg_new(imglist **ppimg, char * id, unsigned char * pixels, uint len,
   img->next = NULL;
   img->prev = NULL;
   img->strage = NULL;
+  img->attr = attr;
 
   img->len = len;
   if (len) {  // image format, not sixel
@@ -672,6 +674,18 @@ winimgs_paint(void)
   for (; img; img = next) {
     next = backward_img_traversal ? img->prev : img->next;
 
+    // blink attribute
+    if (cterm->blink_is_real && cterm->has_focus) {
+      if (img->attr & ATTR_BLINK2) {
+        if (cterm->tblinker2)
+          continue;
+      }
+      else if (img->attr & ATTR_BLINK) {
+        if (cterm->tblinker)
+          continue;
+      }
+    }
+
     imglist * destrimg = 0;
 
     if (img->top + img->height - cterm->virtuallines < - cterm->sblines) {
@@ -895,7 +909,7 @@ winimgs_paint(void)
 #include "charset.h"  // path_win_w_to_posix
 
 void
-win_emoji_show(int x, int y, wchar * efn, void * * bufpoi, int * buflen, int elen, ushort lattr)
+win_emoji_show(int x, int y, wchar * efn, void * * bufpoi, int * buflen, int elen, ushort lattr, bool italic)
 {
   gdiplus_init();
 
@@ -992,6 +1006,26 @@ win_emoji_show(int x, int y, wchar * efn, void * * bufpoi, int * buflen, int ele
   }
 
   HDC dc = GetDC(wnd);
+
+  int coord_transformed = 0;
+  XFORM old_xform;
+  coord_transformed = italic && SetGraphicsMode(dc, GM_ADVANCED);
+  if (coord_transformed && GetWorldTransform(dc, &old_xform)) {
+    //XFORM xform = (XFORM){1.0, 0.0, 1.1, 1.0, -1.1, 0.0};
+    /* {eM11, eM12, eM21, eM22, eDx, eDy}
+       y' = x * eM12 + y * eM22 + eDy
+       x' = x * eM11 + y * eM21 + eDx
+       x' = x + ( (r+h-1-y) / h) * w/4 - bottom-line_x-undent(w/8)
+     */
+    XFORM xform = (XFORM){1.0, 0.0, 0.0, 1.0, 0.0, 0.0};
+    xform.eM21 = ((float)cell_width) * -0.25 / ((float)cell_height);
+    //xform.eDx = ((float)cell_width) * 0.25 * ((float)(row - 1) / ((float)cell_height) + 1.0)
+    //          - ((float)cell_width) * 0.125;
+    xform.eDx = ((float)cell_width) * 
+             (0.25 * ((float)(row - 1) / ((float)cell_height) + 1.0) - 0.125);
+    coord_transformed = SetWorldTransform(dc, &xform);
+  }
+
   GpGraphics * gr;
   s = GdipCreateFromHDC(dc, &gr);
   gpcheck("hdc", s);
@@ -1005,6 +1039,9 @@ win_emoji_show(int x, int y, wchar * efn, void * * bufpoi, int * buflen, int ele
   gpcheck("delete gr", s);
   s = GdipDisposeImage(img);
   gpcheck("dispose img", s);
+
+  if (coord_transformed)
+    SetWorldTransform(dc, &old_xform);
 
   ReleaseDC(wnd, dc);
 
@@ -1062,7 +1099,11 @@ win_emoji_show(int x, int y, wchar * efn, void * * bufpoi, int * buflen, int ele
 {
   (void)x; (void)y;
   (void)efn; (void)bufpoi; (void)buflen;
-  (void)elen; (void)lattr;
+  (void)elen; (void)lattr; (void)italic;
+}
+
+void
+save_img(HDC dc, int x, int y, int w, int h, wstring fn)
 }
 
 void

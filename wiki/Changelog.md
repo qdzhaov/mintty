@@ -1,3 +1,147 @@
+### 3.5.2 (13 November 2021) ###
+
+Unicode and Emoji data
+  * Unicode 14.0 update.
+
+Terminal features
+  * Fix (revert back) DECSDM (DECSET 80) Sixel Display mode (#1127, xterm 369).
+  * Sound file playing OSC 440 (#1122).
+  * DECPS tone playing support (#1122).
+  * Fixed LED state glitch when ScrollLock is held in auto-repeat.
+  * Extended scope of area attributes change functions DECCARA and DECRARA.
+  * Unscroll sequence CSI +T, filling lines from scrollback buffer (kitty).
+  * Changed default BracketedPasteByLine=0 for consistent appearance.
+
+Window handling
+  * Fixed -s max... options (#1124).
+  * Tweaked handling of positioning and size options.
+  * Always support negative position offset (#1123).
+  * Avoid position gap after Options Apply (#1126).
+  * Copy text: set proper clipboard timestamp.
+
+### 3.5.1 (4 September 2021) ###
+
+Terminal features
+  * Visual double-width of symbols and emojis with subsequent space (#1104, #892, #1065, #979).
+  * Limit line cursor width by width of lines (underline etc) (#1101).
+  * Alternative escape sequence DECSET 2026 for synchronous screen update (#1098).
+  * Optimise screen display speed on bell sound series (#1102, ~#865).
+  * Italic emojis.
+  * Notify child process via iotcl also when scaling window with font size (xterm 368).
+  * Bracketed paste mode: configurable splitting by line.
+  * New user-definable functions no-scroll, toggle-no-scroll, scroll-mode, toggle-scroll-mode.
+  * Management of the ScrollLock LED for consistence with actual status of special scroll features.
+
+Rendering
+  * Speedup of width detection for auto-narrowing for certain characters (#1065, #979, #892).
+  * Prevent artefacts of large-size underscore cursor (CSI 4 SP q CSI ? 6 c).
+  * Prevent spacing anomaly after U+FD3E and U+FD3F.
+  * Fix emojis selection highlighting (#1116), reverting 3.0.1 tweak for emojis in bidi lines.
+
+Window handling
+  * Ensure -w full to cover taskbar also with -B void (~#1114).
+  * Tab management: Keep tabbar consistent (~#944, #699).
+
+Initialisation
+  * Font initialisation speedup (~#1113).
+  * Avoid duplicate font initialisation (~#1113).
+  * Earlier window display by later setup of drag-and-drop and tabbar (~#1113).
+  * Grab focus before showing the window, reducing focus delay (#1113).
+
+Configuration
+  * New option BracketedPasteByLine.
+  * Transparency button slider (#728, #140).
+  * New user-definable function new-window-cwd to clone window in current directory (~#1106).
+  * New user-definable functions no-scroll, toggle-no-scroll, scroll-mode, toggle-scroll-mode.
+
+### 3.5.0 (16 April 2021) ###
+
+Terminal features
+  * Revised and fixed handling of blink attribute (~#1097).
+  * Coloured blink substitution display (xterm), escape sequences OSC 5/6;2.
+  * Support distinct blink attribute for base and combining characters.
+  * Apply blink attribute to graphics.
+  * Escape sequence OSC 22 to set mouse pointer shape (xterm 367).
+  * Escape sequences DCS=1/2s for atomic/synchronous screen update (~#1098).
+  * Support progress detection (for implicit progress bar) also if iconized.
+  * Implicit (detected) progress bar uses configured colour.
+  * Escape sequences to reset progress bar colour mode to configured value.
+  * Escape sequence to change progress value only.
+
+Desktop integration
+  * New user-definable function win-toggle-keep-screen-on to disable screen saver.
+
+Configuration
+  * New option BlinkColour.
+  * New options MousePointer, AppMousePointer.
+  * Restored "Allow blinking" in Options dialog (#1097).
+  * WSL-specific detection of Term info availabilities (mintty/wsltty#278).
+  * Export TERM to WSL (mintty/wsltty#278).
+
+### 3.4.7 (16 March 2021) ###
+
+Terminal features
+  * Fixed blinking for drawn/overstrike characters, (under)lining and emojis.
+  * Bracketed Paste Mode: ensure embedding of each line.
+  * Fixed character set GR mappings to be unguarded by NRCS (vttest 3.10).
+  * Restore attributes after DECALN test pattern (vttest 11.6.4/5).
+  * Simplified support of ISO Guarded Area as protected (xterm-like global distinction).
+  * Fixed validity for REP repeat preceding graphic char (vttest 11[.6].7.2).
+  * Keyboard status report (DEC DSR 26), reporting window focus (vttest 11.1.1.1.1).
+
+Vector graphics (Tektronix 4014 mode)
+  * Support "written first vector", triggered by GS-BEL (vttest 11.8.6.5, ~#896).
+  * Initial written vector joins previous text output (xterm).
+  * Adjustment of border coordinates to compensate for coordinate rounding.
+  * Fixed GIN mode and ENQ coordinates.
+  * Tweaked ENQ status byte.
+  * Distinct GIN mode mouse input (xterm).
+  * Smooth GIN mode crosshair cursor movement.
+  * Various mode handling fixes after GIN mode.
+  * GIN mode terminator strap options (Tek, xterm).
+  * Enhanced "defocused" indication by boldened colour.
+  * Enhanced "defocused" point plot indication by boldened point size.
+
+Window handling
+  * Lines cleared from top of screen are scrolled into scrollback buffer (mintty/wsltty#272).
+  * New user-definable function win-toggle-always-on-top (#1095).
+  * New heuristics to adjust row spacing to font metrics (mintty/wsltty#257).
+
+Configuration
+  * Run shell in login mode if terminal started from Windows shortcut.
+  * New option LoginFromShortcut.
+  * New option AutoLeading (mintty/wsltty#257).
+  * New option EraseToScrollback.
+  * New option TekStrap.
+
+### 3.4.6 (20 February 2021) ###
+
+Configuration
+  * Support style Emojis=zoom.
+  * OSC 7750 for dynamic change of emojis style.
+
+### 3.4.5 (17 February 2021) ###
+
+Terminal features
+  * Fixed width handling when selecting a non-text font (~#777).
+  * Auto-narrowing: glyph double-width detection for double-letter characters (like Dz, #777).
+  * Support fractional percentage for progress detection (#1074).
+  * Tweaked availability of DEC Cyrillic character set (VT520, xterm 363).
+
+Keyboard handling
+  * Changed Ctrl+Backarrow to send Backspace (#1082, #449, xterm).
+  * Applying modifyOtherKeys mode 2 more consistently to special keys (~~#1082).
+
+Configuration
+  * Tool `mintheme` works from WSL and in `screen` (mintty/wsltty#268).
+  * Support home or environment variable prefix for setting SaveFilename (~#1086).
+  * New settings -P/--pcon/ConPTY to enable/disable ConPTY support (mintty/wsltty#271).
+  * Support for theme file conversion on filename drag-and-drop (#1079).
+  * Support for theme file conversion on "file:" URL drag-and-drop (~#1079).
+  * Support for ".json" theme file conversion (~~#1079).
+
+### 3.4.4 (19 December 2020) ###
+
 Unicode and Emoji data
   * Update to Emoji data version 13.1.
 
@@ -5,12 +149,27 @@ Terminal features
   * Terminal reset clears progress bar (mintty/wsltty#202).
   * DECTST colour fillings (CSI 4;10..13 y, VT240).
   * Smart detection of progress indication also inmidst line (mintty/wsltty#202).
+  * Fixed rendering of 0x7F (DEL code) in some 96-characters NRCS modes.
+  * Support for 48-bit hex colour specs (#1072).
+
+Font rendering
+  * Enabled width detection for auto-narrowing non-BMP characters (#1065).
+  * Tweaked character ranges to consider for auto-narrowing (#1065).
+  * Enabled secondary font specification for Unicode blocks (#777).
+
+Keyboard handling
+  * Compose key may also be user-defined super or hyper (#777).
 
 Window handling
   * Optionally transform Exit to characters, to exit on application-level (#1063).
+  * Options dialog: configurable font and size (~#1059).
+  * Tweak initial setup of terminal pixel size (#1071).
 
 Configuration
   * New option ExitCommands (#1063).
+  * New options OptionsFont and OptionsFontHeight (~#1059).
+  * Extended syntax for option FontChoice (#777).
+  * New ComposeKey values super, hyper (#777).
 
 ### 3.4.3 (11 November 2020) ###
 
@@ -70,7 +229,6 @@ Character encoding
   * Do not clear/overwrite all locale categories anymore by option Locale.
   * Do not enforce UTF-8 encoding with WSL anymore.
   * Propagate locale settings with option --WSL (mintty/wsltty#259).
-  * Do not enforce UTF-8 for WSL anymore.
 
 Configuration
   * New option CopyTab (#1037).

@@ -5,20 +5,15 @@
 #define WEBSITE "http://mintty.github.io/"
 
 #define MAJOR_VERSION  3
-#define MINOR_VERSION  4
-#define PATCH_NUMBER   3
+#define MINOR_VERSION  5
+#define PATCH_NUMBER   2
 #define BUILD_NUMBER   0
 
 // needed for res.rc
 #define APPDESC "Terminal"
-#define AUTHOR  "Andy Koppe / Thomas Wolff/Wei Zhao"
-#define YEAR    "2013/2020"
+#define AUTHOR  "Andy Koppe / Thomas Wolff"
+#define YEAR    "2013/2021"
 
-#ifndef NDEBUG
-#define VERSION_SUFFIX multitab debug
-#else
-#define VERSION_SUFFIX multitab
-#endif
 
 #define CONCAT_(a,b) a##b
 #define CONCAT(a,b) CONCAT_(a,b)

@@ -49,6 +49,11 @@ int forkpty(int *, char *, struct termios *, struct winsize *);
 static int win_fd=-1;
 static int log_fd = -1;
 bool logging = false;
+#if CYGWIN_VERSION_API_MINOR >= 74
+static struct winsize prev_winsize = (struct winsize){0, 0, 0, 0};
+#else
+static struct winsize prev_winsize;
+#endif
 #if CYGWIN_VERSION_API_MINOR >= 66
 #include <langinfo.h>
 #endif
@@ -225,6 +230,8 @@ child_create(struct STerm* pterm,SessDef*sd,
   char**argv=sd->argv;
   char*cmd=sd->cmd;
   trace_dir(asform("child_create: %s", getcwd(malloc(MAX_PATH), MAX_PATH)));
+
+  prev_winsize = *winp;
 
   // xterm and urxvt ignore SIGHUP, so let's do the same.
   signal(SIGHUP, SIG_IGN);
@@ -469,6 +476,8 @@ static void vprocclose(STerm* pterm){
 void
 child_proc(void)
 {
+  // need patch if (term.no_scroll) return;
+
   for (;;) {
     for (STab**t=win_tabs();*t;t++){
       if ((*t)->terminal->paste_buffer){
@@ -795,8 +804,10 @@ child_sendw(STerm* pterm,const wchar *ws, uint wlen)
 void
 child_resize(STerm* pterm,struct winsize *winp)
 {
-  if ((pterm->child.pty_fd   ) >= 0)
+  if (((pterm->child.pty_fd   ) >= 0)&& (memcmp(&prev_winsize, winp, sizeof(struct winsize)) != 0)) {
+    prev_winsize = *winp;
     ioctl((pterm->child.pty_fd   ), TIOCSWINSZ, winp);
+  }
 }
 
 static int
@@ -805,13 +816,9 @@ foregroundpid(STerm* pterm)
   return ((pterm->child.pty_fd   ) >= 0) ? tcgetpgrp((pterm->child.pty_fd   )) : 0;
 }
 
-char *
-foreground_cwd(STerm* pterm)
+static char *
+get_foreground_cwd()
 {
-  // if working dir is communicated interactively, use it
-  if ((pterm->child.child_dir) && *(pterm->child.child_dir))
-    return strdup((pterm->child.child_dir));
-
   // for WSL, do not check foreground process; hope start dir is good
   if (support_wsl) {
     char cwd[MAX_PATH];
@@ -820,16 +827,16 @@ foreground_cwd(STerm* pterm)
     else
       return 0;
   }
-
-#if CYGWIN_VERSION_DLL_MAJOR >= 1005
-  int fgpid = foregroundpid(pterm);
-  if (fgpid > 0) {
-    char proc_cwd[32];
-    sprintf(proc_cwd, "/proc/%u/cwd", fgpid);
-    return realpath(proc_cwd, 0);
-  }
-#endif
   return 0;
+}
+
+char *
+foreground_cwd(STerm* pterm)
+{
+  // if working dir is communicated interactively, use it
+  if ((pterm->child.child_dir) && *(pterm->child.child_dir))
+    return strdup((pterm->child.child_dir));
+  return get_foreground_cwd();
 }
 
 char *
@@ -1041,7 +1048,7 @@ setenvi(char * env, int val)
  */
 extern SessDef main_sd;
 static void
-do_child_fork(SessDef*sd, int moni, bool launch, bool config_size)
+do_child_fork(SessDef*sd, int moni, bool launch, bool config_size, bool in_cwd)
 {
   char**argv=sd->argv;
   trace_dir(asform("do_child_fork: %s", getcwd(malloc(MAX_PATH), MAX_PATH)));
@@ -1076,6 +1083,10 @@ do_child_fork(SessDef*sd, int moni, bool launch, bool config_size)
   }
 
   if (clone == 0) {  // prepare child process to spawn new terminal
+    string set_dir = 0;
+    if (in_cwd)
+      set_dir = get_foreground_cwd(false);  // do this before close(pty_fd)!
+
     if ((cterm->child.pty_fd   ) >= 0)
       close((cterm->child.pty_fd   ));
     if (log_fd >= 0)
@@ -1084,10 +1095,11 @@ do_child_fork(SessDef*sd, int moni, bool launch, bool config_size)
 
 
 
-
-    if ((cterm->child.child_dir) && *(cterm->child.child_dir)) {
-      string set_dir = (cterm->child.child_dir);
-      if (support_wsl) {
+    if (((cterm->child.child_dir) && *(cterm->child.child_dir))||set_dir) {
+      if (set_dir) {
+        // use cwd of foreground process if requested via in_cwd
+      }
+      else if (support_wsl) {
         wchar * wcd = cs__utftowcs((cterm->child.child_dir));
 #ifdef debug_wsl
         printf("fork wsl <%ls>\n", wcd);
@@ -1099,23 +1111,25 @@ do_child_fork(SessDef*sd, int moni, bool launch, bool config_size)
         set_dir = (string)cs__wcstombs(wcd);
         delete(wcd);
       }
+      else
+        set_dir = strdup(cterm->child.child_dir);
 
-      chdir(set_dir);
-      trace_dir(asform("child: %s", set_dir));
-      setenv("PWD", set_dir, true);  // avoid softlink resolution
-      // prevent shell startup from setting current directory to $HOME
-      // unless cloned/Alt+F2 (!launch)
-      if (!launch) {
-        setenv("CHERE_INVOKING", "mintty", true);
-        // if cloned and then launched from Windows shortcut (!shortcut) 
-        // (by sanitizing taskbar icon grouping, #784, mintty/wsltty#96) 
-        // indicate to set proper directory
-        if (shortcut)
-          setenv("MINTTY_PWD", set_dir, true);
-      }
-
-      if (support_wsl)
+      if (set_dir) {
+        chdir(set_dir);
+        trace_dir(asform("child: %s", set_dir));
+        setenv("PWD", set_dir, true);  // avoid softlink resolution
+        // prevent shell startup from setting current directory to $HOME
+        // unless cloned/Alt+F2 (!launch)
+        if (!launch) {
+          setenv("CHERE_INVOKING", "mintty", true);
+          // if cloned and then launched from Windows shortcut (!shortcut) 
+          // (by sanitizing taskbar icon grouping, #784, mintty/wsltty#96) 
+          // indicate to set proper directory
+          if (shortcut)
+            setenv("MINTTY_PWD", set_dir, true);
+        }
         delete(set_dir);
+      }
     }
 
 #ifdef add_child_parameters
@@ -1181,15 +1195,15 @@ do_child_fork(SessDef*sd, int moni, bool launch, bool config_size)
 
 /*
   Called from Alt+F2.
- */
+  */
 void
-child_fork(SessDef*sd, int moni, bool config_size)
+child_fork(SessDef*sd, int moni, bool config_size, bool in_cwd)
 {
-  do_child_fork(sd, moni, false, config_size);
+  do_child_fork(sd, moni, false, config_size, in_cwd);
 }
 /*
   Called from session launcher.
- */
+*/
 void
 child_launch(int n, SessDef*sd, int moni)
 {
@@ -1227,7 +1241,7 @@ child_launch(int n, SessDef*sd, int moni)
         }
         new_argv[argc] = 0;
         SessDef nsd={argc,0,sd->cmd,new_argv};
-        do_child_fork(&nsd, moni, true, true);
+        do_child_fork(&nsd, moni, true, true, false);
         free(new_argv);
         break;
       }

@@ -456,6 +456,7 @@ term_mouse_click(mouse_button b, mod_keys mods, pos p, int count)
     }
     if (mods & MDK_SHIFT)
       c ^= ' ';
+    c |= 0x80;
     child_send(cterm,&c, 1);
     tek_send_address();
   }

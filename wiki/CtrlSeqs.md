@@ -114,6 +114,30 @@ Keyboard auto-repeat can also be disabled with DECSET 8 (DECARM).
 | `^[[?8h`       | enable auto-repeat  |
 
 
+## Area attributes change ##
+
+Mintty extends the scope of rectangular area attributes change functions 
+DECCARA and DECRARA to additional attributes as suitable.
+Colour and font changing functions are only supported with DECCARA.
+True colour and underline colour settings are not supported.
+Examples:
+
+| **sequence**             | **function**                                    |
+|:-------------------------|:------------------------------------------------|
+| `^[[2*x`                 | set rectangular area extent                     |
+| `^[[`_Pt_`;`_Pl_`;`_Pb_`;`_Pr_`;3;38:5:20$r` | set italic and palette colour 20 in area |
+| `^[[`_Pt_`;`_Pl_`;`_Pb_`;`_Pr_`;29$r` | clear strikeout in area |
+| `^[[`_Pt_`;`_Pl_`;`_Pb_`;`_Pr_`;9$t` | revert strikeout in area |
+
+
+## Unscroll ##
+
+This sequence scrolls down screen lines like SD (CSI T) but fills the 
+empty lines from the end of the scrollback buffer.
+
+> `^[[`_N_`+T`
+
+
 ## Bidirectional rendering ##
 
 Mintty supports bidi rendering by default. However, some applications 
@@ -225,7 +249,9 @@ Note that automatic progress bar can also be configured (option ProgressBar).
 | `^[[1%q`                     | enable progress indication level 1 (green)  |
 | `^[[2%q`                     | enable progress indication level 2 (yellow) |
 | `^[[3%q`                     | enable progress indication level 3 (red)    |
+| `^[[10%q`                    | reset progress indication as configured     |
 | `^[[`_level_`;`_percent_`%q` | set progress level (1..3) and value         |
+| `^[[;`_percent_`%q`          | change progress value only                  |
 | `^[[8%q`                     | enable continuous "busy" indication         |
 
 An _OSC 9;4_ sequence (compatible with ConEmu or Windows Terminal) 
@@ -237,6 +263,7 @@ is available too, alternatively supporting mnemonic parameters:
 | `^[]9;progress;green^G`                 | enable green progress indication  |
 | `^[]9;progress;yellow^G`                | enable yellow progress indication |
 | `^[]9;progress;red^G`                   | enable red progress indication    |
+| `^[]9;progress;default^G` _or empty_    | reset progress indication         |
 | `^[]9;progress;`_level_`;`_percent_`^G` | set progress level and value      |
 | `^[]9;progress;busy^G`                  | enable busy indication            |
 
@@ -396,6 +423,36 @@ As usual, OSC sequences can also be terminated with `^[\` (_ST_, the string term
 When the font size is queried, a sequence that would restore the current font and window size is sent.
 
 
+## Font style ##
+
+OSC 50 semantics is extended to alternative fonts and the Tek mode font;
+it changes the font that is currently selected (and keeps that setting).
+
+
+## Emojis style ##
+
+Like OSC 50 for font style, this sequence can change the emojis style.
+For values, see setting `Emojis` in the manual.
+
+> `^[]7750;_emojis-style_`^G`
+
+
+## Background image ##
+
+OSC 11 semantics is extended to set or change image background.
+
+| **sequence**         | **locale**                                       |
+|:---------------------|:-------------------------------------------------|
+| `^[]11;_`_image_`^G` | set terminal size background image               |
+| `^[]11;%`_image_`^G` | set image and scale terminal to its aspect ratio |
+| `^[]11;*`_image_`^G` | set tiled background                             |
+| `^[]11;=^G`          | set background to desktop image (if tiled)       |
+
+If the background filename is followed by a comma and a number between 1 and 254, 
+the background image will be dimmed towards the background colour;
+with a value of 255, the alpha transparency values of the image will be used.
+
+
 ## Locale ##
 
 The locale and charset used by the terminal can be queried or changed using
@@ -492,6 +549,22 @@ two features:
 | `^[[?7711l`   | mark secondary prompt line (upper lines)                  |
 
 
+## Synchronous update ##
+
+A pair of Begin/End Synchronous Update DECSET or DCS sequences suspends 
+the output between them in order to be updated to the screen synchronously.
+The purpose is that applications can control atomic screen update, 
+in order to avoid screen flickering in certain situations of display update.
+
+| **sequence**      | **function**                                        |
+|:------------------|:----------------------------------------------------|
+| `^[[?2026h`       | suspend screen update for 150 ms                    |
+| `^[P=1s^[\`       | suspend screen update for 150 ms                    |
+| `^[P=1;`_N_`s^[\` | suspend screen update for _N_ ms, max 420 ms        |
+| `^[[?2026l`       | update screen (flush output), end update suspending |
+| `^[P=2s^[\`       | update screen (flush output), end update suspending |
+
+
 ## Image support ##
 
 In addition to the legacy Sixel feature, mintty supports graphic image display 
@@ -521,7 +594,14 @@ If none of width or height are given, the image pixel size is used.
 Image formats supported comprise PNG, JPEG, GIF, TIFF, BMP, Exif.
 
 
-## Graphics end position ##
+## Graphics position ##
+
+Sixel output is anchored at the current cursor position by default 
+(Sixel scrolling mode). DECSET 80 (DECSDM) enables Sixel display mode instead, 
+so Sixel output would start at the top of screen. Note this setting 
+was reversed from mintty 3.0.1 to mintty 3.5.1, following xterm interpretation 
+which has meanwhile also been fixed.
+(The DECSDM setting can be disabled with option `SuppressDEC=80`.)
 
 After output of a Sixel image in Sixel scrolling mode, or other image, 
 the final cursor position can be next to the right bottom of the image, 
@@ -536,6 +616,57 @@ control sequence 8452.
 | `^[[?7730l`   | below left bottom    |
 | `^[[?8452h`   | next to right bottom |
 | `^[[?8452l`   | below image          |
+
+
+## Audio support ##
+
+— EXPERIMENTAL —
+
+Mintty supports audio sound output with this OSC sequence:
+
+> `^[]440;` _sound_ [ `:` _option_ ]* `^G`
+
+where _sound_ is the name of a sound file (.wav) in a mintty configuration 
+subdirectory _sounds_, or a path name of a .wav file.
+
+| **option** | **comment**                                              |
+|:-----------|:---------------------------------------------------------|
+| **async**  | sound playing is decoupled from control processing       |
+| **nostop** | sound is not played if an async sound is already playing |
+| **loop**   | sound is played in asynchronous endless loop             |
+
+An asynchronous sound can be stopped with an empty sound name:
+
+> `^[]440;^G`
+
+Mintty also supports the DECPS Play Sound escape sequence with 
+tone style extension.
+
+| **sequence**                                       | **function**         |
+|:---------------------------------------------------|:---------------------|
+| `^[[`_vol_`;`_duration_`;`_note_[`;`_note_...]`,~` | play notes (16 supported) |
+| `^[[`_vol_`:`_tone_`;`_duration_`;`_note_[`;`_note_...]`,~` | set tone style and play |
+| `^[[0:`_tone_`,~` | change tone style only |
+
+The sequence plays the list of notes with the given volume (0...7) 
+and duration (0...255) in units of 1/32 of a second.
+Supported note values are 1...25, indicating notes c’’ (C5) to c’’’’ (C7).
+
+The range of notes is mirrored to values 101...125 and extended to 41...137, 
+indicating notes ,,C (C0) to c’’’’’ (C8). This extension is experimental 
+and subject to withdrawal in later versions should other standard behaviour 
+be established in terminals.
+
+If the first parameter has a colon-separated sub-parameter appended, 
+it sets the current tone style (which will persist until changed again 
+or reset).
+Tones 1 to 5 are currently defined, 1 is a sine waveform.
+
+The initial tone style can be preselected by setting `PlayTone`; 
+if changed by a sequence, it will be restored by a terminal reset.
+Tone value 0 (also the fallback) resorts to the Windows Beep function.
+Other tones are only effective if the audio output library \fIlibao\fP 
+is installed.
 
 
 ## Cursor style ##
@@ -577,6 +708,22 @@ supported; cursor colour can be set with the OSC 12 sequence.)
 | **4**   | lower_half   |
 | **5**   | two_thirds   |
 | **6**   | full block   |
+
+
+## Mouse pointer style ##
+
+The following _OSC_ ("operating system command") sequence (xterm 367) 
+can be used to set the mouse pointer shape of the current mouse mode 
+(mintty maintains two different mouse pointer shapes, to distinguish 
+application mouse reporting modes).
+Valid values are Windows predefined cursor names 
+(appstarting, arrow, cross, hand, help, ibeam, icon, no, size, sizeall, sizenesw, sizens, sizenwse, sizewe, uparrow, wait).
+or cursor file names which are looked up in subdirectory `pointers` of 
+a mintty resource directory; supported file types are .cur, .ico, .ani.
+
+| **sequence**          |
+|:----------------------|
+| `^[]22;`_pointer_`^G` |
 
 
 ## Printing and screen dump ##

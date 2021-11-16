@@ -10,7 +10,7 @@
 // value is already needed before it would be available that way - totally insane!
 // Therefore, its setting is taken out to this common include file.
 
-#define DIALOG_HEIGHT 200
+#define DIALOG_HEIGHT 201
                    // +11 per ctrl_columns row
                    // +20 per titled single-line set of radio buttons
                    // +31 per titled double-line set of radio buttons
@@ -22,6 +22,7 @@
 #define DIALOG_CLASS "ConfigBox"
 
 #define DIALOG_FONT "MS Shell Dlg"
+#define DIALOG_FONTSIZE 8
 //#define DIALOG_FONT "Tahoma"
 
 //#define DIALOG_FONT "Calibri"

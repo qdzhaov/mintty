@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.22.4 -->
-<!-- CreationDate: Wed Nov 11 10:41:01 2020 -->
+<!-- CreationDate: Wed Nov 10 19:00:24 2021 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -78,7 +78,10 @@ back to <i>/bin/sh</i>.</p>
 
 <p style="margin-left:11%; margin-top: 1em">If a single
 dash is specified instead of a program name, the shell is
-invoked as a login shell.</p>
+invoked as a login shell. If mintty is started from a
+Windows shortcut (desktop or start menu), by default the
+shell is also invoked as a login shell unless disabled by an
+option.</p>
 
 <p style="margin-left:11%; margin-top: 1em">Invocation by a
 name of <b>wsl*</b><i>[-distro]</i> implies a
@@ -125,9 +128,9 @@ preferable.</p>
 <p style="margin-left:22%;">Use the given directory to
 check for resource subdirectories (<i>themes</i>,
 <i>sounds</i>, <i>lang</i>, <i>emojis</i>, <i>icon</i>,
-<i>fonts</i>); also read settings from the configuration
-file <i>DIRNAME</i>/<b>config</b>, in addition to the
-default config files, and save configuration changes
+<i>fonts</i>, <i>pointers</i>); also read settings from the
+configuration file <i>DIRNAME</i>/<b>config</b>, in addition
+to the default config files, and save configuration changes
 here.</p>
 
 <p style="margin-left:11%;"><b>--dir</b>
@@ -398,6 +401,12 @@ AppLaunchCmd.</p>
 <p style="margin-left:22%;">Prevent pinning of the mintty
 window to the Windows taskbar.</p>
 
+<p style="margin-left:11%;"><b>-P</b>, <b>--pcon</b>
+[<b>on</b>|<b>off</b>]</p>
+
+<p style="margin-left:22%;">Enforce enabling or disabling
+of ConPTY support.</p>
+
 <p style="margin-left:11%;"><b>--wsl</b> (preferred option:
 <b>--WSL</b>, see below)</p>
 
@@ -408,8 +417,8 @@ it will be pasted using the Linux path name. <br>
 &ndash; When Ctrl+clicking a file name, it will be
 interpreted in the Linux namespace and converted before
 opening in Windows. <br>
-&ndash; Options DropCommands and setting MINTTY_PROG for
-UserCommands are disabled. <br>
+&ndash; Options DropCommands, ExitCommands, and setting
+MINTTY_PROG for UserCommands are disabled. <br>
 &ndash; The working directory of the current foreground
 process (for click-opening pathnames) cannot be detected.
 <br>
@@ -654,7 +663,7 @@ accessed by clicking on the program icon or pressing
 <b>Alt+Space</b>.</p>
 
 <p style="margin-left:11%; margin-top: 1em">Both menus have
-an entry that leads to the options dialog for changing
+an entry that leads to the Options dialog for changing
 mintty&rsquo;s configuration.</p>
 
 <p style="margin-left:11%; margin-top: 1em"><b>Text
@@ -670,12 +679,13 @@ that commonly appear in file names and URLs.</p>
 
 <p style="margin-left:11%; margin-top: 1em">By default,
 selected text is automatically copied to the clipboard. This
-can be disabled on the <b>Mouse</b> page of the options
+can be disabled on the <b>Mouse</b> page of the Options
 dialog. Selected text can also be copied manually using
 either the <b>Copy</b> menu command, the <b>Ctrl+Ins</b> or
-<b>Ctrl+Shift+C</b> keyboard shortcuts (<b>Ctrl+C</b> with
-option <b>CtrlExchangeShift=yes</b>), or the middle mouse
-button combined with <b>Shift</b>.</p>
+<b>Ctrl+Shift+C</b> keyboard shortcuts (the latter if
+enabled by setting <b>CtrlShiftShortcuts=yes</b>;
+<b>Ctrl+C</b> with option <b>CtrlExchangeShift=yes</b>), or
+the middle mouse button combined with <b>Shift</b>.</p>
 
 <p style="margin-left:11%; margin-top: 1em">The selected
 region is copied as &quot;rich text&quot; as well as normal
@@ -691,7 +701,8 @@ the window menu.</p>
 <p style="margin-left:11%; margin-top: 1em">The clipboard
 contents can be pasted using either the <b>Paste</b> menu
 command, the <b>Shift+Ins</b> or <b>Ctrl+Shift+V</b>
-keyboard shortcuts (<b>Ctrl+V</b> with option
+keyboard shortcuts (the latter if enabled by setting
+<b>CtrlShiftShortcuts=yes</b>; <b>Ctrl+V</b> with option
 <b>CtrlExchangeShift=yes</b>), or the middle mouse button.
 Not only text but also files and directories can be pasted,
 whereby the latter are inserted as Cygwin file names. Shell
@@ -709,7 +720,14 @@ enabled with option <b>SelectionShowSize</b>.</p>
 <p style="margin-left:11%; margin-top: 1em">Selection can
 also be managed using the keyboard. Shift+middle-keypad-key
 (Shift+&quot;5&quot;) enters keyboard selecting mode
-(modifier configurable). <b><br>
+(modifier configurable).</p>
+
+<p style="margin-left:11%; margin-top: 1em">Note: If both
+settings <b>CtrlShiftShortcuts</b> and
+<b>CtrlExchangeShift</b> are enabled, copy &amp; paste
+functions are assigned to plain (unshifted) <b>Ctrl+C</b>
+and <b>Ctrl+V</b> for those who prefer them to be handled
+like in Windows. <b><br>
 Elastic text selection</b></p>
 
 <p style="margin-left:22%;">The traditional selection
@@ -840,8 +858,9 @@ the scrollbar, the mouse wheel, or the keyboard. Hold the
 <b>Shift</b> key while pressing the <b>Up</b> and
 <b>Down</b> arrow keys to scroll line-by-line or the
 <b>PageUp</b> and <b>PageDown</b> keys to scroll
-page-by-page. With option <b>KeyFunctions</b>, user-defined
-keys can be used for scrolling.</p>
+page-by-page. In <i>scroll mode</i>, the same keys without
+<b>Shift</b> do the same. With option <b>KeyFunctions</b>,
+user-defined keys can be used for scrolling.</p>
 
 <p style="margin-left:11%; margin-top: 1em">If the
 alternate screen is active, instead of scrolling in the
@@ -868,6 +887,27 @@ with Control+Alt+mouse-wheel.</p>
 modes of mouse operation are overridden by various
 &quot;mouse tracking&quot; modes enabled by escape
 sequences.</p>
+
+<p style="margin-left:11%; margin-top: 1em"><b>Scroll Lock
+handling</b> <br>
+The ScrollLock key is one of the most useless keys on
+typical PC keyboards as it is mostly ignored by software
+nowadays, and yet has its own LED. However, there are two
+historic features that could be associated with
+&quot;ScrollLock&quot;. One is the VT100 NoScroll key which
+would hold output via the terminal, the other is a Windows
+function to switch cursor keys to screen scrolling as still
+used by the Excel program. Mintty provides both features as
+user-definable functions, in two variants each. Functions
+are no-scroll and scroll-mode (referring to those two
+features) which would be reset by any key input, and
+toggle-no-scroll and toggle-scroll-mode which would switch
+the respective feature on or off. These functions can be
+attached to any user-assignable function key or special key,
+including the ScrollLock key. Mintty manages the ScrollLock
+keyboard light to reflect either of these functions
+activated, trying to decouple the light indication from the
+ScrollLock key while in a mintty window.</p>
 
 <p style="margin-left:11%; margin-top: 1em"><b>Searching in
 the text and scrollback buffer</b> <br>
@@ -933,6 +973,12 @@ Class=...</b>.</p>
 can be switched quickly with user-defined key assignments,
 using user-definable functions
 switch-[visible-](prev|next).</p>
+
+<p style="margin-left:11%; margin-top: 1em">Since 3.5.1,
+mintty manages tabs in order to support transparency
+(avoiding cumulation of opaqueness), hide background tabs
+from appearing while moving the window, and keep the tabbar
+consistent in case a tab gets terminated irregularly.</p>
 
 <table width="100%" border="0" rules="none" frame="void"
        cellspacing="0" cellpadding="0">
@@ -1061,6 +1107,10 @@ selecting mode</p>
 modifier can be configured with setting
 <b>ScrollMod</b>.</p>
 
+<p style="margin-left:22%; margin-top: 1em">Note: In
+<i>scroll mode</i>, up/down/top/bottom scrolling works
+without <b>Shift</b>.</p>
+
 <p style="margin-left:22%; margin-top: 1em">Keyboard
 selecting mode: <b>Alt</b> sets rectangular selection. Once
 keyboard selecting mode is entered, the following keys are
@@ -1156,7 +1206,7 @@ shortcuts</b></p>
 <p style="margin-left:22%; margin-top: 1em">An alternative
 set of shortcuts for clipboard and window commands using
 <b>Ctrl+Shift+letter</b> combinations is available. These
-can be enabled on the Keys pane of the options dialog. <br>
+can be enabled on the Keys pane of the Options dialog. <br>
 &ndash; <b>Ctrl+Shift+A</b>: Select all <br>
 &ndash; <b>Ctrl+Shift+C</b>: Copy <br>
 &ndash; <b>Ctrl+Shift+V</b>: Paste <br>
@@ -1170,7 +1220,8 @@ can be enabled on the Keys pane of the options dialog. <br>
 despite Shift) <br>
 &ndash; <b>Ctrl+Shift+S</b>: Flip screen <br>
 &ndash; <b>Ctrl+Shift+O</b>: Toggle scrollbar <br>
-&ndash; <b>Ctrl+Shift+P</b>: Cycle pointer styles <br>
+&ndash; <b>Ctrl+Shift+P</b>: Cycle text pointer (cursor)
+styles <br>
 &ndash; <b>Ctrl+Shift+T</b>: Cycle or tune transparency
 levels</p>
 
@@ -1245,6 +1296,10 @@ mode, the context menu provides the Tektronix mode functions
 RESET (like xterm), PAGE (minor reset), and COPY
 (&quot;hard&quot; copy to image file).</p>
 
+<p style="margin-left:11%; margin-top: 1em">While in Tek
+mode, the OSC 50 control sequence changes the Tek font. Tek
+mode text output supports Unicode.</p>
+
 <p style="margin-left:11%; margin-top: 1em"><b>Emoji
 display support</b> <br>
 Mintty supports display of emojis as defined by Unicode
@@ -1275,6 +1330,21 @@ held, the function also opens the HTML page.</p>
 <p style="margin-left:11%; margin-top: 1em">Filename
 pattern and location are configurable (setting
 <b>SaveFilename</b>).</p>
+
+<p style="margin-left:11%; margin-top: 1em"><b>Audio
+support</b> <br>
+Mintty supports audio output for the warning bell (^G
+character), margin bell, a private escape sequence for
+explicit output of a sound file, and the DECPS tone playing
+escape sequence. A number of settings are available to
+configure the bell sound, also in conjunction with the bell
+volume escape sequence (each volume can be assigned a
+distinct sound file). Sound files for the bell sound and the
+audio sound output can be deployed in a resource
+subdirectory <i>sounds</i> or addressed by pathname. Tone
+playing by DECPS is supported via the <i>libao</i> audio
+output library if installed. Setting <b>PlayTone</b> can
+preselect a tone style.</p>
 
 <p style="margin-left:11%; margin-top: 1em"><b>Image dump
 of terminal contents</b> <br>
@@ -1330,7 +1400,7 @@ overwrite each other.</p>
 
 
 <p style="margin-left:11%; margin-top: 1em">Mintty has a
-graphical options dialog that can be reached via the context
+graphical Options dialog that can be reached via the context
 menu or the window menu. It has the following action
 buttons: <br>
 &ndash; <b>Cancel</b>: discards changes. <br>
@@ -1376,9 +1446,9 @@ Background, Title, ExitTitle, Icon, Log, SaveFilename,
 Language, Font, Font1..10, FontSample, FontChoice, TekFont,
 CopyAsRTFFont, SearchBar, Printer, Answerback,
 SixelClipChars, Class, AppID, AppName, AppLaunchCmd,
-DropCommands, UserCommands, SessionCommands, TaskCommands,
-KeyFunctions, SysMenuFunctions, CtxMenuFunctions,
-UserCommandsPath.</p>
+DropCommands, ExitCommands, UserCommands, SessionCommands,
+TaskCommands, KeyFunctions, SysMenuFunctions,
+CtxMenuFunctions, UserCommandsPath.</p>
 
 <p style="margin-left:11%; margin-top: 1em">Be careful when
 running multiple instances of mintty. If options are saved
@@ -1473,7 +1543,15 @@ black in the Windows control panel.</p>
 <p style="margin-left:22%; margin-top: 1em">Numeric
 transparency values ranging from 4 to 254 can be specified
 in config files or on the command line. (Values below 4 are
-multiplied by 16, for backward compatibility reasons.)</p>
+multiplied by 16, for backward compatibility reasons.) The
+Options dialog also offers a numeric input option with
+slider buttons. Use Shift or Control to adjust their step
+width.</p>
+
+<p style="margin-left:22%; margin-top: 1em">Since 3.5.1,
+when overlaying multiple tabs (SessionGeomSync modes),
+mintty manages tab window transparency to avoid cumulation
+of opaqueness.</p>
 
 <p style="margin-left:11%;"><b>Opaque when focused</b>
 (OpaqueWhenFocused=no)</p>
@@ -1538,7 +1616,7 @@ fonts are listed <br>
 The font selection dialog also offers an <b>Apply</b> button
 for convenient testing how the selected font looks. Its
 function is the same as the <b>Apply</b> button of the
-options dialog.</p>
+Options dialog.</p>
 
 <p style="margin-left:22%; margin-top: 1em">Further
 settings can be given in the config file:</p>
@@ -1601,9 +1679,13 @@ will override an earlier one (see CJK example below). <br>
 Finally, special name <b>Private</b> covers the Private Use
 ranges, which are often used for additional icon symbols
 (e.g. by &quot;Nerd Fonts&quot; or &quot;Powerline&quot;
-fonts).</p>
+fonts). <br>
+In addition to Unicode scripts, also Unicode blocks can be
+used to specify a secondary font, by a &quot;|&quot; prefix
+to the block name, with block specifications preceding over
+the more general script specifications.</p>
 
-<p style="margin-left:22%; margin-top: 1em">Example:
+<p style="margin-left:22%; margin-top: 1em">Examples:
 <b><br>
 FontChoice=Hebrew:6;Arabic:7;CJK:5;Han:8;Hangul:9 <br>
 Font6=David <br>
@@ -1611,8 +1693,10 @@ Font7=Simplified Arabic Fixed <br>
 Font5=Malgun Gothic <br>
 Font8=FangSong <br>
 Font9=MingLiU <br>
-FontChoice=PictoSymbols:2 <br>
-Font2=DejaVu Sans Mono</b></p>
+FontChoice=PictoSymbols:2;Private:3 <br>
+Font2=DejaVu Sans Mono <br>
+Font3=MesloLGS NF <br>
+FontChoice=Greek:3;|Greek Extended:4</b></p>
 
 <p style="margin-left:22%; margin-top: 1em">&ndash; <b>Font
 sample text</b> (FontSample=): This hidden setting overrides
@@ -1669,7 +1753,8 @@ taken from the font. <br>
 &ndash; <b>twitter</b> Use Twitter emoji graphics. <br>
 &ndash; <b>facebook</b> Use Facebook emoji graphics. <br>
 &ndash; <b>samsung</b> Use Samsung emoji graphics. <br>
-&ndash; <b>windows</b> Use Windows emoji graphics.</p>
+&ndash; <b>windows</b> Use Windows emoji graphics. <br>
+&ndash; <b>zoom</b> Use Zoom emoji graphics.</p>
 
 <p style="margin-left:22%; margin-top: 1em">Note that all
 style options only work if the respective emoji graphics
@@ -1753,6 +1838,17 @@ colour can also be set, modified, enabled or disabled with
 the respective xterm OSC control sequences. <br>
 (Corresponds to the xterm resources <b>colorBD</b> and
 <b>colorBDMode</b>.)</p>
+
+<p style="margin-left:11%;"><b>Blink substitution
+colour</b> (BlinkColour=)</p>
+
+<p style="margin-left:22%;">This hidden option sets a
+colour to be used to render the blink attribute of text,
+overriding real blinking. The blink substitution colour can
+also be set, modified, enabled or disabled with the
+respective xterm OSC control sequences. <br>
+(Corresponds to the xterm resources <b>colorBL</b> and
+<b>colorBLMode</b>.)</p>
 
 <p style="margin-left:11%;"><b>Bold as special
 background</b> (BoldAsRainbowSparkles=false)</p>
@@ -1907,6 +2003,13 @@ particularly <b>Charwidth</b>, and some control sequences;
 for an overview see (
 <i><a href="https://github.com/mintty/mintty/wiki/Tips#character-width">https://github.com/mintty/mintty/wiki/Tips#character-width</a></i>
 ).</p>
+
+<p style="margin-left:22%; margin-top: 1em"><i>Note:</i>
+Setting <b>Locale</b> and combining this with an empty or
+(Default) <b>Charset</b> setting results in an implicit
+character encoding as defined by the respective locale
+without suffix, which is not UTF-8 in most cases and may
+lead to unexpected behaviour.</p>
 
 <p style="margin-left:22%; margin-top: 1em"><i>Note:</i>
 When changing the character set interactively in the Options
@@ -2306,6 +2409,18 @@ in character cells.</p>
 default width and height to the window&rsquo;s current
 size.</p>
 
+<p style="margin-left:11%;"><b>Vertical spacing automatic
+adjustment strategy</b> (AutoLeading=2)</p>
+
+<p style="margin-left:22%;">Vertical spacing / row height
+is determined from font parameters. Mintty can apply some
+heuristic automatic adjustment to catch weird font spacing
+values. Setting 0 disables this feature, setting 1 uses the
+algorithm in effect until mintty 3.4.6, setting 2 uses a
+tweaked algorithm that avoids clipped descenders in some
+fonts. The manual tuning setting <b>RowSpacing</b> is
+applied after auto-leading.</p>
+
 <p style="margin-left:11%;"><b>Vertical spacing
 adjustment</b> (RowSpacing=0)</p>
 
@@ -2385,7 +2500,7 @@ does not affect the arrow keys or Home/End keys.</p>
 
 <p style="margin-left:22%;">This selects the language or
 language/region code to use for localization of the mintty
-user interface, the options dialog, menus, message boxes,
+user interface, the Options dialog, menus, message boxes,
 and terminal in-line error messages. <br>
 &ndash; <i>(empty)</i> an empty entry disables localization
 <br>
@@ -2425,11 +2540,13 @@ mintty startup. Choices available from the dropdown list are
 
 <p style="margin-left:22%; margin-top: 1em">The last three
 options are only offered if the respective terminfo entries
-are installed in the system. The *<b>-direct</b> entries
-provide terminfo capabilities to set true-colour (24 bit
-colour) attributes. Note, however, that this only affects
-usage of the <i>terminfo</i> API to drive the terminal; the
-respective control sequences are always available.</p>
+are installed in the system (WSL distribution with options
+--wsl/--WSL). The *<b>-direct</b> entries provide terminfo
+capabilities to set true-colour (24 bit colour) attributes.
+Note, however, that this only affects usage of the
+<i>terminfo</i> API to drive the terminal; the respective
+control sequences are always available and applications are
+free to use them directly.</p>
 
 <p style="margin-left:22%; margin-top: 1em">If the setting
 contains &quot;vt220&quot; or higher, xterm VT220-style
@@ -2588,6 +2705,16 @@ sounds). <br>
 &ndash; (BellLen=400): Beep sound length (applies to
 frequency beep).</p>
 
+<p style="margin-left:11%;"><b>Play Sound tone</b>
+(PlayTone=2)</p>
+
+<p style="margin-left:22%;">This setting preselects the
+sound tone used for the DECPS &quot;Play Sound&quot; note
+playing escape sequence. Tones 1 to 5 are currently defined,
+1 is a sine waveform. These are only effective if the audio
+output library <i>libao</i> is installed. Value 0 (also the
+fallback) resorts to the Windows Beep function.</p>
+
 <p style="margin-left:11%;"><b>Printer</b> (Printer=)</p>
 
 <p style="margin-left:22%;">The ANSI standard defines
@@ -2662,7 +2789,7 @@ application mouse modes</p>
 line</b> <br>
 The settings here are config file versions of command line
 options described in the OPTIONS section. They do not appear
-in the options dialog. <b><br>
+in the Options dialog. <b><br>
 Holding the window open</b> (Hold=start)</p>
 
 <p style="margin-left:22%;">The <b>Hold</b> setting
@@ -2738,13 +2865,24 @@ logging initially. If a log file name is specified with
 <b>Log=...</b> and <b>Logging=no</b>, logging can be enabled
 (and toggled) from the extended context menu.</p>
 
-<p style="margin-left:11%;"><b>Filename pattern for screen
-saving</b> <br>
-(SaveFilename=mintty.%Y-%m-%d_%H-%M-%S)</p>
+<p style="margin-left:11%;"><b>Filenames for screen
+saving</b> (SaveFilename=mintty.%Y-%m-%d_%H-%M-%S)</p>
 
 <p style="margin-left:22%;">This setting selects the
 location and filename pattern (which is expanded with the
-strftime(3) function) for .html and .png screen dumps.</p>
+strftime(3) function) for .html and .png screen dumps. An
+initial home prefix or environment variable prefix is
+expanded (POSIX path and variable syntax needs to be used in
+this case). Examples: <br>
+&ndash; <b>SaveFilename=~/mintty.%Y-%m-%d_%H-%M-%S</b> <br>
+&ndash;
+<b>SaveFilename=$USERPROFILE/Pictures/mintty/%Y-%m-%d_%H-%M-%S</b></p>
+
+<p style="margin-left:22%; margin-top: 1em">Note that if
+the filename pattern is a relative pathname (as is the
+default), it will be taken as relative to the working
+directory mintty was started in, with some tweaks as
+described above for the Log file.</p>
 
 <p style="margin-left:11%;"><b>Window title</b>
 (Title=)</p>
@@ -2780,7 +2918,8 @@ Y=)</p>
 integer settings that can be used to determine the initial
 coordinates of the top left corner of the terminal window.
 By default, these are unset, which means that the position
-suggested by the window manager is used.</p>
+suggested by the window manager is used. Setting only one of
+X, Y is not supported.</p>
 
 <p style="margin-left:11%;"><b>Window class name</b>
 (Class=mintty)</p>
@@ -2798,17 +2937,29 @@ grouping configuration, the Class option supports the same
 
 <p style="margin-left:11%; margin-top: 1em"><b>Hidden
 settings</b> <br>
-The following settings appear neither in the options dialog
+The following settings appear neither in the Options dialog
 nor as command line options, which means they can only be
 set in config files or using the <b>--option</b> or
 <b>-o</b> command line option. <b><br>
-Customize Options dialog</b> (OldOptions=)</p>
+Options dialog custom font and size</b> (OptionsFont=,
+OptionsFontHeight=0)</p>
+
+<p style="margin-left:22%;">These settings change the font
+and fontsize in the Options dialog. (Note that scaling a
+custom font in the Options dialog when changing the screen
+resolution does not work, so Options is closed in this
+case.)</p>
+
+<p style="margin-left:11%;"><b>Customize Options dialog</b>
+(OldOptions=)</p>
 
 <p style="margin-left:22%;">Listing comma-separated tags in
 this setting will disable extended or enhanced parts of the
 Options dialog. <br>
 &ndash; <b>bold</b> Disable &quot;Show bold&quot; section
 with &quot;xterm&quot; pseudo option. <br>
+&ndash; <b>blinking</b> Disable &quot;Allow blinking&quot;.
+<br>
 &ndash; <b>emoji</b> Disable emoji style section in
 &quot;Text&quot; panel. <br>
 &ndash; <b>selection</b> Disable separate
@@ -2842,6 +2993,14 @@ on input</b> (ClearSelectionOnInput=true)</p>
 
 <p style="margin-left:22%;">When this is disabled, keyboard
 input or pasting does not clear selection highlighting.</p>
+
+<p style="margin-left:11%;"><b>Erase top lines into
+scrollback buffer</b> (EraseToScrollback=true)</p>
+
+<p style="margin-left:22%;">With this setting, lines
+cleared in the top part of the screen are scrolled into the
+scrollback buffer, so they can be restored. (Corresponds
+roughly to the xterm resource <b>cdXtraScroll</b>.)</p>
 
 <p style="margin-left:11%;"><b>Suspend output while
 selecting</b> (SuspendWhileSelecting=8080)</p>
@@ -2881,10 +3040,12 @@ bar</b> (ProgressBar=0)</p>
 <p style="margin-left:22%;">This setting initially enables
 a progress indication on the taskbar icon, based on
 automatic progress detection: if the current cursor line
-ends with a percent indication (x%) it will be notified via
-progress bar in one of three levels 1 (green), 2 (yellow), 3
-(red). Note that the progress bar can also be switched or
-even controlled by an escape sequence.</p>
+contains a percent indication (x%) and a subsequent relative
+positioning (e.g. a CR return character) like in text
+progress indications, it will be notified via progress bar
+in one of three levels 1 (green), 2 (yellow), 3 (red). Note
+that the progress bar can also be switched or even
+controlled by an escape sequence.</p>
 
 <p style="margin-left:11%;"><b>Single-dash long options</b>
 (ShortLongOpts=false)</p>
@@ -3003,16 +3164,16 @@ not need to be set anymore in this case.</p>
 <p style="margin-left:11%;"><b>Application Taskbar Shortcut
 Title</b> (AppName=)</p>
 
-<p style="margin-left:22%;">The title of the Windows 7
-taskbar shortcut. If the shortcut is pinned, the title is
-kept only if it was made persistent as described for
-AppLaunchCmd.</p>
+<p style="margin-left:22%;">The title of the taskbar
+shortcut (since Windows 7). If the shortcut is pinned, the
+title is kept only if it was made persistent as described
+for AppLaunchCmd.</p>
 
 <p style="margin-left:11%;"><b>Application Taskbar Shortcut
 Launch Command</b> (AppLaunchCmd=)</p>
 
 <p style="margin-left:22%;">The command to use if a
-shortcut pinned to the Windows 7 taskbar is invoked. This is
+shortcut pinned to the Windows taskbar is invoked. This is
 only effective if combined with an AppName option and the
 command-line option --store-taskbar-properties to make it
 persistent. It should also be combined with an explicit and
@@ -3047,6 +3208,22 @@ Once made persistent, the stored properties associated with
 a specific AppID cannot be removed or even modified again
 with normal means. For this reason, it is advisable to use
 temporary AppIDs for testing (like MyMintty.1).</p>
+
+<p style="margin-left:11%;"><b>Start shell in login mode if
+run from shortcut</b> (LoginFromShortcut=yes)</p>
+
+<p style="margin-left:22%;">By default, mintty since
+version 347 will start its shell in login mode if invoked
+via a Windows desktop or start menu shortcut unless this
+setting is disabled.</p>
+
+<p style="margin-left:11%;"><b>Control ConPTY support</b>
+(ConPTY=)</p>
+
+<p style="margin-left:22%;">Setting this on or off enforces
+enabled or disabled support of pseudo console for native
+Windows programs. The default is to leave it up to the
+default of the system environment (cygwin or MSYS2).</p>
 
 <p style="margin-left:11%;"><b>Word selection
 characters</b> (WordChars=)</p>
@@ -3088,6 +3265,27 @@ comma-separated list of character tags: <br>
 &ndash; <b>C1</b> control characters 0x80...0x9F <br>
 (Corresponds to the xterm resource
 <b>disallowedPasteControls</b>.)</p>
+
+<p style="margin-left:11%;"><b>Line splitting in bracketed
+paste mode</b> (BracketedPasteByLine=0)</p>
+
+<p style="margin-left:22%;">In bracketed paste mode (which
+embeds pasted contents in bracketing escape sequences), it
+can be considered a security issue for the command line if
+bracket embedding is applied only for the whole paste
+buffer. Therefore mintty provides a configurable feature to
+embed each new line in bracket sequences individually,
+controlled by this setting. <br>
+&ndash; <b>0</b> never split paste contents by lines <br>
+&ndash; <b>1</b> only split when not in alternate screen
+mode <br>
+&ndash; <b>2</b> always split paste contents by lines</p>
+
+<p style="margin-left:22%; margin-top: 1em"><i>Note:</i>
+This is meanwhile handled better by shell versions which
+highlight and hold back the pasted text until confirmed, so
+for consistent and uniform appearance, the default is 0 from
+mintty 3.5.2.</p>
 
 <p style="margin-left:11%;"><b>Special key remapping</b>
 [DEPRECATED, see <b>KeyFunctions</b>]</p>
@@ -3220,11 +3418,17 @@ mode <br>
 &ndash; <b>win-restore</b>: resizes to normal size <br>
 &ndash; <b>win-toggle-max</b>: toggles maximized / normal
 size <br>
+&ndash; <b>win-toggle-keep-screen-on</b>: toggles disabling
+of screen saver (use with care) <br>
+&ndash; <b>win-toggle-always-on-top</b>: toggles window
+always-on-top <br>
 &ndash; <b>win-icon</b>: turns window into icon <br>
 &ndash; <b>close</b>: closes terminal window <br>
 &ndash; <b>new-key</b>: opens a new terminal window when key
 is released <br>
 &ndash; <b>new-window</b>: opens a new terminal window <br>
+&ndash; <b>new-window-cwd</b>: opens a new terminal window
+in working directory of current foreground process <br>
 &ndash; <b>options</b>: opens the Options dialog <br>
 &ndash; <b>menu-text</b> (*): opens the context menu at the
 cursor position <br>
@@ -3282,6 +3486,13 @@ changed <br>
 application <br>
 &ndash; <b>flipscreen</b>: switches the alternate screen
 <br>
+&ndash; <b>no-scroll</b>: locks output until input key is
+pressed <br>
+&ndash; <b>toggle-no-scroll</b>: toggles locked output <br>
+&ndash; <b>scroll-mode</b>: enables unmodified cursor
+scrolling until input <br>
+&ndash; <b>toggle-scroll-mode</b>: toggles unmodified cursor
+key scrolling <br>
 &ndash; <b>open</b>: opens the selection, e.g. a URL or
 filename <br>
 &ndash; <b>toggle-logging</b>: toggles logfile logging <br>
@@ -3380,51 +3591,36 @@ Alt+keypad-Enter but enter ESC Return in the latter case
 Super modifier to the CapsLock key <br>
 &ndash; <b>KeyFunctions=*Menu:29</b> turns the Menu key into
 an F16 function key (xterm default) and applies all
-modifiers to it</p>
-
-<table width="100%" border="0" rules="none" frame="void"
-       cellspacing="0" cellpadding="0">
-<tr valign="top" align="left">
-<td width="22%"></td>
-<td width="-14%"></td>
-<td width="7%"></td>
-<td width="85%">
-
-
-<p>&ndash;
-<b>KeyFunctions=A+Left:switch-prev;A+Right:switch-next;\</b></p> </td></tr>
-<tr valign="top" align="left">
-<td width="22%"></td>
-<td width="-14%"></td>
-<td width="7%"></td>
-<td width="85%">
-
-
-
-<p><b>A+C+Left:switch-visible-prev;A+C+Right:switch-visible-next</b>
+modifiers to it <br>
+&ndash;
+<b>KeyFunctions=A+Left:switch-prev;A+Right:switch-next;\
+A+C+Left:switch-visible-prev;A+C+Right:switch-visible-next</b>
 enables window switching with [Ctrl+]Alt+Left/Right keys on
 the &quot;editing keypad&quot; (prefix KP_ for the numeric
-keypad)</p> </td></tr>
-<tr valign="top" align="left">
-<td width="22%"></td>
-<td width="-14%"></td>
-<td width="7%"></td>
-<td width="85%">
+keypad) <br>
+&ndash;
+<b>KeyFunctions=S+KP_Prior:scroll_pgup;C+KP_Prior:scroll_pgup;\
+C+KP_Next:scroll_pgdn;S+KP_Next:scroll_pgdn</b> enables
+scrollback scrolling with either of Shift or Control
+modifiers <br>
+&ndash; <b>KeyFunctions=ScrollLock:toggle-no-scroll</b>
+enables NoScroll key</p>
 
+<p style="margin-left:11%;"><b>Manage keyboard LEDs</b>
+(ManageLEDs=7)</p>
 
-<p>&ndash;
-<b>KeyFunctions=S+KP_Prior:scroll_pgup;C+KP_Prior:scroll_pgup;\</b></p> </td></tr>
-<tr valign="top" align="left">
-<td width="22%"></td>
-<td width="-14%"></td>
-<td width="7%"></td>
-<td width="85%">
-
-
-<p><b>C+KP_Next:scroll_pgdn;S+KP_Next:scroll_pgdn</b>
-enables scrollback scrolling with either of Shift or Control
-modifiers</p> </td></tr>
-</table>
+<p style="margin-left:22%;">Mintty manages the keyboard
+indicator lights (LEDs) for the CapsLock, Numlock, and
+ScrollLock state in order to achieve consistent indication.
+If any of these keys have a user-defined function attached,
+there usage shall not affect the visual keyboard modifier
+indication. Also, if a scroll feature is activated
+(no-scroll or scroll-mode), the ScrollLock indication shall
+indicate the current state of the terminal window. The
+ScrollLock light is restored to its previous state if the
+terminal window gets out of focus or terminates. This
+setting can disable LED management for ScrollLock
+(ManageLEDs=3) or for all modifiers (ManageLEDs=0).</p>
 
 <p style="margin-left:11%;"><b>Use system colours</b>
 (UseSystemColours=no)</p>
@@ -3432,7 +3628,7 @@ modifiers</p> </td></tr>
 <p style="margin-left:22%;">If this is set, the
 Windows-wide colour settings are used instead of the
 foreground, background, and cursor colours chosen on the
-Looks page of the options dialog.</p>
+Looks page of the Options dialog.</p>
 
 <p style="margin-left:11%;"><b>IME cursor colour</b>
 (IMECursorColour=)</p>
@@ -3499,6 +3695,15 @@ used otherwise.</p>
 
 <p style="margin-left:22%;">The Tektronix drawing beam glow
 can be switched with this setting.</p>
+
+<p style="margin-left:11%;"><b>Tektronix &quot;strap
+option&quot;</b> (TekStrap=0)</p>
+
+<p style="margin-left:22%;">Number of characters appended
+after GIN mode address reports; valid values are 0, 1 (CR)
+and 2 (CR ^C). <br>
+(Corresponds to the xterm resource
+<b>ginTerminator</b>.)</p>
 
 <p style="margin-left:11%;"><b>Downloaded colour scheme</b>
 (ColourScheme=)</p>
@@ -3608,6 +3813,21 @@ that keeps the terminal open after its child process
 terminated, this option prefixes the window title with its
 string, for example -o ExitTitle=&quot;TERMINATED:
 &quot;.</p>
+
+<p style="margin-left:11%;"><b>Mouse pointer styles</b>
+(MousePointer=ibeam, AppMousePointer=arrow)</p>
+
+<p style="margin-left:22%;">This setting defines the mouse
+position indicator (i.e. not the text cursor) from the given
+resource. Note that mintty maintains two different mouse
+pointer shapes, to distinguish application mouse reporting
+modes. Valid values are Windows predefined cursor names
+(appstarting, arrow, cross, hand, help, ibeam, icon, no,
+size, sizeall, sizenesw, sizens, sizenwse, sizewe, uparrow,
+wait). or cursor file names which are looked up in
+subdirectory <i>pointers</i> of a mintty resource directory;
+supported file types are .cur, .ico, .ani. (Corresponds to
+the xterm resource <b>pointerShape</b>.)</p>
 
 <p style="margin-left:11%;"><b>Configure document opening
 by mouse click</b> (OpeningClicks=1)</p>
@@ -3734,6 +3954,47 @@ different actions for directories/folders or even different
 command invocations depending on file name pattern are
 desired, this should be handled by a suitable cooperating
 shell function.</p>
+
+<p style="margin-left:11%;"><b>Exit application-targetted
+commands</b> (ExitCommands=)</p>
+
+<p style="margin-left:22%;">With this setting, a set of
+strings can be configured to be sent to respective
+applications, in dependence of the program running in the
+terminal foreground, if the window is instructed to
+&quot;Close&quot; from its menu or close button.</p>
+
+<p style="margin-left:22%; margin-top: 1em"><i>Note:</i>
+Detection of terminal foreground processes works only
+locally; this features does not work with WSL or after
+remote login.</p>
+
+<p style="margin-left:22%; margin-top: 1em">The value is a
+series of semicolon-separated, colon-combined pairs of
+program name and (control) string. The string is sent to the
+client application. If a semicolon shall be embedded into
+any of the drop patterns, a non-whitespace control character
+(i.e. none of <b>^I^J^K^L^M</b>) can be specified as an
+alternative separator by starting the whole setting with it.
+The definition list can be split over multiple lines if a
+separator is followed by a backslash, newline, and optional
+whitespace indentation.</p>
+
+<p style="margin-left:22%; margin-top: 1em"><i>Note:</i>
+This feature potentially makes mintty vulnerable against
+command injection. Be careful what strings you
+configure!</p>
+
+<p style="margin-left:22%; margin-top: 1em">Example: <br>
+&ndash;
+<b>ExitCommands=bash:exit^M;mined:^[q;emacs:^X^C</b></p>
+
+<p style="margin-left:22%; margin-top: 1em"><i>Note:</i> An
+&quot;Enter&quot; key has to be specified with the CR
+character code, control characters need to be embedded
+verbatim (indicated above as &quot;^M&quot;, &quot;^[&quot;,
+&quot;^X&quot;, &quot;^C&quot;); there is no escape
+notation.</p>
 
 <p style="margin-left:11%;"><b>User commands</b>
 (UserCommands=) [DEPRECATED, see
@@ -4113,11 +4374,15 @@ flexible bidi controls according to the draft bidi mode
 model of the <b>BiDi in Terminal Emulators</b>
 recommendation (
 <i><a href="https://terminal-wg.pages.freedesktop.org/bidi/">https://terminal-wg.pages.freedesktop.org/bidi/</a></i>
-).</p>
+). However, emoji rendering does not work properly within
+right-to-left text.</p>
 
 <p style="margin-left:11%; margin-top: 1em">Mintty also
 provides emulation of the Tektronix 4014 vector graphics
-terminal.</p>
+terminal, including &quot;writethru&quot; and
+&quot;defocused&quot; beam modes (for which colour
+indication can be configured), write beam glow and GIN mode,
+and APL character mode.</p>
 
 <p style="margin-left:11%; margin-top: 1em">Mintty is not
 as configurable as xterm; it offers essential configuration

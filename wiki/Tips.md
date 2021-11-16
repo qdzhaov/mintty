@@ -12,8 +12,8 @@ For its configuration, it reads configuration files in this order:
 
 For resource files to configure a colour scheme, 
 wave file for the bell character, localization files, emoji graphics, 
-dynamic fonts, it looks for subfolders 
-`themes`, `sounds`, `lang`, `emojis`, `fonts`, respectively, 
+dynamic fonts, pointer shapes, it looks for subfolders 
+`themes`, `sounds`, `lang`, `emojis`, `fonts`, `pointers`, respectively, 
 in the directories
 * `~/.mintty`
 * `~/.config/mintty`
@@ -44,6 +44,12 @@ to be appended to the target field of the shortcut’s properties:
 The **[cygutils](http://www.cygwin.com/cygwin-ug-net/using-effectively.html#using-cygutils)** package 
 provides the **mkshortcut** utility for creating shortcuts from the command line. 
 See its manual page for details.
+
+### Smart login mode ###
+
+If invoked from a Windows shortcut (desktop or start menu), mintty starts 
+the shell in login mode implicitly (since mintty 3.4.7) unless disabled 
+with option `LoginFromShortcut`.
 
 ### Hotkey / Windows Shortcut key ###
 
@@ -184,6 +190,12 @@ standalone package would set that up for you in the shortcuts. For other
 invocation (cygwin or Windows command line), mintty finds the suitable 
 WSL icon itself.
 
+Note that older wslbridge2 backends used not to be interoperable among 
+systems with different libraries (glibc vs musl).
+The _distro_ `Alpine` had been checked out to build a backend that works 
+with all Linux distributions; builds of later wslbridge2 are reported 
+to be interoperable though.
+
 At the end of the `mintty --WSL` invocation line, you may add an explicit 
 WSL shell invocation like `/bin/bash -l` to select your favourite shell or 
 ask for a login shell (`-l`), or set a start directory (`-C`, before any 
@@ -317,16 +329,14 @@ Terminal line settings can be viewed or changed with the **[stty](http://www.ope
 
 See the stty manual for all the details, but here are a few examples. The commands can be included in shell startup files to make them permanent.
 
-To change the key for deleting a whole word from _Ctrl+W_ to _Ctrl+Backspace_:
-
+To change the key for deleting a whole word from _Ctrl+W_ to _Ctrl+Backspace_,
+you could assign the `^_` control character to the _Ctrl+Backarrow_ key:
+```
+KeyFunctions=C+Back:"^_"
+```
+and apply the following terminal line setting:
 ```
 stty werase '^_'
-```
-
-To use _Ctrl+Enter_ instead of _Ctrl+D_ for end of file:
-
-```
-stty eof '^^'
 ```
 
 To use _Pause_ and _Break_ instead of _Ctrl+Z_ and _Ctrl+C_ for suspending or interrupting a process:
@@ -343,7 +353,9 @@ echo -ne '\e[?7728h'
 
 (The standard escape character `^[` cannot be used for that purpose because it appears as the first character in many keycodes.)
 
-Unix terminal line drivers have a flow control feature that allow terminal output to be stopped with _Ctrl+S_ and restarted with _Ctrl+Q_. However, due to the scrollback feature in modern terminal emulators, there is little need for this. Hence, to make those key combinations available for other uses, disable flow control with this command:
+Unix terminal line drivers have a flow control feature that allow terminal output to be stopped with _Ctrl+S_ and restarted with _Ctrl+Q_. However, due to the scrollback feature in modern terminal emulators, there is little need for this. Hence, to make those key combinations available for other uses, disable flow control with this command
+(note that screen-oriented programs like text editors will typically 
+manage this setting themselves):
 
 ```
 stty -ixon
@@ -357,32 +369,41 @@ Keyboard input for the **[bash](http://www.gnu.org/software/bash)** shell and ot
 Anyone used to Windows key combinations for editing text might find the following bindings useful:
 
 ```
-# Ctrl+Left/Right to move by whole words
+# Ctrl+Right / Ctrl+Left to move by whole words
 "\e[1;5C": forward-word
 "\e[1;5D": backward-word
 
-# Ctrl+Backspace/Delete to delete whole words
+# Ctrl+Delete / Ctrl+Backarrow to delete whole words
 "\e[3;5~": kill-word
-"\C-_": backward-kill-word
+"\C-_": backward-kill-word      # with mintty setting KeyFunctions=C+Back:"^_"
 
-# Ctrl+Shift+Backspace/Delete to delete to start/end of the line
+# Ctrl+Shift+Delete to delete to end of the line
 "\e[3;6~": kill-line
-"\xC2\x9F": backward-kill-line  # for UTF-8
-#"\x9F": backward-kill-line     # for ISO-8859-x
-#"\e\C-_": backward-kill-line   # for any other charset
 
-# Alt-Backspace for undo
-"\e\d": undo
+# Ctrl+Shift+Backarrow to delete to start of the line
+"\e[72;6~": backward-kill-line  # with mintty setting KeyFunctions=CS+Back:72
+
+# Alt-Backarrow for undo
+"\e\d": undo                    # would be disabled by DECSET 67 sequence
 ```
-
-(The Ctrl+Shift+Backspace keycode depends on the selected character set, so the appropriate binding needs to be chosen.)
 
 Finally, a couple of bindings for convenient searching of the command history. Just enter the first few characters of a previous command and press _Ctrl+Up_ to look it up.
 
 ```
-# Ctrl+Up/Down for searching command history
+# Ctrl+Up / Ctrl+Down for searching command history
 "\e[1;5A": history-search-backward
 "\e[1;5B": history-search-forward
+```
+
+To add interactive protection from injected commands, the readline feature 
+`enable-bracketed-paste` makes use of bracketed-paste mode to present 
+multi-line commands for confirmation before running them.
+It should _not_ be combined with `skip-csi-sequence` however which is 
+buggy as of bash 4.4.12 / readline 7.0.3.
+
+```
+set enable-bracketed-paste on
+# do not map "\e[": skip-csi-sequence
 ```
 
 
@@ -511,6 +532,12 @@ A number of options are available to customize the keyboard behaviour,
 including user-defined function and keypad keys and Ctrl+Shift+key shortcuts.
 See the manual page for options and details.
 
+### Windows-style copy/paste key assignments ###
+
+If both settings `CtrlShiftShortcuts` and `CtrlExchangeShift` are enabled, 
+copy & paste functions are assigned to plain (unshifted) _Ctrl+C_ 
+and _Ctrl+V_ for those who prefer them to be handled like in Windows.
+
 
 ## Compose key ##
 
@@ -603,7 +630,8 @@ can be used in different ways:
 
 (Option 3) 
 A number of colour schemes have been published for mintty, also 
-mintty supports direct drag-and-drop import of itermcolors schemes.
+mintty supports direct drag-and-drop import of theme files in 
+iTerm2 or Windows terminal formats.
 Look for the following repositories:
 * https://iterm2colorschemes.com/
 * https://github.com/oumu/mintty-color-schemes
@@ -757,6 +785,13 @@ FontChoice=Private:3
 Font3=MesloLGS NF
 ```
 
+Note that in addition to Unicode scripts, also Unicode blocks can be used 
+to specify a secondary font, by a "|" prefix to the block name, with block 
+specifications preceding over the more general script specifications.
+```
+FontChoice=Greek:3;|Greek Extended:4
+```
+
 ### Dynamic fonts ###
 
 Mintty supports on-the-fly temporary font installation, especially for use 
@@ -832,6 +867,24 @@ in the Terminals Working Group Specifications.
 Mintty indicates this mode by appending the `@cjksingle` modifier to the 
 `LC_CTYPE` locale variable.
 
+### Remote locale width mismatch ###
+
+After remote login, locale definitions of remote and local systems may differ, 
+mostly about existing locales and ambiguous width properties.
+This is particularly the case if
+* the cygwin locale includes a @cjk... modifier which is not supported on other systems
+* the cygwin locale is a CJK locale with UTF-8 encoding in cygwin before 3.2.0 (which makes ambiguous width narrow for all UTF-8 locales to be consistent with other systems)
+
+The script `localejoin` in the 
+mintty [utils repository](https://github.com/mintty/utils) adjusts these 
+mismatches by switching the terminal locale temporarily and thus joining 
+its width properties with those of typical remote systems.
+Direct invocation of the script just runs a shell with a locale setting.
+To use it for direct remote invocation, install it under the name 
+containing any of the remote login programs (rsh, rlogin, rexec, telnet, ssh).
+Example (with `localejoin` renamed/linked/copied as `minssh`):
+* `minssh` _myLinuxhost_
+
 ### Selective double character width ###
 
 While mintty fully supports double-width characters (esp. CJK) as well 
@@ -845,6 +898,12 @@ Indic and some other characters at double-cell width
 but not all such characters are handled, and there is no perfect solution 
 that would also comply with the locale mechanism unless the terminal would 
 support proportional fonts.
+
+### Wide symbol overhang ###
+
+For symbol characters and emojis that are single-width by definition 
+(e.g. locale) but visually double-width, double-width display is supported 
+if the character is following by an adjacent single-width space character.
 
 
 ## Font rendering and geometry ##
@@ -860,6 +919,7 @@ interfere with mintty’s own bidi transformation.
 The actual window size is influenced by several parameters:
 * Font size / character height is the main parameter to determine the row height.
 * Row height is additionally affected by the “leading” information from the font.
+* Automatic row height adjustment method can be selected by setting `AutoLeading`.
 * Row height and column width can furthermore be tuned with setting `RowSpacing` and `ColSpacing`.
 * A gap between text and window border can be specified with setting `Padding` (default 1).
 
@@ -951,11 +1011,11 @@ Note: SGR codes for superscript and subscript display are subject to change.
 Note: Text attributes can be disabled with option SuppressSGR (see manual).
 
 As a fancy add-on feature for text attributes, mintty supports distinct 
-colour attributes for combining characters, so a combined character 
+(colour) attributes for combining characters, so a combined character 
 can be displayed in multiple colours. Attributes considered for this 
 purpose are default and ANSI foreground colours, palette and true-colour 
-foreground colours, dim mode and manual bold mode (BoldAsFont=false); 
-background colours and inverse mode are ignored.
+foreground colours, dim mode and manual bold mode (BoldAsFont=false), 
+and blinking; background colours and inverse mode are ignored.
 <img align=top src=https://github.com/mintty/mintty/wiki/mintty-coloured-combinings.png>
 
 
@@ -1004,6 +1064,8 @@ Emoji data can be found at the following sources:
 * [JoyPixels](https://www.joypixels.com/) (formerly EmojiOne)
   * Download JoyPixels Free (or Premium)
   * Deploy the preferred subdirectory (e.g. png/unicode/128) as `joypixels`
+* Zoom (with an installed Zoom meeting client)
+  * Deploy $APPDATA/Zoom/data/Emojis/*.png into `zoom`
 <img align=right src=https://github.com/mintty/mintty/wiki/mintty-emojis.png>
 
 To “Clone” with limited download volume, use the command `git clone --depth 1`.
@@ -1051,6 +1113,9 @@ LC_CTYPE=zh_CN.gbk mintty &
 However, as a legacy option, it is also possible to configure mintty with 
 distinct options `Locale` and `Charset`; note that despite the name, the 
 `Locale` parameter must *not* include an encoding suffix in this case.
+Note that combining `Locale` with an empty `Charset` setting results in 
+the implicit character encoding as defined by the respective locale 
+without suffix, which is not UTF-8 in most cases and may be unexpected.
 Take care to make sure that the child process has the same idea about the 
 character encoding as the terminal in this scenario.
 
@@ -1273,7 +1338,7 @@ Mintty supports a few extension features:
 
 See the manual page for details.
 
-### Terminating the foreground program ###
+### Terminating the foreground program, the hard way ###
 
 As an example for a user-defined command, that is not used for filtering 
 text in this case, assume the user wants a menu option to terminate the 
@@ -1282,6 +1347,23 @@ including a user command:
 
 ```
 UserCommands=Kill foreground process:kill -9 $MINTTY_PID
+```
+
+### Terminating the foreground program, the smart way ###
+
+With option `ExitCommands`, a set of strings (likely control strings) 
+can be defined to be sent to the respective foreground application 
+if the window is instructed to "Close" from its menu or close button.
+
+_Note:_ Detection of terminal foreground processes works only locally; 
+this features does not work with WSL or after remote login.
+
+_Note:_ This feature potentially makes mintty vulnerable against command injection.
+Be careful what strings you configure!
+
+Example:
+```
+ExitCommands=bash:exit^M;mined:^[q;emacs:^X^C
 ```
 
 

@@ -280,7 +280,7 @@ static void
 cycle_transparency(void)
 {
   cfg.transparency = ((cfg.transparency + 16) / 16 * 16) % 128;
-  win_update_transparency(false);
+  win_update_transparency(cfg.transparency, false);
 }
 
 static void
@@ -291,7 +291,7 @@ set_transparency(int t)
   else if (t < 0)
     t = 0;
   cfg.transparency = t;
-  win_update_transparency(false);
+  win_update_transparency(t, false);
 }
 
 static void
@@ -317,7 +317,7 @@ transparency_level()
     transparency_tuned = false;
   }
   if (cfg.opaque_when_focused)
-    win_update_transparency(false);
+    win_update_transparency(cfg.transparency, false);
 }
 
 static void
@@ -459,6 +459,91 @@ static void win_ctrlmode(){
 static uint mflags_lock_title() { return cfg.title_settable ? MF_ENABLED : MF_GRAYED; }
 static uint mflags_copy() { return cterm->selected ? MF_ENABLED : MF_GRAYED; }
 static uint mflags_kb_select() { return cterm->selection_pending; }
+
+static void
+refresh_scroll_title()
+{
+  win_unprefix_title(_W("[NO SCROLL] "));
+  win_unprefix_title(_W("[SCROLL MODE] "));
+  win_unprefix_title(_W("[NO SCROLL] "));
+  if (cterm->no_scroll)
+    win_prefix_title(_W("[NO SCROLL] "));
+  if (cterm->scroll_mode)
+    win_prefix_title(_W("[SCROLL MODE] "));
+}
+
+static void
+clear_scroll_lock()
+{
+  bool scrlock0 = cterm->no_scroll || cterm->scroll_mode;
+  if (cterm->no_scroll < 0) {
+    cterm->no_scroll = 0;
+  }
+  if (cterm->scroll_mode < 0) {
+    cterm->scroll_mode = 0;
+  }
+  bool scrlock = cterm->no_scroll || cterm->scroll_mode;
+  if (scrlock != scrlock0) {
+    sync_scroll_lock(cterm->no_scroll || cterm->scroll_mode);
+    refresh_scroll_title();
+  }
+}
+#define Funtion_def_OldName
+#ifdef Funtion_def_OldName
+static void win_toggle_screen_on() { win_keep_screen_on(!keep_screen_on); }
+static int no_scroll(uint key, mod_keys mods) {
+  (void)mods;
+  (void)key;
+  if (!cterm->no_scroll) {
+    cterm->no_scroll = -1;
+    sync_scroll_lock(true);
+    win_prefix_title(_W("[NO SCROLL] "));
+    term_flush();
+  }
+  return 0;
+}
+static int scroll_mode(uint key, mod_keys mods) {
+  (void)mods;
+  (void)key;
+  if (!cterm->scroll_mode) {
+    cterm->scroll_mode = -1;
+    sync_scroll_lock(true);
+    win_prefix_title(_W("[SCROLL MODE] "));
+    term_flush();
+  }
+  return 0;
+}
+static int toggle_no_scroll(uint key, mod_keys mods) {
+  (void)mods;
+  (void)key;
+  cterm->no_scroll = !cterm->no_scroll;
+  sync_scroll_lock(cterm->no_scroll || cterm->scroll_mode);
+  if (!cterm->no_scroll) {
+    refresh_scroll_title();
+    term_flush();
+  }
+  else
+    win_prefix_title(_W("[NO SCROLL] "));
+  return 0;
+}
+static int toggle_scroll_mode(uint key, mod_keys mods) {
+  (void)mods;
+  (void)key;
+  cterm->scroll_mode = !cterm->scroll_mode;
+  sync_scroll_lock(cterm->no_scroll || cterm->scroll_mode);
+  if (!cterm->scroll_mode) {
+    refresh_scroll_title();
+    term_flush();
+  }
+  else
+    win_prefix_title(_W("[SCROLL MODE] "));
+  return 0;
+}
+static uint mflags_no_scroll() { return cterm->no_scroll ? MF_CHECKED : MF_UNCHECKED; }
+static uint mflags_scroll_mode() { return cterm->scroll_mode ? MF_CHECKED : MF_UNCHECKED; }
+static uint mflags_always_top() { return win_is_always_on_top ? MF_CHECKED: MF_UNCHECKED; }
+static uint mflags_screen_on() { return keep_screen_on ? MF_CHECKED: MF_UNCHECKED; } 
+#endif
 static uint mflags_fullscreen() { return win_is_fullscreen ? MF_CHECKED : MF_UNCHECKED; }
 static uint mflags_zoomed() { return IsZoomed(wnd) ? MF_CHECKED: MF_UNCHECKED; }
 static uint mflags_flipscreen() { return cterm->show_other_screen ? MF_CHECKED : MF_UNCHECKED; }
@@ -468,7 +553,7 @@ static uint mflags_vt220() { return cterm->vt220_keys ? MF_CHECKED : MF_UNCHECKE
 static uint mflags_auto_repeat() { return cterm->auto_repeat ? MF_CHECKED : MF_UNCHECKED; }
 static uint mflags_options() { return config_wnd ? MF_GRAYED : MF_ENABLED; }
 static uint mflags_tek_mode() { return tek_mode ? MF_ENABLED : MF_GRAYED; }
-void win_close() { child_terminate(cterm); }
+void win_close();
 typedef struct pstr{ short len; char s[1]; }pstr;
 typedef struct pwstr{ short len; wchar s[1]; }pwstr;
 pwstr *pwsdup(wchar*s){
@@ -510,7 +595,6 @@ static struct function_def cmd_defs[] = {
 #define DFDP(n,f,s,p)   {#n,FT_PAR1,{.fct_par1=f},s,p,0}
 #define DFDQ(n,f,s,p,q) {#n,FT_PAR2,{.fct_par2=f},s,p,q}
 #ifdef support_sc_defs
-
 #warning these do not work, they crash
   DFDC(restore	    ,SC_RESTORE , 0),
   DFDC(move		      ,SC_MOVE    , 0),
@@ -531,6 +615,8 @@ static struct function_def cmd_defs[] = {
   DFDN(win-restore        ,window_restore       , 0),
   DFDN(win-icon           ,window_min           , 0),
   DFDN(close              ,win_close            , 0),
+  DFDN(win-toggle-always-on-top ,win_toggle_on_top   , mflags_always_top),
+  DFDN(win-toggle-keep-screen-on,win_toggle_screen_on, mflags_screen_on ),
 
   DFDK(new                ,newwin               , 0),  // deprecated
   DFDK(new-key            ,newwin               , 0),
@@ -580,6 +666,10 @@ static struct function_def cmd_defs[] = {
   DFDK(super              ,super_down           , 0),
   DFDK(hyper              ,hyper_down           , 0),
   DFDV(kb-select          ,kb_select            ,mflags_kb_select     ),
+  DFDV(no-scroll          ,no_scroll            , mflags_no_scroll),
+  DFDV(toggle-no-scroll   ,toggle_no_scroll     , mflags_no_scroll),
+  DFDV(scroll-mode        ,scroll_mode          , mflags_scroll_mode),
+  DFDV(toggle-scroll-mode ,toggle_scroll_mode   , mflags_scroll_mode),
 
   DFDN(switch-prev		    ,switch_prev          , 0),
   DFDN(switch-next		    ,switch_next          , 0),

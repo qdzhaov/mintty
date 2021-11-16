@@ -1,0 +1,171 @@
+
+2021/11/17 merge from master
+    3.5.2
+    guard unscroll against top of scrollback
+    change default BracketedPasteByLine=0 for consistent appearance
+    unscroll sequence CSI +T, filling lines from scrollback buffer (kitty)
+    extend scope of area attributes change functions DECCARA and DECRARA
+    extend DECPS note range to 8 octaves (experimental) (~#1122)
+    tweak getemojis script (~#1129), change URLs to https for more reliable download
+    maintain cygwin native clipboard format, to set proper clipboard timestamp
+    LED state management: compensate race condition with ScrollLock auto-repeat
+    experiment to fallback to MingW libao (#1122), disabled
+    revise and enhance DECPS audio output support (~#1122)
+    workaround gcc 5.4 compilation glitch
+    simplify workaround for gcc 11 warning glitch
+    manual: refer setting EraseToScrollback roughly to xterm resource cdXtraScroll
+    manual: refer setting EraseToScrollback to xterm resource cdXtraScroll
+    Unicode 14.0.0
+    workaround for gcc 11 bug on cygwin 32 bit
+    safeguard for undefined WSL distribution name (~mintty/wsltty#296)
+    wiki: mention setting SuppressDEC=80 to suppress DECSDM Sixel mode switching (#1127)
+    wiki: mention fixed DECSET Sixel display mode (#1127)
+    wiki: experimental sound support: OSC 440 (#1122)
+    fix getemojis script to run on system with non-bash default shell (#1083)
+    add missing controls to wiki
+    experimental sound support: OSC 440 (#1122) and DECPS
+    fix -s max... (#1124); fix placement options with higher DPI
+    speedup re-introduced initial provisional win_init_fonts
+    confine window position adjustment to proper cases (#1123, #1126)
+    fix (revert back) DECSDM (DECSET 80) Sixel Display mode (#1127, xterm 369)
+    3.5.1
+    fix emojis selection highlighting (#1116), reverting 3.0.1 tweak for emojis in bidi lines
+    grab focus before showing the window, reducing focus delay (#1113)
+    reposition child_create and explain as related to #1113
+    earlier window display by later tabbar setup (~#1113)
+    slightly earlier window display by later drag-and-drop setup (~#1113)
+    excempt numeric and indicator emojis from space overhang (#1104)
+    ensure -w full to cover taskbar also with -B void (~#1114)
+    prevent spacing anomaly after U+FD3E and U+FD3F
+    manual and wiki tips: enhance how to set copy/paste keys Windows-style (#778)
+    avoid duplicate font initialisation (~#1113)
+    speedup font initialisation (~#1113)
+    withdraw tab transparency support (#1069, ~#699, ~944);
+    tab management via background tab hiding did not work properly;
+    see also comments in code for unpleasant side effects
+    wiki: notes on bracketed-paste mode usage in bash
+    transparency button slider (#728, #140)
+    3.5.1 release candidate
+    add warning about setting Locale and leaving Charset empty (mintty/wsltty#289)
+    tab management:
+    * hide background tabs from appearing while moving the window (~#1069, ~#944, ~#699)
+    * support transparency (avoiding cumulation of opaqueness) (#1069, ~#699)
+    * keep tabbar consistent in case a tab gets terminated irregularly (~#944, #699)
+    wiki: fix and tweak configurations related to stty/readline (#1109)
+    new user-definable function new-window-cwd to clone window in current directory (~#1106)
+    new user-definable function new-window-cwd to clone window in current directory
+    scroll features and user-definable functions no-scroll, scroll-mode;
+    management of ScrollLock keyboard LED
+    bracketed paste mode: configurable splitting by line, option BracketedPasteByLine
+    notify child process via iotcl also when scaling window with font size (xterm 368)
+    tweak overhang mechanism; adjust interaction with TAB, emojis, Disp* options (#1104)
+    workaround for broken `windres` tool of binutils 2.36 (fixed upstream)
+    visual double-width of symbols and emojis with subsequent space (#1104, #892, #1065, #979, #553, ~#927, ~#922, ~#938, ~#638)
+    tweak italic emoji placement
+    apply italic attribute to emojis
+    prevent artefacts of large-size underscore cursor (CSI 4 SP q CSI ? 6 c)
+    speedup of width detection for auto-narrowing for certain characters (#1065, #979, #892);
+    not using GetPixel anymore
+    include screen update in squashing of bell sound series (#1102, ~#865)
+    fix termination of synchronous update (#1098)
+    alternative escape sequence DECSET 2026 for synchronous screen update (#1098)
+    limit line cursor width by width of underline etc rather than char width (#1101)
+    3.5.0
+    apply blink attribute to graphics
+    revise/fix handling of blink attribute (~#1097);
+    coloured blink substitution display (xterm),
+    escape sequences OSC 5/6;2,
+    new option BlinkColour;
+    support distinct blink attribute for base and combining characters
+    user-definable function win-toggle-keep-screen-on to disable screen saver
+    restore "Allow blinking" in Options dialog (#1097)
+    export TERM to WSL (mintty/wsltty#278)
+    OSC 22 to set mouse pointer shape (xterm 367), options MousePointer, AppMousePointer
+    WSL-specific detection of Term info availabilities (mintty/wsltty#278)
+    atomic/synchronous screen update (~#1098), escape sequences DCS=1/2s
+    escape sequence to change progress value only
+    manual: add missing detail on Tek mode support scope (#896)
+    escape sequences to reset progress bar colour mode to configured value
+    support progress detection (for implicit progress bar) also if iconized
+    implicit (detected) progress bar uses configured colour
+    fix reporting option -RW in some cases
+    manual: add details on Tek mode support scope (#896)
+    3.4.7
+    new heuristics to adjust row spacing to font metrics (mintty/wslttyw#257); option AutoLeading
+    Bracketed Paste Mode: ensure embedding of each line
+    enhanced indication of "defocused mode": boldened colour and point size
+    lines cleared from top of screen are scrolled into scrollback buffer (mintty/wsltty#272)
+    fix character set GR mappings to be unguarded by NRCS (vttest 3.10)
+    new user-definable function win-toggle-always-on-top (#1095)
+    various Tek mode fixes:
+    initial written vector joins previous text output (xterm);
+    GIN mode and ENQ coordinates, ENQ status byte;
+    various mode handling fixes after GIN mode;
+    GIN mode terminator strap options (Tek, xterm), option TekStrap
+    smooth GIN mode crosshair cursor movement
+    rearrange
+    distinct GIN mode mouse input (xterm)
+    tek borders: adjust to compensate for coordinate rounding
+    keyboard status report (DEC DSR 26), reporting window focus (vttest 11.1.1.1.1)
+    support "written first vector", triggered by GS-BEL (vttest 11.8.6.5, ~#896)
+    fix validity for REP repeat preceding graphic char (vttest 11[.6].7.2)
+    simplified support of ISO Guarded Area as protected (xterm-like global distinction)
+    restore attributes after DECALN test pattern (vttest 11.6.4/5)
+    run login mode shell if started from Windows shortcut; option LoginFromShortcut
+    wiki: doc script to adjust remote locale mismatch (mintty/mintty#1092)
+    fix blinking for drawn/overstrike characters, (under)lining and emojis
+    3.4.6
+    OSC 7750 for dynamic change of emojis style; support style Emojis=zoom
+    3.4.5
+    mintheme tool works in `screen` (mintty/wsltty#268)
+    fold case_fold
+    tame some window operations, just in case
+    describe initial working dir setup for SaveFilename (~#1086)
+    mintheme tool: enhanced option --save to work better in WSL (mintty/wsltty#268)
+    support home or environment variable prefix for setting SaveFilename (~#1086)
+    settings -P/--pcon/ConPTY to enable/disable ConPTY support (mintty/wsltty#271)
+    wiki: mention (former) interoperability issues of wslbridge2 backend
+    among systems based on glibc vs musl libraries (mintty/wsltty#271, mintty/wsltty#195)
+    change Ctrl+Backarrow to send Backspace (#1082, #449, xterm);
+    apply modifyOtherKeys mode 2 more consistently to special keys;
+    hidden options OldModifyKeys and FormatOtherKeys
+    wiki doc support for Windows terminal theme (~~#1079)
+    support ".json" theme file conversion, vscode and Windows terminal formats (~~#1079)
+    unfold colour scheme collection to be used for multiple formats
+    support theme file conversion on "file:" URL drag-and-drop (~#1079)
+    support theme file conversion on filename drag-and-drop (#1079)
+    safeguard
+    mention configuration dependence of Ctrl+Shift+letter shortcuts (#1084)
+    fix getemojis script to run on system with non-bash default shell (#1083)
+    tweak progress bar implementation: Windows interface usage
+    document check whether invoked via Win+R;
+    may be considered to imply login mode, not enabled
+    (see https://sourceware.org/pipermail/cygwin/2021-January/247321.html)
+    add github avatar to repository
+    tweak availability of DEC Cyrillic character set (VT520, xterm 363)
+    fix U+01C* glyph double-width to apply detection rather than assume wide (#777)
+    detect fractional progress percentage (#1074);
+    auto-narrowing: glyph double-width for double-letter characters (like Dz, #777)
+    avoid trouble with non-text font (#777)
+    3.4.4
+    note about reduced transparency of overlayed windows (#1069)
+    new Compose key options: user-defined super or hyper (#777)
+    tweak initial setup of terminal pixel size (#1071)
+    support 48-bit hex colour specs (#1072)
+    secondary font specification for Unicode blocks: add missing files
+    fix rendering of 0x7F (DEL code) in some 96-characters NRCS modes
+    secondary font specification for Unicode blocks (#777),
+    extended syntax for option FontChoice
+    INSTALL instructions up-to-date
+    workaround for mysterious output delay during non-BMP width detection (#1065)
+    enhance documentation of ExitCommands feature (#1063)
+    fix potential font resource leaks with search bar and tabbar
+    custom font in Options dialog (~#1059), options OptionsFont, OptionsFontHeight
+    enable non-BMP width detection, tweak auto-narrowing character ranges (#1065)
+    configurable font for Options dialog (~#1059), still disabled
+    update to Emoji data version 13.1
+    smart detection of progress indication also inmidst line (mintty/wsltty#202)
+    transform Exit to characters, to exit on application-level (#1063), option ExitCommands
+    DECTST colour fillings (CSI 4;10..13 y, VT240)
+    terminal reset clears progress bar (mintty/wsltty#202)
+
