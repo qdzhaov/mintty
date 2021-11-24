@@ -396,10 +396,12 @@ term_reset(bool full)
   term_schedule_tblink2();
   term_schedule_cblink();
   term_clear_scrollback(cterm);
-  taskbar_progress(-9);
+
+  cterm->iso_guarded_area = false;
 
   cterm->detect_progress = cfg.progress_bar;
-  cterm->iso_guarded_area = false;
+  taskbar_progress(-9);
+
   cterm->suspend_update = 0;
   cterm->no_scroll = 0;
   cterm->scroll_mode = 0;

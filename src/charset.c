@@ -858,7 +858,7 @@ cs__utforansitowcs(const char * s)
 }
 
 char *
-cs__utftombs(char * s)
+cs__utftombs(const char * s)
 {
 //#if CYGWIN_VERSION_API_MINOR >= 66
 #if HAS_LOCALES

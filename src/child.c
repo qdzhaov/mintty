@@ -530,7 +530,7 @@ child_proc(void)
     for (STab**t=win_tabs();*t;t++){
       win_tab_v(*t);
       STerm *pterm=(*t)->terminal;
-	  int pty_fd=pterm->child.pty_fd;
+  	  int pty_fd=pterm->child.pty_fd;
       if ( pty_fd> highfd) highfd = pty_fd;
       if (pty_fd >= 0)
         FD_SET(pty_fd, &fds);

@@ -177,42 +177,42 @@ struct KNVDef{
   DKNU(SCROLLLOCK ,SCROLL ),
   DKNU(EXEC       ,EXECUTE),
   DKNU(BEGIN      ,CLEAR  ),
-#if _WIN32_WINNT >= 0x0604
-  DKND(NAVIGATION_VIEW    ),
-  DKND(NAVIGATION_MENU    ),
-  DKND(NAVIGATION_UP      ),
-  DKND(NAVIGATION_DOWN    ),
-  DKND(NAVIGATION_LEFT    ),
-  DKND(NAVIGATION_RIGHT   ),
-  DKND(NAVIGATION_ACCEPT  ),
-  DKND(NAVIGATION_CANCEL  ),
-#endif
-#if _WIN32_WINNT >= 0x0604
-  DKND(GAMEPAD_A                         ),
-  DKND(GAMEPAD_B                         ),
-  DKND(GAMEPAD_X                         ),
-  DKND(GAMEPAD_Y                         ),
-  DKND(GAMEPAD_RIGHT_SHOULDER            ),
-  DKND(GAMEPAD_LEFT_SHOULDER             ),
-  DKND(GAMEPAD_LEFT_TRIGGER              ),
-  DKND(GAMEPAD_RIGHT_TRIGGER             ),
-  DKND(GAMEPAD_DPAD_UP                   ),
-  DKND(GAMEPAD_DPAD_DOWN                 ),
-  DKND(GAMEPAD_DPAD_LEFT                 ),
-  DKND(GAMEPAD_DPAD_RIGHT                ),
-  DKND(GAMEPAD_MENU                      ),
-  DKND(GAMEPAD_VIEW                      ),
-  DKND(GAMEPAD_LEFT_THUMBSTICK_BUTTON    ),
-  DKND(GAMEPAD_RIGHT_THUMBSTICK_BUTTON   ),
-  DKND(GAMEPAD_LEFT_THUMBSTICK_UP        ),
-  DKND(GAMEPAD_LEFT_THUMBSTICK_DOWN      ),
-  DKND(GAMEPAD_LEFT_THUMBSTICK_RIGHT     ),
-  DKND(GAMEPAD_LEFT_THUMBSTICK_LEFT      ),
-  DKND(GAMEPAD_RIGHT_THUMBSTICK_UP       ),
-  DKND(GAMEPAD_RIGHT_THUMBSTICK_DOWN     ),
-  DKND(GAMEPAD_RIGHT_THUMBSTICK_RIGHT    ),
-  DKND(GAMEPAD_RIGHT_THUMBSTICK_LEFT     ),
-#endif /* _WIN32_WINNT >= 0x0604 */
+//#if _WIN32_WINNT >= 0x0604
+//  DKND(NAVIGATION_VIEW    ),
+//  DKND(NAVIGATION_MENU    ),
+//  DKND(NAVIGATION_UP      ),
+//  DKND(NAVIGATION_DOWN    ),
+//  DKND(NAVIGATION_LEFT    ),
+//  DKND(NAVIGATION_RIGHT   ),
+//  DKND(NAVIGATION_ACCEPT  ),
+//  DKND(NAVIGATION_CANCEL  ),
+//#endif
+//#if _WIN32_WINNT >= 0x0604
+//  DKND(GAMEPAD_A                         ),
+//  DKND(GAMEPAD_B                         ),
+//  DKND(GAMEPAD_X                         ),
+//  DKND(GAMEPAD_Y                         ),
+//  DKND(GAMEPAD_RIGHT_SHOULDER            ),
+//  DKND(GAMEPAD_LEFT_SHOULDER             ),
+//  DKND(GAMEPAD_LEFT_TRIGGER              ),
+//  DKND(GAMEPAD_RIGHT_TRIGGER             ),
+//  DKND(GAMEPAD_DPAD_UP                   ),
+//  DKND(GAMEPAD_DPAD_DOWN                 ),
+//  DKND(GAMEPAD_DPAD_LEFT                 ),
+//  DKND(GAMEPAD_DPAD_RIGHT                ),
+//  DKND(GAMEPAD_MENU                      ),
+//  DKND(GAMEPAD_VIEW                      ),
+//  DKND(GAMEPAD_LEFT_THUMBSTICK_BUTTON    ),
+//  DKND(GAMEPAD_RIGHT_THUMBSTICK_BUTTON   ),
+//  DKND(GAMEPAD_LEFT_THUMBSTICK_UP        ),
+//  DKND(GAMEPAD_LEFT_THUMBSTICK_DOWN      ),
+//  DKND(GAMEPAD_LEFT_THUMBSTICK_RIGHT     ),
+//  DKND(GAMEPAD_LEFT_THUMBSTICK_LEFT      ),
+//  DKND(GAMEPAD_RIGHT_THUMBSTICK_UP       ),
+//  DKND(GAMEPAD_RIGHT_THUMBSTICK_DOWN     ),
+//  DKND(GAMEPAD_RIGHT_THUMBSTICK_RIGHT    ),
+//  DKND(GAMEPAD_RIGHT_THUMBSTICK_LEFT     ),
+//#endif 
   {0,0}
 #undef DKNU 
 #undef DKND 
@@ -226,7 +226,7 @@ static char*getvkname(int key){
   return "UNKOWN";
 }
 #endif
-static int getvk(char *n){
+static int getvk(const char *n){
   struct KNVDef*p;
   if(n[1]==0){
     return (int)(unsigned char)n[0];
@@ -662,6 +662,7 @@ static struct function_def cmd_defs[] = {
   DFSN(window_max         , mflags_zoomed),
   DFSN(window_toggle_max  , mflags_zoomed),
   DFSC(OPTIONS            , mflags_options),
+  DFSC(BORDERS            , 0),
   DFSC(SCROLLBAR          , mflags_scrollbar_outer),
   DFSN(win_tog_scrollbar  , mflags_scrollbar_inner),
   DFSC(COPY               , mflags_copy),

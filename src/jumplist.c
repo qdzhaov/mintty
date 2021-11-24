@@ -3,7 +3,6 @@
 
 #undef WINVER
 #define WINVER 0x0601
-#include "std.h"
 //#undef NTDDI_VERSION
 //#define NTDDI_VERSION NTDDI_WIN7
 #ifndef ___PROCESSOR_NUMBER_DEFINED

@@ -432,7 +432,8 @@ win_update_menus(bool callback)
   //__ Context menu:
   modify_menu(ctxmenu, IDM_TABBAR   , CKED(cfg.tab_bar_show)  , _W("Tabbar(&H)"),    null);
   //__ Context menu:
-  modify_menu(ctxmenu, IDM_SCROLLBAR, scrollbar_checked       , _W("Scrollbar(&B)"), null);
+  modify_menu(ctxmenu, IDM_SCROLLBAR, scrollbar_checked       , _W("Scrollbar(&S)"), null);
+  modify_menu(ctxmenu, IDM_BORDERS  , 0, _W("&Border"), null);
   //__ Context menu:
   modify_menu(ctxmenu, IDM_PARTLINE , CKED(cterm->usepartline), _W("PartLine(&K)"),  null);
   //__ Context menu:
@@ -446,7 +447,7 @@ win_update_menus(bool callback)
 
   uint otherscreen_checked = cterm->show_other_screen ? MF_CHECKED : MF_UNCHECKED;
   //__ Context menu:
-  modify_menu(ctxmenu, IDM_FLIPSCREEN, otherscreen_checked, _W("Flip &Screen"),
+  modify_menu(ctxmenu, IDM_FLIPSCREEN, otherscreen_checked, _W("Flip Screen(&W)"),
     alt_fn ? W("Alt+F12") : ct_sh ? W("Ctrl+Shift+S") : null
   );
 
@@ -592,6 +593,7 @@ win_init_ctxmenu(bool extended_menu, bool with_user_commands)
   }
   AppendMenuW(ctxmenu, MF_SEPARATOR, 0, 0);
   AppendMenuW(ctxmenu, MF_ENABLED | MF_UNCHECKED, IDM_DEFSIZE_ZOOM, 0);
+  AppendMenuW(ctxmenu, MF_ENABLED | MF_UNCHECKED, IDM_BORDERS  , 0);
   AppendMenuW(ctxmenu, MF_ENABLED | MF_UNCHECKED, IDM_SCROLLBAR, 0);
   AppendMenuW(ctxmenu, MF_ENABLED | MF_CHECKED  , IDM_TABBAR   , 0);
   AppendMenuW(ctxmenu, MF_ENABLED | MF_UNCHECKED, IDM_PARTLINE , 0);
