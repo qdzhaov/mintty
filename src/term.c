@@ -14,7 +14,6 @@
 #include <langinfo.h>
 #endif
 
-extern int lines_scrolled;
 STerm dterm={0};
 STerm *cterm=&dterm;
 
@@ -31,8 +30,6 @@ enum {
   FULL_UPDATE = 2
 };
 
-static int markpos = 0;
-static bool markpos_valid = false;
 
 static char * * links = 0;
 static int nlinks = 0;
@@ -1423,13 +1420,13 @@ term_do_scroll(int topline, int botline, int lines, bool sb)
   int scrolllines = lines;
 #endif
 
-  markpos_valid = false;
+  cterm->markpos_valid = false;
   assert(botline >= topline && lines != 0);
 
   bool down = lines < 0; // Scrolling downwards?
   lines = abs(lines);    // Number of lines to scroll by
 
-  lines_scrolled += lines;
+  cterm->lines_scrolled += lines;
 
   botline++; // One below the scroll region: easier to calculate with
 
@@ -2428,9 +2425,9 @@ term_paint(void)
       } else {
         tattr.attr &= ~TATTR_RESULT;
       }
-      if (markpos_valid && (displine->lattr & (LATTR_MARKED | LATTR_UNMARKED))) {
+      if (cterm->markpos_valid && (displine->lattr & (LATTR_MARKED | LATTR_UNMARKED))) {
         tattr.attr |= TATTR_MARKED;
-        if (scrpos.y == markpos)
+        if (scrpos.y == cterm->markpos)
           tattr.attr |= TATTR_CURMARKED;
       } else {
         tattr.attr &= ~TATTR_MARKED;
@@ -3424,17 +3421,17 @@ term_scroll(int rel, int where)
   bool do_schedule_update = false;
 
   if (rel == SB_PRIOR || rel == SB_NEXT) {
-    if (!markpos_valid) {
-      markpos = sbbot;
-      markpos_valid = true;
+    if (!cterm->markpos_valid) {
+      cterm->markpos = sbbot;
+      cterm->markpos_valid = true;
     }
-    int y = markpos;
+    int y = cterm->markpos;
     while ((rel == SB_PRIOR) ? y-- > sbtop : y++ < sbbot) {
       termline * line = fetch_line(y);
       ushort lattr = line->lattr;
       release_line(line);
       if (lattr & LATTR_MARKED) {
-        markpos = y;
+        cterm->markpos = y;
         cterm->disptop = y;
         break;
       }

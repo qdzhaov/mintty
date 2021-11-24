@@ -175,7 +175,7 @@ typedef struct {
   wstring exit_title;
   wstring icon;
   wstring log;
-  bool logging;
+  int logging;
   wstring title;
   bool title_settable;
   bool create_utmp;

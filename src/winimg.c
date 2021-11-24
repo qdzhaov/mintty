@@ -278,8 +278,8 @@ winimg_new(imglist **ppimg, char * id, unsigned char * pixels, uint len,
   img->len = len;
   if (len) {  // image format, not sixel
     img->id = id ? strdup(id) : 0;
-    img->cwidth = cell_width;
-    img->cheight = cell_height;
+    img->cwidth = wv.cell_width;
+    img->cheight = wv.cell_height;
 
 #if CYGWIN_VERSION_API_MINOR >= 74
     if (!pixelwidth || !pixelheight || preserveAR) {
@@ -356,26 +356,26 @@ winimg_new(imglist **ppimg, char * id, unsigned char * pixels, uint len,
       if (img->pixelwidth && img->pixelheight) {  // case 1
         if ((ulong)img->pixelwidth * (ulong)ph < (ulong)img->pixelheight * (ulong)pw) {
           img->pixelheight = (ulong)img->pixelwidth * (ulong)ph / pw;
-          img->height = (img->pixelheight - 1) / cell_height + 1;
+          img->height = (img->pixelheight - 1) / wv.cell_height + 1;
         }
         else if ((ulong)img->pixelheight * (ulong)pw < (ulong)img->pixelwidth * (ulong)ph) {
           img->pixelwidth = (ulong)img->pixelheight * (ulong)pw / ph;
-          img->width = (img->pixelwidth - 1) / cell_width + 1;
+          img->width = (img->pixelwidth - 1) / wv.cell_width + 1;
         }
       }
       else if (img->pixelwidth) {  // case 2
         img->pixelheight = (ulong)img->pixelwidth * (ulong)ph / pw;
-        img->height = (img->pixelheight - 1) / cell_height + 1;
+        img->height = (img->pixelheight - 1) / wv.cell_height + 1;
       }
       else if (img->pixelheight) {  // case 3
         img->pixelwidth = (ulong)img->pixelheight * (ulong)pw / ph;
-        img->width = (img->pixelwidth - 1) / cell_width + 1;
+        img->width = (img->pixelwidth - 1) / wv.cell_width + 1;
       }
       else {  // case 4
         img->pixelwidth = pw;
-        img->width = (pw - 1) / cell_width + 1;
+        img->width = (pw - 1) / wv.cell_width + 1;
         img->pixelheight = ph;
-        img->height = (ph - 1) / cell_height + 1;
+        img->height = (ph - 1) / wv.cell_height + 1;
       }
     }
 #else
@@ -553,8 +553,8 @@ draw_img(HDC dc, imglist * img)
     }
 
     // position
-    int left = img->left * cell_width;
-    int top = (img->top - cterm->virtuallines - cterm->disptop) * cell_height;
+    int left = img->left * wv.cell_width;
+    int top = (img->top - cterm->virtuallines - cterm->disptop) * wv.cell_height;
     int width = img->pixelwidth;
     int height = img->pixelheight;
     left += PADDING;
@@ -562,12 +562,12 @@ draw_img(HDC dc, imglist * img)
 
     int coord_transformed = 0;
     XFORM old_xform;
-    if (img->cwidth != cell_width || img->cheight != cell_height) {
+    if (img->cwidth != wv.cell_width || img->cheight != wv.cell_height) {
       coord_transformed = SetGraphicsMode(dc, GM_ADVANCED);
       if (coord_transformed && GetWorldTransform(dc, &old_xform)) {
         XFORM xform =
-          (XFORM){(float)cell_width / (float)img->cwidth, 0.0,
-                  0.0, (float)cell_height / (float)img->cheight,
+          (XFORM){(float)wv.cell_width / (float)img->cwidth, 0.0,
+                  0.0, (float)wv.cell_height / (float)img->cheight,
                   left, top};
         coord_transformed = SetWorldTransform(dc, &xform);
         left = 0;
@@ -657,8 +657,8 @@ winimgs_paint(void)
   RECT rc;
   GetClientRect(wnd, &rc);
   IntersectClipRect(dc, rc.left + PADDING, rc.top + OFFSET + PADDING,
-                    rc.left + PADDING + cterm->cols * cell_width,
-                    rc.top + OFFSET + PADDING + cterm->rows * cell_height);
+                    rc.left + PADDING + cterm->cols * wv.cell_width,
+                    rc.top + OFFSET + PADDING + cterm->rows * wv.cell_height);
 
   // prepare detection of overwritten images for garbage collection
   bool drawn[cterm->rows * cterm->cols];
@@ -752,10 +752,10 @@ winimgs_paint(void)
             }
             if (clip_flag)
               ExcludeClipRect(dc,
-                              x * wide_factor * cell_width + PADDING,
-                              y * cell_height + OFFSET + PADDING,
-                              (x + 1) * wide_factor * cell_width + PADDING,
-                              (y + 1) * cell_height + OFFSET + PADDING);
+                              x * wide_factor * wv.cell_width + PADDING,
+                              y * wv.cell_height + OFFSET + PADDING,
+                              (x + 1) * wide_factor * wv.cell_width + PADDING,
+                              (y + 1) * wv.cell_height + OFFSET + PADDING);
           }
         }
 #ifdef debug_img_over
@@ -775,10 +775,10 @@ winimgs_paint(void)
 
         // fill image area background (in case it's smaller or transparent)
         // calculate area for padding
-        int ytop = max(0, top) * cell_height + OFFSET + PADDING;
-        int ybot = min(top + img->height, cterm->rows) * cell_height + OFFSET + PADDING;
-        int xlft = left * cell_width + PADDING;
-        int xrgt = min(left + img->width, cterm->cols) * cell_width + PADDING;
+        int ytop = max(0, top) * wv.cell_height + OFFSET + PADDING;
+        int ybot = min(top + img->height, cterm->rows) * wv.cell_height + OFFSET + PADDING;
+        int xlft = left * wv.cell_width + PADDING;
+        int xrgt = min(left + img->width, cterm->cols) * wv.cell_width + PADDING;
         if (img->len) {
           // better background handling implemented below; this version 
           // would expose artefacts if a transparent image is scrolled
@@ -792,15 +792,15 @@ winimgs_paint(void)
           int iheight;
           if (img->len) {
             // image: actual picture size
-            iwidth = img->pixelwidth * cell_width / img->cwidth;
-            iheight = img->pixelheight * cell_height / img->cheight;
+            iwidth = img->pixelwidth * wv.cell_width / img->cwidth;
+            iheight = img->pixelheight * wv.cell_height / img->cheight;
           }
           else {
             // sixel: actual picture size
-            iwidth = img->cwidth * cell_width * img->width / img->pixelwidth;
-            iheight = img->cheight * cell_height * img->height / img->pixelheight;
+            iwidth = img->cwidth * wv.cell_width * img->width / img->pixelwidth;
+            iheight = img->cheight * wv.cell_height * img->height / img->pixelheight;
           }
-          int ibot = max(0, top * cell_height + iheight) + OFFSET + PADDING;
+          int ibot = max(0, top * wv.cell_height + iheight) + OFFSET + PADDING;
           // fill either background image or colour
           if (*cfg.background) {
             fill_background(dc, &(RECT){xlft + iwidth, ytop, xrgt, ibot});
@@ -851,14 +851,14 @@ winimgs_paint(void)
           }
           else {
             StretchBlt(dc,
-                       left * cell_width + PADDING, top * cell_height + OFFSET + PADDING,
-                       img->width * cell_width, img->height * cell_height,
+                       left * wv.cell_width + PADDING, top * wv.cell_height + OFFSET + PADDING,
+                       img->width * wv.cell_width, img->height * wv.cell_height,
                        img->hdc,
                        0, 0, img->pixelwidth, img->pixelheight, SRCCOPY);
             ExcludeClipRect(dc,
-                       left * cell_width + PADDING, top * cell_height + OFFSET + PADDING,
-                       left * cell_width + PADDING + img->width * cell_width,
-                       top * cell_height + OFFSET + PADDING + img->height * cell_height
+                       left * wv.cell_width + PADDING, top * wv.cell_height + OFFSET + PADDING,
+                       left * wv.cell_width + PADDING + img->width * wv.cell_width,
+                       top * wv.cell_height + OFFSET + PADDING + img->height * wv.cell_height
                        );
           }
           if (!backward_img_traversal) {
@@ -961,17 +961,17 @@ win_emoji_show(int x, int y, wchar * efn, void * * bufpoi, int * buflen, int ele
     gpcheck("load file", s);
   }
 
-  int col = PADDING + x * cell_width;
-  int row = OFFSET + PADDING + y * cell_height;
+  int col = PADDING + x * wv.cell_width;
+  int row = OFFSET + PADDING + y * wv.cell_height;
   if ((lattr & LATTR_MODE) >= LATTR_BOT)
-    row -= cell_height;
-  int w = elen * cell_width;
+    row -= wv.cell_height;
+  int w = elen * wv.cell_width;
   if ((lattr & LATTR_MODE) != LATTR_NORM) {
     w *= 2;
     // fix position in double-width line
-    col += x * cell_width;
+    col += x * wv.cell_width;
   }
-  int h = cell_height;
+  int h = wv.cell_height;
   if ((lattr & LATTR_MODE) >= LATTR_TOP)
     h *= 2;
   // glitch: missing clipping for inconsistent double-height lines
@@ -1018,11 +1018,11 @@ win_emoji_show(int x, int y, wchar * efn, void * * bufpoi, int * buflen, int ele
        x' = x + ( (r+h-1-y) / h) * w/4 - bottom-line_x-undent(w/8)
      */
     XFORM xform = (XFORM){1.0, 0.0, 0.0, 1.0, 0.0, 0.0};
-    xform.eM21 = ((float)cell_width) * -0.25 / ((float)cell_height);
-    //xform.eDx = ((float)cell_width) * 0.25 * ((float)(row - 1) / ((float)cell_height) + 1.0)
-    //          - ((float)cell_width) * 0.125;
-    xform.eDx = ((float)cell_width) * 
-             (0.25 * ((float)(row - 1) / ((float)cell_height) + 1.0) - 0.125);
+    xform.eM21 = ((float)wv.cell_width) * -0.25 / ((float)wv.cell_height);
+    //xform.eDx = ((float)wv.cell_width) * 0.25 * ((float)(row - 1) / ((float)wv.cell_height) + 1.0)
+    //          - ((float)wv.cell_width) * 0.125;
+    xform.eDx = ((float)wv.cell_width) * 
+             (0.25 * ((float)(row - 1) / ((float)wv.cell_height) + 1.0) - 0.125);
     coord_transformed = SetWorldTransform(dc, &xform);
   }
 

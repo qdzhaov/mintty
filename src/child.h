@@ -24,7 +24,7 @@ typedef struct SChild SChild;
 extern void child_update_charset(STerm* pterm);
 extern void child_create(STerm* pterm, SessDef*sd, struct winsize *winp, const char* path);
 extern void toggle_logging(void);
-extern bool logging;
+extern int logging;
 extern void child_proc(void);
 extern void child_kill(bool point_blank);
 extern void child_terminate(STerm* pterm);

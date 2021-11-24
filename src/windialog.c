@@ -58,11 +58,11 @@ static controlbox *ctrlbox;
  * which change from panel to panel.
  */
 static winctrls ctrls_base, ctrls_panel;
-extern int heightsc;
-#define SC(a) (heightsc*(a)/100)
+static int heightsc=1;
+//#define SC(a) (heightsc*(a)/100)
+#define SC(a) win_dialog_sc(a)
 windlg dlg;
 wstring dragndrop;
-
 static int dialog_height,dialog_width,ldpi=72;  
 #define USECTLWND
 #define DLGH 28
@@ -73,12 +73,13 @@ enum {
   IDCX_STDBASE,
   IDCX_PANELBASE = IDCX_STDBASE + 32
 };
-
 typedef struct {
   HWND treeview;
   HTREEITEM lastat[4];
 } treeview_faff;
-
+int win_dialog_sc(int iv){
+  return (heightsc*(iv)/100);
+}
 static HTREEITEM
 treeview_insert(treeview_faff * faff, int level, char *text, char *path)
 {

@@ -393,10 +393,8 @@ win_update_menus(bool callback)
     alt_fn ? W("Alt+F3") : ct_sh ? W("Ctrl+Shift+H") : null
   );
 
-  uint logging_enabled = (logging || *cfg.log) ? MF_ENABLED : MF_GRAYED;
-  uint logging_checked = logging ? MF_CHECKED : MF_UNCHECKED;
   //__ Context menu:
-  modify_menu(ctxmenu, IDM_TOGLOG, logging_enabled | logging_checked, _W("&Log to File"),
+  modify_menu(ctxmenu, IDM_TOGLOG, logging ? MF_CHECKED : MF_UNCHECKED, _W("&Log to File"),
     null
   );
 
@@ -876,12 +874,12 @@ static pos
 translate_pos(int x, int y)
 {
   return (pos){
-    .x = floorf((x - PADDING) / (float)cell_width),
-    .y = floorf((y - PADDING - OFFSET) / (float)cell_height),
-    .pix = min(max(0, x - PADDING), cterm->rows * cell_height - 1),
-    .piy = min(max(0, y - PADDING - OFFSET), cterm->cols * cell_width - 1),
+    .x = floorf((x - PADDING) / (float)wv.cell_width),
+    .y = floorf((y - PADDING - OFFSET) / (float)wv.cell_height),
+    .pix = min(max(0, x - PADDING), cterm->rows * wv.cell_height - 1),
+    .piy = min(max(0, y - PADDING - OFFSET), cterm->cols * wv.cell_width - 1),
     .r = (cfg.elastic_mouse && !cterm->mouse_mode)
-         ? (x - PADDING) % cell_width > cell_width / 2
+         ? (x - PADDING) % wv.cell_width > wv.cell_width / 2
          : 0
   };
 }
@@ -1066,21 +1064,21 @@ win_get_locator_info(int *x, int *y, int *buttons, bool by_pixels)
         p.x = 0;
       else
         p.x -= PADDING;
-      if (p.x >= cterm->cols * cell_width)
-        p.x = cterm->cols * cell_width - 1;
+      if (p.x >= cterm->cols * wv.cell_width)
+        p.x = cterm->cols * wv.cell_width - 1;
       if (p.y < OFFSET + PADDING)
         p.y = 0;
       else
         p.y -= OFFSET + PADDING;
-      if (p.y >= cterm->rows * cell_height)
-        p.y = cterm->rows * cell_height - 1;
+      if (p.y >= cterm->rows * wv.cell_height)
+        p.y = cterm->rows * wv.cell_height - 1;
 
       if (by_pixels) {
         *x = p.x;
         *y = p.y;
       } else {
-        *x = floorf(p.x / (float)cell_width);
-        *y = floorf(p.y / (float)cell_height);
+        *x = floorf(p.x / (float)wv.cell_width);
+        *y = floorf(p.y / (float)wv.cell_height);
       }
     }
   }

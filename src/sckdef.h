@@ -358,48 +358,15 @@ kb_select(uint key, mod_keys mods)
   cterm->selection_pending = true;
   return 1;
 }
-static uint
-mflags_defsize()
-{
-  return
-    IsZoomed(wnd) || cterm->cols != cfg.cols || cterm->rows != cfg.rows
-    ? MF_ENABLED : MF_GRAYED;
-}
-
-static uint
-mflags_scrollbar_outer()
-{
-  return cterm->show_scrollbar ? MF_CHECKED : MF_UNCHECKED
+static uint mflags_defsize() { return (IsZoomed(wnd) || cterm->cols != cfg.cols || cterm->rows != cfg.rows) ? MF_ENABLED : MF_GRAYED; }
 #ifdef allow_disabling_scrollbar
-         | cfg.scrollbar ? 0 : MF_GRAYED
+static uint mflags_scrollbar_outer() { return cterm->show_scrollbar ? MF_CHECKED : MF_UNCHECKED | cfg.scrollbar ? 0 : MF_GRAYED ; }
+#else
+static uint mflags_scrollbar_outer() { return cterm->show_scrollbar ? MF_CHECKED : MF_UNCHECKED ; }
 #endif
-  ;
-}
-
-static uint
-mflags_scrollbar_inner()
-{
-  if (cfg.scrollbar)
-    return cterm->show_scrollbar ? MF_CHECKED : MF_UNCHECKED;
-  else
-    return MF_GRAYED;
-}
-
-static uint
-mflags_logging()
-{
-  return ((logging || *cfg.log) ? MF_ENABLED : MF_GRAYED)
-       | (logging ? MF_CHECKED : MF_UNCHECKED)
-  ;
-}
-static uint
-mflags_bidi()
-{
-  return (cfg.bidi == 0
-         || (cfg.bidi == 1 && (cterm->on_alt_screen ^ cterm->show_other_screen))
-         ) ? MF_GRAYED
-           : cterm->disable_bidi ? MF_UNCHECKED : MF_CHECKED;
-}
+static uint mflags_scrollbar_inner() { return cfg.scrollbar?(  cterm->show_scrollbar ? MF_CHECKED : MF_UNCHECKED): MF_GRAYED; }
+static uint mflags_logging() { return (logging ? MF_CHECKED : MF_UNCHECKED) ; }
+static uint mflags_bidi() { return (cfg.bidi == 0 || (cfg.bidi == 1 && (cterm->on_alt_screen ^ cterm->show_other_screen))) ? MF_GRAYED : cterm->disable_bidi ? MF_UNCHECKED : MF_CHECKED; }
 static void zoom_font_out   (){ win_zoom_font(-1, 0);}
 static void zoom_font_in    (){ win_zoom_font( 1, 0);}
 static void zoom_font_reset (){ win_zoom_font( 0, 0);}
@@ -413,9 +380,6 @@ static void window_max() { win_maximise(1); }
 static void window_toggle_max() { win_maximise(!IsZoomed(wnd)); }
 static void window_restore() { win_maximise(0); }
 static void window_min() { win_set_iconic(true); }
-void toggle_vt220() { cterm->vt220_keys = !cterm->vt220_keys; }
-void toggle_auto_repeat() { cterm->auto_repeat = !cterm->auto_repeat; }
-void toggle_bidi() { cterm->disable_bidi = !cterm->disable_bidi; }
 static void switch_next() { win_switch(false, true); }
 static void switch_prev() { win_switch(true, true); }
 static void switch_visible_next() { win_switch(false, false); }
@@ -433,6 +397,9 @@ static void scroll_lnup	 (){SendMessage(wnd, WM_VSCROLL,SB_LINEUP   ,0);}
 static void scroll_lndn	 (){SendMessage(wnd, WM_VSCROLL,SB_LINEDOWN ,0);} 
 static void scroll_prev	 (){SendMessage(wnd, WM_VSCROLL,SB_PRIOR    ,0);}    
 static void scroll_next	 (){SendMessage(wnd, WM_VSCROLL,SB_NEXT     ,0);}     
+void toggle_vt220() { cterm->vt220_keys = !cterm->vt220_keys; }
+void toggle_auto_repeat() { cterm->auto_repeat = !cterm->auto_repeat; }
+void toggle_bidi() { cterm->disable_bidi = !cterm->disable_bidi; }
 void tab_prev	    (){win_tab_change(-1);}
 void tab_next	    (){win_tab_change( 1);}
 void tab_move_prev(){win_tab_move  (-1);}

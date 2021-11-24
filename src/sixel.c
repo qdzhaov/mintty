@@ -192,8 +192,8 @@ sixel_parser_init(sixel_state_t * st,
   st->attributed_pv = 0;
   st->repeat_count = 1;
   st->color_index = 16;
-  st->grid_width = cell_width;
-  st->grid_height = cell_height;
+  st->grid_width = wv.cell_width;
+  st->grid_height = wv.cell_height;
   st->nparams = 0;
   st->param = 0;
 

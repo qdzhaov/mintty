@@ -3,6 +3,7 @@
 
 #include "minibidi.h"
 #include "config.h"
+#include <termios.h>
 
 // Colour numbers
 
@@ -473,6 +474,9 @@ typedef struct STerm {
   int tempsblines;        /* number of lines of .scrollback that
                            * can be retrieved onto the terminal
                            * ("temporary scrollback") */
+  int lines_scrolled;
+  int markpos ;
+  bool markpos_valid ;
   long long int virtuallines;
   long long int altvirtuallines;
 
@@ -502,6 +506,7 @@ typedef struct STerm {
   int marg_left, marg_right; /* horizontal margins */
   bool lrmargmode;           /* enable horizontal margins */
   bool attr_rect;            /* rectangular attribute change extent */
+
   bool printing, only_printing;  /* Are we doing ANSI printing? */
   int  print_state;       /* state of print-end-sequence scan */
   char *printbuf;         /* buffered data for printer */
@@ -510,6 +515,7 @@ typedef struct STerm {
   int usepartline;
   int  rows, cols;
   int  rows0, cols0;
+  struct winsize cwinsize;
   bool has_focus;
   bool focus_reported;
   bool in_vbell;
@@ -666,6 +672,7 @@ typedef struct STerm {
 
   SChild child;
   struct STab* tab;
+  int log_fd;
   // Search results
   termresults results;
 

@@ -144,6 +144,7 @@ static void tab_init(STab*tab){
   memset(tab,0,sizeof(*tab));
   tab->terminal=new(STerm);
   memset(tab->terminal, 0, sizeof(STerm));
+  tab->terminal->log_fd=-1;
 }
 static void tab_free(STab*tab){
   if (tab->terminal){
@@ -221,7 +222,7 @@ void win_tab_create(SessDef*sd){
   char cwd_path[256];
   sprintf(cwd_path,"/proc/%d/cwd",child_get_pid(t) ); 
   char* cwd = realpath(cwd_path, 0);
-  struct winsize wsz={t->rows, t->cols, t->cols * cell_width, t->rows * cell_height};
+  struct winsize wsz={t->rows, t->cols, t->cols * wv.cell_width, t->rows * wv.cell_height};
   newtab(sd,&wsz, cwd);
   free(cwd);
   win_tab_go(ntabs - 1);

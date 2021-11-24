@@ -2620,7 +2620,7 @@ do_winop(void)
       search_monitors(&w, &h, 0, false, 0);
       child_printf(cterm,"\e[5;%d;%dt", h, w);
     }
-    when 16: child_printf(cterm,"\e[6;%d;%dt", cell_height, cell_width);
+    when 16: child_printf(cterm,"\e[6;%d;%dt", wv.cell_height, wv.cell_width);
     when 18: child_printf(cterm,"\e[8;%d;%dt", cterm->rows, cterm->cols);
     when 19: {
 #ifdef size_of_monitor_only
@@ -2631,7 +2631,7 @@ do_winop(void)
 #else
       int w, h;
       search_monitors(&w, &h, 0, false, 0);
-      child_printf(cterm,"\e[9;%d;%dt", h / cell_height, w / cell_width);
+      child_printf(cterm,"\e[9;%d;%dt", h / wv.cell_height, w / wv.cell_width);
 #endif
     }
     when 22:
@@ -4205,29 +4205,29 @@ do_cmd(void)
         else if (0 == strcmp("width", s)) {
           if (pix) {
             pixelwidth = val;
-            width = (val - 1) / cell_width + 1;
+            width = (val - 1) / wv.cell_width + 1;
           }
           else if (per) {
             width = cterm->cols * val / 100;
-            pixelwidth = width * cell_width;
+            pixelwidth = width * wv.cell_width;
           }
           else {
             width = val;
-            pixelwidth = val * cell_width;
+            pixelwidth = val * wv.cell_width;
           }
         }
         else if (0 == strcmp("height", s)) {
           if (pix) {
             pixelheight = val;
-            height = (val - 1) / cell_height + 1;
+            height = (val - 1) / wv.cell_height + 1;
           }
           else if (per) {
             height = cterm->rows * val / 100;
-            pixelheight = height * cell_height;
+            pixelheight = height * wv.cell_height;
           }
           else {
             height = val;
-            pixelheight = val * cell_height;
+            pixelheight = val * wv.cell_height;
           }
         }
         else if (0 == strcmp("preserveAspectRatio", s)) {

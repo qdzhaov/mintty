@@ -15,7 +15,6 @@
 #include <usp10.h>  // Uniscribe
 //winmain
 extern char * home;
-extern int ini_width, ini_height; 
 
 #define dont_debug_bold 1
 
@@ -101,7 +100,6 @@ int font_size;
 // scaled font size; pure font height, without spacing
 static int font_height;
 // character cell size, including spacing:
-int cell_width, cell_height;
 // border padding:
 int PADDING = 1;
 int OFFSET = 0;
@@ -672,24 +670,24 @@ win_init_fontfamily(HDC dc, int findex)
         (int)tm.tmDescent, ff->row_spacing, ff->name));
     ff->col_spacing = cfg.col_spacing;
 
-    cell_height = tm.tmHeight + ff->row_spacing;
-    //cell_width = tm.tmAveCharWidth + ff->col_spacing;
-    cell_width = (int)(latin_char_width * 16) + ff->col_spacing;
+    wv.cell_height = tm.tmHeight + ff->row_spacing;
+    //wv.cell_width = tm.tmAveCharWidth + ff->col_spacing;
+    wv.cell_width = (int)(latin_char_width * 16) + ff->col_spacing;
 
-    line_scale = cell_height * 100 / abs(font_height);
+    line_scale = wv.cell_height * 100 / abs(font_height);
 
     PADDING = tm.tmAveCharWidth;
     if (cfg.padding >= 0 && cfg.padding < PADDING)
       PADDING = cfg.padding;
   }
   else {
-    ff->row_spacing = cell_height - tm.tmHeight;
-    //ff->col_spacing = cell_width - tm.tmAveCharWidth;
-    ff->col_spacing = cell_width - (int)(latin_char_width * 16);
+    ff->row_spacing = wv.cell_height - tm.tmHeight;
+    //ff->col_spacing = wv.cell_width - tm.tmAveCharWidth;
+    ff->col_spacing = wv.cell_width - (int)(latin_char_width * 16);
   }
 
 #ifdef debug_create_font
-  printf("size %d -> height %d -> height %d\n", font_size, font_height, cell_height);
+  printf("size %d -> height %d -> height %d\n", font_size, font_height, wv.cell_height);
 #endif
 
   //ff->font_dualwidth = (tm.tmMaxCharWidth >= tm.tmAveCharWidth * 3 / 2);
@@ -754,7 +752,7 @@ win_init_fontfamily(HDC dc, int findex)
   */
   if (ff->und_mode == UND_FONT) {
     HDC und_dc = CreateCompatibleDC(dc);
-    HBITMAP und_bm = CreateCompatibleBitmap(dc, cell_width, cell_height);
+    HBITMAP und_bm = CreateCompatibleBitmap(dc, wv.cell_width, wv.cell_height);
     HBITMAP und_oldbm = SelectObject(und_dc, und_bm);
     SelectObject(und_dc, ff->fonts[FONT_UNDERLINE]);
     SetTextAlign(und_dc, TA_TOP | TA_LEFT | TA_NOUPDATECP);
@@ -769,8 +767,8 @@ win_init_fontfamily(HDC dc, int findex)
     // look for font-generated underline in descender section only
     int i = tm.tmAscent;
     //int i = tm.tmAscent + 1;
-    for (; i < cell_height; i++) {
-      COLORREF c = GetPixel(und_dc, cell_width / 2, i);
+    for (; i < wv.cell_height; i++) {
+      COLORREF c = GetPixel(und_dc, wv.cell_width / 2, i);
       if (c != RGB(0, 0, 0))
         gotit = true;
     }
@@ -789,8 +787,8 @@ win_init_fontfamily(HDC dc, int findex)
     ff->fonts[FONT_BOLD] = create_font(ff->name, ff->fw_bold, false);
 
   ff->descent = tm.tmAscent + 1;
-  if (ff->descent >= cell_height)
-    ff->descent = cell_height - 1;
+  if (ff->descent >= wv.cell_height)
+    ff->descent = wv.cell_height - 1;
 
   int fontsize[FONT_UNDERLINE + 1];
 #ifdef handle_baseline_leap
@@ -1013,7 +1011,6 @@ static enum { UPDATE_IDLE, UPDATE_BLOCKED, UPDATE_PENDING } update_state;
 static bool ime_open = false;
 
 static int update_skipped = 0;
-int lines_scrolled = 0;
 
 #define dont_debug_cursor 1
 
@@ -1254,8 +1251,8 @@ do_update(void)
   win_tab_actv();
 
   update_skipped++;
-  int output_speed = lines_scrolled / (cterm->rows ?: cfg.rows);
-  lines_scrolled = 0;
+  int output_speed = cterm->lines_scrolled / (cterm->rows ?: cfg.rows);
+  cterm->lines_scrolled = 0;
   if ((update_skipped < cfg.display_speedup && cfg.display_speedup < 10
        && output_speed > update_skipped
        //&& !cterm->smooth_scroll ?
@@ -1310,8 +1307,8 @@ do_update(void)
   // blind people: apparently some helper software tracks the system caret,
   // so we should arrange to have one.)
   if (cterm->has_focus) {
-    int x = cterm->curs.x * cell_width + PADDING;
-    int y = (cterm->curs.y - cterm->disptop) * cell_height + OFFSET + PADDING;
+    int x = cterm->curs.x * wv.cell_width + PADDING;
+    int y = (cterm->curs.y - cterm->disptop) * wv.cell_height + OFFSET + PADDING;
     SetCaretPos(x, y);
     if (ime_open) {
       COMPOSITIONFORM cf = {.dwStyle = CFS_POINT, .ptCurrentPos = {x, y}};
@@ -1355,20 +1352,20 @@ sel_update(bool update_sel_tip)
     LONG style = GetWindowLong(wnd, GWL_STYLE);
     int x = wr.left
           + ((style & WS_THICKFRAME) ? GetSystemMetrics(SM_CXSIZEFRAME) : 0)
-          + PADDING + last_pos.x * cell_width;
+          + PADDING + last_pos.x * wv.cell_width;
     int y = wr.top
           + ((style & WS_THICKFRAME) ? GetSystemMetrics(SM_CYSIZEFRAME) : 0)
           + ((style & WS_CAPTION) ? GetSystemMetrics(SM_CYCAPTION) : 0)
-          + OFFSET + PADDING + last_pos.y * cell_height;
+          + OFFSET + PADDING + last_pos.y * wv.cell_height;
 #ifdef debug_selection_show_size 
     cfg.selection_show_size = cfg.selection_show_size % 12 + 1;
 #endif
     int w = 30, h = 18;  // assumed size of tip window
     float phi = 2 * 3.1415 / 12 * (cfg.selection_show_size + 9);
-    float rx = cell_width * 1.5;
-    float ry = cell_height * 1.5;
-    int dx = cell_width / 2 + rx * cos(phi) - w / 2;
-    int dy = cell_height / 2 + ry * sin(phi) - h / 2;
+    float rx = wv.cell_width * 1.5;
+    float ry = wv.cell_height * 1.5;
+    int dx = wv.cell_width / 2 + rx * cos(phi) - w / 2;
+    int dy = wv.cell_height / 2 + ry * sin(phi) - h / 2;
     //printf("selection_show_size [%d]: %.2f %.2f %.2f\n", cfg.selection_show_size, phi, cos(phi), sin(phi));
     win_show_tip(x + dx, y + dy, cols, rows);
     selection_tip_active = true;
@@ -1452,7 +1449,7 @@ another_font(struct fontfam * ff, int fontno)
   i = false;
   s = false;
   u = false;
-  x = cell_width;
+  x = wv.cell_width;
 
   if (fontno & FONT_WIDE)
     x *= 2;
@@ -1468,8 +1465,8 @@ another_font(struct fontfam * ff, int fontno)
     u = true;
   int y = font_height * (1 + !!(fontno & FONT_HIGH));
   if (fontno & FONT_ZOOMFULL) {
-    y = cell_height * (1 + !!(fontno & FONT_HIGH));
-    x = cell_width * (1 + !!(fontno & FONT_WIDE));
+    y = wv.cell_height * (1 + !!(fontno & FONT_HIGH));
+    x = wv.cell_width * (1 + !!(fontno & FONT_WIDE));
   }
   if (fontno & FONT_ZOOMSMALL) {
     y = y * 12 / 20;
@@ -2211,8 +2208,8 @@ scale_to_image_ratio()
   if (abs((int)bw * h - (int)bh * w) < w + h)
     return;
 
-  w = max(w, ini_width);
-  h = max(h, ini_height);
+  w = max(w, wv.ini_width);
+  h = max(h, wv.ini_height);
 #ifdef debug_aspect_ratio
   printf("  max w %d h %d\n", (int)w, (int)h);
 #endif
@@ -2774,7 +2771,7 @@ win_text(int tx, int ty, wchar *text, int len, cattr attr, cattr *textattr, usho
   bool lpresrtl = lattr & LATTR_PRESRTL;
   lattr &= LATTR_MODE;
 
-  int char_width = cell_width * (1 + (lattr != LATTR_NORM));
+  int char_width = wv.cell_width * (1 + (lattr != LATTR_NORM));
 
  /* Only want the left half of double width lines */
   // check this before scaling up x to pixels!
@@ -2783,7 +2780,7 @@ win_text(int tx, int ty, wchar *text, int len, cattr attr, cattr *textattr, usho
 
  /* Convert to window coordinates */
   int x = tx * char_width + PADDING;
-  int y = ty * cell_height + OFFSET + PADDING;
+  int y = ty * wv.cell_height + OFFSET + PADDING;
 
 #ifdef support_triple_width
 #define TATTR_TRIPLE 0x0080000000000000u
@@ -2863,7 +2860,7 @@ win_text(int tx, int ty, wchar *text, int len, cattr attr, cattr *textattr, usho
         fg = bg;
       bg = cursor_colour;
 #ifdef debug_cursor
-      printf("set cursor (colour %06X) @(row %d col %d) cursor_on %d\n", bg, (y - PADDING - OFFSET) / cell_height, (x - PADDING) / char_width, cterm->cursor_on);
+      printf("set cursor (colour %06X) @(row %d col %d) cursor_on %d\n", bg, (y - PADDING - OFFSET) / wv.cell_height, (x - PADDING) / char_width, cterm->cursor_on);
 #endif
     }
   }
@@ -3048,13 +3045,13 @@ win_text(int tx, int ty, wchar *text, int len, cattr attr, cattr *textattr, usho
  /* Painting box */
   int width = char_width * (combining ? 1 : ulen);
   RECT box = {
-    .top = y, .bottom = y + cell_height,
-    .left = x, .right = min(x + width, cell_width * cterm->cols + PADDING)
+    .top = y, .bottom = y + wv.cell_height,
+    .left = x, .right = min(x + width, wv.cell_width * cterm->cols + PADDING)
   };
   RECT box0 = box;
   if (ldisp2) {  // e.g. attr.attr & ATTR_ITALIC
-    box.right += cell_width;
-    box.left -= cell_width;
+    box.right += wv.cell_width;
+    box.left -= wv.cell_width;
   }
   if (clearpad && tx > 0)
     box.right += PADDING;
@@ -3084,7 +3081,7 @@ win_text(int tx, int ty, wchar *text, int len, cattr attr, cattr *textattr, usho
 #endif
 
  /* Begin text output */
-  int yt = y + (ff->row_spacing / 2) - (lattr == LATTR_BOT ? cell_height : 0);
+  int yt = y + (ff->row_spacing / 2) - (lattr == LATTR_BOT ? wv.cell_height : 0);
   int xt = x + (ff->col_spacing / 2);
   if (attr.attr & TATTR_ZOOMFULL) {
     yt -= ff->row_spacing / 2;
@@ -3095,7 +3092,7 @@ win_text(int tx, int ty, wchar *text, int len, cattr attr, cattr *textattr, usho
                     + (attr.attr & ATTR_BOLD ? 1 : 0)
                     + (lattr >= LATTR_WIDE ? 2 : 0)
                     + (lattr >= LATTR_TOP ? 2 : 0)
-                   ) * cell_height / 40;
+                   ) * wv.cell_height / 40;
   if (line_width < 1)
     line_width = 1;
 
@@ -3111,12 +3108,12 @@ win_text(int tx, int ty, wchar *text, int len, cattr attr, cattr *textattr, usho
 
  /* Manual underline */
   colour ul = fg;
-  int uloff = ff->descent + (cell_height - ff->descent + 1) / 2;
+  int uloff = ff->descent + (wv.cell_height - ff->descent + 1) / 2;
   if (lattr == LATTR_BOT)
-    uloff = ff->descent + (cell_height - ff->descent + 1) / 2;
+    uloff = ff->descent + (wv.cell_height - ff->descent + 1) / 2;
   uloff += line_width / 2;
-  if (uloff >= cell_height)
-    uloff = cell_height - 1;
+  if (uloff >= wv.cell_height)
+    uloff = wv.cell_height - 1;
 
   if (attr.attr & ATTR_ULCOLOUR)
     ul = attr.ulcolr;
@@ -3157,7 +3154,7 @@ win_text(int tx, int ty, wchar *text, int len, cattr attr, cattr *textattr, usho
     // extend into padding area
     if (!tx)
       bgbox.left = 0;
-    if (bgbox.right >= PADDING + cell_width * cterm->cols)
+    if (bgbox.right >= PADDING + wv.cell_width * cterm->cols)
       bgbox.right += PADDING;
     if (!ty)
       bgbox.top = 0;
@@ -3183,7 +3180,7 @@ win_text(int tx, int ty, wchar *text, int len, cattr attr, cattr *textattr, usho
   if (lpresrtl) {
     coord_transformed = SetGraphicsMode(dc, GM_ADVANCED);
     if (coord_transformed && GetWorldTransform(dc, &old_xform)) {
-      XFORM xform = (XFORM){-1.0, 0.0, 0.0, 1.0, cterm->cols * cell_width + 2 * PADDING, 0.0};
+      XFORM xform = (XFORM){-1.0, 0.0, 0.0, 1.0, cterm->cols * wv.cell_width + 2 * PADDING, 0.0};
       coord_transformed = SetWorldTransform(dc, &xform);
     }
   }
@@ -3212,9 +3209,9 @@ win_text(int tx, int ty, wchar *text, int len, cattr attr, cattr *textattr, usho
       RGB(0x99, 0x00, 0xFF), // violet
       };
 
-    int dist = cell_height / 20 + 1;
-    int leap = cell_height <= 20 ? 3 : cell_height <= 30 ? 2 : 1;
-    int y = yt - cell_height / 2 + 4 * dist;
+    int dist = wv.cell_height / 20 + 1;
+    int leap = wv.cell_height <= 20 ? 3 : wv.cell_height <= 30 ? 2 : 1;
+    int y = yt - wv.cell_height / 2 + 4 * dist;
     for (uint c = 0; c < lengthof(rainbow); c += leap) {
       SetTextColor(dc, rainbow[c]);
       uint eto = eto_options;
@@ -3231,14 +3228,14 @@ win_text(int tx, int ty, wchar *text, int len, cattr attr, cattr *textattr, usho
   }
 
   if (attr.attr & (ATTR_SUBSCR | ATTR_SUPERSCR)) {
-    xt += cell_width * 3 / 10;
+    xt += wv.cell_width * 3 / 10;
     if (attr.attr & ATTR_SUBSCR)
-      yt += cell_height * 3 / 8;
+      yt += wv.cell_height * 3 / 8;
     else
-      yt += cell_height * 1 / 8;
+      yt += wv.cell_height * 1 / 8;
   }
   if (attr.attr & TATTR_SINGLE)
-    yt += cell_height / 4;
+    yt += wv.cell_height / 4;
 
  /* Shadow */
   int layer = 0;
@@ -3284,14 +3281,14 @@ draw:;
 
       float scale = 1.0 + (float)bloom / 7.0;
       /*
-        xt' = xt + cell_width / 2
+        xt' = xt + wv.cell_width / 2
         x' - xt' = sc * (x - xt')
         x' = xt' + sc * x - sc * xt'
         x' = sc * x + (1 - sc) * xt'
       */
       XFORM xform = (XFORM){scale, 0.0, 0.0, scale, 
-                    ((float)xt + (float)cell_width / 2) * (1.0 - scale), 
-                    ((float)yt + (float)cell_height / 2) * (1.0 - scale)};
+                    ((float)xt + (float)wv.cell_width / 2) * (1.0 - scale), 
+                    ((float)yt + (float)wv.cell_height / 2) * (1.0 - scale)};
       coord_transformed_bloom = ModifyWorldTransform(dc, &xform, MWT_LEFTMULTIPLY);
     }
   }
@@ -3569,8 +3566,8 @@ draw:;
     else {  // Sum segments to be (partially) drawn, 
             // square root base, pointing triangles, VT52 fraction numerator
       int sum_width = line_width;
-      int y0 = (lattr == LATTR_BOT) ? y - cell_height : y;
-      int yoff = (cell_height - line_width) * 3 / 5;
+      int y0 = (lattr == LATTR_BOT) ? y - wv.cell_height : y;
+      int yoff = (wv.cell_height - line_width) * 3 / 5;
       if (lattr >= LATTR_TOP)
         yoff *= 2;
       int xoff = (char_width - line_width) / 2;
@@ -3582,7 +3579,7 @@ draw:;
       // 0xE6 lower right: add hook up
       // 0xE7 middle right angle
       int yt, yb;
-      int ycellb = y0 + (lattr >= LATTR_TOP ? 2 : 1) * cell_height;
+      int ycellb = y0 + (lattr >= LATTR_TOP ? 2 : 1) * wv.cell_height;
       if (graph & 1) {  // upper segment: downwards
         yt = y0 + yoff;
         yb = ycellb;
@@ -3604,8 +3601,8 @@ draw:;
         }
       }
       if (graph == 0xF7) {  // VT52 fraction numerator
-        yt = y + (cell_height - line_width) * 10 / 16;
-        yb = y + (cell_height - line_width) * 8 / 16;
+        yt = y + (wv.cell_height - line_width) * 10 / 16;
+        yb = y + (wv.cell_height - line_width) * 8 / 16;
         xl = x + line_width - 1;
         xr = xl + char_width - 1;
       }
@@ -3624,7 +3621,7 @@ draw:;
         xl = x + line_width;
         xr = x + char_width - 2 * line_width - 1;
         x0 = x + (char_width - line_width) / 2;
-        yt = y + cell_height - 2 * line_width - 1;
+        yt = y + wv.cell_height - 2 * line_width - 1;
         yb = y + line_width;
         if (graph & 1) {
           yt ^= yb;
@@ -3678,14 +3675,14 @@ draw:;
     // Private Use geometric Powerline symbols (U+E0B0-U+E0BF, not 5, 7)
     // 
     //      - -
-    int char_height = cell_height;
+    int char_height = wv.cell_height;
     if (lattr >= LATTR_TOP)
       char_height *= 2;
     int y0 = y;
     if (lattr == LATTR_BOT)
-      y0 -= cell_height;
+      y0 -= wv.cell_height;
     int xi = x;
-    //printf("x %d y %d w %d h %d cw %d \n", x, y, cell_width, cell_height, char_width);
+    //printf("x %d y %d w %d h %d cw %d \n", x, y, wv.cell_width, wv.cell_height, char_width);
 
     /*
        Mix fg at mix/8 with bg.
@@ -3911,11 +3908,11 @@ draw:;
   else if (graph >> 4) {  // VT100/VT52 horizontal "scanlines"
     int parts = graph_vt52 ? 8 : 5;
     HPEN oldpen = SelectObject(dc, CreatePen(PS_SOLID, 0, fg));
-    int yoff = (cell_height - line_width) * (graph >> 4) / parts;
+    int yoff = (wv.cell_height - line_width) * (graph >> 4) / parts;
     if (lattr >= LATTR_TOP)
       yoff *= 2;
     if (lattr == LATTR_BOT)
-      yoff -= cell_height;
+      yoff -= wv.cell_height;
     for (int l = 0; l < line_width; l++) {
       MoveToEx(dc, x, y + yoff + l, null);
       LineTo(dc, x + len * char_width, y + yoff + l);
@@ -3924,8 +3921,8 @@ draw:;
   }
   else if (graph) {  // VT100 box drawing characters ┘┐┌└┼ ─ ├┤┴┬│
     HPEN oldpen = SelectObject(dc, CreatePen(PS_SOLID, 0, fg));
-    int y0 = (lattr == LATTR_BOT) ? y - cell_height : y;
-    int yoff = (cell_height - line_width) * 3 / 5;
+    int y0 = (lattr == LATTR_BOT) ? y - wv.cell_height : y;
+    int yoff = (wv.cell_height - line_width) * 3 / 5;
     if (lattr >= LATTR_TOP)
       yoff *= 2;
     int xoff = (char_width - line_width) / 2;
@@ -3953,7 +3950,7 @@ draw:;
         else
           yt = y0 + yoff;
         if (graph & DRAW_DOWN)
-          yb = y0 + (lattr >= LATTR_TOP ? 2 : 1) * cell_height;
+          yb = y0 + (lattr >= LATTR_TOP ? 2 : 1) * wv.cell_height;
         else
           yb = y0 + yoff + line_width;
         for (int l = 0; l < line_width; l++) {
@@ -3997,12 +3994,12 @@ draw:;
       when CUR_BLOCK:
         if (attr.attr & TATTR_PASCURS) {
           HBRUSH oldbrush = SelectObject(dc, GetStockObject(NULL_BRUSH));
-          Rectangle(dc, x, y, x + char_width, y + cell_height);
+          Rectangle(dc, x, y, x + char_width, y + wv.cell_height);
           SelectObject(dc, oldbrush);
         }
       when CUR_BOX: {
         HBRUSH oldbrush = SelectObject(dc, GetStockObject(NULL_BRUSH));
-        Rectangle(dc, x, y, x + char_width, y + cell_height);
+        Rectangle(dc, x, y, x + char_width, y + wv.cell_height);
         SelectObject(dc, oldbrush);
       }
       when CUR_LINE: {
@@ -4020,27 +4017,27 @@ draw:;
           // leaving a pixel artefact, under some utterly weird interference 
           // with output of certain characters (mintty/wsltty#255)
           HBRUSH oldbrush = SelectObject(dc, CreateSolidBrush(_cc));
-          Rectangle(dc, xx, y, xx + caret_width, y + cell_height);
+          Rectangle(dc, xx, y, xx + caret_width, y + wv.cell_height);
           DeleteObject(SelectObject(dc, oldbrush));
 #else
           HBRUSH br = CreateSolidBrush(_cc);
-          FillRect(dc, &(RECT){xx, y, xx + caret_width, y + cell_height}, br);
+          FillRect(dc, &(RECT){xx, y, xx + caret_width, y + wv.cell_height}, br);
           DeleteObject(br);
 #endif
         }
         else if (attr.attr & TATTR_PASCURS) {
-          for (int dy = 0; dy < cell_height; dy += 2)
+          for (int dy = 0; dy < wv.cell_height; dy += 2)
             Polyline(
               dc, (POINT[]){{xx, y + dy}, {xx + caret_width, y + dy}}, 2);
         }
       }
       when CUR_UNDERSCORE: {
-        int yy = yt + min(ff->descent, cell_height - 2);
+        int yy = yt + min(ff->descent, wv.cell_height - 2);
         yy += ff->row_spacing * 3 / 8;
         if (lattr >= LATTR_TOP) {
           yy += ff->row_spacing / 2;
           if (lattr == LATTR_BOT)
-            yy += cell_height;
+            yy += wv.cell_height;
         }
         if (attr.attr & TATTR_ACTCURS) {
 	  /* cursor size CSI ? N c
@@ -4057,10 +4054,10 @@ draw:;
           switch (cterm->cursor_size) {
             when 1: up = -2;
             when 2: up = line_width - 1;
-            when 3: up = cell_height / 3 - 1;
-            when 4: up = cell_height / 2;
-            when 5: up = cell_height * 2 / 3;
-            when 6: up = cell_height - 2;
+            when 3: up = wv.cell_height / 3 - 1;
+            when 4: up = wv.cell_height / 2;
+            when 5: up = wv.cell_height * 2 / 3;
+            when 6: up = wv.cell_height - 2;
           }
           if (up) {
             int yct = max(yy - up, yt);
@@ -4280,7 +4277,7 @@ win_char_width(xchar c, cattrflags attr)
     ABCFLOAT abcf; memset(&abcf, 0, sizeof abcf);
     BOOL ok4 = GetCharABCWidthsFloatW(dc, c, c, &abcf);
     printf(" w %04X [cell %d] - 32 %d %d - flt %d %.3f - abc %d %d %d %d - abcflt %d %4.1f %4.1f %4.1f\n", 
-           c, cell_width, 
+           c, wv.cell_width, 
            ok1, cw, ok2, cwf, 
            ok3, abc.abcA, abc.abcB, abc.abcC, 
            ok4, abcf.abcfA, abcf.abcfB, abcf.abcfC);
@@ -4294,7 +4291,7 @@ win_char_width(xchar c, cattrflags attr)
   if (c < 0x10000) {
     bool ok = GetCharWidth32W(dc, c, c, &ibuf);
 #ifdef debug_win_char_width
-    printf(" getcharwidth32 %04X %dpx(/cell %dpx)\n", c, ibuf, cell_width);
+    printf(" getcharwidth32 %04X %dpx(/cell %dpx)\n", c, ibuf, wv.cell_width);
 #endif
     if (!ok) {
       ReleaseDC(wnd, dc);
@@ -4303,11 +4300,11 @@ win_char_width(xchar c, cattrflags attr)
 
     // report char as wide if its width is more than 1½ cells;
     // this is unreliable if font fallback is involved (#615)
-    ibuf += cell_width / 2 - 1;
-    ibuf /= cell_width;
+    ibuf += wv.cell_width / 2 - 1;
+    ibuf /= wv.cell_width;
     if (ibuf > 1) {
 #ifdef debug_win_char_width
-      printf(" enquired %04X %dpx/cell %dpx\n", c, ibuf, cell_width);
+      printf(" enquired %04X %dpx/cell %dpx\n", c, ibuf, wv.cell_width);
 #endif
       ReleaseDC(wnd, dc);
       //printf(" win_char_width %04X -> %d\n", c, ibuf);
@@ -4329,7 +4326,7 @@ win_char_width(xchar c, cattrflags attr)
     ulong now = tim.tv_sec * (long)1000000000 + tim.tv_nsec;
 # endif
     HDC wid_dc = CreateCompatibleDC(dc);
-    HBITMAP wid_bm = CreateCompatibleBitmap(dc, cell_width * 2, cell_height);
+    HBITMAP wid_bm = CreateCompatibleBitmap(dc, wv.cell_width * 2, wv.cell_height);
     HBITMAP wid_oldbm = SelectObject(wid_dc, wid_bm);
     SelectObject(wid_dc, ff->fonts[FONT_NORMAL]);
     SetTextAlign(wid_dc, TA_TOP | TA_LEFT | TA_NOUPDATECP);
@@ -4359,9 +4356,9 @@ win_char_width(xchar c, cattrflags attr)
 #ifdef use_GetPixel
 
 # if defined(debug_win_char_width) && debug_win_char_width > 1
-    for (int y = 0; y < cell_height; y++) {
+    for (int y = 0; y < wv.cell_height; y++) {
       printf(" %2d|", y);
-      for (int x = 0; x < cell_width * 2; x++) {
+      for (int x = 0; x < wv.cell_width * 2; x++) {
         COLORREF c = GetPixel(wid_dc, x, y);
         printf("%c", c != RGB(0, 0, 0) ? '*' : ' ');
       }
@@ -4369,22 +4366,22 @@ win_char_width(xchar c, cattrflags attr)
     }
 # endif
 # ifdef heuristic_sparse_width_checking
-    for (int x = cell_width * 2 - 1; !wid && x >= cell_width; x -= 2)
-      for (int y = 0; y < cell_height / 2; y++) {
-        COLORREF c = GetPixel(wid_dc, x, cell_height / 2 + y);
+    for (int x = wv.cell_width * 2 - 1; !wid && x >= wv.cell_width; x -= 2)
+      for (int y = 0; y < wv.cell_height / 2; y++) {
+        COLORREF c = GetPixel(wid_dc, x, wv.cell_height / 2 + y);
         if (c != RGB(0, 0, 0)) {
           wid = x + 1;
           break;
         }
-        c = GetPixel(wid_dc, x, cell_height / 2 - y);
+        c = GetPixel(wid_dc, x, wv.cell_height / 2 - y);
         if (c != RGB(0, 0, 0)) {
           wid = x + 1;
           break;
         }
       }
 # else
-    for (int x = cell_width * 2 - 1; !wid && x >= 0; x--)
-      for (int y = 0; y < cell_height; y++) {
+    for (int x = wv.cell_width * 2 - 1; !wid && x >= 0; x--)
+      for (int y = 0; y < wv.cell_height; y++) {
         COLORREF c = GetPixel(wid_dc, x, y);
         if (c != RGB(0, 0, 0)) {
           wid = x + 1;
@@ -4402,13 +4399,13 @@ win_char_width(xchar c, cattrflags attr)
     BITMAP bm0;
     GetObject(wid_bm, sizeof(BITMAP), &bm0);
     //assuming:
-    //bm0.bmWidthBytes == bm0.bmWidth * 4 == cell_width * 8
+    //bm0.bmWidthBytes == bm0.bmWidth * 4 == wv.cell_width * 8
     //bm0.bmBitsPixel == 32
 # endif
     BITMAPINFO bmi;
     bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
 # ifdef test_precheck_bitmap
-    int ok = GetDIBits(wid_dc, wid_bm, 0, cell_height, 0, &bmi, DIB_RGB_COLORS);
+    int ok = GetDIBits(wid_dc, wid_bm, 0, wv.cell_height, 0, &bmi, DIB_RGB_COLORS);
     printf("DI %d %d pl %d bt/px %d comp %d size %d\n",
            bmi.bmiHeader.biWidth, bmi.bmiHeader.biHeight,
            bmi.bmiHeader.biPlanes, bmi.bmiHeader.biBitCount,
@@ -4417,29 +4414,29 @@ win_char_width(xchar c, cattrflags attr)
     //bmi.bmiHeader.biBitCount == 32
     //bmi.bmiHeader.biSizeImage == biWidth * biHeight * 4
 # endif
-    bmi.bmiHeader.biWidth = cell_width * 2;
-    bmi.bmiHeader.biHeight = -cell_height;
+    bmi.bmiHeader.biWidth = wv.cell_width * 2;
+    bmi.bmiHeader.biHeight = -wv.cell_height;
     bmi.bmiHeader.biPlanes = 1;
     bmi.bmiHeader.biBitCount = 32;
     bmi.bmiHeader.biCompression = BI_RGB;
 
-    DWORD * pixels = newn(DWORD, cell_width * 2 * cell_height);
+    DWORD * pixels = newn(DWORD, wv.cell_width * 2 * wv.cell_height);
     //int scanlines =
-    GetDIBits(wid_dc, wid_bm, 0, cell_height, pixels, &bmi, DIB_RGB_COLORS);
+    GetDIBits(wid_dc, wid_bm, 0, wv.cell_height, pixels, &bmi, DIB_RGB_COLORS);
 
 # if defined(debug_win_char_width) && debug_win_char_width > 1
-    for (int y = 0; y < cell_height; y++) {
+    for (int y = 0; y < wv.cell_height; y++) {
       printf(" %2d|", y);
-      for (int x = 0; x < cell_width * 2; x++) {
-        COLORREF c = pixels[y * cell_width * 2 + x];
+      for (int x = 0; x < wv.cell_width * 2; x++) {
+        COLORREF c = pixels[y * wv.cell_width * 2 + x];
         printf("%c", c != RGB(0, 0, 0) ? '*' : ' ');
       }
       printf("|\n");
     }
 # endif
-    for (int x = cell_width * 2 - 1; !wid && x >= 0; x--)
-      for (int y = 0; y < cell_height; y++) {
-        COLORREF c = pixels[y * cell_width * 2 + x];
+    for (int x = wv.cell_width * 2 - 1; !wid && x >= 0; x--)
+      for (int y = 0; y < wv.cell_height; y++) {
+        COLORREF c = pixels[y * wv.cell_width * 2 + x];
         if (c != RGB(0, 0, 0)) {
           wid = x + 1;
           break;
@@ -4456,7 +4453,7 @@ win_char_width(xchar c, cattrflags attr)
 # ifdef debug_rendering
     clock_gettime(CLOCK_MONOTONIC, &tim);
     ulong then = tim.tv_sec * (long)1000000000 + tim.tv_nsec;
-    printf("rendered %05X %s (t %ld) width %d -> %d\n", wc, attr & TATTR_WIDE ? "wide" : "narr", then - now, wid, wid > cell_width ? 2 : 1);
+    printf("rendered %05X %s (t %ld) width %d -> %d\n", wc, attr & TATTR_WIDE ? "wide" : "narr", then - now, wid, wid > wv.cell_width ? 2 : 1);
 # endif
 
     return wid;
@@ -4530,11 +4527,11 @@ win_char_width(xchar c, cattrflags attr)
 
     int mbuf = act_char_width(c);
     // report char as wide if its measured width is more than 1½ cells
-    int width = mbuf > cell_width ? 2 : 1;
+    int width = mbuf > wv.cell_width ? 2 : 1;
     ReleaseDC(wnd, dc);
 # ifdef debug_win_char_width
     if (c > '~' || c == 'A') {
-      printf(" measured %04X %dpx cell %dpx width %d\n", c, mbuf, cell_width, width);
+      printf(" measured %04X %dpx cell %dpx width %d\n", c, mbuf, wv.cell_width, width);
     }
 # endif
     // cache width
@@ -4793,10 +4790,10 @@ win_paint(void)
   win_tab_actv();
   // better invalidate more than less; limited to text area in term_invalidate
   term_invalidate(
-    (p.rcPaint.left - PADDING) / cell_width,
-    (p.rcPaint.top - PADDING - OFFSET) / cell_height,
-    (p.rcPaint.right - PADDING - 1) / cell_width,
-    (p.rcPaint.bottom - PADDING - OFFSET - 1) / cell_height
+    (p.rcPaint.left - PADDING) / wv.cell_width,
+    (p.rcPaint.top - PADDING - OFFSET) / wv.cell_height,
+    (p.rcPaint.right - PADDING - 1) / wv.cell_width,
+    (p.rcPaint.bottom - PADDING - OFFSET - 1) / wv.cell_height
   );
 
   //if (kb_trace) printf("[%ld] win_paint state %d (idl/blk/pnd)\n", mtime(), update_state);
@@ -4819,8 +4816,8 @@ win_paint(void)
       (p.fErase
        || p.rcPaint.left < PADDING
        || p.rcPaint.top < OFFSET + PADDING
-       || p.rcPaint.right >= PADDING + cell_width * cterm->cols
-       || p.rcPaint.bottom >= OFFSET + PADDING + cell_height * cterm->rows
+       || p.rcPaint.right >= PADDING + wv.cell_width * cterm->cols
+       || p.rcPaint.bottom >= OFFSET + PADDING + wv.cell_height * cterm->rows
       )
      )
   {
@@ -4849,8 +4846,8 @@ win_paint(void)
     // mask inner area not to pad with background
     ExcludeClipRect(dc, PADDING,
                         OFFSET + PADDING,
-                        PADDING + cell_width * cterm->cols,
-                        OFFSET + PADDING + cell_height * cterm->rows);
+                        PADDING + wv.cell_width * cterm->cols,
+                        OFFSET + PADDING + wv.cell_height * cterm->rows);
 
     // fill outer padding area with background
     int sy = win_search_visible() ? SEARCHBAR_HEIGHT : 0;

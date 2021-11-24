@@ -27,7 +27,16 @@ enum {
   WIN_INIT_POS = 5,
   WIN_HIDE = 8,
 };
-
+typedef struct {
+//filled by win_adjust_borders:
+  int term_width, term_height;
+  int width, height;
+  int extra_width, extra_height, norm_extra_width, norm_extra_height;
+  int ini_width, ini_height;
+  // character cell size, including spacing:
+  int cell_width, cell_height;
+}winvar;
+extern winvar wv;
 extern HINSTANCE inst;  // The all-important instance handle
 extern HWND wnd;        // the main terminal window
 extern HIMC imc;        // the input method context
@@ -35,7 +44,6 @@ extern HWND config_wnd; // the options window
 extern COLORREF colours[COLOUR_NUM];
 
 extern int font_size;  // logical font size, as configured (< 0: pixel size)
-extern int cell_width, cell_height;  // includes spacing
 extern bool font_ambig_wide;
 extern int PADDING;
 extern int OFFSET;

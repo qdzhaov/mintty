@@ -57,6 +57,7 @@ typedef UINT_PTR uintptr_t;
 #define GWL_USERDATA -21
 #endif
 
+winvar wv;
 
 extern LOGFONT lfont;
 extern bool click_focus_token;//wintext
@@ -89,12 +90,9 @@ static HHOOK kb_hook = 0;
 
 
 //filled by win_adjust_borders:
-static LONG window_style;
-static int term_width, term_height;
-static int width, height;
-static int extra_width, extra_height, norm_extra_width, norm_extra_height;
+//static int term_width, term_height;
+//static int width, height;
 
-int ini_width, ini_height;
 
 // State
 bool win_is_fullscreen;
@@ -112,7 +110,7 @@ bool clipboard_token = false;
 bool keep_screen_on = false;
 
 // Options
-static string border_style = 0;
+static int border_style = 0;
 static string report_geom = 0;
 static bool report_moni = false;
 bool report_child_pid = false;
@@ -194,7 +192,7 @@ trace_winsize(char * tag)
   RECT cr, wr;
   GetClientRect(wnd, &cr);
   GetWindowRect(wnd, &wr);
-  printf("winsize[%s] @%d/%d %d %d cl %d %d + %d/%d\n", tag, (int)wr.left, (int)wr.top, (int)(wr.right - wr.left), (int)(wr.bottom - wr.top), (int)(cr.right - cr.left), (int)(cr.bottom - cr.top), extra_width, norm_extra_width);
+  printf("winsize[%s] @%d/%d %d %d cl %d %d + %d/%d\n", tag, (int)wr.left, (int)wr.top, (int)(wr.right - wr.left), (int)(wr.bottom - wr.top), (int)(cr.right - cr.left), (int)(cr.bottom - cr.top), wv.extra_width, wv.norm_extra_width);
 }
 #else
 #define trace_winsize(tag)	
@@ -978,10 +976,10 @@ win_get_pixels(int *height_p, int *width_p, bool with_borders)
     GetClientRect(wnd, &r);
     int sy = win_search_visible() ? SEARCHBAR_HEIGHT : 0;
     *height_p = r.bottom - r.top - 2 * PADDING - OFFSET - sy
-              //- extra_height
+              //- wv.extra_height
               ;
     *width_p = r.right - r.left - 2 * PADDING
-             //- extra_width
+             //- wv.extra_width
              //- (cfg.scrollbar ? GetSystemMetrics(SM_CXVSCROLL) : 0)
              //- (win_has_scrollbar() ? GetSystemMetrics(SM_CXVSCROLL) : 0)
              ;
@@ -1016,8 +1014,8 @@ win_get_screen_chars(int *rows_p, int *cols_p)
   MONITORINFO mi;
   get_my_monitor_info(&mi);
   RECT fr = mi.rcMonitor;
-  *rows_p = (fr.bottom - fr.top - 2 * PADDING - OFFSET) / cell_height;
-  *cols_p = (fr.right - fr.left - 2 * PADDING) / cell_width;
+  *rows_p = (fr.bottom - fr.top - 2 * PADDING - OFFSET) / wv.cell_height;
+  *cols_p = (fr.right - fr.left - 2 * PADDING) / wv.cell_width;
 }
 
 void
@@ -1031,8 +1029,8 @@ win_set_pixels(int height, int width)
   int sy = win_search_visible() ? SEARCHBAR_HEIGHT : 0;
   // set window size
   SetWindowPos(wnd, null, 0, 0,
-               width + extra_width + 2 * PADDING,
-               height + extra_height + OFFSET + 2 * PADDING + sy,
+               width + wv.extra_width + 2 * PADDING,
+               height + wv.extra_height + OFFSET + 2 * PADDING + sy,
                SWP_NOACTIVATE | SWP_NOCOPYBITS | SWP_NOMOVE | SWP_NOZORDER);
 }
 
@@ -1162,6 +1160,25 @@ win_dark_mode(HWND w)
     }
   }
 }
+static LONG up_borderstyle(LONG style){
+  style &= ~(WS_CAPTION | WS_BORDER | WS_THICKFRAME);
+  switch(border_style){
+    when 0:
+      style |= (WS_CAPTION | WS_BORDER | WS_THICKFRAME);
+    when 2:
+    otherwise:
+      style |= WS_THICKFRAME;
+  }
+  return style;
+}
+void  win_update_border(){
+  LONG style = GetWindowLong(wnd, GWL_STYLE);
+  style=up_borderstyle(style);
+  SetWindowLong(wnd, GWL_STYLE, style);
+  SetWindowPos(wnd, null, 0, 0, 0, 0,
+               SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED
+               | SWP_NOACTIVATE);
+}
 
 /*
  * Go full-screen. This should only be called when we are already maximised.
@@ -1196,20 +1213,8 @@ clear_fullscreen(void)
 {
   win_is_fullscreen = false;
   win_update_glass(cfg.opaque_when_focused);
-
  /* Reinstate the window furniture. */
-  LONG style = GetWindowLong(wnd, GWL_STYLE);
-  if (border_style) {
-    if (strcmp(border_style, "void") != 0) {
-      style |= WS_THICKFRAME;
-    }
-  }
-  else {
-    style |= WS_CAPTION | WS_BORDER | WS_THICKFRAME;
-  }
-  SetWindowLong(wnd, GWL_STYLE, style);
-  SetWindowPos(wnd, null, 0, 0, 0, 0,
-               SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+  win_update_border();
 }
 
 void
@@ -1294,7 +1299,7 @@ win_set_chars(int rows, int cols)
   // prevent resizing to same logical size
   // which would remove bottom padding and spoil some Windows magic (#629)
   if (rows != cterm->rows || cols != cterm->cols) {
-    win_set_pixels(rows * cell_height, cols * cell_width);
+    win_set_pixels(rows * wv.cell_height, cols * wv.cell_width);
     if (is_init)  // don't spoil negative position (#1123)
       win_fix_position();
   }
@@ -1815,47 +1820,40 @@ print_system_metrics(int dpi, string tag)
 static void
 win_adjust_borders(int t_width, int t_height)
 {
-  term_width = t_width;
-  term_height = t_height;
-  RECT cr = {0, 0, term_width + 2 * PADDING, term_height + OFFSET + 2 * PADDING};
+  wv.term_width = t_width;
+  wv.term_height = t_height;
+  RECT cr = {0, 0, wv.term_width + 2 * PADDING, wv.term_height + OFFSET + 2 * PADDING};
   RECT wr = cr;
-  window_style = WS_OVERLAPPEDWINDOW;
-  if (border_style) {
-    if (strcmp(border_style, "void") == 0)
-      window_style &= ~(WS_CAPTION | WS_BORDER | WS_THICKFRAME);
-    else
-      window_style &= ~(WS_CAPTION | WS_BORDER);
-  }
-
+  long style =up_borderstyle(WS_OVERLAPPEDWINDOW);
   if (pGetDpiForMonitor && pAdjustWindowRectExForDpi) {
     HMONITOR mon = MonitorFromWindow(wnd, MONITOR_DEFAULTTONEAREST);
     uint x, dpi;
     pGetDpiForMonitor(mon, 0, &x, &dpi);  // MDT_EFFECTIVE_DPI
-    pAdjustWindowRectExForDpi(&wr, window_style, false, 0, dpi);
+    pAdjustWindowRectExForDpi(&wr, style, false, 0, dpi);
 #ifdef debug_dpi
     RECT wr0 = cr;
-    AdjustWindowRect(&wr0, window_style, false);
+    AdjustWindowRect(&wr0, style, false);
     printf("adjust borders dpi %3d: %d %d\n", dpi, (int)(wr.right - wr.left), (int)(wr.bottom - wr.top));
     printf("                      : %d %d\n", (int)(wr0.right - wr0.left), (int)(wr0.bottom - wr0.top));
     print_system_metrics(dpi, "win_adjust_borders");
 #endif
   }
   else
-    AdjustWindowRect(&wr, window_style, false);
+    AdjustWindowRect(&wr, style, false);
 
-  width = wr.right - wr.left;
-  height = wr.bottom - wr.top;
+  wv.width = wr.right - wr.left;
+  wv.height = wr.bottom - wr.top;
 #ifdef debug_resize
-  printf("win_adjust_borders w/h %d %d\n", width, height);
+  printf("win_adjust_borders w/h %d %d\n", wv.width, wv.height);
 #endif
 
   if ((cterm&&cterm->app_scrollbar) || cfg.scrollbar)
-    width += GetSystemMetrics(SM_CXVSCROLL);
+    wv.width += GetSystemMetrics(SM_CXVSCROLL);
 
-  extra_width = width - (cr.right - cr.left);
-  extra_height = height - (cr.bottom - cr.top);
-  norm_extra_width = extra_width;
-  norm_extra_height = extra_height;
+  wv.extra_width = wv.width - (cr.right - cr.left);
+  wv.extra_height = wv.height - (cr.bottom - cr.top);
+  wv.norm_extra_width = wv.extra_width;
+  wv.norm_extra_height = wv.extra_height;
 }
 
 void
@@ -1891,7 +1889,7 @@ win_adapt_term_size(bool sync_size_with_font, bool scale_font_with_size)
 
   if (sync_size_with_font && !win_is_fullscreen) {
     // enforced win_set_chars(cterm->rows, cterm->cols):
-    win_set_pixels(cterm->rows * cell_height, cterm->cols * cell_width);
+    win_set_pixels(cterm->rows * wv.cell_height, cterm->cols * wv.cell_width);
     if (is_init)  // don't spoil negative position (#1123)
       win_fix_position();
     trace_winsize("win_adapt_term_size > win_fix_position");
@@ -1906,15 +1904,15 @@ win_adapt_term_size(bool sync_size_with_font, bool scale_font_with_size)
   GetWindowRect(wnd, &wr);
   int client_width = cr.right - cr.left;
   int client_height = cr.bottom - cr.top;
-  extra_width = wr.right - wr.left - client_width;
-  extra_height = wr.bottom - wr.top - client_height;
+  wv.extra_width = wr.right - wr.left - client_width;
+  wv.extra_height = wr.bottom - wr.top - client_height;
   if (!win_is_fullscreen) {
-    norm_extra_width = extra_width;
-    norm_extra_height = extra_height;
+    wv.norm_extra_width = wv.extra_width;
+    wv.norm_extra_height = wv.extra_height;
   }
   int term_width = client_width - 2 * PADDING;
   int term_height = client_height - 2 * PADDING;
-  if(cterm->usepartline)term_height +=cell_height*cfg.partline/8;
+  if(cterm->usepartline)term_height +=wv.cell_height*cfg.partline/8;
   if (!sync_size_with_font ) {
     // apparently insignificant if sync_size_with_font && win_is_fullscreen
     term_height -= OFFSET;
@@ -1926,12 +1924,12 @@ win_adapt_term_size(bool sync_size_with_font, bool scale_font_with_size)
   if (scale_font_with_size && cterm->cols != 0 && cterm->rows != 0) {
     // calc preliminary size (without font scaling), as below
     // should use term_height rather than rows; calc and store in term_resize
-    int cols0 = max(1, term_width / cell_width);
-    int rows0 = max(1, term_height / cell_height);
+    int cols0 = max(1, term_width / wv.cell_width);
+    int rows0 = max(1, term_height / wv.cell_height);
 
-    // rows0/cterm->rows gives a rough scaling factor for cell_height
-    // cols0/cterm->cols gives a rough scaling factor for cell_width
-    // cell_height, cell_width give a rough scaling indication for font_size
+    // rows0/cterm->rows gives a rough scaling factor for wv.cell_height
+    // cols0/cterm->cols gives a rough scaling factor for wv.cell_width
+    // wv.cell_height, wv.cell_width give a rough scaling indication for font_size
     // height or width could be considered more according to preference
     bool bigger = rows0 * cols0 > cterm->rows * cterm->cols;
     int font_size1 =
@@ -1958,15 +1956,15 @@ win_adapt_term_size(bool sync_size_with_font, bool scale_font_with_size)
       win_set_font_size(font_size1, false);
   }
 
-  int cols = max(1, term_width / cell_width);
-  int rows = max(1, term_height / cell_height);
+  int cols = max(1, term_width / wv.cell_width);
+  int rows = max(1, term_height / wv.cell_height);
   if (rows != cterm->rows || cols != cterm->cols) {
     term_resize(rows, cols);
-    struct winsize ws = {rows, cols, cols * cell_width, rows * cell_height};
+    struct winsize ws = {rows, cols, cols * wv.cell_width, rows * wv.cell_height};
     child_resize(cterm,&ws);
   }
   else {  // also notify font size changes; filter identical updates later
-    struct winsize ws = {rows, cols, cols * cell_width, rows * cell_height};
+    struct winsize ws = {rows, cols, cols * wv.cell_width, rows * wv.cell_height};
     child_resize(cterm,&ws);
   }
 
@@ -1976,29 +1974,6 @@ win_adapt_term_size(bool sync_size_with_font, bool scale_font_with_size)
   // support tabbar
   term_schedule_search_update();
   win_schedule_update();
-}
-
-static int
-win_fix_taskbar_max(int show_cmd)
-{
-  if (border_style && show_cmd == SW_SHOWMAXIMIZED) {
-    // (SW_SHOWMAXIMIZED == SW_MAXIMIZE)
-    // workaround for Windows failing to consider the taskbar properly 
-    // when maximizing without WS_CAPTION in style (#732)
-    MONITORINFO mi;
-    get_my_monitor_info(&mi);
-    RECT ar = mi.rcWork;
-    RECT mr = mi.rcMonitor;
-    if (mr.top != ar.top || mr.bottom != ar.bottom || mr.left != ar.left || mr.right != ar.right) {
-      show_cmd = SW_RESTORE;
-      // set window size
-      SetWindowPos(wnd, null, 
-                   ar.left, ar.top, ar.right - ar.left, ar.bottom - ar.top, 
-                   SWP_NOZORDER);
-      win_adapt_term_size(false, false);
-    }
-  }
-  return show_cmd;
 }
 
 /*
@@ -2025,7 +2000,7 @@ win_maximise(int max)
     else if (max == 1) {  // maximize
       // this would apply the workaround to consider the taskbar
       // but it would make maximizing irreversible, so let's not do it here
-      //ShowWindow(wnd, win_fix_taskbar_max(SW_MAXIMIZE));
+      //ShowWindow(wnd, SW_MAXIMIZE);
       // rather let Windows maximize as it prefers, including the bug
       ShowWindow(wnd, SW_MAXIMIZE);
     }
@@ -2544,6 +2519,11 @@ void win_tog_scrollbar(){
   cterm->show_scrollbar = !cterm->show_scrollbar;
   win_update_scrollbar(true);
 }
+void win_tog_border(){
+  border_style++;
+  if(border_style>2)border_style=0;
+  win_update_border();
+}
 WPARAM win_set_font(HWND hwnd){//set font for gui,user do not release it;
   static int cfsize=0;
   int font_height;
@@ -2764,6 +2744,7 @@ static struct {
           // support tabbar
         }
         when IDM_SCROLLBAR: win_tog_scrollbar();
+        when IDM_BORDERS  : win_tog_border();
         when IDM_TABBAR: win_tab_show();
         when IDM_PARTLINE: win_tog_partline();
         when IDM_INDICATOR: win_tab_indicator();
@@ -3070,7 +3051,7 @@ static struct {
       //     -> Windows sends WM_THEMECHANGED and WM_SYSCOLORCHANGE
       // and in both case a couple of WM_WININICHANGE
 
-      win_adjust_borders(cell_width * cfg.cols, cell_height * cfg.rows);
+      win_adjust_borders(wv.cell_width * cfg.cols, wv.cell_height * cfg.rows);
       RedrawWindow(wnd, null, null, 
                    RDW_FRAME | RDW_INVALIDATE |
                    RDW_UPDATENOW | RDW_ALLCHILDREN);
@@ -3136,7 +3117,6 @@ static struct {
       term_set_focus(true, false);
       win_sys_style(true);
       CreateCaret(wnd, caretbm, 0, 0);
-      //flash_taskbar(false);  /* stop; not needed when leaving search bar */
       win_update(false);
       ShowCaret(wnd);
       zoom_token = -4;
@@ -3176,13 +3156,13 @@ static struct {
       * 2) Make sure the window size is _stepped_ in units of the font size.
       */
       LPRECT r = (LPRECT) lp;
-      int width = r->right - r->left - extra_width - 2 * PADDING;
-      int height = r->bottom - r->top - extra_height - 2 * PADDING - OFFSET;
-      int cols = max(1, (float)width / cell_width + 0.5);
-      int rows = max(1, (float)height / cell_height + 0.5);
+      int width = r->right - r->left - wv.extra_width - 2 * PADDING;
+      int height = r->bottom - r->top - wv.extra_height - 2 * PADDING - OFFSET;
+      int cols = max(1, (float)width / wv.cell_width + 0.5);
+      int rows = max(1, (float)height / wv.cell_height + 0.5);
 
-      int ew = width - cols * cell_width;
-      int eh = height - rows * cell_height;
+      int ew = width - cols * wv.cell_width;
+      int eh = height - rows * wv.cell_height;
 
       if (wp >= WMSZ_BOTTOM) {
         wp -= WMSZ_BOTTOM;
@@ -3198,7 +3178,7 @@ static struct {
       else if (wp == WMSZ_LEFT)
         r->left += ew;
 
-      win_show_tip(r->left + extra_width, r->top + extra_height, cols, rows);
+      win_show_tip(r->left + wv.extra_width, r->top + wv.extra_height, cols, rows);
 
       return ew || eh;
     }
@@ -3468,14 +3448,12 @@ static struct {
   return DefWindowProcW(wnd, message, wp, lp);
 }
 
-HWND g_hWnd = NULL;             //窗口句柄
-HHOOK g_hlowKeyHook = NULL;     //低级键盘钩子句柄
 //static DWORD spid,stid;
 #define KH_MAPSIZE 4096
-const char *szmmname="minttyz/keyhook";
 int pmapmem(int flg){
   static HANDLE hMapFile=0 ;
   static char*pBuf=NULL;
+  const char *szmmname="minttyz/keyhook";
   int nnew=0;
   if(flg){
     hMapFile = OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE,szmmname) ;
@@ -3618,8 +3596,8 @@ report_pos(void)
     y = placement.rcNormalPosition.top;
     int cols = cterm->cols;
     int rows = cterm->rows;
-    cols = (placement.rcNormalPosition.right - placement.rcNormalPosition.left - norm_extra_width - 2 * PADDING) / cell_width;
-    rows = (placement.rcNormalPosition.bottom - placement.rcNormalPosition.top - norm_extra_height - 2 * PADDING - OFFSET) / cell_height;
+    cols = (placement.rcNormalPosition.right - placement.rcNormalPosition.left - wv.norm_extra_width - 2 * PADDING) / wv.cell_width;
+    rows = (placement.rcNormalPosition.bottom - placement.rcNormalPosition.top - wv.norm_extra_height - 2 * PADDING - OFFSET) / wv.cell_height;
 
     printf("%s", main_sd.argv[0]);
     printf(*report_geom == 'o' ? " -o Columns=%d -o Rows=%d" : " -s %d,%d", cols, rows);
@@ -4785,7 +4763,8 @@ int LoadConfig(){
         set_arg_option("TabBar", strdup("1"));
         set_arg_option("SessionGeomSync", optarg ?: strdup("2"));
       when 'B':
-        border_style = strdup(optarg);
+        if (strcmp(optarg,"frame")==0) border_style = 1;
+        else border_style=2;
       when 'R':
         switch (*optarg) {
           when 's' or 'o':
@@ -5432,7 +5411,7 @@ main(int argc, char *argv[])
     // we cannot avoid double win_init_fonts completely because of 
     // circular dependencies of various window geometry calculations 
     // with initial window creation (see comments below);
-    // initial setup esp. of cell_width, cell_height is needed 
+    // initial setup esp. of wv.cell_width, wv.cell_height is needed 
     // in order to prevent their uninitialised usage (#1124); we could also
     // - set dummy values here, but which ones to ensure proper geometry?
     // - guard against failing uninitialised cell_ values but that 
@@ -5455,7 +5434,8 @@ main(int argc, char *argv[])
   cs_reconfig();
 
   // Determine window sizes.
-  win_adjust_borders(cell_width * term_cols, cell_height * term_rows);
+  win_adjust_borders(wv.cell_width * term_cols, wv.cell_height * term_rows);
+
 
   // Having x == CW_USEDEFAULT but not y still triggers default positioning,
   // whereas y == CW_USEDEFAULT but not x results in an invisible window,
@@ -5481,10 +5461,11 @@ main(int argc, char *argv[])
 
   // Create initial window.
   //cterm->show_scrollbar = cfg.scrollbar;  // hotfix #597
+  long style =up_borderstyle(WS_OVERLAPPEDWINDOW);
   wnd = CreateWindowExW(cfg.scrollbar < 0 ? WS_EX_LEFTSCROLLBAR : 0,
                         wclass, wtitle,
-                        window_style | (cfg.scrollbar ? WS_VSCROLL : 0),
-                        x, y, width, height,
+                        style | (cfg.scrollbar ? WS_VSCROLL : 0),
+                        x, y, wv.width, wv.height,
                         null, null, inst, null);
   trace_winsize("createwindow");
 
@@ -5540,20 +5521,20 @@ main(int argc, char *argv[])
 
     if (maxwidth) {
       x = ar.left;
-      width = ar.right - ar.left;
+      wv.width = ar.right - ar.left;
     }
     if (maxheight) {
       y = ar.top;
-      height = ar.bottom - ar.top;
+      wv.height = ar.bottom - ar.top;
     }
 #ifdef debug_resize
     if (maxwidth || maxheight)
-      printf("max w/h %d %d\n", width, height);
+      printf("max w/h %d %d\n", wv.width, wv.height);
 #endif
     printpos("fin", x, y, ar);
 
     // set window size
-    SetWindowPos(wnd, NULL, x, y, width, height,
+    SetWindowPos(wnd, NULL, x, y, wv.width, wv.height,
                  SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_NOACTIVATE);
     trace_winsize("-p");
   }
@@ -5563,17 +5544,17 @@ main(int argc, char *argv[])
   cursd.argc=argc;
   cursd.cmd=cmd;
   cursd.argv=argv;
-  win_tab_init(home, &cursd,term_width, term_height);
+  win_tab_init(home, &cursd,wv.term_width, wv.term_height);
 
   if (per_monitor_dpi_aware) {
     if (cfg.x != (int)CW_USEDEFAULT) {
       // The first SetWindowPos actually set x and y;
       // set window size
-      SetWindowPos(wnd, NULL, x, y, width, height,
+      SetWindowPos(wnd, NULL, x, y, wv.width, wv.height,
                    SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_NOACTIVATE);
       // Then, we have placed the window on the correct monitor
       // and we can now interpret width/height in correct DPI.
-      SetWindowPos(wnd, NULL, x, y, width, height,
+      SetWindowPos(wnd, NULL, x, y, wv.width, wv.height,
                    SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_NOACTIVATE);
     }
     // retrieve initial monitor DPI
@@ -5637,7 +5618,7 @@ main(int argc, char *argv[])
           // consider preset size (term_)
           win_set_chars(term_rows ?: cfg.rows, term_cols ?: cfg.cols);
           trace_winsize("dpi > win_set_chars");
-          //?win_set_pixels(term_rows * cell_height, term_cols * cell_width);
+          //?win_set_pixels(term_rows * wv.cell_height, term_cols * wv.cell_width);
         }
       }
     }
@@ -5651,7 +5632,7 @@ main(int argc, char *argv[])
   if (center || right || bottom || left || top || maxwidth || maxheight) {
     // adjust window size assumption to changed dpi
     if (dpi != 96) {
-      win_get_pixels(&height, &width, true);
+      win_get_pixels(&wv.height, &wv.width, true);
     }
 
     MONITORINFO mi;
@@ -5672,58 +5653,45 @@ main(int argc, char *argv[])
     if (left)
       x = ar.left + cfg.x;
     else if (right)
-      x = ar.right - cfg.x - width;
+      x = ar.right - cfg.x - wv.width;
     else if (center)
-      x = (ar.left + ar.right - width) / 2;
+      x = (ar.left + ar.right - wv.width) / 2;
     if (top)
       y = ar.top + cfg.y;
     else if (bottom)
-      y = ar.bottom - cfg.y - height;
+      y = ar.bottom - cfg.y - wv.height;
     else if (center)
-      y = (ar.top + ar.bottom - height) / 2;
+      y = (ar.top + ar.bottom - wv.height) / 2;
       printpos("pos", x, y, ar);
 
     if (maxwidth) {
       x = ar.left;
-      width = ar.right - ar.left;
+      wv.width = ar.right - ar.left;
     }
     if (maxheight) {
       y = ar.top;
-      height = ar.bottom - ar.top;
+      wv.height = ar.bottom - ar.top;
     }
 #ifdef debug_resize
     if (maxwidth || maxheight)
-      printf("max w/h %d %d\n", width, height);
+      printf("max w/h %d %d\n", wv.width, wv.height);
 #endif
     printpos("fin", x, y, ar);
 
     // heuristic adjustment, to prevent off-by-one width/height:
     if (maxheight && !maxwidth)
-      width += cell_width * 3 / 4;
+      wv.width += wv.cell_width * 3 / 4;
     if (maxwidth && !maxheight)
-      height += cell_height * 3 / 4;
+      wv.height += wv.cell_height * 3 / 4;
 
     // set window size
-    SetWindowPos(wnd, NULL, x, y, width, height,
+    SetWindowPos(wnd, NULL, x, y, wv.width, wv.height,
                  SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_NOACTIVATE);
     trace_winsize("-p");
   }
 
 
-  if (border_style) {
-    LONG style = GetWindowLong(wnd, GWL_STYLE);
-    if (strcmp(border_style, "void") == 0) {
-      style &= ~(WS_CAPTION | WS_BORDER | WS_THICKFRAME);
-    }
-    else {
-      style &= ~(WS_CAPTION | WS_BORDER);
-    }
-    SetWindowLong(wnd, GWL_STYLE, style);
-    SetWindowPos(wnd, null, 0, 0, 0, 0,
-                 SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED
-                 | SWP_NOACTIVATE);
-    trace_winsize("border_style");
-  }
+  win_update_border();
   configure_taskbar(app_id);
 
   // The input method context.
@@ -5752,7 +5720,7 @@ main(int argc, char *argv[])
   );
 
   // Set up an empty caret bitmap. We're painting the cursor manually.
-  caretbm = CreateBitmap(1, cell_height, 1, 1, newn(short, cell_height));
+  caretbm = CreateBitmap(1, wv.cell_height, 1, 1, newn(short, wv.cell_height));
   CreateCaret(wnd, caretbm, 0, 0);
 
   // Initialise various other stuff.
@@ -5776,7 +5744,6 @@ main(int argc, char *argv[])
   go_fullscr_on_max = (cfg.window == -1);
   default_size_token = true;  // prevent font zooming (#708)
   int show_cmd = (go_fullscr_on_max || run_max) ? SW_SHOWMAXIMIZED : cfg.window;
-  show_cmd = win_fix_taskbar_max(show_cmd);
   // if (run_max == 2) win_maximise(2); // do that later to reduce flickering
 
   // Ensure -w full to cover taskbar also with -B void (~#1114)
@@ -5785,7 +5752,7 @@ main(int argc, char *argv[])
     run_max = 2; // ensure fullscreen is full screen
 
   // Scale to background image aspect ratio if requested
-  win_get_pixels(&ini_height, &ini_width, false);
+  win_get_pixels(&wv.ini_height, &wv.ini_width, false);
   if (*cfg.background == '%')
     scale_to_image_ratio();
   // Adjust ConPTY support if requested
@@ -5836,7 +5803,7 @@ main(int argc, char *argv[])
   */
   child_create(
     argv,
-    &(struct winsize){term_rows, term_cols, term_cols * cell_width, term_rows * cell_height}
+    &(struct winsize){term_rows, term_cols, term_cols * wv.cell_width, term_rows * wv.cell_height}
   );
 #endif
   // Finally show the window.
@@ -5864,6 +5831,7 @@ main(int argc, char *argv[])
   }
   win_set_font(wnd);
   is_init = true;
+  logging = cfg.logging;
   // Message loop.
   for (;;) {
     MSG msg;

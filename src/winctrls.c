@@ -24,7 +24,8 @@
  * winctrls.c: routines to self-manage the controls in a dialog box.
  */
 
-#define SC(a) (heightsc*(a)/100)
+int win_dialog_sc(int iv);
+#define SC(a) win_dialog_sc(a)
 #define GAPBETWEEN    SC(3)
 #define GAPWITHIN     SC(1)
 #define GAPXBOX       SC(6)
@@ -40,7 +41,6 @@
 #define COMBOHEIGHT    SC(15)
 #define PUSHBTNHEIGHT  SC(18)
 #define PROGBARHEIGHT  SC(18)
-int heightsc=1;
 
 static HFONT _diafont = 0;
 static int diafontsize = 0;

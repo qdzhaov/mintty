@@ -211,16 +211,16 @@ win_toggle_search(bool show, bool focus)
   GetClientRect(wnd, &cr);
   int width = cr.right - cr.left;
 
-  int margin = cell_width / 6 + 1;
-  int height = cell_height + margin * 2;
-  int button_width = cell_width * 2;
+  int margin = wv.cell_width / 6 + 1;
+  int height = wv.cell_height + margin * 2;
+  int button_width = wv.cell_width * 2;
   SEARCHBAR_HEIGHT = height;
 
   int edit_width = width - button_width * 3 - margin * 2;
   int ctrl_height = height - margin * 2;
   int sf_height = ctrl_height - 4;
 #ifdef debug_searchbar
-  printf("ctrl/but %d/%d cell %d/%d font h %d s %d\n", ctrl_height, button_width, cell_height, cell_width, font_height, font_size);
+  printf("ctrl/but %d/%d cell %d/%d font h %d s %d\n", ctrl_height, button_width, wv.cell_height, wv.cell_width, font_height, font_size);
 #endif
 
   const wchar * search_bar = cfg.search_bar;
