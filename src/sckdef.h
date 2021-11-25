@@ -523,14 +523,14 @@ static uint mflags_tek_mode() { return tek_mode ? MF_ENABLED : MF_GRAYED; }
 void win_close();
 typedef struct pstr{ short len; char s[1]; }pstr;
 typedef struct pwstr{ short len; wchar s[1]; }pwstr;
-pwstr *pwsdup(wchar*s){
+pwstr *pwsdup(const wchar*s){
   int len=wcslen(s);
   pwstr *d=(pwstr*)malloc(len+2);
   wcsncpy(d->s,s,len);
   d->len=len;
   return d;
 }
-pstr *psdup(char*s){
+pstr *psdup(const char*s){
   int len=strlen(s);
   pstr *d=(pstr*)malloc(len+4);
   strncpy(d->s,s,len);
@@ -547,7 +547,7 @@ static void wpesccode(int code,int mods){//FT_ESCC
   int len = sprintf(buf, mods ? "\e[%i;%u~" : "\e[%i~", code, mods + 1);
   child_send(cterm,buf, len);
 }
-static void shellcmd(char*cmd){//FT_SHEL
+static void shellcmd(const char*cmd){//FT_SHEL
   term_cmd(cmd);
 }
 /* Keyboard handling */
@@ -759,14 +759,14 @@ static struct function_def cmd_defs[] = {
   {0,0,{.fct=nop},0,0,0}
 };
 static struct function_def *
-function_def(char * cmd)
+function_def(const char * cmd)
 {
   for (uint i = 0; i < lengthof(cmd_defs); i++)
     if (!strcasecmp(cmd, cmd_defs[i].name))
       return &cmd_defs[i];
   return 0;
 }
-static int fundef_run(char*cmd,uint key, mod_keys mods){
+static int fundef_run(const char*cmd,uint key, mod_keys mods){
   struct function_def * fundef = function_def(cmd);
   if (fundef) {
     switch(fundef->type){
@@ -789,7 +789,7 @@ static int fundef_run(char*cmd,uint key, mod_keys mods){
     return true;
   }
 }
-static int fundef_stat(char*cmd){
+static int fundef_stat(const char*cmd){
   struct function_def * fudef = function_def(cmd);
   if (fudef && fudef->fct_status) {
     return fudef->fct_status();

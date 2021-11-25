@@ -36,7 +36,7 @@ _realloc(void *aptr, size_t nbytes)
 #define new(type) ((type *) malloc(sizeof(type)))
 #define newn(type, n) ((type *) calloc((n), sizeof(type)))
 #define renewn(p, n) ((typeof(p)) _realloc((p), sizeof(*p) * (n)))
-static inline void delete(const void *p) { free((void *)p); }
+static inline void delete(const void *p) { if(p)free((void *)p); }
 
 
 extern char * tmpdir(void);
@@ -109,7 +109,7 @@ typedef const wchar *wstring;
 #define strappend(s0, s1) s0 = _strappend(s0, s1)
 
 static inline char *
-_strappend(char * s0, char * s1)
+_strappend(char * s0, const char * s1)
 {
   s0 = renewn(s0, strlen(s0) + strlen(s1) + 1);
   strcat(s0, s1);
@@ -126,8 +126,8 @@ _strappend(char * s0, char * s1)
 #define W(s) __W(s)
 
 // localized string/wstring lookup:
-extern char * loctext(string msg);
-extern wchar * wloctext(string msg);
+extern const char * loctext(string msg);
+extern const wchar * wloctext(string msg);
 #define _(s) loctext(s)
 #define _W(s) wloctext(s)
 // dummy marker for xgettext:
@@ -163,6 +163,6 @@ extern wchar*awsform(const wchar *fmt, ...);
 #define sgn(x) ({ typeof(x) x_ = (x); (x_ > 0) - (x_ < 0); })
 #define sqr(x) ({ typeof(x) x_ = (x); x_ * x_; })
 
-#define VFREE(p) if(p)free(p)
+#define VFREE(p) delete(p)
 
 #endif

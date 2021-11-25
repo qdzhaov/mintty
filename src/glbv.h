@@ -200,7 +200,7 @@ static int colours_num = 0;
 static uchar esc_mod0 = 0;//ZNT5
 static uchar esc_mod1 = 0;//ZNT5
 ============== textprint.c
-//ZNT1
+//ZNT0
 static wstring printer = 0;
 static char * pf;
 static int pd;

@@ -219,7 +219,7 @@ doctl(control * ctrl,
  * Begin a grouping box, with or without a group title.
  */
 static void
-beginbox(ctrlpos * cp, char *name, int idbox)
+beginbox(ctrlpos * cp, const char * name, int idbox)
 {
   cp->boxystart = cp->ypos;
   if (name) cp->ypos += STATICHEIGHT;
@@ -254,7 +254,7 @@ endbox(ctrlpos * cp)
  * A static line, followed by a full-width edit box.
  */
 static void
-editbox(control * ctrl, ctrlpos * cp, int password, char * text, 
+editbox(control * ctrl, ctrlpos * cp, int password, const char * text, 
         int staticid, int editid)
 {
   RECT r;
@@ -281,7 +281,7 @@ editbox(control * ctrl, ctrlpos * cp, int password, char * text,
  * A static line, followed by a full-width combo box.
  */
 static void
-combobox(control * ctrl, ctrlpos * cp, char *text, int staticid, int listid)
+combobox(control * ctrl, ctrlpos * cp, const char * text, int staticid, int listid)
 {
   RECT r;
 
@@ -308,7 +308,7 @@ typedef struct {
 } radio;
 
 static void
-radioline_common(ctrlpos * cp, char *text, int id, int nacross,
+radioline_common(ctrlpos * cp, const char * text, int id, int nacross,
                  radio * buttons, int nbuttons)
 {
   RECT r;
@@ -352,7 +352,7 @@ radioline_common(ctrlpos * cp, char *text, int id, int nacross,
  * A single standalone checkbox.
  */
 static void
-checkbox(ctrlpos * cp, char *text, int id)
+checkbox(ctrlpos * cp, const char * text, int id)
 {
   RECT r;
 
@@ -386,7 +386,7 @@ paneltitle(ctrlpos * cp, int id)
  * A plain text.
  */
 static void
-statictext(ctrlpos * cp, char * stext, int sid)
+statictext(ctrlpos * cp, const char * stext, int sid)
 {
   RECT r;
 
@@ -404,7 +404,7 @@ statictext(ctrlpos * cp, char * stext, int sid)
  * A button on the right hand side, with a static to its left.
  */
 static void
-staticbtn(ctrlpos * cp, char *stext, int sid, char *btext, int bid)
+staticbtn(ctrlpos * cp, const char * stext, int sid, const char *btext, int bid)
 {
   const int height =
     (PUSHBTNHEIGHT > STATICHEIGHT ? PUSHBTNHEIGHT : STATICHEIGHT);
@@ -436,7 +436,7 @@ staticbtn(ctrlpos * cp, char *stext, int sid, char *btext, int bid)
  * A simple push button.
  */
 static void
-button(control * ctrl, ctrlpos * cp, char *btext, int bid, int defbtn)
+button(control * ctrl, ctrlpos * cp, const char *btext, int bid, int defbtn)
 {
   RECT r;
 
@@ -469,7 +469,7 @@ button(control * ctrl, ctrlpos * cp, char *btext, int bid, int defbtn)
  * An edit control on the right hand side, with a static to its left.
  */
 static void
-staticedit_internal(ctrlpos * cp, char *stext, int sid, int eid,
+staticedit_internal(ctrlpos * cp, const char * stext, int sid, int eid,
                     int percentedit, int style)
 {
   const int height = (EDITHEIGHT > STATICHEIGHT ? EDITHEIGHT : STATICHEIGHT);
@@ -498,13 +498,13 @@ staticedit_internal(ctrlpos * cp, char *stext, int sid, int eid,
 }
 
 static void
-staticedit(ctrlpos * cp, char *stext, int sid, int eid, int percentedit)
+staticedit(ctrlpos * cp, const char * stext, int sid, int eid, int percentedit)
 {
   staticedit_internal(cp, stext, sid, eid, percentedit, 0);
 }
 
 static void
-staticpassedit(ctrlpos * cp, char *stext, int sid, int eid, int percentedit)
+staticpassedit(ctrlpos * cp, const char * stext, int sid, int eid, int percentedit)
 {
   staticedit_internal(cp, stext, sid, eid, percentedit, ES_PASSWORD);
 }
@@ -513,7 +513,7 @@ staticpassedit(ctrlpos * cp, char *stext, int sid, int eid, int percentedit)
  * A drop-down list box on the right hand side, with a static to its left.
  */
 static void
-staticddl(ctrlpos * cp, char *stext, int sid, int lid, int percentlist)
+staticddl(ctrlpos * cp, const char * stext, int sid, int lid, int percentlist)
 {
   const int height = (COMBOHEIGHT > STATICHEIGHT ? COMBOHEIGHT : STATICHEIGHT);
   RECT r;
@@ -544,7 +544,7 @@ staticddl(ctrlpos * cp, char *stext, int sid, int lid, int percentlist)
  * A combo box on the right hand side, with a static to its left.
  */
 static void
-staticcombo(ctrlpos * cp, char *stext, int sid, int lid, int percentlist)
+staticcombo(ctrlpos * cp, const char * stext, int sid, int lid, int percentlist)
 {
   const int height = (COMBOHEIGHT > STATICHEIGHT ? COMBOHEIGHT : STATICHEIGHT);
   RECT r;
@@ -575,7 +575,7 @@ staticcombo(ctrlpos * cp, char *stext, int sid, int lid, int percentlist)
  * A static, with a full-width drop-down list box below it.
  */
 static void
-staticddlbig(ctrlpos * cp, char *stext, int sid, int lid)
+staticddlbig(ctrlpos * cp, const char * stext, int sid, int lid)
 {
   RECT r;
 
@@ -602,7 +602,7 @@ staticddlbig(ctrlpos * cp, char *stext, int sid, int lid)
  * A static, text/label only.
  */
 static void
-staticlabel(ctrlpos * cp, char *stext, int sid)
+staticlabel(ctrlpos * cp, const char * stext, int sid)
 {
   RECT r;
 
@@ -620,7 +620,7 @@ staticlabel(ctrlpos * cp, char *stext, int sid)
  * A list box with a static labelling it.
  */
 static void
-listbox(control * ctrl, ctrlpos * cp, char *stext, int sid, int lid, int lines)
+listbox(control * ctrl, ctrlpos * cp, const char * stext, int sid, int lid, int lines)
 {
   RECT r;
 

@@ -7,7 +7,7 @@
 
 static wstring printer = 0;
 static char * pf;
-static int pd;
+static int pd=-1;
 static const wchar BOM = 0xFEFF;
 static uint np = 0;
 static struct passwd * pw;
@@ -49,10 +49,10 @@ printer_start_job(wstring printer_name)
 }
 
 void
-printer_wwrite(wchar * wdata, uint len)
+printer_wwrite(const wchar * wdata, uint len)
 {
   if (printer) {
-    void * wbuf = wdata;
+    const char * wbuf = (const char*)wdata;
     uint wlen = len * sizeof(wchar);
     uint n;
     while ((n = write(pd, wbuf, wlen)) > 0) {
@@ -63,7 +63,7 @@ printer_wwrite(wchar * wdata, uint len)
 }
 
 void
-printer_write(char * data, uint len)
+printer_write(const char * data, uint len)
 {
   if (printer) {
     char * buf = malloc(len + 1);
@@ -86,6 +86,7 @@ printer_finish_job(void)
 {
   if (printer) {
     close(pd);
+    pd=-1;
 
     char * wf = path_posix_to_win_a(pf);
 

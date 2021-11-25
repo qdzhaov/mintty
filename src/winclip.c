@@ -47,7 +47,7 @@ shell_exec_thread(void *data)
       message_box_w(0, msg, null, MB_ICONERROR, null);
     }
   }
-  free(wpath);
+  VFREE(wpath);
   return 0;
 }
 
@@ -186,16 +186,16 @@ wslmntmapped(void)
       fclose(mtab);
     }
 
-    free(fstab);
-    free(wsl$conf);
-    free(rootfs);
+    VFREE(fstab);
+    VFREE(wsl$conf);
+    VFREE(rootfs);
     wslmnt_init = true;
   }
   return wsl_conf_mnt || wsl_fstab;
 }
 
 static char *
-unwslpath(wchar * wpath)
+unwslpath(const wchar * wpath)
 {
   char * res = null;
   if (wslmntmapped()) {
@@ -211,13 +211,13 @@ unwslpath(wchar * wpath)
                          &wslpath[strlen(wsl_fstab[i].mount_point)]);
             break;
           }
-    free(wslpath);
+    VFREE(wslpath);
   }
   return res;
 }
 
 static char *
-wslpath(char * path)
+wslpath(const char * path)
 {
   char * res = null;
   if (ispathprefix("/cygdrive", path) && wslmntmapped()) {
@@ -237,39 +237,34 @@ wslpath(char * path)
   // cygwin-internal paths not supported
   return res;
 }
-wchar *
-dewsl(wchar * wpath)
+const wchar *
+dewsl(const wchar * wpath) //free parameter 
 {
 #ifdef debug_wsl
   printf("open <%ls>\n", wpath);
 #endif
   char * unwslp = unwslpath(wpath);
+  wchar *unwsl;
   if (unwslp) {
-    wchar * unwsl = cs__utftowcs(unwslp);
-    free(unwslp);
-    delete(wpath);
-    wpath = unwsl;
+    unwsl = cs__utftowcs(unwslp);
+    VFREE(unwslp);
   }
   else if (wcsncmp(wpath, W("/mnt/"), 5) == 0) {
-    wchar * unwsl = newn(wchar, wcslen(wpath) + 6);
+    unwsl = newn(wchar, wcslen(wpath) + 6);
     wcscpy(unwsl, W("/cygdrive"));
     wcscat(unwsl, wpath + 4);
-    delete(wpath);
-    wpath = unwsl;
   }
   else if (*wpath == '/' && *wsl_basepath) {
     static wchar * wbase = 0;
     if (!wbase) {
       char * pbase = path_win_w_to_posix(wsl_basepath);
       wbase = cs__mbstowcs(pbase);
-      free(pbase);
+      VFREE(pbase);
     }
 
-    wchar * unwsl = newn(wchar, wcslen(wbase) + wcslen(wpath) + 1);
+    unwsl = newn(wchar, wcslen(wbase) + wcslen(wpath) + 1);
     wcscpy(unwsl, wbase);
     wcscat(unwsl, wpath);
-    delete(wpath);
-    wpath = unwsl;
   }
   else if (*wpath == '/') {  // prepend %LOCALAPPDATA%\lxss[\rootfs]
     // deprecated case; for WSL, wsl_basepath should be set
@@ -277,9 +272,9 @@ dewsl(wchar * wpath)
     if (appd) {
       wchar * wappd = cs__mbstowcs(appd);
       appd = path_win_w_to_posix(wappd);
-      free(wappd);
+      VFREE(wappd);
       wappd = cs__mbstowcs(appd);
-      free(appd);
+      VFREE(appd);
 
       bool rootfs_mount = true;
       for (uint i = 0; i < lengthof(lxss_mounts); i++) {
@@ -289,35 +284,33 @@ dewsl(wchar * wpath)
         }
       }
 
-      wchar * unwsl = newn(wchar, wcslen(wappd) + wcslen(wpath) + 13);
+      unwsl = newn(wchar, wcslen(wappd) + wcslen(wpath) + 13);
       wcscpy(unwsl, wappd);
-      free(wappd);
+      VFREE(wappd);
       wcscat(unwsl, W("/lxss"));
       if (rootfs_mount)
         wcscat(unwsl, W("/rootfs"));
       wcscat(unwsl, wpath);
-      delete(wpath);
-      wpath = unwsl;
     }
-  }
-  return wpath;
+  }else return wpath;
+  delete(wpath);
+  return unwsl;
 }
 
 void
-win_open(wstring wpath, bool adjust_dir)
+win_open(wchar*wpath, bool adjust_dir)
 // frees wpath
 {
   // unescape
   int wl = wcslen(wpath);
+  wchar * p0 = wpath;
   if ((*wpath == '"' || *wpath == '\'') && wpath[wl - 1] == *wpath) {
     // don't wpath++ (later delete!)
-    wchar * p0 = (wchar *)wpath;
     for (int i = 0; i < wl - 2; i++)
       p0[i] = p0[i + 1];
     p0[wl - 2] = 0;
   }
   else {
-    wchar * p0 = (wchar *)wpath;
     wchar * p1 = p0;
     while (*p0) {
       if (*p0 == '\\')
@@ -474,7 +467,7 @@ win_copy_as(const wchar *data, cattr *cattrs, int len, char what)
     rtflen = sprintf(rtf,
       "{\\rtf1\\ansi\\deff0{\\fonttbl{\\f0\\fmodern\\fprq1 %s;}}\\f0\\fs%d",
       rtffontname, cfgsize * 2);
-    free(rtffontname);
+    VFREE(rtffontname);
 
    /*
     * Add colour palette
@@ -683,7 +676,7 @@ win_copy_as(const wchar *data, cattr *cattrs, int len, char what)
       memcpy(lock3, rtf, rtflen);
       GlobalUnlock(clipdata3);
     }
-    free(rtf);
+    VFREE(rtf);
   }
 
   GlobalUnlock(clipdata);
@@ -732,14 +725,14 @@ win_copy_as(const wchar *data, cattr *cattrs, int len, char what)
              htmldescrlen + strlen(htmlpre),
              htmldescrlen + strlen(htmlpre) + strlen(html),
              htmlpre, html, htmlpost);
-      free(html);
+      VFREE(html);
       int len = strlen(htmlcb);
       //printf("clipboard HTML Format:\n%s\n", htmlcb);
       HGLOBAL clipdatahtml = GlobalAlloc(GMEM_DDESHARE | GMEM_MOVEABLE, len);
       char * cliphtml = GlobalLock(clipdatahtml);
       if (cliphtml) {
         memcpy(cliphtml, htmlcb, len);
-        free(htmlcb);
+        VFREE(htmlcb);
         GlobalUnlock(clipdatahtml);
         SetClipboardData(CF_HTML, clipdatahtml);
       }
@@ -819,7 +812,7 @@ buf_add(char c)
 }
 
 static void
-buf_path(wchar * wfn, bool convert, bool quote)
+buf_path(const wchar * wfn, bool convert, bool quote)
 {
     bool posix_path = convert || support_wsl;
     char * fn = posix_path
@@ -850,7 +843,7 @@ buf_path(wchar * wfn, bool convert, bool quote)
 #endif
       char * wslp = wslpath(p);
       if (wslp) {
-        free(fn);
+        VFREE(fn);
         fn = wslp;
         p = fn;
       }
@@ -882,10 +875,10 @@ buf_path(wchar * wfn, bool convert, bool quote)
         if (appd) {
           wchar * wappd = cs__mbstowcs(appd);
           appd = path_win_w_to_posix(wappd);
-          free(wappd);
+          VFREE(wappd);
         }
 
-        char * mount_point(char * path, char * appd) {
+        char * mount_point(char * path, const char * appd) {
           if (!appd)
             return null;
           int lapp = strlen(appd);
@@ -943,7 +936,7 @@ buf_path(wchar * wfn, bool convert, bool quote)
     }
     if (needs_quotes)
       buf_add(posix_path ? '\'' : '"');
-    free(fn);
+    VFREE(fn);
 }
 
 static void
@@ -991,17 +984,17 @@ paste_hdrop(HDROP drop)
           char * pastebuf = newn(char, strlen(paste) + strlen(buf) + 1);
           sprintf(pastebuf, paste, buf);
           child_send(cterm,pastebuf, strlen(pastebuf));
-          free(pastebuf);
+          VFREE(pastebuf);
         }
         else
           child_send(cterm,paste, strlen(paste));
-        free(drops);  // also frees paste which points into drops
-        free(fg_prog);
-        free(buf);
+        VFREE(drops);  // also frees paste which points into drops
+        VFREE(fg_prog);
+        VFREE(buf);
         return;
       }
-      free(drops);
-      free(fg_prog);
+      VFREE(drops);
+      VFREE(fg_prog);
     }
   }
 
@@ -1010,7 +1003,7 @@ paste_hdrop(HDROP drop)
   if (cterm->bracketed_paste)
     child_write(cterm,"\e[200~", 6);
   child_send(cterm,buf, buf_pos);
-  free(buf);
+  VFREE(buf);
   if (cterm->bracketed_paste)
     child_write(cterm,"\e[201~", 6);
 }
@@ -1026,7 +1019,7 @@ paste_path(HANDLE data)
   if (cterm->bracketed_paste)
     child_write(cterm,"\e[200~", 6);
   child_send(cterm,buf, buf_pos);
-  free(buf);
+  VFREE(buf);
   if (cterm->bracketed_paste)
     child_write(cterm,"\e[201~", 6);
 }
@@ -1245,7 +1238,7 @@ dt_drop(IDropTarget *this, IDataObject *obj,
     if (drop) {
       // this will only work with the DIALOG_CLASS target
       SendMessage(h, WM_USER, (WPARAM)widget, (LPARAM)drop);
-      free(drop);
+      VFREE(drop);
     }
   }
   return 0;

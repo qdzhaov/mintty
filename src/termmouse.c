@@ -411,7 +411,7 @@ get_selpoint(const pos p)
 }
 
 static void
-send_keys(char *code, uint len, uint count)
+send_keys(const char *code, uint len, uint count)
 {
   if (count) {
     uint size = len * count;

@@ -5,7 +5,7 @@
 #include "child.h"
 #include "winpriv.h"
 #include <termios.h>
-int cs_mbstowcs(wchar *ws, const char *s, size_t wlen);
+#include "charset.h"
 
 #define lengthof(array) (sizeof(array) / sizeof(*(array)))
 static unsigned int ntabs=0,mtabs=0 ,active_tab = 0;
@@ -55,7 +55,7 @@ void win_tab_set_title(STerm*pterm, const wchar_t* title) {
     win_invalidate_all(1);
   }
   if (pterm == win_tab_active_term()) {
-    win_set_title((wchar *)tab->titles[tab->titles_i]);
+    win_set_title(tab->titles[tab->titles_i]);
   }
 }
 void win_tab_title_push(STerm*pterm) {
@@ -154,9 +154,9 @@ static void tab_free(STab*tab){
   VFREE(tab->sd.title);
   VFREE(tab->sd.cmd  );
   for(int i=0;tab->sd.argv[i];i++){
-    free(tab->sd.argv[i]);
+    delete(tab->sd.argv[i]);
   }
-  VFREE(tab->sd.argv );
+  delete(tab->sd.argv );
   free(tab);
 }
 
@@ -183,7 +183,7 @@ static void newtab(SessDef*sd,struct winsize *wsz, const char* cwd ){
   tab->sd.cmd=strdup(sd->cmd);
   if(sd->title)tab->sd.title=strdup(sd->title);
   else tab->sd.title=0;
-  tab->sd.argv=newn(char*,sd->argc+1);
+  tab->sd.argv=newn(const char*,sd->argc+1);
   for(int i=0;sd->argv[i];i++){
     tab->sd.argv[i]=strdup(sd->argv[i]);
   }

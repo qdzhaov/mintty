@@ -54,7 +54,7 @@ termchar basic_erase_char =
 #define dont_debug_hyperlinks
 
 int
-putlink(char * link)
+putlink(const char * link)
 {
 #if CYGWIN_VERSION_API_MINOR >= 66
   bool utf8 = strcmp(nl_langinfo(CODESET), "UTF-8") == 0;
@@ -64,14 +64,14 @@ putlink(char * link)
   if (!utf8) {
     wchar * wlink = cs__mbstowcs(link);
     link = cs__wcstoutf(wlink);
-    free(wlink);
+    delete(wlink);
   }
 
   if (*link != ';')
     for (int i = 0; i < nlinks; i++)
       if (0 == strcmp(link, links[i])) {
         if (!utf8)
-          free(link);
+          delete(link);
         return i;
       }
 
@@ -84,7 +84,7 @@ putlink(char * link)
   printf("[%d] link <%s>\n", nlinks, link1);
 #endif
   if (!utf8)
-    free(link);
+    delete(link);
 
   nlinks++;
   links = renewn(links, nlinks);
@@ -414,7 +414,7 @@ static void freelines(termlines* lines, int rows) {
   if (lines) {
     for (int i = 0; i < rows; i++)
       freeline(lines[i]);
-    free(lines);
+    delete(lines);
   }
 }
 void
@@ -426,27 +426,27 @@ term_free(struct STerm* pterm)
 
   term_clear_scrollback(pterm);
 
-  free(pterm->suspbuf );
+  delete(pterm->suspbuf );
 
-  free(pterm->printbuf);
+  delete(pterm->printbuf);
 
-  free(pterm->tabs);
+  delete(pterm->tabs);
 
-  free(pterm->paste_buffer);
+  delete(pterm->paste_buffer);
 
-  free(pterm->ltemp);
-  free(pterm->wcFrom);
-  free(pterm->wcTo);
+  delete(pterm->ltemp);
+  delete(pterm->wcFrom);
+  delete(pterm->wcTo);
   for (int i = 0; i < pterm->bidi_cache_size; i++) {
-    free(pterm->pre_bidi_cache[i].chars);
-    free(pterm->pre_bidi_cache[i].forward);
-    free(pterm->pre_bidi_cache[i].backward);
-    free(pterm->post_bidi_cache[i].chars);
-    free(pterm->post_bidi_cache[i].forward);
-    free(pterm->post_bidi_cache[i].backward);
+    delete(pterm->pre_bidi_cache[i].chars);
+    delete(pterm->pre_bidi_cache[i].forward);
+    delete(pterm->pre_bidi_cache[i].backward);
+    delete(pterm->post_bidi_cache[i].chars);
+    delete(pterm->post_bidi_cache[i].forward);
+    delete(pterm->post_bidi_cache[i].backward);
   }
-  free(pterm->pre_bidi_cache);
-  free(pterm->post_bidi_cache);
+  delete(pterm->pre_bidi_cache);
+  delete(pterm->post_bidi_cache);
   memset(pterm, 0, sizeof(*pterm));
 }
 
@@ -639,9 +639,9 @@ case_fold(uint ch)
 }
 
 void
-term_set_search(wchar * needle)
+term_set_search(const wchar * needle)
 {
-  free(cterm->results.query);
+  delete(cterm->results.query);
   cterm->results.query = needle;
 
   // transform UTF-16 to UCS for matching
@@ -662,7 +662,7 @@ term_set_search(wchar * needle)
   }
   xquery[++xlen] = 0;
 
-  free(cterm->results.xquery);
+  delete(cterm->results.xquery);
   cterm->results.xquery = xquery;
   cterm->results.xquery_length = xlen;
   cterm->results.update_type = FULL_UPDATE;
@@ -1037,8 +1037,8 @@ term_clear_search(void)
 {
   term_clear_results();
   cterm->results.update_type = NO_UPDATE;
-  free(cterm->results.query);
-  free(cterm->results.xquery);
+  delete(cterm->results.query);
+  delete(cterm->results.xquery);
   cterm->results.query = NULL;
   cterm->results.xquery = NULL;
   cterm->results.xquery_length = 0;
@@ -1059,7 +1059,7 @@ scrollback_push(uchar *line)
     }
     else if (cterm->sblines) {
       // Throw away the oldest line
-      free(cterm->scrollback[cterm->sbpos]);
+      delete(cterm->scrollback[cterm->sbpos]);
       cterm->sblines--;
     }
     else
@@ -1095,8 +1095,8 @@ void
 term_clear_scrollback(STerm* pterm)
 {
   while (pterm->sblines)
-    free(scrollback_pop());
-  free(pterm->scrollback);
+    delete(scrollback_pop());
+  delete(pterm->scrollback);
   pterm->scrollback = 0;
   pterm->sblen = pterm->sblines = pterm->sbpos = 0;
   pterm->tempsblines = 0;
@@ -1192,7 +1192,7 @@ term_resize(int newrows, int newcols)
     for (int i = restore; i--;) {
       uchar *cline = scrollback_pop();
       termline *line = decompressline(cline, null);
-      free(cline);
+      delete(cline);
       line->temporary = false;  /* reconstituted line is now real */
       lines[i] = line;
     }
@@ -1476,9 +1476,9 @@ term_do_scroll(int topline, int botline, int lines, bool sb)
       for (int i = topline + lines - 1; i >= topline && cterm->sblines > 0; i--) {
         uchar *cline = scrollback_pop();
         termline *line = decompressline(cline, null);
-        free(cline);
+        delete(cline);
         line->temporary = false;  /* reconstituted line is now real */
-        free(cterm->lines[i]);
+        delete(cterm->lines[i]);
         cterm->lines[i] = line;
       }
     }
@@ -1725,22 +1725,22 @@ clear_emoji_data()
 {
   for (uint i = 0; i < lengthof(emoji_bases); i++) {
     if (emoji_bases[i].efn) {
-      free(emoji_bases[i].efn);
+      delete(emoji_bases[i].efn);
       emoji_bases[i].efn = 0;
     }
     if (emoji_bases[i].buf) {
-      free(emoji_bases[i].buf);
+      delete(emoji_bases[i].buf);
       emoji_bases[i].buf = 0;
       emoji_bases[i].buflen = 0;
     }
   }
   for (uint i = 0; i < lengthof(emoji_seqs); i++) {
     if (emoji_seqs[i].efn) {
-      free(emoji_seqs[i].efn);
+      delete(emoji_seqs[i].efn);
       emoji_seqs[i].efn = 0;
     }
     if (emoji_seqs[i].buf) {
-      free(emoji_seqs[i].buf);
+      delete(emoji_seqs[i].buf);
       emoji_seqs[i].buf = 0;
       emoji_seqs[i].buflen = 0;
     }
@@ -1781,10 +1781,10 @@ check_emoji(struct emoji e)
 {
   wchar * * efnpoi;
   if (e.seq) {
-    efnpoi = (wchar * *)&emoji_seqs[e.idx].efn;
+    efnpoi = &emoji_seqs[e.idx].efn;
   }
   else {
-    efnpoi = (wchar * *)&emoji_bases[e.idx].efn;
+    efnpoi = &emoji_bases[e.idx].efn;
   }
   if (*efnpoi) { // emoji resource was checked before
     return **efnpoi;  // ... successfully?
@@ -1798,10 +1798,10 @@ fallback:;
     EmojiOne: 0023-20e3.png
     Noto Emoji: emoji_u0023_20e3.png
   */
-  char * pre;
-  char * fmt = "%04x";
-  char * sep = "-";
-  char * suf = ".png";
+  const char * pre;
+  const char * fmt = "%04x";
+  const char * sep = "-";
+  const char * suf = ".png";
   bool zwj = true; // include 200D in filename
   bool sel = true; // include FE0F in filename
   switch (style) {
@@ -1873,12 +1873,12 @@ fallback:;
 #ifdef debug_emojis
   printf("emoji <%s> file <%s>\n", en, ef);
 #endif
-  free(wen);
-  free(en);
+  delete(wen);
+  delete(en);
 
   if (ef) {
     * efnpoi = path_posix_to_win_w(ef);
-    free(ef);
+    delete(ef);
     return true;
   }
   else {
@@ -2139,7 +2139,7 @@ _win_text(int line, int tx, int ty, wchar *text, int len, cattr attr, cattr *tex
 #define dont_debug_dirty 1
 
 #ifdef debug_line
-void trace_line(char * tag, termchar * chars)
+void trace_line(const char * tag, termchar * chars)
 {
   if (chars[0].chr > 0x80)
     printf("[%s] %04X %04X %04X %04X %04X %04X\n", tag, chars[0].chr, chars[1].chr, chars[2].chr, chars[3].chr, chars[4].chr, chars[5].chr);

@@ -94,14 +94,14 @@ extern void set_dpi_auto_scaling(bool on);
 extern void win_update_transparency(int transparency, bool opaque);
 extern void win_prefix_title(const wstring);
 extern void win_unprefix_title(const wstring);
-extern void win_set_icon(char * s, int icon_index);
+extern void win_set_icon(const char * s, int icon_index);
 
 extern void win_show_tip(int x, int y, int cols, int rows);
 extern void win_destroy_tip(void);
 
 extern void taskbar_progress(int percent);
 extern HCURSOR win_get_cursor(bool appmouse);
-extern void set_cursor_style(bool appmouse, wchar * style);
+extern void set_cursor_style(bool appmouse, const wchar * style);
 
 extern void win_init_menus(void);
 extern void win_update_menus(bool callback);
@@ -121,17 +121,17 @@ extern bool win_whotkey(WPARAM, LPARAM);
 extern void win_update_shortcuts();
 extern bool win_key_up(WPARAM, LPARAM);
 extern void do_win_key_toggle(int vk, bool on);
-extern void win_csi_seq(char * pre, char * suf);
+extern void win_csi_seq(const char * pre, const char * suf);
 
 extern void win_led(int led, bool set);
 extern bool get_scroll_lock(void);
 extern void sync_scroll_lock(bool locked);
 
-extern wchar * dewsl(wchar * wpath);
+extern const wchar * dewsl(const wchar * wpath);
 extern void shell_exec(wstring wpath);
 extern void win_init_drop_target(void);
 
-extern wstring wslicon(wchar * params);
+extern wstring wslicon(const wchar * params);
 
 typedef struct SChild SChild;
 extern char * foreground_cwd(STerm* pterm);
@@ -146,8 +146,8 @@ extern bool win_get_ime(void);
 
 extern void win_dark_mode(HWND w);
 
-extern void show_message(char * msg, UINT type);
-extern void show_info(char * msg);
+extern void show_message(const char * msg, UINT type);
+extern void show_info(const char * msg);
 
 extern void win_close();
 extern void win_toggle_on_top(void);

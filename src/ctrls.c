@@ -14,7 +14,7 @@
 /* Return the number of matching path elements at the starts of p1 and p2,
  * or INT_MAX if the paths are identical. */
 int
-ctrl_path_compare(char *p1, char *p2)
+ctrl_path_compare(const char *p1, const char *p2)
 {
   int i = 0;
   while (*p1 || *p2) {
@@ -46,22 +46,22 @@ ctrl_free_box(controlbox * b)
   for (int i = 0; i < b->nctrlsets; i++)
     ctrl_free_set(b->ctrlsets[i]);
   for (int i = 0; i < b->nfrees; i++)
-    free(b->frees[i]);
-  free(b->ctrlsets);
-  free(b->frees);
-  free(b);
+    delete(b->frees[i]);
+  delete(b->ctrlsets);
+  delete(b->frees);
+  delete(b);
 }
 
 void
 ctrl_free_set(controlset *s)
 {
-  free(s->pathname);
-  free(s->boxtitle);
+  delete(s->pathname);
+  delete(s->boxtitle);
   for (int i = 0; i < s->ncontrols; i++) {
     ctrl_free(s->ctrls[i]);
   }
-  free(s->ctrls);
-  free(s);
+  delete(s->ctrls);
+  delete(s);
 }
 
 /*
@@ -69,7 +69,7 @@ ctrl_free_set(controlset *s)
  * If that path doesn't exist, return the index where it should be inserted.
  */
 static int
-ctrl_find_set(controlbox * b, char *path)
+ctrl_find_set(controlbox * b, const char *path)
 {
 #ifdef debug_layout
   printf("ctrl_find_set %d\n", b->nctrlsets);
@@ -100,7 +100,7 @@ ctrl_find_set(controlbox * b, char *path)
  * If -1 is passed as input, find the first.
  */
 int
-ctrl_find_path(controlbox * b, char *path, int index)
+ctrl_find_path(controlbox * b,const char *path, int index)
 {
   if (index < 0)
     index = ctrl_find_set(b, path);
@@ -129,14 +129,14 @@ insert_controlset(controlbox *b, int index, controlset *s)
 
 /* Create a controlset. */
 controlset *
-ctrl_new_set(controlbox *b, char *path, char *panel, char *title)
+ctrl_new_set(controlbox *b, const char *path, const char *panel, const char *title)
 {
   // See whether this path exists already
   int index = ctrl_find_set(b, path);
 
   // If not, and it's not an empty path, set up a title.
   if (index == b->nctrlsets && *path) {
-    char *title = panel;
+    const char *title = panel;
     if (!title) {
       title = strrchr(path, '/');
       title = title ? title + 1 : path;
@@ -228,7 +228,7 @@ ctrl_columns(controlset *s, int ncolumns, ...)
 }
 
 control *
-ctrl_editbox(controlset *s, char *label, int percentage,
+ctrl_editbox(controlset *s, const char * label, int percentage,
              handler_fn handler, void *context)
 {
   control *c = ctrl_new(s, CTRL_EDITBOX, handler, context);
@@ -240,7 +240,7 @@ ctrl_editbox(controlset *s, char *label, int percentage,
 }
 
 control *
-ctrl_combobox(controlset *s, char *label, int percentage,
+ctrl_combobox(controlset *s, const char * label, int percentage,
               handler_fn handler, void *context)
 {
   control *c = ctrl_new(s, CTRL_EDITBOX, handler, context);
@@ -252,7 +252,7 @@ ctrl_combobox(controlset *s, char *label, int percentage,
 }
 
 control *
-ctrl_listbox(controlset *s, char *label, int lines, int percentage,
+ctrl_listbox(controlset *s, const char * label, int lines, int percentage,
               handler_fn handler, void *context)
 {
   control *c = ctrl_new(s, CTRL_LISTBOX, handler, context);
@@ -269,8 +269,8 @@ ctrl_listbox(controlset *s, char *label, int lines, int percentage,
  * until a null in place of a title string is seen.
  */
 control *
-ctrl_radiobuttons(controlset *s, char *label, int ncolumns,
-                  handler_fn handler, char *context, ...)
+ctrl_radiobuttons(controlset *s, const char * label, int ncolumns,
+                  handler_fn handler,char *context, ...)
 {
   va_list ap;
   int i;
@@ -304,7 +304,7 @@ ctrl_radiobuttons(controlset *s, char *label, int ncolumns,
 }
 
 control *
-ctrl_pushbutton(controlset *s, char *label,
+ctrl_pushbutton(controlset *s, const char * label,
                 handler_fn handler, void *context)
 {
   control *c = ctrl_new(s, CTRL_BUTTON, handler, context);
@@ -315,7 +315,7 @@ ctrl_pushbutton(controlset *s, char *label,
 }
 
 control *
-ctrl_label(controlset *s, char *label)
+ctrl_label(controlset *s, const char * label)
 {
   control *c = ctrl_new(s, CTRL_LABEL, 0, 0);
   c->label = label ? strdup(label) : null;
@@ -323,7 +323,7 @@ ctrl_label(controlset *s, char *label)
 }
 
 control *
-ctrl_fontsel(controlset *s, char *label,
+ctrl_fontsel(controlset *s, const char * label,
              handler_fn handler, void *context)
 {
   control *c = ctrl_new(s, CTRL_FONTSELECT, handler, context);
@@ -332,7 +332,7 @@ ctrl_fontsel(controlset *s, char *label,
 }
 
 control *
-ctrl_checkbox(controlset *s, char *label,
+ctrl_checkbox(controlset *s, const char * label,
               handler_fn handler, void *context)
 {
   control *c = ctrl_new(s, CTRL_CHECKBOX, handler, context);
@@ -343,17 +343,17 @@ ctrl_checkbox(controlset *s, char *label,
 void
 ctrl_free(control *ctrl)
 {
-  free(ctrl->label);
+  delete(ctrl->label);
   switch (ctrl->type) {
     when CTRL_RADIO:
       for (int i = 0; i < ctrl->radio.nbuttons; i++)
         delete(ctrl->radio.labels[i]);
-      free(ctrl->radio.labels);
-      free(ctrl->radio.vals);
+      delete(ctrl->radio.labels);
+      delete(ctrl->radio.vals);
     when CTRL_COLUMNS:
-      free(ctrl->columns.percentages);
+      delete(ctrl->columns.percentages);
   }
-  free(ctrl);
+  delete(ctrl);
 }
 
 void

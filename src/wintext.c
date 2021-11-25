@@ -153,11 +153,11 @@ char *
 fontpropinfo()
 {
   //__ Options - Text: font properties information: "Leading": total line padding (see option RowSpacing), Bold/Underline modes (font or manual, see options BoldAsFont/UnderlineManual/UnderlineColour)
-  char * fontinfopat = _("Leading: %d, Bold: %s, Underline: %s");
+  const char * fontinfopat = _("Leading: %d, Bold: %s, Underline: %s");
   //__ Options - Text: font properties: value taken from font
-  char * fontinfo_font = _("font");
+  const char * fontinfo_font = _("font");
   //__ Options - Text: font properties: value affected by option
-  char * fontinfo_manual = _("manual");
+  const char * fontinfo_manual = _("manual");
   int taglen = max(strlen(fontinfo_font), strlen(fontinfo_manual));
   char * fontinfo = newn(char, strlen(fontinfopat) + 23 + 2 * taglen);
   sprintf(fontinfo, fontinfopat, fontfamilies->row_spacing, 
@@ -305,7 +305,7 @@ row_padding(int i, int e)
 static char * font_warnings = 0;
 
 static void
-font_warning(struct fontfam * ff, char * msg)
+font_warning(struct fontfam * ff,const char * msg)
 {
   // suppress multiple font error messages
   if (ff->name_reported && wcscmp(ff->name_reported, ff->name) == 0) {
@@ -320,12 +320,12 @@ font_warning(struct fontfam * ff, char * msg)
   char * fn = cs__wcstoutf(ff->name);
   if (font_warnings) {
     char * newfw = asform("%s\n%s:\n%s", font_warnings, msg, fn);
-    free(font_warnings);
+    delete(font_warnings);
     font_warnings = newfw;
   }
   else
     font_warnings = asform("%s:\n%s", msg, fn);
-  free(fn);
+  delete(fn);
 }
 
 static void
@@ -333,7 +333,7 @@ show_font_warnings(void)
 {
   if (font_warnings) {
     show_message(font_warnings, MB_ICONWARNING);
-    free(font_warnings);
+    delete(font_warnings);
     font_warnings = 0;
   }
 }
@@ -1047,7 +1047,7 @@ init_charnametable()
   FILE * cnf = 0;
   if (cnfn) {
     cnf = fopen(cnfn, "r");
-    free(cnfn);
+    delete(cnfn);
   }
   if (cnf) {
     uint cc;
@@ -1135,13 +1135,13 @@ show_curchar_info(char tag)
       if (nonascii(cs)) {
         wchar * wcs = cs__utftowcs(cs);
         SetWindowTextW(wnd, wcs);
-        free(wcs);
+        delete(wcs);
       }
       else
         SetWindowTextA(wnd, cs);
     }
     if (prev)
-      free(prev);
+      delete(prev);
     prev = cs;
   }
 
@@ -1215,11 +1215,11 @@ show_curchar_info(char tag)
 #else
       cs = renewn(cs, strlen(cs) + strlen(cn) + 1);
       sprintf(&cs[strlen(cs)], "%s", cn);
-      free(cn);
+      delete(cn);
 #endif
     }
 
-    show_char_msg(cs);  // does free(cs);
+    show_char_msg(cs);  // does delete(cs);
   }
 
   int line = cterm->curs.y - cterm->disptop;
@@ -1390,7 +1390,7 @@ show_link(void)
     if (nonascii(url)) {
       wchar * wcs = cs__utftowcs(url);
       SetWindowTextW(wnd, wcs);
-      free(wcs);
+      delete(wcs);
     }
     else
       SetWindowTextA(wnd, url);
@@ -1740,7 +1740,7 @@ load_background_image_brush(HDC dc, wstring fn)
       printf("isnewbg %d <%ls> <%ls>\n", isnewbg, cfg.background, prevbg);
       if (ratio && isnewbg && abs((int)bw * h - (int)bh * w) > 5) {
         if (prevbg)
-          free(prevbg);
+          delete(prevbg);
         prevbg = wcsdup(cfg.background);
 
         int xh, xw;
@@ -2039,24 +2039,24 @@ get_bg_filename(void)
     // path transformations
     if (0 == strncmp("~/", bf, 2)) {
       char * bfexp = asform("%s/%s", home, bf + 2);
-      free(bf);
+      delete(bf);
       bf = bfexp;
     }
     else if (*bf != '/' && !(*bf && bf[1] == ':')) {
       char * fgd = foreground_cwd(cterm);
       if (fgd) {
         char * bfexp = asform("%s/%s", fgd, bf);
-        free(bf);
+        delete(bf);
         bf = bfexp;
       }
     }
 
     if (support_wsl && !wallp) {
-      wchar * wbf = cs__utftowcs(bf);
-      wchar * wdewbf = dewsl(wbf);  // free(wbf)
+      const wchar * wbf = cs__utftowcs(bf);
+      const wchar * wdewbf = dewsl(wbf);  // delete(wbf)
       char * dewbf = cs__wcstoutf(wdewbf);
-      free(wdewbf);
-      free(bf);
+      delete(wdewbf);
+      delete(bf);
       bf = dewbf;
     }
 
@@ -2066,7 +2066,7 @@ get_bg_filename(void)
 #ifdef debug_gdiplus
   printf("loading brush <%ls> <%s> <%ls>\n", cfg.background, bf, bgfn);
 #endif
-  free(bf);
+  delete(bf);
   return bgfn;
 }
 
@@ -2152,7 +2152,7 @@ load_background_brush(HDC dc)
   printf("loaded brush <%ls>: GDI %d GDI+ %d (tiled %d)\n", bgfn, !!bgbrush_bmp, !!bgbrush_img, tiled);
 #endif
 
-  free(bgfn);
+  delete(bgfn);
 }
 
 bool
@@ -2192,7 +2192,7 @@ scale_to_image_ratio()
 
   uint bw, bh;
   int res = get_image_size(bgfn, &bw, &bh);
-  free(bgfn);
+  delete(bgfn);
   if (!res || !bw || !bh)
     return;
 
@@ -2711,9 +2711,10 @@ apply_attr_colour(cattr a, attr_colour_mode mode)
  * We are allowed to fiddle with the contents of `text'.
    clearpad: flag to clear padding from overhang
    phase: overlay line display (italic right-to-left overhang handling)
+ * FIXME:function should modify parameter text
  */
 void
-win_text(int tx, int ty, wchar *text, int len, cattr attr, cattr *textattr, ushort lattr, bool has_rtl, bool clearpad, uchar phase)
+win_text(int tx, int ty,wchar *text, int len, cattr attr, cattr *textattr, ushort lattr, bool has_rtl, bool clearpad, uchar phase)
 {
 #ifdef debug_wscale
   if (attr.attr & (TATTR_EXPAND | TATTR_NARROW | TATTR_WIDE))
@@ -3979,7 +3980,7 @@ draw:;
   }
 
   if (origtext)
-    free(origtext);
+    delete(origtext);
 
   show_curchar_info('w');
   if (has_cursor) {
@@ -4139,6 +4140,7 @@ font4(struct fontfam * ff, cattrflags attr)
 
 /* Check availability of characters in the current font.
  * Zeroes each of the characters in the input array that isn't available.
+ * FIXME:function should modify parameter wcs
  */
 void
 win_check_glyphs(wchar *wcs, uint num, cattrflags attr)
@@ -4443,7 +4445,7 @@ win_char_width(xchar c, cattrflags attr)
         }
       }
 
-    free(pixels);
+    delete(pixels);
 
 #endif // use_GetPixel
 

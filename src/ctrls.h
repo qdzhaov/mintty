@@ -86,7 +86,7 @@ struct control {
   * 
   * For CTRL_COLUMNS, this field MUST be null.
   */
-  char * label;
+  const char * label;
  /*
   * Indicate which column(s) this control occupies. This can be unpacked
   * into starting column and column span by the COLUMN macros above.
@@ -238,8 +238,8 @@ struct control {
  * in the config will be a container box within a panel.
  */
 typedef struct {
-  char * pathname;      /* panel path, e.g. "SSH/Tunnels" */
-  char * boxtitle;      /* title of container box */
+  const char * pathname;      /* panel path, e.g. "SSH/Tunnels" */
+  const char * boxtitle;      /* title of container box */
   int ncolumns;         /* current no. of columns at bottom */
   int ncontrols;        /* number of `control' in array */
   int ctrlsize;         /* allocated size of array */
@@ -267,8 +267,8 @@ extern void ctrl_free_box(controlbox *);
  */
 
 /* Create a controlset. */
-extern controlset * ctrl_new_set(controlbox *, char * path, 
-                                 char * panel, char * title);
+extern controlset * ctrl_new_set(controlbox *, const char * path, 
+                                 const char * panel, const char * title);
 extern void ctrl_free_set(controlset *);
 
 extern void ctrl_free(control *);
@@ -294,27 +294,27 @@ extern void * ctrl_alloc(controlbox *, size_t size);
 /* `ncolumns' is followed by that many percentages, as integers. */
 extern control * ctrl_columns(controlset *, int ncolumns, ...);
 
-extern control * ctrl_label(controlset *, char * label);
-extern control * ctrl_editbox(controlset *, char * label, int percentage,
+extern control * ctrl_label(controlset *, const char * label);
+extern control * ctrl_editbox(controlset *, const char * label, int percentage,
                               handler_fn handler, void * context);
-extern control * ctrl_combobox(controlset *, char * label, int percentage,
+extern control * ctrl_combobox(controlset *, const char * label, int percentage,
                                handler_fn handler, void * context);
-extern control * ctrl_listbox(controlset *, char * label, int lines, int percentage,
+extern control * ctrl_listbox(controlset *, const char * label, int lines, int percentage,
                               handler_fn handler, void * context);
 /*
  * `ncolumns' is followed by (alternately) radio button titles and integers,
  * until a null in place of a title string is seen.
  */
-extern control * ctrl_radiobuttons(controlset *, char * label, int ncolumns,
+extern control * ctrl_radiobuttons(controlset *, const char * label, int ncolumns,
                                    handler_fn handler, char * context, ...);
 
-extern control * ctrl_pushbutton(controlset *, char * label,
+extern control * ctrl_pushbutton(controlset *, const char * label,
                                  handler_fn handler, void * context);
-extern control * ctrl_droplist(controlset *, char * label, int percentage,
+extern control * ctrl_droplist(controlset *, const char * label, int percentage,
                                handler_fn handler, void * context);
-extern control * ctrl_fontsel(controlset *, char * label,
+extern control * ctrl_fontsel(controlset *, const char * label,
                               handler_fn handler, void * context);
-extern control * ctrl_checkbox(controlset *, char * label,
+extern control * ctrl_checkbox(controlset *, const char * label,
                                handler_fn handler, void * context);
 
 /*
@@ -400,10 +400,10 @@ extern void dlg_refresh(control *);
  *          ... process this controlset ...
  *      }
  */
-extern int ctrl_find_path(controlbox *, char * path, int index);
+extern int ctrl_find_path(controlbox *,const char * path, int index);
 
 /* Return the number of matching path elements at the starts of p1 and p2,
  * or INT_MAX if the paths are identical. */
-extern int ctrl_path_compare(char * p1, char * p2);
+extern int ctrl_path_compare(const char * p1, const char * p2);
 
 #endif

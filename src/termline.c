@@ -949,7 +949,7 @@ term_bidi_cache_store(int line,
 #define dont_debug_bidi
 
 #ifdef debug_bidi
-void trace_bidi(char * tag, bidi_char * wc, int ib)
+void trace_bidi(const char * tag, bidi_char * wc, int ib)
 {
   printf("%s[%d]", tag, ib);
   for (int i = 0; i < ib; i++)

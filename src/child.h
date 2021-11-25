@@ -8,9 +8,9 @@ typedef struct STerm STerm;
 #define TAB_LTITLE 128
 typedef struct SessDef{
   int argc;
-  char*title;
-  char*cmd;
-  char**argv;
+  const char*title;
+  const char*cmd;
+  const char**argv;
 }SessDef;
 typedef struct STab {
   wchar_t titles[TAB_LTITLE][TAB_NTITLE];
@@ -44,9 +44,9 @@ extern wchar * grandchild_process_list(STerm* pterm);
 extern char * child_tty(STerm* pterm);
 extern char * foreground_prog(STerm* pterm);  // to be free()d
 extern wstring child_conv_path(STerm* pterm,wstring, bool adjust_dir);
-extern void setenvi(char * env, int val);
+extern void setenvi(const char * env, int val);
 
-extern void child_set_fork_dir(STerm* pterm,char *);
+extern void child_set_fork_dir(STerm* pterm,const char *);
 extern void child_launch(int n, SessDef*sd, int moni);
 extern void child_fork(SessDef*sd, int moni, bool config_size, bool in_cwd);
 extern void user_command(STerm* pterm,wstring commands, int n);

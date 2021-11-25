@@ -229,9 +229,9 @@ win_toggle_search(bool show, bool focus)
   int pos_next = -1;
   int pos_edit = -1;
   int barpos = margin;
-  wchar * prev_but = _W("◀");
-  wchar * next_but = _W("▶");
-  wchar * close_but = _W("X");
+  wchar prev_but  [4]=W("◀");
+  wchar next_but  [4]=W("▶");
+  wchar close_but [4]=W("X");
   while (search_bar && * search_bar) {
     switch (* search_bar) {
       when 'x' or 'X':

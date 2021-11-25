@@ -65,7 +65,7 @@ extern void term_export_html(bool do_open);
 extern char * term_get_html(int level);
 extern void print_screen(void);
 
-extern int putlink(char * link);
+extern int putlink(const char * link);
 extern char * geturl(int n);
 
 extern void compose_clear(void);

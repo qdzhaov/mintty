@@ -347,8 +347,8 @@ typedef struct {
   // An idx can be matched against cterm->results.results iff idx in [range_begin, range_end).
   int range_begin, range_end;
   result * results;
-  wchar * query;
-  xchar * xquery;
+  const wchar * query;
+  const xchar * xquery;
   int xquery_length;
   // The capacity and length of results.
   int capacity;
@@ -374,7 +374,7 @@ typedef struct imglist {
   struct imglist * next;
   struct imglist * prev;
   // image ref for multiple use (currently unused)
-  char * id;
+  const char * id;
   // sixel: rendering data
   void * hdc;
   void * hbmp;
@@ -698,10 +698,10 @@ extern void term_invalidate(int left, int top, int right, int bottom);
 extern void term_open(void);
 extern void term_copy(void);
 extern void term_copy_as(char what);
-extern void term_paste(wchar *, uint len, bool all);
+extern void term_paste(const wchar *, uint len, bool all);
 extern void term_send_paste(void);
 extern void term_cancel_paste(void);
-extern void term_cmd(char * cmdpat);
+extern void term_cmd(const char * cmdpat);
 extern void term_reconfig(void);
 extern void term_flip_screen(void);
 extern void term_reset_screen(void);
@@ -711,7 +711,7 @@ extern void term_set_focus(bool has_focus, bool may_report);
 extern int  term_cursor_type(void);
 extern void term_hide_cursor(void);
 
-extern void term_set_search(wchar * needle);
+extern void term_set_search(const wchar * needle);
 extern void term_schedule_search_partial_update(void);
 extern void term_schedule_search_update(void);
 extern void term_update_search(void);

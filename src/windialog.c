@@ -81,7 +81,7 @@ int win_dialog_sc(int iv){
   return (heightsc*(iv)/100);
 }
 static HTREEITEM
-treeview_insert(treeview_faff * faff, int level, char *text, char *path)
+treeview_insert(treeview_faff * faff, int level, const char *text, const char *path)
 {
 // text will be the label of an Options dialog treeview item;
 // it is passed in here as the basename of path
@@ -107,7 +107,7 @@ treeview_insert(treeview_faff * faff, int level, char *text, char *path)
     ins.hParent = (level > 0 ? faff->lastat[level - 1] : TVI_ROOT);
     ins.hInsertAfter = faff->lastat[level];
     ins.item.mask = TVIF_TEXT | TVIF_PARAM;
-    ins.item.pszText = text;
+    ins.item.pszText = (char*)text;
     //ins.item.cchTextMax = strlen(text) + 1;  // ignored when setting
     ins.item.lParam = (LPARAM) path;
     //newitem = TreeView_InsertItem(faff->treeview, &ins);
@@ -127,7 +127,7 @@ treeview_insert(treeview_faff * faff, int level, char *text, char *path)
  * Create the panelfuls of controls in the configuration box.
  */
 static void
-create_controls(HWND wnd, char *path)
+create_controls(HWND wnd, const char *path)
 {
   ctrlpos cp;
   int index;
@@ -195,7 +195,7 @@ crashtest()
 }
 
 static void
-debug(char *tag)
+debug(const char *tag)
 {
   if (!debugopt) {
     debugopt = getenv("MINTTY_DEBUG");
@@ -230,16 +230,16 @@ static char * version_available = 0;
 static bool version_retrieving = false;
 
 static void
-display_update(char * new)
+display_update(const char * new)
 {
   if (!config_wnd)
     return;
 
   //__ Options: dialog title
-  char * opt = _("Options");
+  const char * opt = _("Options");
   //__ Options: dialog title: "mintty <release> available (for download)"
-  char * avl = _("available");
-  char * pat = "%s            ▶ %s %s %s ◀";
+  const char * avl = _("available");
+  const char * pat = "%s            ▶ %s %s %s ◀";
   int len = strlen(opt) + strlen(CHECK_APP) + strlen(new) + strlen(avl) + strlen(pat) - 7;
   char * msg = newn(char, len);
   sprintf(msg, pat, opt, CHECK_APP, new, avl);
@@ -597,13 +597,13 @@ config_dialog_proc(HWND wnd, UINT msg, WPARAM wParam, LPARAM lParam)
       * Set up the tree view contents.
       */
       HTREEITEM hfirst = null;
-      char *path = null;
+      const char *path = null;
 
       for (int i = 0; i < ctrlbox->nctrlsets; i++) {
         controlset *s = ctrlbox->ctrlsets[i];
         HTREEITEM item;
         int j;
-        char *c;
+        const char *c;
 
         if (!s->pathname[0])
           continue;
@@ -982,7 +982,7 @@ set_labels(int nCode, WPARAM wParam, LPARAM lParam)
 }
 
 int
-message_box(HWND parwnd, char * text, char * caption, int type, wstring ok)
+message_box(HWND parwnd,const  char * text,const  char * caption, int type, wstring ok)
 {
   if (!text)
     return 0;
@@ -1009,7 +1009,7 @@ message_box(HWND parwnd, char * text, char * caption, int type, wstring ok)
 }
 
 int
-message_box_w(HWND parwnd, wchar * wtext, wchar * wcaption, int type, wstring ok)
+message_box_w(HWND parwnd, const wchar * wtext, const wchar * wcaption, int type, wstring ok)
 {
   if (!wtext)
     return 0;
@@ -1079,13 +1079,13 @@ win_show_about(void)
 }
 
 void
-win_show_error(char * msg)
+win_show_error(const char * msg)
 {
   message_box(0, msg, null, MB_ICONERROR, 0);
 }
 
 void
-win_show_warning(char * msg)
+win_show_warning(const char * msg)
 {
   message_box(0, msg, null, MB_ICONWARNING, 0);
 }

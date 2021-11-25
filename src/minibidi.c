@@ -655,7 +655,7 @@ do_bidi(bool autodir, int paragraphLevel, bool explicitRTL, bool box_mirror,
       printf("\n");
     }
   }
-  void trace_mark(char * tag) {
+  void trace_mark(const char * tag) {
     (void)tag;
   }
   trace_bidi(0);

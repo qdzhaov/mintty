@@ -20,9 +20,9 @@ extern void tek_font(short f);
 extern void tek_write(wchar c, int width);
 extern void tek_enq(void);
 extern void tek_alt(bool);
-extern void tek_copy(wchar * fn);
+extern void tek_copy(const wchar * fn);
 extern void tek_clear(void);
-extern void tek_set_font(wchar * fn);
+extern void tek_set_font(const wchar * fn);
 
 extern void tek_move_to(int y, int x);
 extern void tek_move_by(int dy, int dx);

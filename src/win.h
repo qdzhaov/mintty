@@ -28,11 +28,11 @@ extern void win_capture_mouse(void);
 extern void win_get_locator_info(int *x, int *y, int *buttons, bool by_pixels);
 
 extern void win_beep(uint tone, float vol, float freq, uint ms);
-extern void win_sound(char * sound_name, uint options);
+extern void win_sound(const char * sound_name, uint options);
 extern void win_bell(config *);
 extern void win_margin_bell(config *);
 
-extern void win_set_title(wchar_t *);
+extern void win_set_title(const wchar_t *);
 extern void win_save_title(void);
 extern void win_restore_title(void);
 extern void win_copy_title(void);
@@ -70,7 +70,7 @@ extern void win_check_glyphs(wchar *wcs, uint num, cattrflags attr);
 extern int win_char_width(xchar, cattrflags attr);
 extern wchar win_combine_chars(wchar bc, wchar cc, cattrflags attr);
 
-extern void win_open(wstring path, bool adjust_dir);
+extern void win_open(wchar*path, bool adjust_dir);
 extern void win_copy(const wchar *data, cattr *cattrs, int len);
 extern void win_copy_as(const wchar *data, cattr *cattrs, int len, char what);
 extern void win_paste(void);
@@ -80,10 +80,10 @@ extern void win_set_timer(void_fn cb, uint ticks);
 
 extern bool print_opterror(FILE * stream, string msg, bool utf8params, string p1, string p2);
 extern void win_show_about(void);
-extern void win_show_error(char * msg);
-extern void win_show_warning(char * msg);
-extern int message_box(HWND parwnd, char * wtext, char * wcaption, int type, wstring ok);
-extern int message_box_w(HWND parwnd, wchar * wtext, wchar * wcaption, int type, wstring ok);
+extern void win_show_error(const char * msg);
+extern void win_show_warning(const char * msg);
+extern int message_box(HWND parwnd, const char * wtext, const char * wcaption, int type, wstring ok);
+extern int message_box_w(HWND parwnd, const wchar * wtext, const wchar * wcaption, int type, wstring ok);
 
 extern bool win_is_glass_available(void);
 

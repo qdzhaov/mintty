@@ -32,8 +32,8 @@ static bool newwin_home = false;
 static int newwin_monix = 0, newwin_moniy = 0;
 static int transparency_pending = 0;
 
-static int fundef_stat(char*cmd);
-static int fundef_run(char*cmd,uint key, mod_keys mods);
+static int fundef_stat(const char*cmd);
+static int fundef_run(const char*cmd,uint key, mod_keys mods);
 extern void LoadConfig();
 static inline void
 show_last_error()
@@ -234,7 +234,7 @@ win_update_menus(bool callback)
 #endif
 
   void
-  modify_menu(HMENU menu, UINT item, UINT state, wchar * label, wchar * key)
+  modify_menu(HMENU menu, UINT item, UINT state,const wchar * label,const wchar * key)
   // if item is sysentry: ignore state
   // state: MF_ENABLED, MF_GRAYED, MF_CHECKED, MF_UNCHECKED
   // label: if null, use current label
@@ -334,10 +334,10 @@ win_update_menus(bool callback)
     free(mi.dwTypeData);
   }
 
-  wchar *
-  itemlabel(char * label)
+  const wchar *
+  itemlabel(const char * label)
   {
-    char * loc = _(label);
+    const char * loc = _(label);
     if (loc == label)
       // no localization entry
       return null;  // indicate to use system localization
@@ -479,7 +479,7 @@ win_update_menus(bool callback)
         *newcmdp++ = '\0';
 
       // localize
-      wchar * label = _W(cmdp);
+      const wchar * label = _W(cmdp);
       uint status = fundef_stat(paramp);
       modify_menu(menu, idm_cmd + n, status, label, null);
 
@@ -1212,7 +1212,7 @@ win_key_nullify(uchar vk)
 #define dont_debug_def_keys 1
 
 static int
-pick_key_function(wstring key_commands, char * tag, int n, uint key, mod_keys mods, mod_keys mod0, uint scancode)
+pick_key_function(wstring key_commands,const char * tag, int n, uint key, mod_keys mods, mod_keys mod0, uint scancode)
 {
   char * ukey_commands = cs__wcstoutf(key_commands);
   char * cmdp = ukey_commands;
@@ -1229,10 +1229,10 @@ pick_key_function(wstring key_commands, char * tag, int n, uint key, mod_keys mo
   // prefixing them to the tag (before calling pick_key_function) but 
   // that would have been more substantial redesign; or the prefix could 
   // be normalized here by sorting; better solution: collect info here
-  mod_keys tagmods(char * k)
+  mod_keys tagmods(const char * k)
   {
     mod_keys m = mod0;
-    char * sep = strrchr(k, '+');
+    const char * sep = strrchr(k, '+');
     if (sep)
       for (; *k && k < sep; k++)
         switch (*k) {
@@ -1247,7 +1247,7 @@ pick_key_function(wstring key_commands, char * tag, int n, uint key, mod_keys mo
   }
 
   mod_keys mod_tag = tagmods(tag ?: "");
-  char * tag0 = tag ? strchr(tag, '+') : 0;
+  const char * tag0 = tag ? strchr(tag, '+') : 0;
   if (tag0)
     tag0++;
   else
@@ -2558,7 +2558,7 @@ win_key_down(WPARAM wp, LPARAM lp)
 }
 
 void
-win_csi_seq(char * pre, char * suf)
+win_csi_seq(const char * pre, const char * suf)
 {
   mod_keys mods = get_mods();
   inline bool is_key_down(uchar vk) { return GetKeyState(vk) & 0x80; }

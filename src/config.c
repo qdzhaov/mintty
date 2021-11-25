@@ -749,7 +749,7 @@ static opt_val * const opt_vals[] = {
 
 
 char *
-save_filename(char * suf)
+save_filename(const char * suf)
 {
   char * pat = cs__wcstombs(cfg.save_filename);
 
@@ -757,21 +757,21 @@ save_filename(char * suf)
   char * sep;
   if (*pat == '~' && pat[1] == '/') {
     char * pat1 = asform("%s%s", home, pat + 1);
-    free(pat);
+    delete(pat);
     pat = pat1;
   }
   else if (*pat == '$' && (sep = strchr(pat, '/'))) {
     *sep = 0;
     if (getenv(pat + 1)) {
       char * pat1 = asform("%s/%s", getenv(pat + 1), sep + 1);
-      free(pat);
+      delete(pat);
       pat = pat1;
     }
   }
   wchar * wpat = cs__mbstowcs(pat);
-  free(pat);
+  delete(pat);
   pat = path_win_w_to_posix(wpat);
-  free(wpat);
+  delete(wpat);
   //printf("save_filename pat %ls -> %s\n", cfg.save_filename, pat);
 
   struct timeval now;
@@ -779,7 +779,7 @@ save_filename(char * suf)
   char * fn = newn(char, MAX_PATH + 1 + strlen(suf));
   strftime(fn, MAX_PATH, pat, localtime(& now.tv_sec));
   //printf("save_filename [%s] (%s) -> %s%s\n", pat, suf, fn, suf);
-  free(pat);
+  delete(pat);
   strcat(fn, suf);
 
   // make sure directory exists
@@ -831,7 +831,7 @@ clear_opts(void)
 {
   for (uint n = 0; n < file_opts_num; n++)
     if (file_opts[n].comment)
-      free(file_opts[n].comment);
+      delete(file_opts[n].comment);
   file_opts_num = 0;
   arg_opts_num = 0;
 }
@@ -853,7 +853,7 @@ seen_arg_option(uint i)
 }
 
 static void
-remember_file_option(char * tag, uint i)
+remember_file_option(const char * tag, uint i)
 {
   (void)tag;
   trace_theme(("[%s] remember_file_option (file %d arg %d) %d %s\n", tag, seen_file_option(i), seen_arg_option(i), i, options[i].name));
@@ -870,7 +870,7 @@ remember_file_option(char * tag, uint i)
 }
 
 static void
-remember_file_comment(char * comment)
+remember_file_comment(const char * comment)
 {
   trace_theme(("[] remember_file_comment <%s>\n", comment));
   if (file_opts_num >= lengthof(file_opts)) {
@@ -882,7 +882,7 @@ remember_file_comment(char * comment)
 }
 
 static void
-remember_arg_option(char * tag, uint i)
+remember_arg_option(const char * tag, uint i)
 {
   (void)tag;
   trace_theme(("[%s] remember_arg_option (file %d arg %d) %d %s\n", tag, seen_file_option(i), seen_arg_option(i), i, options[i].name));
@@ -896,7 +896,7 @@ remember_arg_option(char * tag, uint i)
 }
 
 static void
-check_legacy_options(void (*remember_option)(char * tag, uint))
+check_legacy_options(void (*remember_option)(const char * tag, uint))
 {
   if (cfg.use_system_colours) {
     // Translate 'UseSystemColours' to colour settings.
@@ -989,7 +989,7 @@ set_option(string name, string val_str, bool from_file)
       else
         ws = cs__mbstowcs(val_str);
       wstrset(val_p, ws);
-      free(ws);
+      delete(ws);
       return i;
     }
     when OPT_INT: {
@@ -1086,7 +1086,7 @@ parse_arg_option(string option)
    In a configuration parameter list, map tag to value.
  */
 char *
-matchconf(char * conf, char * item)
+matchconf(char * conf,const char * item)
 {
   char * cmdp = conf;
   char sepch = ';';
@@ -1173,7 +1173,7 @@ get_resource_file(wstring sub, wstring res, bool towrite)
     wcscpy(&rf[len], res);
 
     char * resfn = path_win_w_to_posix(rf);
-    free(rf);
+    delete(rf);
     fd = open(resfn, towrite ? O_CREAT | O_EXCL | O_WRONLY | O_BINARY : O_RDONLY | O_BINARY, 0644);
 #if CYGWIN_VERSION_API_MINOR >= 74
     if (towrite && fd < 0 && errno == ENOENT) {
@@ -1193,7 +1193,7 @@ get_resource_file(wstring sub, wstring res, bool towrite)
       close(fd);
       return resfn;
     }
-    free(resfn);
+    delete(resfn);
     if (errno == EACCES || errno == EEXIST)
       break;
   }
@@ -1203,75 +1203,100 @@ get_resource_file(wstring sub, wstring res, bool towrite)
 
 #define dont_debug_messages 1
 
-static struct {
-  char * msg;
-  char * locmsg;
-  wchar * wmsg;
-} * messages = 0;
+typedef struct {
+  string msg;
+  string locmsg;
+  wstring wmsg;
+}s_message;
+static void setmsg(s_message*pm,string msg, string locmsg){
+  pm->msg = msg;
+  pm->locmsg = locmsg;
+  pm->wmsg = null;
+}
+static void freemsg(s_message *pm){
+    VFREE((void*)pm->msg);
+    VFREE((void*)pm->locmsg);
+    if  (pm->wmsg) VFREE((void*)pm->wmsg);
+}
+#define usehashtab
+#ifdef usehashtab
+#define HASHTS 31
+typedef struct {
+  int n,m;
+  s_message *t;
+}s_hashtab;
+static s_hashtab  hmsgt[HASHTS] = {0};
+#define HASHS(s) (*(char*)s?(*(unsigned short*)s)%(HASHTS):0)
+static s_message*findmsg(string msg){
+  s_hashtab *pt=&hmsgt[HASHS(msg)];
+  for (int i = 0; i < pt->n; i++) {
+    if (strcmp(msg, pt->t[i].msg) == 0) { return &pt->t[i]; }
+  }
+  return NULL;
+}
+static void clear_messages()
+{
+  for (int j = 0; j < HASHTS; j++) { 
+    s_hashtab *pt=&hmsgt[j];
+    for (int i = 0; i < pt->n; i++) { freemsg(pt->t+i); }
+    VFREE(pt->t);
+    pt->t=0;pt->n=0;pt->m=0;
+  }
+}
+static void add_message(string msg, string locmsg)
+{
+  s_hashtab *pt=&hmsgt[HASHS(msg)];
+  if (pt->n>= pt->m) {
+    pt->m+= 20;
+    pt->t= renewn(pt->t, pt->m);
+  }
+  setmsg(& pt->t[pt->n], msg, locmsg);
+  pt->n++;
+}
+#else
+static s_message * messages = {0};
 int nmessages = 0;
 int maxmessages = 0;
-
-static void
-clear_messages()
-{
+static s_message*findmsg(string msg){
   for (int i = 0; i < nmessages; i++) {
-    free(messages[i].msg);
-    free(messages[i].locmsg);
-    if (messages[i].wmsg)
-      free(messages[i].wmsg);
+    if (strcmp(msg, messages[i].msg) == 0) { return &messages[i]; }
   }
+  return NULL;
+}
+static void clear_messages()
+{
+  for (int i = 0; i < nmessages; i++) { freemsg(messages+i); }
   nmessages = 0;
 }
-
-static void
-add_message(char * msg, char * locmsg)
+static void add_message(string msg, string locmsg)
 {
   if (nmessages >= maxmessages) {
-    if (maxmessages)
-      maxmessages += 20;
-    else
-      maxmessages = 180;
+    if (maxmessages) maxmessages += 20;
+    else maxmessages = 180;
     messages = renewn(messages, maxmessages);
   }
 #if defined(debug_messages) && debug_messages > 3
   printf("add %d <%s> <%s>\n", nmessages, msg, locmsg);
 #endif
-  messages[nmessages].msg = msg;
-  messages[nmessages].locmsg = locmsg;
-  messages[nmessages].wmsg = null;
+  setmsg(& messages[nmessages], msg, locmsg);
   nmessages ++;
 }
+#endif
 
-char * loctext(string msg)
+const char*loctext(string msg)
 {
-  for (int i = 0; i < nmessages; i++) {
-#if defined(debug_messages) && debug_messages > 5
-    printf("?<%s> %d <%s> -> <%s>\n", msg, i, messages[i].msg, messages[i].locmsg);
-#endif
-    if (strcmp(msg, messages[i].msg) == 0) {
-#if defined(debug_messages) && debug_messages > 4
-      printf("!<%s> %d <%s> -> <%s>\n", msg, i, messages[i].msg, messages[i].locmsg);
-#endif
-      return messages[i].locmsg;
-    }
-  }
-  return (char *) msg;
+  s_message *pm=findmsg(msg);
+  if(pm)return (char*)pm->locmsg;
+  return  (char*)msg;
 }
 
-wchar * wloctext(string msg)
+const wchar *wloctext(string msg)
 {
-  for (int i = 0; i < nmessages; i++) {
-#if defined(debug_messages) && debug_messages > 5
-    printf("?<%s> %d <%s> -> <%s> <%ls>\n", msg, i, messages[i].msg, messages[i].locmsg, messages[i].wmsg);
-#endif
-    if (strcmp(msg, messages[i].msg) == 0) {
-#if defined(debug_messages) && debug_messages > 4
-      printf("!<%s> %d <%s> -> <%s> <%ls>\n", msg, i, messages[i].msg, messages[i].locmsg, messages[i].wmsg);
-#endif
-      if (messages[i].wmsg == null)
-        messages[i].wmsg = cs__utftowcs(messages[i].locmsg);
-      return messages[i].wmsg;
-    }
+  s_message *pm=findmsg(msg);
+  if(pm){
+    if (pm->wmsg == null)
+      pm->wmsg = cs__utftowcs(pm->locmsg);
+    return (wchar*)pm->wmsg;
   }
   add_message(strdup(msg), strdup(msg));
   return wloctext(msg);
@@ -1318,7 +1343,7 @@ readtext(char * buf, int len, FILE * file)
         strcat(str, p);
       }
       else {
-        free(str);
+        delete(str);
         return null;
       }
     }
@@ -1338,9 +1363,10 @@ readtext(char * buf, int len, FILE * file)
 }
 
 static void
-load_messages_file(char * textdbf)
+load_messages_file(const char * textdbf)
 {
   FILE * file = fopen(textdbf, "r");
+  int nmsgs=0;
   if (file) {
     clear_messages();
 
@@ -1350,8 +1376,9 @@ load_messages_file(char * textdbf)
         char * msg = readtext(linebuf, sizeof linebuf, file);
         if (strncmp(linebuf, "msgstr ", 7) == 0) {
           char * locmsg = readtext(linebuf, sizeof linebuf, file);
-          if (msg && *msg && locmsg && *locmsg)
-            add_message(msg, locmsg);
+          if (msg && *msg && locmsg && *locmsg){
+            nmsgs++; add_message(msg, locmsg);
+          }
         }
       }
       else {
@@ -1360,7 +1387,7 @@ load_messages_file(char * textdbf)
     fclose(file);
   }
 #ifdef debug_messages
-  printf("read %d messages\n", nmessages);
+  printf("read %d messages\n", nmsgs);
 #if debug_messages > 2
   printf("msg blö -> <%s> <%ls>\n", loctext("blö"), wloctext("blö"));
   printf("msg blö -> <%s> <%ls>\n", loctext("blö"), wloctext("blö"));
@@ -1384,14 +1411,14 @@ load_messages_lang_w(wstring lang, bool fallback)
         return false;
     }
     wcscat(wl, W(".po"));
-    char * textdbf = get_resource_file(W("lang"), wl, false);
-    free(wl);
+    const char * textdbf = get_resource_file(W("lang"), wl, false);
+    delete(wl);
 #ifdef debug_messages
     printf("Trying to load messages from <%ls>: <%s>\n", lang, textdbf);
 #endif
     if (textdbf) {
       load_messages_file(textdbf);
-      free(textdbf);
+      delete(textdbf);
       return true;
     }
   }
@@ -1403,7 +1430,7 @@ load_messages_lang(string lang, bool fallback)
 {
   wchar * wlang = cs__utftowcs(lang);
   bool res = load_messages_lang_w((wstring)wlang, fallback);
-  free(wlang);
+  delete(wlang);
   return res;
 }
 
@@ -1426,7 +1453,7 @@ load_messages(config * cfg_p)
     }
     else if (wcscmp(cfg_p->lang, W("*")) == 0) {
       // determine UI language from environment
-      char * lang = getenv("LANGUAGE");
+      const char * lang = getenv("LANGUAGE");
       if (lang) {
         lang = strdup(lang);
         while (lang && *lang) {
@@ -1439,9 +1466,9 @@ load_messages(config * cfg_p)
           if (lang)
             lang++;
         }
-        free(lang);
+        delete(lang);
       }
-      lang = (char *)getlocenvcat("LC_MESSAGES");
+      lang = getlocenvcat("LC_MESSAGES");
       if (lang && *lang) {
         lang = strdup(lang);
         char * dot = strchr(lang, '.');
@@ -1449,7 +1476,7 @@ load_messages(config * cfg_p)
           *dot = '\0';
         if (load_messages_lang(lang, fallback))
           return;
-        free(lang);
+        delete(lang);
       }
     }
     else {
@@ -1467,13 +1494,13 @@ load_theme(wstring theme)
     if (wcschr(theme, L'/') || wcschr(theme, L'\\')) {
       char * thf = path_win_w_to_posix(theme);
       load_config(thf, false);
-      free(thf);
+      delete(thf);
     }
     else {
       char * thf = get_resource_file(W("themes"), theme, false);
       if (thf) {
         load_config(thf, false);
-        free(thf);
+        delete(thf);
       }
     }
   }
@@ -1505,7 +1532,7 @@ load_scheme(string cs)
     else
       sch++;
   }
-  free(scheme);
+  delete(scheme);
 }
 
 // to_save:
@@ -1587,7 +1614,7 @@ load_config(string filename, int to_save)
         }
       }
       if (lbuf != linebuf)
-        free(lbuf);
+        delete(lbuf);
     }
     fclose(file);
   }
@@ -1601,7 +1628,7 @@ load_config(string filename, int to_save)
 }
 
 void
-copy_config(char * tag, config * dst_p, const config * src_p)
+copy_config(string tag, config * dst_p, const config * src_p)
 {
 #ifdef debug_theme
   char * _cfg(const config * p) {
@@ -1698,7 +1725,7 @@ save_config(void)
     //__ %1$s: config file name, %2$s: error message
     int len = asprintf(&msg, _("Could not save options to '%s':\n%s."),
                        up, strerror(errno));
-    free(up);
+    delete(up);
     if (len > 0) {
       win_show_error(msg);
       delete(msg);
@@ -1723,7 +1750,7 @@ save_config(void)
           when OPT_WSTRING: {
             char * s = cs__wcstoutf(*(wstring *)val_p);
             fprintf(file, "%s", s);
-            free(s);
+            delete(s);
           }
           when OPT_INT:
             fprintf(file, "%i", *(int *)val_p);
@@ -1816,7 +1843,7 @@ apply_config(bool save)
 // Registry handling (for retrieving localized sound labels)
 
 static HKEY
-regopen(HKEY key, char * subkey)
+regopen(HKEY key,const char * subkey)
 {
   HKEY hk = 0;
   RegOpenKeyA(key, subkey, &hk);
@@ -1900,7 +1927,7 @@ getregstr(HKEY key, wstring subkey, wstring attribute)
   res = RegQueryValueExW(sk, attribute, 0, &type, (void *)val, &len);
   RegCloseKey(sk);
   if (res) {
-    free(val);
+    delete(val);
     return 0;
   }
   return val;
@@ -1939,7 +1966,7 @@ getregval(HKEY key, wstring subkey, wstring attribute)
 }
 
 static wchar *
-muieventlabel(wchar * event)
+muieventlabel(const wchar * event)
 {
   // HKEY_CURRENT_USER\AppEvents\EventLabels\SystemAsterisk
   // DispFileName -> "@mmres.dll,-5843"
@@ -1949,7 +1976,7 @@ muieventlabel(wchar * event)
   // HKEY_CURRENT_USER\Software\Classes\Local Settings\MuiCache\N\M
   // "@mmres.dll,-5843" -> "Sternchen"
   wchar * lbl = getregstr(muicache, 0, rsr);
-  free(rsr);
+  delete(rsr);
   return lbl;
 }
 
@@ -2012,7 +2039,7 @@ do_file_resources(control *ctrl, wstring pattern, bool list_dirs, str_fn fnh)
     WIN32_FIND_DATAW ffd;
     HANDLE hFind = FindFirstFileW(rcpat, &ffd);
     int ok = hFind != INVALID_HANDLE_VALUE;
-    free(rcpat);
+    delete(rcpat);
     if (ok) {
       while (ok) {
         if (list_dirs && (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
@@ -2083,16 +2110,16 @@ do_file_resources(control *ctrl, wstring pattern, bool list_dirs, str_fn fnh)
               char * fn = asform("%s/%s", rcpat, direntry->d_name);
               wchar * wfn = path_posix_to_win_w(fn);
               fnh(wfn);
-              free(wfn);
-              free(fn);
+              delete(wfn);
+              delete(fn);
             }
           }
         }
       }
       closedir(dir);
     }
-    free(rcpat);
-    free(pat);
+    delete(rcpat);
+    delete(pat);
 #endif
   }
 }
@@ -2135,7 +2162,7 @@ printer_handler(control *ctrl, int event)
     dlg_listbox_add_w(ctrl, DEFAULT);
     uint num = printer_start_enum();
     for (uint i = 0; i < num; i++)
-      dlg_listbox_add_w(ctrl, (wchar *)printer_get_name(i));
+      dlg_listbox_add_w(ctrl, printer_get_name(i));
     printer_finish_enum();
     if (*printer == '*')
       dlg_editbox_set_w(ctrl, DEFAULT);
@@ -2276,16 +2303,16 @@ lang_handler(control *ctrl, int event)
 static void
 term_handler(control *ctrl, int event)
 {
-  bool terminfo_exists(char * ti) {
-    bool terminfo_exists_in(char * dir, char * sub, char * ti) {
+  bool terminfo_exists(const char * ti) {
+    bool terminfo_exists_in(const char * dir, const char * sub, const char * ti) {
       char * terminfo = asform("%s%s/%x/%s", dir, sub ?: "", *ti, ti);
       bool exists = !access(terminfo, R_OK);
-      free(terminfo);
+      delete(terminfo);
       if (support_wsl && !exists) {
         terminfo = asform("%s%s/%c/%s", dir, sub ?: "", *ti, ti);
         exists = !access(terminfo, R_OK);
         //printf("exists %d <%s>\n", exists, terminfo);
-        free(terminfo);
+        delete(terminfo);
       }
       return exists;
     }
@@ -2294,14 +2321,14 @@ term_handler(control *ctrl, int event)
       if (wslname) {
         char * wslnamec = cs__wcstombs(wslname);
         wslroot = asform("//wsl$/%s", wslnamec);
-        free(wslnamec);
+        delete(wslnamec);
       }
       else if (*wsl_basepath)
         wslroot = path_win_w_to_posix(wsl_basepath);
       else
         wslroot = strdup("");
       bool ex = terminfo_exists_in(wslroot, "/usr/share/terminfo", ti);
-      free(wslroot);
+      delete(wslroot);
       return ex;
     }
     else
@@ -2359,7 +2386,7 @@ bell_handler(control *ctrl, int event)
       dlg_listbox_clear(ctrl);
       retrievemuicache();
       for (uint i = 0; i < lengthof(beeps); i++) {
-        char * beepname = _(beeps[i].name);
+        string beepname = _(beeps[i].name);
         if (beepname == beeps[i].name) {
           // no localization entry, try to retrieve system localization
           if (muicache && beeps[i].event) {
@@ -2369,7 +2396,7 @@ bell_handler(control *ctrl, int event)
               if ((int)i == new_cfg.bell_type + 1)
                 dlg_editbox_set_w(ctrl, lbl);
               beepname = null;
-              free(lbl);
+              delete(lbl);
             }
           }
         }
@@ -2437,7 +2464,7 @@ enable_widget(control * ctrl, bool enable)
    Load scheme from URL or file, convert .itermcolors and .json formats
  */
 static char *
-download_scheme(char * url)
+download_scheme(const char * url)
 {
   if (strchr(url, '\''))
     return null;  // Insecure link
@@ -2465,15 +2492,15 @@ download_scheme(char * url)
 # endif
       char * wfn = path_posix_to_win_a(sfn);
       ok = S_OK == pURLDownloadToFile(NULL, url, wfn, 0, NULL);
-      free(wfn);
+      delete(wfn);
     }
     if (!ok)
-      free(sfn);
+      delete(sfn);
     sf = fopen(sfn, "r");
     //printf("URL <%s> file <%s> OK %d\n", url, sfn, !!sf);
     if (!sf) {
       remove(sfn);
-      free(sfn);
+      delete(sfn);
     }
 #endif
   }
@@ -2496,7 +2523,7 @@ download_scheme(char * url)
   colour cursor_colour = (colour)-1, sel_fg_colour = (colour)-1, sel_bg_colour = (colour)-1;
   colour underl_colour = (colour)-1, hover_colour = (colour)-1;
   // construct a ColourScheme string
-  void schapp(char * opt, colour c)
+  void schapp(const char * opt, colour c)
   {
 #if defined(debug_scheme) && debug_scheme > 1
     printf("schapp %s %06X\n", opt, c);
@@ -2661,7 +2688,7 @@ download_scheme(char * url)
         printf("<%s> <%s> (%s)\n", key, val, linebuf);
 #endif
         // transform .json colour names
-        void schapp(char * jname, char * name)
+        void schapp(const char * jname, const char * name)
         {
           if (strcasecmp(key, jname) == 0) {
 #if defined(debug_scheme) && debug_scheme > 1
@@ -2744,7 +2771,7 @@ download_scheme(char * url)
   fclose(sf);
   if (sfn) {
     remove(sfn);
-    free(sfn);
+    delete(sfn);
   }
 #endif
 
@@ -2824,7 +2851,7 @@ theme_handler(control *ctrl, int event)
       }
       *sch = '\0';
       strset(&new_cfg.colour_scheme, scheme);
-      free(scheme);
+      delete(scheme);
       enable_widget(store_button, false);
     }
     else if (wcsncmp(W("http:"), dragndrop, 5) == 0
@@ -2859,13 +2886,13 @@ theme_handler(control *ctrl, int event)
 
           enable_widget(store_button, true);
         }
-        free(sch);
+        delete(sch);
       }
       else {
         win_bell(&new_cfg);  // Could not load web theme
         win_show_warning(_("Could not load web theme"));
       }
-      free(url);
+      delete(url);
     }
     else {
       dlg_editbox_set_w(ctrl, dragndrop);
@@ -2905,7 +2932,7 @@ scheme_saver(control *ctrl, int event)
         if (sn) {
           // save colour_scheme to theme_file
           FILE * thf = fopen(sn, "w");
-          free(sn);
+          delete(sn);
           if (thf) {
             char * sch = (char *)new_cfg.colour_scheme;
             for (int i = 0; sch[i]; i++) {
@@ -3033,10 +3060,10 @@ static string sizes[] = {
 };
 
 static void
-enterfontlist(wchar * fn, int weight, wchar * style)
+enterfontlist(const wchar * fn, int weight, const wchar * style)
 {
   if (*fn == '@') {
-    free(fn);
+    delete(fn);
     // ignore vertical font
     return;
   }
@@ -3054,7 +3081,7 @@ enterfontlist(wchar * fn, int weight, wchar * style)
   }
 
   if (found) {
-    free(fn);
+    delete(fn);
 
     bool found = false;
     uint wi = 0;
@@ -3068,7 +3095,7 @@ enterfontlist(wchar * fn, int weight, wchar * style)
       wi++;
     }
     if (found)
-      free(style);
+      delete(style);
     else {
       fontlist[fi].weightsn++;
       fontlist[fi].weights = renewn(fontlist[fi].weights, fontlist[fi].weightsn);
@@ -3176,7 +3203,7 @@ fontenum(const ENUMLOGFONTW *lpelf, const NEWTEXTMETRICW *lpntm, DWORD fontType,
       // skip vertical font families
       return 1;
 
-    wchar * tagsplit(wchar * fn, wstring style)
+    const wchar * tagsplit(const wchar * fn, wstring style)
     {
 #if CYGWIN_VERSION_API_MINOR >= 74
       wchar * tag = wcsstr(fn, style);
@@ -3207,13 +3234,13 @@ fontenum(const ENUMLOGFONTW *lpelf, const NEWTEXTMETRICW *lpntm, DWORD fontType,
 	DejaVu Sans Mono|Book
      */
     wchar * fn = wcsdup(lfp->lfFaceName);
-    wchar * st = tagsplit(fn, W("Oblique"));
+    const wchar * st = tagsplit(fn, W("Oblique"));
     if ((st = tagsplit(fn, lpelf->elfStyle))) {
       //   Source Code Pro ExtraLight|ExtraLight
       //-> Source Code Pro|ExtraLight
     }
     else {
-      wchar * fnst = fn;
+      const wchar * fnst = fn;
 #if CYGWIN_VERSION_API_MINOR >= 74
       int digsi = wcscspn(fn, W("0123456789"));
       int nodigsi = wcsspn(&fn[digsi], W("0123456789"));
@@ -3228,7 +3255,7 @@ fontenum(const ENUMLOGFONTW *lpelf, const NEWTEXTMETRICW *lpntm, DWORD fontType,
         }
     }
     if (!st || !*st)
-      st = (wchar *)lpelf->elfStyle;
+      st = lpelf->elfStyle;
     if (!*st)
       st = W("Regular");
     st = wcsdup(st);
@@ -3340,7 +3367,7 @@ emojis_handler(control *ctrl, int event)
 }
 
 static void
-opt_handler(control *ctrl, int event, char * popt, opt_val * ovals)
+opt_handler(control *ctrl, int event,char * popt, opt_val * ovals)
 {
   switch (event) {
     when EVENT_REFRESH:

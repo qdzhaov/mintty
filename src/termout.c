@@ -998,7 +998,7 @@ static bool scriptfonts_init = false;
 static bool use_blockfonts = false;
 
 static void
-mapfont(struct rangefont * ranges, uint len, char * script, uchar f)
+mapfont(struct rangefont * ranges, uint len, const char * script, uchar f)
 {
   for (uint i = 0; i < len; i++) {
     if (0 == strcmp(ranges[i].scriptname, script))
@@ -1017,9 +1017,9 @@ mapfont(struct rangefont * ranges, uint len, char * script, uchar f)
 }
 
 static char *
-cfg_apply(char * conf, char * item)
+cfg_apply(const char * conf, const char * item)
 {
-  char * cmdp = conf;
+  const char * cmdp = conf;
   char sepch = ';';
   if ((uchar)*cmdp <= (uchar)' ')
     sepch = *cmdp++;
@@ -1541,8 +1541,8 @@ do_esc(uchar c)
   uchar csmask = 0;
   int gi;
   if (designator) {
-    void check_designa(char * designa, uchar cstype) {
-      char * csdesigna = strchr(designa, designator);
+    void check_designa(const char * designa, uchar cstype) {
+      const char * csdesigna = strchr(designa, designator);
       if (csdesigna) {
         csmask = cstype;
         gi = csdesigna - designa + cstype - 1;
@@ -4343,7 +4343,7 @@ typedef struct {
   char * p;
   int v;
 } paramap;
-      int scanenum(char * s, int * _i, paramap * p, bool donum) {
+      int scanenum(const char * s, int * _i, paramap * p, bool donum) {
         char * sep = strchr(s, ';');
         int len = sep ? (uint)(sep - s) : strlen(s);
         while (p->p) {
@@ -4579,7 +4579,7 @@ term_do_write(const char *buf, uint len)
 
         // Everything else
 
-        wchar NRC(wchar * map)
+        wchar NRC(const wchar * map)
         {
           static char * rpl = "#@[\\]^_`{|}~";
           char * match = strchr(rpl, c);

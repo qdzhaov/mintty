@@ -72,11 +72,10 @@ HIMC imc;
 ATOM class_atom;
 SessDef sessdefs[]={
   {0,0,0,0},
-  {1,"Wsl"        ,"wsl"             ,(char*[]){"wsl" ,0}},
-  // {1,"Wsl"        ,"/bin/wslbridge2" ,(char*[]){"/bin/wslbridge2" ,0}},
-  {0,"CygWin"     ,0                 ,(char*[]){0                 ,0}},
-  {1,"CMD"        ,"cmd"             ,(char*[]){"cmd"             ,0}},
-  {1,"PowerShell" ,"powershell"      ,(char*[]){"powershell"      ,0}},
+  {1,"Wsl"        ,"wsl"             ,(const char*[]){"wsl" ,0}},
+  {0,"CygWin"     ,0                 ,(const char*[]){0                 ,0}},
+  {1,"CMD"        ,"cmd"             ,(const char*[]){"cmd"             ,0}},
+  {1,"PowerShell" ,"powershell"      ,(const char*[]){"powershell"      ,0}},
   {0,0,0,0}
 }; 
 SessDef main_sd={0};
@@ -187,7 +186,7 @@ mtime(void)
 #ifdef debug_resize
 #define SetWindowPos(wnd, after, x, y, cx, cy, flags)	printf("SWP[%s] %ld %ld\n", __FUNCTION__, (long int)cx, (long int)cy), Set##WindowPos(wnd, after, x, y, cx, cy, flags)
 static void
-trace_winsize(char * tag)
+trace_winsize(const char * tag)
 {
   RECT cr, wr;
   GetClientRect(wnd, &cr);
@@ -515,7 +514,7 @@ win_set_scrollview(int pos, int len, int height)
  */
 
 void
-win_set_icon(char * s, int icon_index)
+win_set_icon(const char * s, int icon_index)
 {
   HICON large_icon = 0, small_icon = 0;
   wstring icon_file = path_posix_to_win_w(s);
@@ -550,7 +549,7 @@ void update_tab_titles(){
 
 }
 void
-win_set_title(wchar*title)
+win_set_title(const wchar*title)
 {
   //printf("win_set_title settable %d <%s>\n", title_settable, title);
   if (cfg.title_settable) {
@@ -1389,7 +1388,7 @@ flash_border()
  * Play sound.
  */
 void
-win_sound(char * sound_name, uint options)
+win_sound(const char * sound_name, uint options)
 {
   //printf("win_sound %ld<%s> %d\n", strlen(sound_name), sound_name, options);
 
@@ -1678,7 +1677,7 @@ do_win_bell(config * conf, bool margin_bell)
     bellstate->last_vol = bellstate->vol;
 
     wchar * bell_name = 0;
-    void set_bells(char * belli)
+    void set_bells(const char * belli)
     {
       while (*belli) {
         int i = (*belli & 0x0F) - 2;
@@ -2230,8 +2229,8 @@ confirm_exit(void)
     return true;
 #endif
 
-  wchar * msg_pre = _W("Processes are running in session:");
-  wchar * msg_post = _W("Close anyway?");
+  const wchar * msg_pre = _W("Processes are running in session:");
+  const wchar * msg_post = _W("Close anyway?");
 
   wchar * wmsg = newn(wchar, wcslen(msg_pre) + wcslen(proclist) + wcslen(msg_post) + 2);
   wcscpy(wmsg, msg_pre);
@@ -2316,7 +2315,7 @@ win_get_cursor(bool appmouse)
 }
 
 void
-set_cursor_style(bool appmouse, wchar * style)
+set_cursor_style(bool appmouse, const wchar * style)
 {
   HCURSOR c = 0;
   if (wcschr(style, '.')) {
@@ -2363,7 +2362,7 @@ win_init_cursors()
  */
 
 void
-show_message(char * msg, UINT type)
+show_message(const char * msg, UINT type)
 {
   FILE * out = (type & (MB_ICONWARNING | MB_ICONSTOP)) ? stderr : stdout;
   char * outmsg = cs__utftombs(msg);
@@ -2376,7 +2375,7 @@ show_message(char * msg, UINT type)
 }
 
 void
-show_info(char * msg)
+show_info(const char * msg)
 {
   show_message(msg, MB_OK);
 }
@@ -2386,28 +2385,26 @@ opterror_msg(string msg, bool utf8params, string p1, string p2)
 {
   // Note: msg is in UTF-8,
   // parameters are in current encoding unless utf8params is true
+  char * fullmsg;
+  int len=0;;
   if (!utf8params) {
+    char*s1=NULL,*s2=NULL;
     if (p1) {
       wchar * w = cs__mbstowcs(p1);
-      p1 = cs__wcstoutf(w);
+      s1 = cs__wcstoutf(w);
       free(w);
     }
     if (p2) {
       wchar * w = cs__mbstowcs(p2);
-      p2 = cs__wcstoutf(w);
+      s2 = cs__wcstoutf(w);
       free(w);
     }
+    len = asprintf(&fullmsg, msg, s1, s2);
+    delete(s1);
+    delete(s2);
+  }else{
+    len = asprintf(&fullmsg, msg, p1, p2);
   }
-
-  char * fullmsg;
-  int len = asprintf(&fullmsg, msg, p1, p2);
-  if (!utf8params) {
-    if (p1)
-      free((char *)p1);
-    if (p2)
-      free((char *)p2);
-  }
-
   if (len > 0)
     return fullmsg;
   else
@@ -2437,7 +2434,7 @@ print_error(string msg)
 }
 
 static void
-option_error(char * msg, char * option, int err)
+option_error(const char * msg, const char * option, int err)
 {
   finish_config();  // ensure localized message
   // msg is in UTF-8, option is in current encoding
@@ -2454,9 +2451,9 @@ option_error(char * msg, char * option, int err)
 }
 
 static void
-show_iconwarn(wchar * winmsg)
+show_iconwarn(const wchar * winmsg)
 {
-  char * msg = _("Could not load icon");
+  const char * msg = _("Could not load icon");
   char * in = cs__wcstoutf(cfg.icon);
 
   char * fullmsg;
@@ -3663,7 +3660,7 @@ typedef void * voidrefref;
 #endif
 
 static wchar *
-get_shortcut_icon_location(wchar * iconfile, bool * wdpresent)
+get_shortcut_icon_location(const wchar * iconfile, bool * wdpresent)
 {
   IShellLinkW * shell_link;
   IPersistFile * persist_file;
@@ -3777,7 +3774,7 @@ get_shortcut_icon_location(wchar * iconfile, bool * wdpresent)
 }
 
 static wchar *
-get_shortcut_appid(wchar * shortcut)
+get_shortcut_appid(const wchar * shortcut)
 {
 #if CYGWIN_VERSION_API_MINOR >= 74
   DWORD win_version = GetVersion();
@@ -3939,7 +3936,7 @@ getlxssinfo(bool list, wstring wslname, uint * wsl_ver,
     return 0;
   }
 
-  int getlxssdistinfo(bool list, HKEY lxss, wchar * guid)
+  int getlxssdistinfo(bool list, HKEY lxss,const  wchar * guid)
   {
     wchar * rootfs;
     wchar * icon = 0;
@@ -4126,7 +4123,7 @@ waccess(wstring fn, int amode)
 }
 
 static int
-select_WSL(char * wsl)
+select_WSL(const char * wsl)
 {
   wslname = cs__mbstowcs(wsl ?: "");
   wstring wsl_icon;
@@ -4190,7 +4187,7 @@ cmd_enum(wstring label, wstring cmd, wstring icon, int icon_index)
 }
 
 wstring
-wslicon(wchar * params)
+wslicon(const wchar * params)
 {
   wstring icon = 0;  // default: no icon
 #if CYGWIN_VERSION_API_MINOR >= 74
@@ -4286,7 +4283,7 @@ enum_commands(wstring commands, CMDENUMPROC cmdenum)
 
 
 static void
-configure_taskbar(wchar * app_id)
+configure_taskbar(const wchar * app_id)
 {
   if (*cfg.task_commands) {
     enum_commands(cfg.task_commands, cmd_enum);
@@ -4378,7 +4375,7 @@ DEFINE_PROPERTYKEY(PKEY_AppUserModel_StartPinOption, 0x9f4c2855,0x9f79,0x4B39,0x
 #ifdef debug_properties
           printf("AppUserModel_ID=%ls\n", app_id);
 #endif
-          var.pwszVal = app_id;
+          var.pwszVal = (wchar*)app_id;
           var.vt = VT_LPWSTR;  // VT_EMPTY should remove but has no effect
           pps->lpVtbl->SetValue(pps,
               &PKEY_AppUserModel_ID, &var);
@@ -4648,16 +4645,16 @@ int LoadConfig(){
     // If that's not the case, we should unset MINTTY_SHORTCUT here.
   }
   int argc=main_sd.argc;
-  char**argv=main_sd.argv;
+  const char**argv=main_sd.argv;
 
   for (;;) {
     int opt = cfg.short_long_opts
-      ? getopt_long_only(argc, argv, short_opts, opts, 0)
-      : getopt_long(argc, argv, short_opts, opts, 0);
+      ? getopt_long_only(argc, (char**)argv, short_opts, opts, 0)
+      : getopt_long(argc, (char**)argv, short_opts, opts, 0);
     if (opt == -1 || opt == 'e')
       break;
-    char * longopt = argv[optind - 1];
-    char * shortopt = (char[]){'-', optopt, 0};
+    const char * longopt = argv[optind - 1];
+    const char * shortopt = (char[]){'-', optopt, 0};
     switch (opt) {
       when 'c': load_config(optarg, 3);
       when 'C': load_config(optarg, false);
@@ -4941,7 +4938,7 @@ int LoadConfig(){
   return 0;
 }
 int
-main(int argc, char *argv[])
+main(int argc, const char *argv[])
 {
   char buf[1024];
   char *pt;
@@ -5000,7 +4997,7 @@ main(int argc, char *argv[])
 
   // Options triggered via wsl*.exe
 #if CYGWIN_VERSION_API_MINOR >= 74
-  char * exename = *argv;
+  const char * exename = *argv;
   const char * exebasename = strrchr(exename, '/');
   if (exebasename)
     exebasename ++;
@@ -5105,7 +5102,7 @@ main(int argc, char *argv[])
 
   // Work out what to execute.
   argv += optind;
-  char *cmd;
+  const char *cmd;
   if (wsl_guid && wsl_launch) {
     argc -= optind;
 #ifdef wslbridge2
@@ -5130,8 +5127,8 @@ main(int argc, char *argv[])
 #endif
     argc += 10;  // -e parameters
 
-    char ** new_argv = newn(char *, argc + 8 + start_home + (wsltty_appx ? 2 : 0));
-    char ** pargv = new_argv;
+    const char ** new_argv = newn(const char *, argc + 8 + start_home + (wsltty_appx ? 2 : 0));
+    const char ** pargv = new_argv;
     if (login_dash) {
       *pargv++ = cmd0;
 #ifdef wslbridge_supports_l
@@ -5187,7 +5184,7 @@ main(int argc, char *argv[])
 
 #if CYGWIN_VERSION_API_MINOR >= 74
     // provide wslbridge-backend in a reachable place for invocation
-    bool copyfile(char * fn, char * tn, bool overwrite)
+    bool copyfile(const char * fn,const  char * tn, bool overwrite)
     {
 # ifdef copyfile_posix
       int f = open(fn, O_BINARY | O_RDONLY);
@@ -5328,7 +5325,7 @@ main(int argc, char *argv[])
   }
 
   // Expand AppID placeholders
-  wchar * app_id = 0;
+  const wchar * app_id = 0;
   if (invoked_from_shortcut && sui.lpTitle)
     app_id = get_shortcut_appid(sui.lpTitle);
   if (!app_id)
@@ -5361,7 +5358,7 @@ main(int argc, char *argv[])
   if (!*wtitle) {
     size_t len;
     char *argz;
-    argz_create(argv, &argz, &len);
+    argz_create((char**)argv, &argz, &len);
     argz_stringify(argz, len, ' ');
     char * title = argz;
     size_t size = cs_mbstowcs(0, title, 0) + 1;

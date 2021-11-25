@@ -201,7 +201,7 @@ init_locale_menu(void)
 {
   uint count = 0;
 
-  void add_lc(char * locale) {
+  void add_lc(const char * locale) {
     for (uint i = 1; i < count; i++)
       if (!strcmp(locale, locale_menu[i]))
         return;
@@ -474,7 +474,7 @@ set_locale_env(string loc)
     setlocenv("LANG", loc);
 
   if (cut)
-    free((char *)loc);
+    delete(loc);
 }
 
 static void
@@ -864,7 +864,7 @@ cs__utftombs(const char * s)
 #if HAS_LOCALES
   bool utf8out = strcmp(nl_langinfo(CODESET), "UTF-8") == 0;
 #else
-  char * loc = (char *)cs_get_locale();
+  const char * loc = (char *)cs_get_locale();
   if (!loc)
     loc = "";
   bool utf8out = strstr(loc, ".65001");

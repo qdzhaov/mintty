@@ -65,13 +65,13 @@ int child_get_pid(STerm*pterm){
   return pterm->child.pid;
 }
 static void
-childerror(char * action, bool from_fork, int errno_code, int code)
+childerror(const char * action, bool from_fork, int errno_code, int code)
 {
 #if CYGWIN_VERSION_API_MINOR >= 66
   bool utf8 = strcmp(nl_langinfo(CODESET), "UTF-8") == 0;
-  char * oldloc;
+  const char * oldloc;
 #else
-  char * oldloc = (char *)cs_get_locale();
+  const char * oldloc = cs_get_locale();
   bool utf8 = strstr(oldloc, ".65001");
 #endif
   if (utf8)
@@ -87,7 +87,7 @@ childerror(char * action, bool from_fork, int errno_code, int code)
   term_write(s, strlen(s));
   term_write(action, strlen(action));
   if (errno_code) {
-    char * err = strerror(errno_code);
+    const char * err = strerror(errno_code);
     if (from_fork && errno_code == ENOENT)
       err = _("There are no available terminals");
     term_write(": ", 2);
@@ -101,7 +101,7 @@ childerror(char * action, bool from_fork, int errno_code, int code)
 
   if (oldloc) {
     cs_set_locale(oldloc);
-    free(oldloc);
+    VFREE(oldloc);
   }
 }
 
@@ -262,8 +262,8 @@ child_create(struct STerm* pterm,SessDef*sd,
   if(logging<0)logging = cfg.logging;
   (pterm->child.pty_fd   ) = -1;
   win_tab_v(pterm->tab);
-  char**argv=sd->argv;
-  char*cmd=sd->cmd;
+  const char**argv=sd->argv;
+  const char*cmd=sd->cmd;
   trace_dir(asform("child_create: %s", getcwd(malloc(MAX_PATH), MAX_PATH)));
 
   pterm->cwinsize = *winp;
@@ -384,7 +384,7 @@ child_create(struct STerm* pterm,SessDef*sd,
       }
     }
     //fprintf(stderr, "execvp cmd:%s\n",cmd);
-    execvp(cmd, argv);
+    execvp(cmd, (char**)argv);
     // If we get here, exec failed.
     fprintf(stderr, "\033]701;C.UTF-8\007");
     fprintf(stderr, "\033[30;41m\033[K");
@@ -421,7 +421,7 @@ child_create(struct STerm* pterm,SessDef*sd,
     //child_update_charset();  // could do it here or as above
 
     if (cfg.create_utmp) {
-      char *dev = ptsname(pterm->child.pty_fd   );
+      const char *dev = ptsname(pterm->child.pty_fd   );
       if (dev) {
         struct utmp ut;
         memset(&ut, 0, sizeof ut);
@@ -492,7 +492,7 @@ static void vprocclose(STerm* pterm){
 
       if (!s && cfg.exit_write) {
         //__ default inline notification if ExitWrite=yes
-        s = _("TERMINATED");
+        s = strdup(_("TERMINATED"));
       }
       if (s) {
         char * wsl_pre = "\0337\033[H\033[L";
@@ -500,6 +500,7 @@ static void vprocclose(STerm* pterm){
         if (err && support_wsl)
           term_write(wsl_pre, strlen(wsl_pre));
         childerror(s, false, 0, err ? 41 : 42);
+        free(s);
         if (err && support_wsl)
           term_write(wsl_post, strlen(wsl_post));
       }
@@ -658,7 +659,7 @@ child_is_alive(STerm* pterm)
 
 
 static char *
-procres(int pid, char * res)
+procres(int pid, const char * res)
 {
   char fbuf[99];
   char * fn = asform("/proc/%d/%s", pid, res);
@@ -679,7 +680,7 @@ procres(int pid, char * res)
 }
 
 static int
-procresi(int pid, char * res)
+procresi(int pid, const char * res)
 {
   char * si = procres(pid, res);
   int i = atoi(si);
@@ -988,7 +989,7 @@ child_conv_path(STerm* pterm,wstring wpath, bool adjust_dir)
         wpath = cd;
       }
     }
-    wpath = dewsl((wchar *)wpath);
+    wpath=dewsl(wpath); 
   }
   int wlen = wcslen(wpath);
   int len = wlen * cs_cur_max;
@@ -1069,13 +1070,13 @@ child_conv_path(STerm* pterm,wstring wpath, bool adjust_dir)
 }
 
 void
-child_set_fork_dir(STerm* pterm,char * dir)
+child_set_fork_dir(STerm* pterm,const char * dir)
 {
   strset(&(pterm->child.child_dir), dir);
 }
 
 void
-setenvi(char * env, int val)
+setenvi(const char * env, int val)
 {
   static char valbuf[22];  // static to prevent #530
   sprintf(valbuf, "%d", val);
@@ -1088,7 +1089,7 @@ extern SessDef main_sd;
 static void
 do_child_fork(SessDef*sd, int moni, bool launch, bool config_size, bool in_cwd)
 {
-  char**argv=sd->argv;
+  const char**argv=sd->argv;
   trace_dir(asform("do_child_fork: %s", getcwd(malloc(MAX_PATH), MAX_PATH)));
 #ifdef control_AltF2_size_via_token
   void reset_fork_mode()
@@ -1137,7 +1138,7 @@ do_child_fork(SessDef*sd, int moni, bool launch, bool config_size, bool in_cwd)
         // use cwd of foreground process if requested via in_cwd
       }
       else if (support_wsl) {
-        wchar * wcd = cs__utftowcs((cterm->child.child_dir));
+        const wchar * wcd = cs__utftowcs((cterm->child.child_dir));
 #ifdef debug_wsl
         printf("fork wsl <%ls>\n", wcd);
 #endif
@@ -1221,10 +1222,10 @@ do_child_fork(SessDef*sd, int moni, bool launch, bool config_size, bool in_cwd)
     // Strip enclosing quotes if present.
     int na;
     for(na=0;argv[na];na++);
-    char ** new_argv = newn(char *, na+2);
-    new_argv[0]=main_sd.cmd;
+    const char ** new_argv = newn(const char *, na+2);
+    new_argv[0]=(char*)main_sd.cmd;
     for(na=0;argv[na];na++)new_argv[na+1]=argv[na];
-    execvp(main_sd.cmd, new_argv);
+    execvp(main_sd.cmd, (char**)new_argv);
     exit(mexit);
   }
   //reset_fork_mode();
@@ -1245,7 +1246,7 @@ void
 child_launch(int n, SessDef*sd, int moni)
 {
   int argc=sd->argc;
-  char **argv=sd->argv;
+  const char **argv=sd->argv;
   if (*cfg.session_commands) {
     char * cmds = cs__wcstombs(cfg.session_commands);
     char * cmdp = cmds;
@@ -1260,7 +1261,7 @@ child_launch(int n, SessDef*sd, int moni)
       if (sepp) *sepp = '\0';
       if (n == 0) {
         argc = 1;
-        char ** new_argv = newn(char *, argc + 1);
+        const char ** new_argv = newn(const char *, argc + 1);
         new_argv[0] = argv[0];
         // prepare launch parameters from config string
         while (*paramp) {
@@ -1279,7 +1280,7 @@ child_launch(int n, SessDef*sd, int moni)
         new_argv[argc] = 0;
         SessDef nsd={argc,0,sd->cmd,new_argv};
         do_child_fork(&nsd, moni, true, true, false);
-        free(new_argv);
+        delete(new_argv);
         break;
       }
       n--;

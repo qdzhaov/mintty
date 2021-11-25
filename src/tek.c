@@ -16,14 +16,14 @@ static short tek_y, tek_x;
 static short gin_y, gin_x = -1;
 static uchar lastfont = 0;
 static int lastwidth = -1;
-static wchar * tek_dyn_font = 0;
+static const wchar * tek_dyn_font = 0;
 
 static int beam_glow = 1;
 static int thru_glow = 5;
 
 static bool flash = false;
 
-static wchar * copyfn = 0;
+static const wchar * copyfn = 0;
 
 static wchar * APL = W(" ¨)<≤=>]∨∧≠÷,+./0123456789([;×:\\¯⍺⊥∩⌊∊_∇∆⍳∘'⎕∣⊤○⋆?⍴⌈∼↓∪ω⊃↑⊂←⊢→≥-⋄ABCDEFGHIJKLMNOPQRSTUVWXYZ{⊣}$ ");
 
@@ -86,8 +86,7 @@ tek_buf_append(struct tekchar * tc)
 static void
 tek_buf_clear(void)
 {
-  if (tek_buf)
-    free(tek_buf);
+  delete(tek_buf);
   tek_buf = 0;
   tek_buf_len = 0;
   tek_buf_size = 0;
@@ -198,7 +197,7 @@ tek_alt(bool alt_chars)
 
 
 void
-tek_copy(wchar * fn)
+tek_copy(const wchar * fn)
 {
   if (!copyfn)
     copyfn = fn;
@@ -503,10 +502,9 @@ get_font_quality(void)
 }
 
 void
-tek_set_font(wchar * fn)
+tek_set_font(const wchar * fn)
 {
-  if (tek_dyn_font)
-    free(tek_dyn_font);
+  delete(tek_dyn_font);
   tek_dyn_font = fn;
 }
 
@@ -592,7 +590,7 @@ tek_enq(void)
 }
 
 static void
-out_text(HDC dc, short x, short y, wchar * s, uchar f)
+out_text(HDC dc, short x, short y, const wchar * s, uchar f)
 {
   SelectObject(dc, tekfonts[f].f);
   SetBkMode(dc, TRANSPARENT);
@@ -616,7 +614,7 @@ out_flush(HDC dc)
     }
     //printf("%d <%ls> [%d]\n", txt_len, txt, lastwidth);
     out_text(dc, txt_x, 3120 - txt_y - tekfonts[font].hei, txt, lastfont & 3);
-    free(txt);
+    delete(txt);
     txt = 0;
     txt_len = 0;
     txt_wid = 0;
@@ -1068,7 +1066,7 @@ tek_paint(void)
 
   if (copyfn) {
     save_img(hdc, 0, 0, width, height, copyfn);
-    free(copyfn);
+    delete(copyfn);
     copyfn = 0;
   }
   else {

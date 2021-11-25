@@ -76,7 +76,7 @@ get_selection(pos start, pos end, bool rect, bool allinline, bool with_tabs)
     }
 
     pos nlpos;
-    wchar * sixel_clipp = (wchar *)cfg.sixel_clip_char;
+    const wchar * sixel_clipp = cfg.sixel_clip_char;
 
    /*
     * nlpos will point at the maximum position on this line we
@@ -146,11 +146,11 @@ get_selection(pos start, pos end, bool rect, bool allinline, bool with_tabs)
         if (c == SIXELCH && *cfg.sixel_clip_char) {
           // copy replacement into clipboard
           if (!*sixel_clipp)
-            sixel_clipp = (wchar *)cfg.sixel_clip_char;
+            sixel_clipp = cfg.sixel_clip_char;
           c = *sixel_clipp++;
         }
         else
-          sixel_clipp = (wchar *)cfg.sixel_clip_char;
+          sixel_clipp = cfg.sixel_clip_char;
         cbuf[0] = c;
         cbuf[1] = 0;
 
@@ -240,7 +240,7 @@ contains(string s, wchar c)
 }
 
 void
-term_paste(wchar *data, uint len, bool all)
+term_paste(const wchar *data, uint len, bool all)
 {
   term_cancel_paste();
 
@@ -432,7 +432,7 @@ term_get_text(bool all, bool screen, bool command)
 }
 
 void
-term_cmd(char * cmd)
+term_cmd(const char * cmd)
 {
   // provide scrollback buffer
   wchar * wsel = term_get_text(true, false, false);
@@ -759,7 +759,7 @@ term_create_html(FILE * hf, int level)
 
       // style adding function
       bool with_style = false;
-      void add_style(char * s) {
+      void add_style(const char * s) {
         if (!with_style) {
           hprintf(hf, "' style='%s", s);
           with_style = true;
@@ -767,7 +767,7 @@ term_create_html(FILE * hf, int level)
         else
           hprintf(hf, " %s", s);
       }
-      void add_color(char * pre, int col) {
+      void add_color(const char * pre, int col) {
         colour ansii = win_get_colour(ANSI0 + col);
         uchar r = red(ansii), g = green(ansii), b = blue(ansii);
         add_style("");

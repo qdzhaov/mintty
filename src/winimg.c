@@ -38,7 +38,7 @@ static IStream * (WINAPI * pSHCreateMemStream)(void *, UINT) = 0;
 
 #ifdef debug_gdiplus
 static void
-gpcheck(char * tag, GpStatus s)
+gpcheck(const char * tag, GpStatus s)
 {
   static char * gps[] = {
     "Ok",
@@ -116,7 +116,7 @@ tempfile_destroy(tempfile_t *tempfile)
     tempfile_current = NULL;
   fclose(tempfile->fp);
   //printf("free tempfile %p\n", tempfile);
-  free(tempfile);
+  delete(tempfile);
   tempfile_num--;
 }
 
@@ -214,7 +214,7 @@ strage_destroy(temp_strage_t *strage)
 {
   tempfile_deref(strage->tempfile);
   //printf("free strage %p\n", strage);
-  free(strage);
+  delete(strage);
 }
 
 static bool
@@ -241,7 +241,7 @@ winimg_len(imglist *img)
 }
 
 bool
-winimg_new(imglist **ppimg, char * id, unsigned char * pixels, uint len,
+winimg_new(imglist **ppimg, const char * id, unsigned char * pixels, uint len,
            int left, int top, int width, int height,
            int pixelwidth, int pixelheight, bool preserveAR,
            int crop_x, int crop_y, int crop_width, int crop_height,
@@ -434,7 +434,7 @@ winimg_lazyinit(imglist *img)
       if (img->pixels) {
         CopyMemory(pixels, img->pixels, size);
         //printf("winimg_lazyinit free pixels [%d]->%p\n", img->imgi, img->pixels);
-        free(img->pixels);
+        delete(img->pixels);
       } else {
         // resume from hibernation
         assert(img->strage);
@@ -494,13 +494,12 @@ winimg_destroy(imglist *img)
     DeleteObject(img->hbmp);
   } else if (img->pixels) {
     //printf("winimg_destroy free pixels %p\n", img->pixels);
-    free(img->pixels);
+    delete(img->pixels);
   } else {
     strage_destroy(img->strage);
   }
-  if (img->id)
-    free(img->id);
-  free(img);
+  delete(img->id);
+  delete(img);
 }
 
 void
@@ -509,7 +508,7 @@ winimgs_clear(void)
   // clear parser state
   sixel_parser_deinit(cterm->imgs.parser_state);
   //printf("winimgs_clear free state %p\n", cterm->imgs.parser_state);
-  free(cterm->imgs.parser_state);
+  delete(cterm->imgs.parser_state);
   cterm->imgs.parser_state = NULL;
 
   imglist *img, *prev;
@@ -909,7 +908,7 @@ winimgs_paint(void)
 #include "charset.h"  // path_win_w_to_posix
 
 void
-win_emoji_show(int x, int y, wchar * efn, void * * bufpoi, int * buflen, int elen, ushort lattr, bool italic)
+win_emoji_show(int x, int y, const wchar * efn, void * * bufpoi, int * buflen, int elen, ushort lattr, bool italic)
 {
   gdiplus_init();
 
@@ -927,7 +926,7 @@ win_emoji_show(int x, int y, wchar * efn, void * * bufpoi, int * buflen, int ele
     if (s && pSHCreateMemStream) {
       char * fn = path_win_w_to_posix(efn);
       int f = open(fn, O_BINARY | O_RDONLY);
-      free(fn);
+      delete(fn);
       if (f) {
         struct stat stat;
         if (0 == fstat(f, &stat)) {
@@ -1095,7 +1094,7 @@ save_img(HDC dc, int x, int y, int w, int h, wstring fn)
 #else
 
 void
-win_emoji_show(int x, int y, wchar * efn, void * * bufpoi, int * buflen, int elen, ushort lattr)
+win_emoji_show(int x, int y,const wchar * efn, void * * bufpoi, int * buflen, int elen, ushort lattr)
 {
   (void)x; (void)y;
   (void)efn; (void)bufpoi; (void)buflen;

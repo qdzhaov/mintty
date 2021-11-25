@@ -12,7 +12,7 @@ typedef struct {
   int ypos, width;
   int xoff;
   int boxystart, boxid;
-  char *boxtext;
+  const char *boxtext;
 } ctrlpos;
 
 
