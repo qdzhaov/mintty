@@ -22,11 +22,6 @@
 #endif
 #include <termios.h>
 
-extern char * home;
-extern bool report_child_pid;
-extern bool icon_is_from_shortcut;
-extern wstring shortcut;
-extern bool kb_input;
 #if CYGWIN_VERSION_API_MINOR >= 93
 #include <pty.h>
 #else
@@ -48,7 +43,6 @@ int forkpty(int *, char *, struct termios *, struct winsize *);
 
 static int win_fd=-1;
 //static int log_fd = -1;
-int logging = 0;
 #if CYGWIN_VERSION_API_MINOR >= 66
 #include <langinfo.h>
 #endif
@@ -125,14 +119,14 @@ open_logfile(bool toggling)
 
     if (0 == wcscmp(cfg.log, W("-"))) {
       log_fd = fileno(stdout);
-      logging = true;
+      wv.logging = true;
     }
     else {
       char * log;
       if (*cfg.log == '~' && cfg.log[1] == '/') {
-        // substitute '~' -> home
+        // substitute '~' -> wv.home
         char * path = cs__wcstombs(&cfg.log[2]);
-        log = asform("%s/%s", home, path);
+        log = asform("%s/%s", wv.home, path);
         free(path);
       }
       else
@@ -159,10 +153,9 @@ open_logfile(bool toggling)
       log_fd = open(log, O_WRONLY | O_CREAT | O_EXCL, 0600);
       if (log_fd < 0) {
         // report message and filename:
-        wchar * wpath = path_posix_to_win_w(log);
-        char * upath = cs__wcstoutf(wpath);
+        char * upath = cs__wcstoutf(log);
 #ifdef debug_logfilename
-        printf(" -> <%ls> -> <%s>\n", wpath, upath);
+        printf(" -> <%ls> -> <%s>\n", log, upath);
 #endif
         char * msg = _("Error: Could not open log file");
         if (toggling) {
@@ -177,10 +170,9 @@ open_logfile(bool toggling)
           childerror(upath, false, 0, 0);
         }
         free(upath);
-        free(wpath);
       }
       else
-        logging = true;
+        wv.logging = true;
 
       free(log);
     }
@@ -189,15 +181,15 @@ open_logfile(bool toggling)
 void
 toggle_logging()
 {
-  if (logging)
-    logging = false;
+  if (wv.logging)
+    wv.logging = false;
   else if(log_fd>=0)
-    logging = true;
+    wv.logging = true;
   else open_logfile(true);
 }
 void
 vtlog(STerm* pterm,const char *buf, uint len,int mode){
-  if (log_fd >= 0 && logging){
+  if (log_fd >= 0 && wv.logging){
     write(log_fd, buf, len);
     write(log_fd, "\n", 1);
   }
@@ -216,13 +208,13 @@ open_logfile(struct STerm* pterm)
 void
 toggle_logging()
 {
-  logging++;
-  if(logging>4)logging=0;
+  wv.logging++;
+  if(wv.logging>4)wv.logging=0;
 }
 static string stag[3]={"v:","i:","o:"};
 void
 vtlog(STerm* pterm,const char *buf, uint len,int mode){
-  if ( (logging&mode)==0)return ;
+  if ( (wv.logging&mode)==0)return ;
   if(pterm->log_fd < 0){
     open_logfile(pterm);
   }
@@ -259,7 +251,7 @@ child_create(struct STerm* pterm,SessDef*sd,
              struct winsize *winp, const char* path)
 {
   pid_t pid;
-  if(logging<0)logging = cfg.logging;
+  if(wv.logging<0)wv.logging = cfg.logging;
   (pterm->child.pty_fd   ) = -1;
   win_tab_v(pterm->tab);
   const char**argv=sd->argv;
@@ -403,7 +395,7 @@ child_create(struct STerm* pterm,SessDef*sd,
   }
   else { // Parent process.
     (pterm->child.pid      )=pid;
-    if (report_child_pid) {
+    if (wv.report_child_pid) {
       printf("%d\n", pid);
       fflush(stdout);
     }
@@ -497,11 +489,11 @@ static void vprocclose(STerm* pterm){
       if (s) {
         char * wsl_pre = "\0337\033[H\033[L";
         char * wsl_post = "\0338\033[B";
-        if (err && support_wsl)
+        if (err && wv.support_wsl)
           term_write(wsl_pre, strlen(wsl_pre));
         childerror(s, false, 0, err ? 41 : 42);
         free(s);
-        if (err && support_wsl)
+        if (err && wv.support_wsl)
           term_write(wsl_post, strlen(wsl_post));
       }
       if (cfg.exit_title && *cfg.exit_title)
@@ -604,8 +596,8 @@ child_proc(void)
             buf[len]=0;
             term_write(buf, len);
             // accelerate keyboard echo if (unechoed) keyboard input is pending
-            if (kb_input) {
-              kb_input = false;
+            if (wv.kb_input) {
+              wv.kb_input = false;
               if (cfg.display_speedup)
                 // undocumented safeguard in case something goes wrong here
                 win_update_now();
@@ -859,7 +851,7 @@ static char *
 get_foreground_cwd()
 {
   // for WSL, do not check foreground process; hope start dir is good
-  if (support_wsl) {
+  if (wv.support_wsl) {
     char cwd[MAX_PATH];
     if (getcwd(cwd, sizeof(cwd)))
       return strdup(cwd);
@@ -971,7 +963,7 @@ wstring
 child_conv_path(STerm* pterm,wstring wpath, bool adjust_dir)
 {
   // Need to convert POSIX path to Windows first
-  if (support_wsl) {
+  if (wv.support_wsl) {
     // First, we need to replicate some of the handling of relative paths 
     // as implemented in child_conv_path,
     // because the dewsl functionality would actually go in between 
@@ -1008,7 +1000,7 @@ child_conv_path(STerm* pterm,wstring wpath, bool adjust_dir)
       rest = "";
     char * base;
     if (!*name)
-      base = home;
+      base = wv.home;
     else {
 #if CYGWIN_VERSION_DLL_MAJOR >= 1005
       // Find named user's home directory
@@ -1032,12 +1024,12 @@ child_conv_path(STerm* pterm,wstring wpath, bool adjust_dir)
       fgpid = (pterm->child.pid      );
 
     char * cwd = foreground_cwd(pterm);
-    exp_path = asform("%s/%s", cwd ?: home, path);
+    exp_path = asform("%s/%s", cwd ?: wv.home, path);
     if (cwd)
       free(cwd);
 #else
     // If we're lucky, the path is relative to the home directory.
-    exp_path = asform("%s/%s", home, path);
+    exp_path = asform("%s/%s", wv.home, path);
 #endif
   }
   else
@@ -1137,7 +1129,7 @@ do_child_fork(SessDef*sd, int moni, bool launch, bool config_size, bool in_cwd)
       if (set_dir) {
         // use cwd of foreground process if requested via in_cwd
       }
-      else if (support_wsl) {
+      else if (wv.support_wsl) {
         const wchar * wcd = cs__utftowcs((cterm->child.child_dir));
 #ifdef debug_wsl
         printf("fork wsl <%ls>\n", wcd);
@@ -1160,10 +1152,10 @@ do_child_fork(SessDef*sd, int moni, bool launch, bool config_size, bool in_cwd)
         // unless cloned/Alt+F2 (!launch)
         if (!launch) {
           setenv("CHERE_INVOKING", "mintty", true);
-          // if cloned and then launched from Windows shortcut (!shortcut) 
+          // if cloned and then launched from Windows wv.shortcut (!wv.shortcut) 
           // (by sanitizing taskbar icon grouping, #784, mintty/wsltty#96) 
           // indicate to set proper directory
-          if (shortcut)
+          if (wv.shortcut)
             setenv("MINTTY_PWD", set_dir, true);
         }
         delete(set_dir);
@@ -1204,16 +1196,16 @@ do_child_fork(SessDef*sd, int moni, bool launch, bool config_size, bool in_cwd)
       setenvi("MINTTY_ROWS", cterm->rows0);
       setenvi("MINTTY_COLS", cterm->cols0);
       // provide environment to maximise window
-      if (win_is_fullscreen)
+      if (wv.win_is_fullscreen)
         setenvi("MINTTY_MAXIMIZE", 2);
-      else if (IsZoomed(wnd))
+      else if (IsZoomed(wv.wnd))
         setenvi("MINTTY_MAXIMIZE", 1);
     }
     // provide environment to select monitor
     if (moni > 0)
       setenvi("MINTTY_MONITOR", moni);
-    // propagate shortcut-inherited icon
-    if (icon_is_from_shortcut)
+    // propagate wv.shortcut-inherited icon
+    if (wv.icon_is_from_shortcut)
       setenv("MINTTY_ICON", cs__wcstoutf(cfg.icon), true);
 
     //setenv("MINTTY_CHILD", "1", true);

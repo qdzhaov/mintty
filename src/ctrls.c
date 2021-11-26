@@ -14,7 +14,7 @@
 /* Return the number of matching path elements at the starts of p1 and p2,
  * or INT_MAX if the paths are identical. */
 int
-ctrl_path_compare(const char *p1, const char *p2)
+ctrl_path_compare(const wchar *p1, const wchar *p2)
 {
   int i = 0;
   while (*p1 || *p2) {
@@ -69,7 +69,7 @@ ctrl_free_set(controlset *s)
  * If that path doesn't exist, return the index where it should be inserted.
  */
 static int
-ctrl_find_set(controlbox * b, const char *path)
+ctrl_find_set(controlbox * b, const wchar *path)
 {
 #ifdef debug_layout
   printf("ctrl_find_set %d\n", b->nctrlsets);
@@ -100,14 +100,14 @@ ctrl_find_set(controlbox * b, const char *path)
  * If -1 is passed as input, find the first.
  */
 int
-ctrl_find_path(controlbox * b,const char *path, int index)
+ctrl_find_path(controlbox * b,const wchar *path, int index)
 {
   if (index < 0)
     index = ctrl_find_set(b, path);
   else
     index++;
 
-  if (index < b->nctrlsets && !strcmp(path, b->ctrlsets[index]->pathname))
+  if (index < b->nctrlsets && !wcscmp(path, b->ctrlsets[index]->pathname))
     return index;
   else
     return -1;
@@ -129,21 +129,21 @@ insert_controlset(controlbox *b, int index, controlset *s)
 
 /* Create a controlset. */
 controlset *
-ctrl_new_set(controlbox *b, const char *path, const char *panel, const char *title)
+ctrl_new_set(controlbox *b, const wchar *path, const wchar *panel, const wchar *title)
 {
   // See whether this path exists already
   int index = ctrl_find_set(b, path);
 
   // If not, and it's not an empty path, set up a title.
   if (index == b->nctrlsets && *path) {
-    const char *title = panel;
+    const wchar *title = panel;
     if (!title) {
-      title = strrchr(path, '/');
+      title = wcsrchr(path, '/');
       title = title ? title + 1 : path;
     }
     controlset *s = new(controlset);
-    s->pathname = strdup(path);
-    s->boxtitle = strdup(title);
+    s->pathname = wcsdup(path);
+    s->boxtitle = wcsdup(title);
     s->ncontrols = s->ctrlsize = 0;
     s->ncolumns = 0;      /* this is a title! */
     s->ctrls = null;
@@ -152,12 +152,12 @@ ctrl_new_set(controlbox *b, const char *path, const char *panel, const char *tit
   }
 
   // Skip existing sets for the same path.
-  while (index < b->nctrlsets && !strcmp(b->ctrlsets[index]->pathname, path))
+  while (index < b->nctrlsets && !wcscmp(b->ctrlsets[index]->pathname, path))
     index++;
 
   controlset *s = new(controlset);
-  s->pathname = strdup(path);
-  s->boxtitle = title ? strdup(title) : null;
+  s->pathname = wcsdup(path);
+  s->boxtitle = title ? wcsdup(title) : null;
   s->ncolumns = 1;
   s->ncontrols = s->ctrlsize = 0;
   s->ctrls = null;
@@ -185,7 +185,7 @@ ctrl_alloc(controlbox * b, size_t size)
 }
 
 static control *
-ctrl_new(controlset *s, int type, handler_fn handler, void *context)
+ctrl_new(controlset *s,int col, int type,wstring label,wstring tip, handler_fn handler, void *context)
 {
   control *c = new(control);
   if (s->ncontrols >= s->ctrlsize) {
@@ -197,10 +197,12 @@ ctrl_new(controlset *s, int type, handler_fn handler, void *context)
   * Fill in the standard fields.
   */
   c->type = type;
-  c->column = COLUMN_FIELD(0, s->ncolumns);
+  if(col<0) c->column = COLUMN_FIELD(0, s->ncolumns);
+  else c->column=col;
   c->handler = handler;
   c->context = context;
-  c->label = null;
+  c->label = label ? wcsdup(label) : null;
+  c->tip   = tip   ? wcsdup(tip  ) : null;
   c->plat_ctrl = null;
   return c;
 }
@@ -209,8 +211,8 @@ ctrl_new(controlset *s, int type, handler_fn handler, void *context)
 control *
 ctrl_columns(controlset *s, int ncolumns, ...)
 {
-  control *c = ctrl_new(s, CTRL_COLUMNS, 0, 0);
-  assert(s->ncolumns == 1 || ncolumns == 1);
+  control *c = ctrl_new(s,-1,CTRL_COLUMNS, 0,0,0,0);
+  //assert(s->ncolumns == 1 || ncolumns == 1);
   c->columns.ncols = ncolumns;
   s->ncolumns = ncolumns;
   if (ncolumns == 1)
@@ -228,11 +230,10 @@ ctrl_columns(controlset *s, int ncolumns, ...)
 }
 
 control *
-ctrl_editbox(controlset *s, const char * label, int percentage,
+ctrl_editbox(controlset *s, int col, const wchar * label,const wchar * tip, int percentage,
              handler_fn handler, void *context)
 {
-  control *c = ctrl_new(s, CTRL_EDITBOX, handler, context);
-  c->label = label ? strdup(label) : null;
+  control *c = ctrl_new(s,col, CTRL_EDITBOX, label,tip,handler, context);
   c->editbox.percentwidth = percentage;
   c->editbox.password = 0;
   c->editbox.has_list = 0;
@@ -240,11 +241,10 @@ ctrl_editbox(controlset *s, const char * label, int percentage,
 }
 
 control *
-ctrl_combobox(controlset *s, const char * label, int percentage,
+ctrl_combobox(controlset *s, int col, const wchar * label,const wchar * tip, int percentage,
               handler_fn handler, void *context)
 {
-  control *c = ctrl_new(s, CTRL_EDITBOX, handler, context);
-  c->label = label ? strdup(label) : null;
+  control *c = ctrl_new(s,col, CTRL_EDITBOX, label,tip,handler, context);
   c->editbox.percentwidth = percentage;
   c->editbox.password = 0;
   c->editbox.has_list = 1;
@@ -252,11 +252,10 @@ ctrl_combobox(controlset *s, const char * label, int percentage,
 }
 
 control *
-ctrl_listbox(controlset *s, const char * label, int lines, int percentage,
+ctrl_listbox(controlset *s, int col, const wchar * label,const wchar * tip, int lines, int percentage,
               handler_fn handler, void *context)
 {
-  control *c = ctrl_new(s, CTRL_LISTBOX, handler, context);
-  c->label = label ? strdup(label) : null;
+  control *c = ctrl_new(s,col, CTRL_LISTBOX, label,tip,handler, context);
   c->listbox.percentwidth = percentage;
   c->listbox.height = lines;
   c->listbox.ncols = 0;
@@ -269,26 +268,25 @@ ctrl_listbox(controlset *s, const char * label, int lines, int percentage,
  * until a null in place of a title string is seen.
  */
 control *
-ctrl_radiobuttons(controlset *s, const char * label, int ncolumns,
+ctrl_radiobuttons(controlset *s, int col, const wchar * label,const wchar * tip, int ncolumns,
                   handler_fn handler,char *context, ...)
 {
   va_list ap;
   int i;
-  control *c = ctrl_new(s, CTRL_RADIO, handler, context);
-  c->label = label ? strdup(label) : null;
+  control *c = ctrl_new(s,col, CTRL_RADIO, label,tip,handler, context);
   c->radio.ncolumns = ncolumns;
  /*
   * Initial pass along variable argument list to count the buttons.
   */
   va_start(ap, context);
   i = 0;
-  while (va_arg(ap, string)) {
+  while (va_arg(ap, wstring)) {
     va_arg(ap, int);
     i++;
   }
   va_end(ap);
   c->radio.nbuttons = i;
-  c->radio.labels = newn(string, c->radio.nbuttons);
+  c->radio.labels = newn(wstring, c->radio.nbuttons);
   c->radio.vals = newn(int, c->radio.nbuttons);
  /*
   * second pass along variable argument list to actually fill in
@@ -296,7 +294,7 @@ ctrl_radiobuttons(controlset *s, const char * label, int ncolumns,
   */
   va_start(ap, context);
   for (i = 0; i < c->radio.nbuttons; i++) {
-    c->radio.labels[i] = strdup(va_arg(ap, string));
+    c->radio.labels[i] = wcsdup(va_arg(ap, wstring));
     c->radio.vals[i] = va_arg(ap, int);
   }
   va_end(ap);
@@ -304,39 +302,44 @@ ctrl_radiobuttons(controlset *s, const char * label, int ncolumns,
 }
 
 control *
-ctrl_pushbutton(controlset *s, const char * label,
+ctrl_pushbutton(controlset *s, int col, const wchar * label,const wchar * tip,
                 handler_fn handler, void *context)
 {
-  control *c = ctrl_new(s, CTRL_BUTTON, handler, context);
-  c->label = label ? strdup(label) : null;
+  control *c = ctrl_new(s,col, CTRL_BUTTON, label,tip,handler, context);
+  c->button.isdefault = 0;
+  c->button.iscancel = 0;
+  return c;
+}
+control *
+ctrl_clrbutton(controlset *s, int col, const wchar * label,const wchar * tip,
+                handler_fn handler, void *context)
+{
+  control *c = ctrl_new(s,col, CTRL_CLRBUTTON, label,tip,handler, context);
   c->button.isdefault = 0;
   c->button.iscancel = 0;
   return c;
 }
 
 control *
-ctrl_label(controlset *s, const char * label)
+ctrl_label(controlset *s, int col, const wchar * label,const wchar * tip)
 {
-  control *c = ctrl_new(s, CTRL_LABEL, 0, 0);
-  c->label = label ? strdup(label) : null;
+  control *c = ctrl_new(s,col, CTRL_LABEL, label, tip,0,0);
   return c;
 }
 
 control *
-ctrl_fontsel(controlset *s, const char * label,
+ctrl_fontsel(controlset *s, int col, const wchar * label,const wchar * tip,
              handler_fn handler, void *context)
 {
-  control *c = ctrl_new(s, CTRL_FONTSELECT, handler, context);
-  c->label = label ? strdup(label) : null;
+  control *c = ctrl_new(s,col, CTRL_FONTSELECT, label,tip,handler, context);
   return c;
 }
 
 control *
-ctrl_checkbox(controlset *s, const char * label,
+ctrl_checkbox(controlset *s, int col, const wchar * label,const wchar * tip,
               handler_fn handler, void *context)
 {
-  control *c = ctrl_new(s, CTRL_CHECKBOX, handler, context);
-  c->label = label ? strdup(label) : null;
+  control *c = ctrl_new(s,col, CTRL_CHECKBOX, label,tip,handler, context);
   return c;
 }
 
@@ -432,7 +435,8 @@ dlg_stdcolour_handler(control *ctrl, int event)
     dlg_coloursel_start(*cp);
   else if (event == EVENT_CALLBACK) {
     colour c;
-    if (dlg_coloursel_results(&c))
+    if (dlg_coloursel_results(&c)){
       *cp = c;
+    }
   }
 }

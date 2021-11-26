@@ -2,7 +2,8 @@
 #define APPINFO_H
 
 #define APPNAME "mintty"
-#define WEBSITE "http://mintty.github.io/"
+//#define WEBSITE "http://mintty.github.io/"
+#define WEBSITE "https://gitee.com/qdzhaov/mintty"
 
 #define MAJOR_VERSION  3
 #define MINOR_VERSION  5
@@ -11,7 +12,7 @@
 
 // needed for res.rc
 #define APPDESC "Terminal"
-#define AUTHOR  "Andy Koppe / Thomas Wolff"
+#define AUTHOR  "Zhao Wei/Andy Koppe / Thomas Wolff"
 #define YEAR    "2013/2021"
 
 
@@ -55,7 +56,7 @@
 #endif
 
 #define RELEASEINFO \
-  "released at https://gitee.com/qdzhaov/mintty"
+  "released at https://gitee.com/qdzhaov/mintty\n"
 
 #define LICENSE_TEXT \
   "License GPLv3+: GNU GPL version 3 or later"
@@ -66,8 +67,9 @@
 // needed for Options... - About...
 //__ %s: WEBSITE (URL)
 #define ABOUT_TEXT \
-  __("Please report bugs or request enhancements through the " \
-  "issue tracker on the mintty project page located at" \
+  __("This Software is branched from mintty,http://mintty.github.io/\n"\
+  "Please report bugs or request enhancements through the \n" \
+  "issue tracker on the mintty project page located at\n" \
   "\n%s.\n" \
   "See also the Wiki there for further hints, thanks and credits.")
 

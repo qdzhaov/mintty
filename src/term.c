@@ -2437,12 +2437,12 @@ term_paint(void)
 
      /* Colour indication for blinking ? */
       if ((tattr.attr & (ATTR_BLINK | ATTR_BLINK2))
-       && cterm->enable_blink_colour && colours[BLINK_COLOUR_I] != (colour)-1
+       && cterm->enable_blink_colour && wv.colours[BLINK_COLOUR_I] != (colour)-1
        //&& !(tattr.attr & TATTR_EMOJI)
          )
       {
         if (!(tattr.attr & TATTR_EMOJI)) {
-          tattr.truefg = colours[BLINK_COLOUR_I];
+          tattr.truefg = wv.colours[BLINK_COLOUR_I];
           tattr.attr = (tattr.attr & ~ATTR_FGMASK) | (TRUE_COLOUR << ATTR_FGSHIFT);
         }
       }
@@ -3281,11 +3281,11 @@ term_paint(void)
           // copy attribute, handle blinking
           cattr tattr = dd->attr;
           if ((tattr.attr & (ATTR_BLINK | ATTR_BLINK2))
-           && cterm->enable_blink_colour && colours[BLINK_COLOUR_I] != (colour)-1
+           && cterm->enable_blink_colour && wv.colours[BLINK_COLOUR_I] != (colour)-1
            && !(tattr.attr & TATTR_EMOJI)
              )
           {  // colour indication for blinking
-            tattr.truefg = colours[BLINK_COLOUR_I];
+            tattr.truefg = wv.colours[BLINK_COLOUR_I];
             tattr.attr = (tattr.attr & ~ATTR_FGMASK) | (TRUE_COLOUR << ATTR_FGSHIFT);
           }
           else if (cterm->blink_is_real) {

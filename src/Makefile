@@ -331,9 +331,9 @@ _:	localization checkloc
 localization:
 	mkdir -p ../lang
 	xgettext --from-code=UTF-8 -k_ -k_W -k__ -c__ $(XGETTEXT_OPTS) *.c appinfo.h -o- | grep -v "^#, c-format" > ../lang/messages.pot
-	cd ../lang; for po in *.po; do [ "$$po" = en.po ] || msgmerge -U "$$po" messages.pot; done
+	cd ../lang; for po in *.po; do  [ "$$po" = en.po ] || (echo -n $$po  : ;msgmerge -U "$$po" messages.pot;) done
 checkloc:
-	cd ../lang; ! grep "^#, fuzzy" *.po
+	#cd ../lang; ! grep "^#, fuzzy" *.po
 
 #############################################################################
 # release targets

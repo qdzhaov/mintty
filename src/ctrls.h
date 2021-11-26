@@ -24,6 +24,7 @@ enum {
   CTRL_COLUMNS,    /* divide window into columns */
   CTRL_FONTSELECT, /* label plus font selector */
   CTRL_LABEL,      /* static text/label only */
+  CTRL_CLRBUTTON,  /* color push button (no label) */
 };
 
 /*
@@ -75,153 +76,154 @@ typedef void (* handler_fn)(control *, int event);
 
 struct control {
   int type;
- /*
-  * Every control except CTRL_COLUMNS has _some_ sort of label.
-  * By putting it in the `generic' union as well as everywhere else,
-  * we avoid having to have an irritating switch statement when we
-  * go through and deallocate all the memory in a config-box structure.
-  * 
-  * Yes, this does mean that any non-null value in this field
-  * is expected to be dynamically allocated and freeable.
-  * 
-  * For CTRL_COLUMNS, this field MUST be null.
-  */
-  const char * label;
- /*
-  * Indicate which column(s) this control occupies. This can be unpacked
-  * into starting column and column span by the COLUMN macros above.
-  */
+  /*
+   * Every control except CTRL_COLUMNS has _some_ sort of label.
+   * By putting it in the `generic' union as well as everywhere else,
+   * we avoid having to have an irritating switch statement when we
+   * go through and deallocate all the memory in a config-box structure.
+   * 
+   * Yes, this does mean that any non-null value in this field
+   * is expected to be dynamically allocated and freeable.
+   * 
+   * For CTRL_COLUMNS, this field MUST be null.
+   */
+  const wchar * label;
+  const wchar * tip;
+  /*
+   * Indicate which column(s) this control occupies. This can be unpacked
+   * into starting column and column span by the COLUMN macros above.
+   */
   int column;
- /*
-  * Most controls need to provide a function which gets called
-  * when that control's setting is changed,
-  * or when the control's setting needs initialising.
-  * 
-  * The `data' parameter points to the writable data being modified
-  * as a result of the configuration activity; for example,
-  * the `Config' structure, although not necessarily.
-  * 
-  * The `dlg' parameter is passed back to the platform-specific routines
-  * to read and write the actual control state.
-  */
+  /*
+   * Most controls need to provide a function which gets called
+   * when that control's setting is changed,
+   * or when the control's setting needs initialising.
+   * 
+   * The `data' parameter points to the writable data being modified
+   * as a result of the configuration activity; for example,
+   * the `Config' structure, although not necessarily.
+   * 
+   * The `dlg' parameter is passed back to the platform-specific routines
+   * to read and write the actual control state.
+   */
   handler_fn handler;
- /*
-  * Identify a drag-and-drop target control by its widget ("Window") 
-  * as due to the obscure wisdom of Windows design, drag-and-drop events 
-  * are handled completely differently from other events and particularly 
-  * do not provide a "Control identifier".
-  */
+  /*
+   * Identify a drag-and-drop target control by its widget ("Window") 
+   * as due to the obscure wisdom of Windows design, drag-and-drop events 
+   * are handled completely differently from other events and particularly 
+   * do not provide a "Control identifier".
+   */
   void * widget;
- /*
-  * Almost all of the above functions will find it useful to
-  * be able to store a piece of `void *' data.
-  */
+  /*
+   * Almost all of the above functions will find it useful to
+   * be able to store a piece of `void *' data.
+   */
   void * context;
   union {
     struct {
-     /*
-      * Percentage of the dialog-box width used by the edit box.
-      * If this is set to 100, the label is on its own line;
-      * otherwise the label is on the same line as the box itself.
-      */
+      /*
+       * Percentage of the dialog-box width used by the edit box.
+       * If this is set to 100, the label is on its own line;
+       * otherwise the label is on the same line as the box itself.
+       */
       int percentwidth;
       int password;       /* details of input are hidden */
-     /*
-      * A special case of the edit box is the combo box, which has
-      * a drop-down list built in. (Note that a _non_-editable
-      * drop-down list is done as a special case of a list box.)
-      */
+      /*
+       * A special case of the edit box is the combo box, which has
+       * a drop-down list built in. (Note that a _non_-editable
+       * drop-down list is done as a special case of a list box.)
+       */
       int has_list;
     } editbox;
     struct {
-     /*
-      * There are separate fields for `ncolumns' and `nbuttons'
-      * for several reasons.
-      * 
-      * Firstly, we sometimes want the last of a set of buttons
-      * to have a longer label than the rest; we achieve this by
-      * setting `ncolumns' higher than `nbuttons', and the
-      * layout code is expected to understand that the final button
-      * should be given all the remaining space on the line.
-      * This sounds like a ludicrously specific special case
-      * (if we're doing this sort of thing, why not have
-      * the general ability to have a particular button span
-      * more than one column whether it's the last one or not?)
-      * but actually it's reasonably common for the sort of
-      * three-way control we get a lot of:
-      * `yes' versus `no' versus `some more complex way to decide'.
-      * 
-      * Secondly, setting `nbuttons' higher than `ncolumns' lets us
-      * have more than one line of radio buttons for a single setting.
-      * A very important special case of this is setting `ncolumns' to 1,
-      * so that each button is on its own line.
-      */
+      /*
+       * There are separate fields for `ncolumns' and `nbuttons'
+       * for several reasons.
+       * 
+       * Firstly, we sometimes want the last of a set of buttons
+       * to have a longer label than the rest; we achieve this by
+       * setting `ncolumns' higher than `nbuttons', and the
+       * layout code is expected to understand that the final button
+       * should be given all the remaining space on the line.
+       * This sounds like a ludicrously specific special case
+       * (if we're doing this sort of thing, why not have
+       * the general ability to have a particular button span
+       * more than one column whether it's the last one or not?)
+       * but actually it's reasonably common for the sort of
+       * three-way control we get a lot of:
+       * `yes' versus `no' versus `some more complex way to decide'.
+       * 
+       * Secondly, setting `nbuttons' higher than `ncolumns' lets us
+       * have more than one line of radio buttons for a single setting.
+       * A very important special case of this is setting `ncolumns' to 1,
+       * so that each button is on its own line.
+       */
       int ncolumns;
       int nbuttons;
-     /*
-      * This points to a dynamically allocated array of `char *' pointers,
-      * each of which points to a dynamically allocated string.
-      */
-      string * labels;     /* `nbuttons' button labels */
-     /*
-      * This points to a dynamically allocated array,
-      * with the value corresponding to each button.
-      */
+      /*
+       * This points to a dynamically allocated array of `char *' pointers,
+       * each of which points to a dynamically allocated string.
+       */
+      wstring * labels;     /* `nbuttons' button labels */
+      /*
+       * This points to a dynamically allocated array,
+       * with the value corresponding to each button.
+       */
       int * vals;       /* `nbuttons' entries; may be null */
     } radio;
     struct {
-     /*
-      * At least Windows has the concept of a `default push button',
-      * which gets implicitly pressed when you hit.
-      * Return even if it doesn't have the input focus.
-      */
+      /*
+       * At least Windows has the concept of a `default push button',
+       * which gets implicitly pressed when you hit.
+       * Return even if it doesn't have the input focus.
+       */
       int isdefault;
-     /*
-      * Also, the reverse of this: a default cancel-type button,
-      * which is implicitly pressed when you hit Escape.
-      */
+      /*
+       * Also, the reverse of this: a default cancel-type button,
+       * which is implicitly pressed when you hit Escape.
+       */
       int iscancel;
     } button;
     struct {
-     /*
-      * Height of the list box, in approximate number of lines.
-      * If this is zero, the list is a drop-down list.
-      */
+      /*
+       * Height of the list box, in approximate number of lines.
+       * If this is zero, the list is a drop-down list.
+       */
       int height;       /* height in lines */
-     /*
-      * Percentage of the dialog-box width used by the list box.
-      * If this is set to 100, the label is on its own line;
-      * otherwise the label is on the same line as the box itself.
-      * Setting this to anything other than 100 is not guaranteed
-      * to work on a _non_-drop-down list, so don't try it!
-      */
+      /*
+       * Percentage of the dialog-box width used by the list box.
+       * If this is set to 100, the label is on its own line;
+       * otherwise the label is on the same line as the box itself.
+       * Setting this to anything other than 100 is not guaranteed
+       * to work on a _non_-drop-down list, so don't try it!
+       */
       int percentwidth;
-     /*
-      * Some list boxes contain strings that contain tab characters.
-      * If `ncols' is greater than 0, then `percentages' is expected
-      * to be non-zero and to contain the respective widths of
-      * `ncols' columns, which together will exactly fit the width 
-      * of the list box. Otherwise `percentages' must be null.
-      */
+      /*
+       * Some list boxes contain strings that contain tab characters.
+       * If `ncols' is greater than 0, then `percentages' is expected
+       * to be non-zero and to contain the respective widths of
+       * `ncols' columns, which together will exactly fit the width 
+       * of the list box. Otherwise `percentages' must be null.
+       */
       int ncols;  /* number of columns */
       int * percentages;   /* % width of each column */
     } listbox;
 
     struct {
-     /* In this variant, `label' MUST be null. */
+      /* In this variant, `label' MUST be null. */
       int ncols;                /* number of columns */
       int * percentages;        /* % width of each column */
-     /*
-      * Every time this control type appears, exactly one of `ncols'
-      * and the previous number of columns MUST be one.
-      * Attempting to allow a seamless transition from a four-column
-      * to a five-column layout, for example, would be way more
-      * trouble than it was worth. If you must lay things out
-      * like that, define eight unevenly sized columns and use
-      * column-spanning a lot. But better still, just don't.
-      * 
-      * `percentages' may be null if ncols==1, to save space.
-      */
+      /*
+       * Every time this control type appears, exactly one of `ncols'
+       * and the previous number of columns MUST be one.
+       * Attempting to allow a seamless transition from a four-column
+       * to a five-column layout, for example, would be way more
+       * trouble than it was worth. If you must lay things out
+       * like that, define eight unevenly sized columns and use
+       * column-spanning a lot. But better still, just don't.
+       * 
+       * `percentages' may be null if ncols==1, to save space.
+       */
     } columns;
   };
 
@@ -238,8 +240,8 @@ struct control {
  * in the config will be a container box within a panel.
  */
 typedef struct {
-  const char * pathname;      /* panel path, e.g. "SSH/Tunnels" */
-  const char * boxtitle;      /* title of container box */
+  const wchar * pathname;      /* panel path, e.g. "SSH/Tunnels" */
+  const wchar * boxtitle;      /* title of container box */
   int ncolumns;         /* current no. of columns at bottom */
   int ncontrols;        /* number of `control' in array */
   int ctrlsize;         /* allocated size of array */
@@ -267,8 +269,8 @@ extern void ctrl_free_box(controlbox *);
  */
 
 /* Create a controlset. */
-extern controlset * ctrl_new_set(controlbox *, const char * path, 
-                                 const char * panel, const char * title);
+extern controlset * ctrl_new_set(controlbox *, const wchar * path, 
+                                 const wchar * panel, const wchar * title);
 extern void ctrl_free_set(controlset *);
 
 extern void ctrl_free(control *);
@@ -294,27 +296,29 @@ extern void * ctrl_alloc(controlbox *, size_t size);
 /* `ncolumns' is followed by that many percentages, as integers. */
 extern control * ctrl_columns(controlset *, int ncolumns, ...);
 
-extern control * ctrl_label(controlset *, const char * label);
-extern control * ctrl_editbox(controlset *, const char * label, int percentage,
+extern control * ctrl_label(controlset *, int col, const wchar * label,const wchar * tip);
+extern control * ctrl_editbox(controlset *, int col, const wchar * label,const wchar * tip, int percentage,
                               handler_fn handler, void * context);
-extern control * ctrl_combobox(controlset *, const char * label, int percentage,
+extern control * ctrl_combobox(controlset *, int col, const wchar * label,const wchar * tip, int percentage,
                                handler_fn handler, void * context);
-extern control * ctrl_listbox(controlset *, const char * label, int lines, int percentage,
+extern control * ctrl_listbox(controlset *, int col, const wchar * label,const wchar * tip, int lines, int percentage,
                               handler_fn handler, void * context);
 /*
  * `ncolumns' is followed by (alternately) radio button titles and integers,
  * until a null in place of a title string is seen.
  */
-extern control * ctrl_radiobuttons(controlset *, const char * label, int ncolumns,
+extern control * ctrl_radiobuttons(controlset *, int col, const wchar * label,const wchar * tip, int ncolumns,
                                    handler_fn handler, char * context, ...);
 
-extern control * ctrl_pushbutton(controlset *, const char * label,
+extern control * ctrl_pushbutton(controlset *, int col, const wchar * label,const wchar * tip,
                                  handler_fn handler, void * context);
-extern control * ctrl_droplist(controlset *, const char * label, int percentage,
+extern control * ctrl_clrbutton(controlset *, int col, const wchar * label,const wchar * tip,
+                                 handler_fn handler, void * context);
+extern control * ctrl_droplist(controlset *, int col, const wchar * label,const wchar * tip, int percentage,
                                handler_fn handler, void * context);
-extern control * ctrl_fontsel(controlset *, const char * label,
+extern control * ctrl_fontsel(controlset *, int col, const wchar * label,const wchar * tip,
                               handler_fn handler, void * context);
-extern control * ctrl_checkbox(controlset *, const char * label,
+extern control * ctrl_checkbox(controlset *, int col, const wchar * label,const wchar * tip,
                                handler_fn handler, void * context);
 
 /*
@@ -400,10 +404,10 @@ extern void dlg_refresh(control *);
  *          ... process this controlset ...
  *      }
  */
-extern int ctrl_find_path(controlbox *,const char * path, int index);
+extern int ctrl_find_path(controlbox *,const wchar * path, int index);
 
 /* Return the number of matching path elements at the starts of p1 and p2,
  * or INT_MAX if the paths are identical. */
-extern int ctrl_path_compare(const char * p1, const char * p2);
+extern int ctrl_path_compare(const wchar * p1, const wchar * p2);
 
 #endif

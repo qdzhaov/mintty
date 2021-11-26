@@ -2,7 +2,7 @@
 #define CHILD_H
 
 struct winsize;
-enum IDSS{IDSS_CUR=-1, IDSS_DEF=0, IDSS_WSL , IDSS_CYG , IDSS_CMD , IDSS_PSH , IDSS_USR };
+enum IDSS{IDSS_CUR=-1, IDSS_DEF=0, IDSS_WSL , IDSS_CYG , IDSS_CMD , IDSS_PSH , IDSS_VIEW,IDSS_USR };
 typedef struct STerm STerm;
 #define TAB_NTITLE 16
 #define TAB_LTITLE 128
@@ -24,7 +24,6 @@ typedef struct SChild SChild;
 extern void child_update_charset(STerm* pterm);
 extern void child_create(STerm* pterm, SessDef*sd, struct winsize *winp, const char* path);
 extern void toggle_logging(void);
-extern int logging;
 extern void child_proc(void);
 extern void child_kill(bool point_blank);
 extern void child_terminate(STerm* pterm);

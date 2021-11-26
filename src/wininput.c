@@ -14,9 +14,6 @@
 #include <winnls.h>
 #include <termios.h>
 
-int tabctrling=0;
-LONG last_tabk_time = 0;
-bool kb_input = false;
 uint kb_trace = 0;
 
 static HMENU ctxmenu = NULL;
@@ -49,8 +46,8 @@ show_last_error()
   }
 }
 
-static inline void send_syscommand2(WPARAM cmd, LPARAM p) { SendMessage(wnd, WM_SYSCOMMAND, cmd, p); }
-static inline void send_syscommand(WPARAM cmd) { SendMessage(wnd, WM_SYSCOMMAND, cmd, ' '); }
+static inline void send_syscommand2(WPARAM cmd, LPARAM p) { SendMessage(wv.wnd, WM_SYSCOMMAND, cmd, p); }
+static inline void send_syscommand(WPARAM cmd) { SendMessage(wv.wnd, WM_SYSCOMMAND, cmd, ' '); }
 
 /* Icon conversion */
 
@@ -68,7 +65,7 @@ icon_bitmap(HICON hIcon)
 
   //HWND desktop = GetDesktopWindow();
   //HWND desktop = 0;
-  HWND desktop = wnd;
+  HWND desktop = wv.wnd;
 
   HDC screen_dev = GetDC(desktop);
   if (screen_dev == NULL)
@@ -156,7 +153,7 @@ append_commands(HMENU menu, wstring commands, UINT_PTR idm_cmd, bool add_icons, 
                                   LR_DEFAULTSIZE | LR_LOADFROMFILE
                                   | LR_LOADTRANSPARENT);
       else
-        icon = LoadIcon(inst, MAKEINTRESOURCE(IDI_MAINICON));
+        icon = LoadIcon(wv.inst, MAKEINTRESOURCE(IDI_MAINICON));
       HBITMAP bitmap = icon_bitmap(icon);
       mi.hbmpItem = bitmap;
       SetMenuItemInfoW(menu, idm_cmd + n, 0, &mi);
@@ -228,6 +225,8 @@ win_update_menus(bool callback)
   bool clip = shorts && cfg.clip_shortcuts;
   bool alt_fn = shorts && cfg.alt_fn_shortcuts;
   bool ct_sh = shorts && cfg.ctrl_shift_shortcuts;
+  uint mflags;
+  wstring cap;
 
 #ifdef debug_modify_menu
   printf("win_update_menus\n");
@@ -313,15 +312,15 @@ win_update_menus(bool callback)
         key += 6;
       }
       int len1 = wcslen(mi.dwTypeData) + 1
-                 + (mod & MDK_CTRL ? wcslen(_W("Ctrl+")) : 0)
-                 + (mod & MDK_ALT ? wcslen(_W("Alt+")) : 0)
-                 + (mod & MDK_SHIFT ? wcslen(_W("Shift+")) : 0)
+                 + (mod & MDK_CTRL ? 5 : 0)
+                 + (mod & MDK_ALT ? 4 : 0)
+                 + (mod & MDK_SHIFT ? 6 : 0)
                  + wcslen(key) + 1;
       mi.dwTypeData = renewn(mi.dwTypeData, len1);
       wcscat(mi.dwTypeData, W("\t"));
-      if (mod & MDK_CTRL) wcscat(mi.dwTypeData, _W("Ctrl+"));
-      if (mod & MDK_ALT) wcscat(mi.dwTypeData, _W("Alt+"));
-      if (mod & MDK_SHIFT) wcscat(mi.dwTypeData, _W("Shift+"));
+      if (mod & MDK_CTRL) wcscat(mi.dwTypeData, W("Ctrl+"));
+      if (mod & MDK_ALT) wcscat(mi.dwTypeData, W("Alt+"));
+      if (mod & MDK_SHIFT) wcscat(mi.dwTypeData, W("Shift+"));
       wcscat(mi.dwTypeData, key);
     }
 #ifdef debug_modify_menu
@@ -344,122 +343,100 @@ win_update_menus(bool callback)
     else
       return _W(label);  // use our localization
   }
-    modify_menu(sysmenu, SC_CLOSE, 0, itemlabel(__("&Close")),
-                alt_fn ? W("Alt+F4") : ct_sh ? W("Ctrl+Shift+W") : null
-               );
-    uint switch_move_enabled = win_tab_count() == 1;
-    EnableMenuItem(sysmenu, IDM_PREVTAB, switch_move_enabled);
-    EnableMenuItem(sysmenu, IDM_NEXTTAB, switch_move_enabled);
-    EnableMenuItem(sysmenu, IDM_MOVELEFT, switch_move_enabled);
-    EnableMenuItem(sysmenu, IDM_MOVERIGHT, switch_move_enabled);
+#define ENSM(id,f)   EnableMenuItem(sysmenu, id, f)
+#define ENCM(id,f)   EnableMenuItem(ctxmenu, id, f)
+#define MFSM(id,f,lbl,key)   modify_menu(sysmenu, id, f,lbl,key)
+#define MFCM(id,f,lbl,key)   modify_menu(ctxmenu , id, f,lbl,key)
+  MFSM( SC_CLOSE, 0, itemlabel(__("&Close")), alt_fn ? W("Alt+F4") : ct_sh ? W("Ctrl+Shift+W") : null);
+  mflags= win_tab_count() == 1;
+  ENSM( IDM_PREVTAB   , mflags);
+  ENSM( IDM_NEXTTAB   , mflags);
+  ENSM( IDM_MOVELEFT  , mflags);
+  ENSM( IDM_MOVERIGHT , mflags);
 
-    //__ System menu:
-    modify_menu(sysmenu, IDM_NEW, 0, _W("Ne&w"),
-                alt_fn ? W("Alt+F2") : ct_sh ? W("Ctrl+Shift+N") : null
-               );
-  uint sel_enabled = cterm->selected ? MF_ENABLED : MF_GRAYED;
-  EnableMenuItem(ctxmenu, IDM_OPEN, sel_enabled);
+#define CKED(v) ((v)?MF_CHECKED : MF_UNCHECKED)  
+#define GYED(v) ((v)?MF_GRAYED : MF_ENABLED)
+  //__ System menu:
+  MFSM( IDM_NEW, 0, _W("Ne&w"), alt_fn ? W("Alt+F2") : ct_sh ? W("Ctrl+Shift+N") : null);
+  ENCM( IDM_OPEN, GYED(cterm->selected ));
   //__ Context menu:
-  modify_menu(ctxmenu, IDM_COPY, sel_enabled, _W("&Copy"),
-    clip ? W("Ctrl+Ins") : ct_sh ? W("Ctrl+Shift+C") : null
-  );
+  MFCM( IDM_COPY, GYED(cterm->selected ), _W("&Copy"), clip ? W("Ctrl+Ins") : ct_sh ? W("Ctrl+Shift+C") : null);
   // enable/disable predefined extended context menu entries
   // (user-definable ones are handled via fct_status())
-  EnableMenuItem(ctxmenu, IDM_COPY_TEXT, sel_enabled);
-  EnableMenuItem(ctxmenu, IDM_COPY_TABS, sel_enabled);
-  EnableMenuItem(ctxmenu, IDM_COPY_TXT, sel_enabled);
-  EnableMenuItem(ctxmenu, IDM_COPY_RTF, sel_enabled);
-  EnableMenuItem(ctxmenu, IDM_COPY_HTXT, sel_enabled);
-  EnableMenuItem(ctxmenu, IDM_COPY_HFMT, sel_enabled);
-  EnableMenuItem(ctxmenu, IDM_COPY_HTML, sel_enabled);
-
-  uint paste_enabled =
+  ENCM( IDM_COPY_TEXT, GYED(cterm->selected ));
+  ENCM( IDM_COPY_TABS, GYED(cterm->selected ));
+  ENCM( IDM_COPY_TXT , GYED(cterm->selected ));
+  ENCM( IDM_COPY_RTF , GYED(cterm->selected ));
+  ENCM( IDM_COPY_HTXT, GYED(cterm->selected ));
+  ENCM( IDM_COPY_HFMT, GYED(cterm->selected ));
+  ENCM( IDM_COPY_HTML, GYED(cterm->selected ));
+  MFCM( IDM_COPASTE, GYED(cterm->selected ), _W("Copy → Paste"), clip ? W("Ctrl+Shift+Ins") : null);
+  mflags =
     IsClipboardFormatAvailable(CF_TEXT) ||
     IsClipboardFormatAvailable(CF_UNICODETEXT) ||
     IsClipboardFormatAvailable(CF_HDROP)
     ? MF_ENABLED : MF_GRAYED;
-  //__ Context menu:
-  modify_menu(ctxmenu, IDM_PASTE, paste_enabled, _W("&Paste "),
+  MFCM( IDM_PASTE, mflags, _W("&Paste "),
     clip ? W("Shift+Ins") : ct_sh ? W("Ctrl+Shift+V") : null
   );
 
-  //__ Context menu:
-  modify_menu(ctxmenu, IDM_COPASTE, sel_enabled, _W("Copy → Paste"),
-    clip ? W("Ctrl+Shift+Ins") : null
-  );
 
-  //__ Context menu:
-  modify_menu(ctxmenu, IDM_SEARCH, 0, _W("S&earch"),
+  MFCM( IDM_SEARCH, 0, _W("S&earch"),
     alt_fn ? W("Alt+F3") : ct_sh ? W("Ctrl+Shift+H") : null
   );
+  switch(wv.logging){    
+    when 1:cap=_W("&Log to File[I]");
+    when 2:cap=_W("&Log to File[O]");
+    when 3:cap=_W("&Log to File[IO]");
+    otherwise:
+    cap=_W("&Log to File");
+    mflags=MF_UNCHECKED;
+  }
+  MFCM( IDM_TOGLOG, mflags, cap, null);
+  MFCM( IDM_TOGCHARINFO, CKED(show_charinfo ), _W("Character &Info"), null);
 
-  //__ Context menu:
-  modify_menu(ctxmenu, IDM_TOGLOG, logging ? MF_CHECKED : MF_UNCHECKED, _W("&Log to File"),
-    null
-  );
+  MFCM( IDM_TOGVT220KB, CKED(cterm->vt220_keys), _W("VT220 Keyboard"), null);
+  MFCM( IDM_RESET, 0, _W("&Reset"), 
+        alt_fn ? W("Alt+F8") : ct_sh ? W("Ctrl+Shift+R") : null);
 
-  uint charinfo = show_charinfo ? MF_CHECKED : MF_UNCHECKED;
-  //__ Context menu:
-  modify_menu(ctxmenu, IDM_TOGCHARINFO, charinfo, _W("Character &Info"),
-    null
-  );
+  mflags = IsZoomed(wv.wnd) || cterm->cols != cfg.cols || cterm->rows != cfg.rows ? MF_ENABLED : MF_GRAYED;
+  MFCM( IDM_DEFSIZE_ZOOM, mflags, _W("&Default Size"), 
+        alt_fn ? W("Alt+F10") : ct_sh ? W("Ctrl+Shift+D") : null);
+  MFCM( IDM_TABBAR   , CKED(cfg.tab_bar_show)  , _W("Tabbar(&H)"),    null);
 
-  uint vt220kb = cterm->vt220_keys ? MF_CHECKED : MF_UNCHECKED;
-  //__ Context menu:
-  modify_menu(ctxmenu, IDM_TOGVT220KB, vt220kb, _W("VT220 Keyboard"),
-    null
-  );
-
-  //__ Context menu:
-  modify_menu(ctxmenu, IDM_RESET, 0, _W("&Reset"),
-    alt_fn ? W("Alt+F8") : ct_sh ? W("Ctrl+Shift+R") : null
-  );
-
-  uint defsize_enabled =
-    IsZoomed(wnd) || cterm->cols != cfg.cols || cterm->rows != cfg.rows
-    ? MF_ENABLED : MF_GRAYED;
-  //__ Context menu:
-  modify_menu(ctxmenu, IDM_DEFSIZE_ZOOM, defsize_enabled, _W("&Default Size"),
-    alt_fn ? W("Alt+F10") : ct_sh ? W("Ctrl+Shift+D") : null
-  );
-
-#define CKED(v) ((v)?MF_CHECKED : MF_UNCHECKED)  
-  uint scrollbar_checked = CKED(cterm->show_scrollbar );
+  mflags = CKED(cterm->show_scrollbar );
 #ifdef allow_disabling_scrollbar
   if (!cfg.scrollbar)
-    scrollbar_checked |= MF_GRAYED;
+    mflags |= MF_GRAYED;
 #endif
-  //__ Context menu:
-  modify_menu(ctxmenu, IDM_TABBAR   , CKED(cfg.tab_bar_show)  , _W("Tabbar(&H)"),    null);
-  //__ Context menu:
-  modify_menu(ctxmenu, IDM_SCROLLBAR, scrollbar_checked       , _W("Scrollbar(&S)"), null);
-  modify_menu(ctxmenu, IDM_BORDERS  , 0, _W("&Border"), null);
-  //__ Context menu:
-  modify_menu(ctxmenu, IDM_PARTLINE , CKED(cterm->usepartline), _W("PartLine(&K)"),  null);
-  //__ Context menu:
-  modify_menu(ctxmenu, IDM_INDICATOR, CKED(cfg.indicator)     , _W("Indicator(&J)"), null);
+  MFCM( IDM_SCROLLBAR, mflags       , _W("Scrollbar(&S)"), null);
 
-  uint fullscreen_checked = win_is_fullscreen ? MF_CHECKED : MF_UNCHECKED;
-  //__ Context menu:
-  modify_menu(ctxmenu, IDM_FULLSCREEN_ZOOM, fullscreen_checked, _W("&Full Screen"),
-    alt_fn ? W("Alt+F11") : ct_sh ? W("Ctrl+Shift+F") : null
-  );
+  if(wv.win_is_fullscreen){
+    mflags=MF_GRAYED;
+  }else{
+    mflags=MF_CHECKED;
+  }
+  switch(wv.border_style){    
+    when 1:cap=_W("&Border[T]");
+    when 2:cap=_W("&Border[N]");
+    otherwise:
+    cap=_W("&Border");
+    mflags=MF_UNCHECKED;
+  }
+  MFCM( IDM_BORDERS  , mflags, cap, null);
+  MFCM( IDM_PARTLINE , CKED(cterm->usepartline), _W("PartLine(&K)"),  null);
+  MFCM( IDM_INDICATOR, CKED(cfg.indicator)     , _W("Indicator(&J)"), null);
+  MFCM( IDM_FULLSCREEN_ZOOM, CKED(wv.win_is_fullscreen), _W("&Full Screen"), 
+        alt_fn ? W("Alt+F11") : ct_sh ? W("Ctrl+Shift+F") : null);
 
-  uint otherscreen_checked = cterm->show_other_screen ? MF_CHECKED : MF_UNCHECKED;
-  //__ Context menu:
-  modify_menu(ctxmenu, IDM_FLIPSCREEN, otherscreen_checked, _W("Flip Screen(&W)"),
-    alt_fn ? W("Alt+F12") : ct_sh ? W("Ctrl+Shift+S") : null
-  );
+  MFCM( IDM_FLIPSCREEN, CKED(cterm->show_other_screen), _W("Flip Screen(&W)"), 
+        alt_fn ? W("Alt+F12") : ct_sh ? W("Ctrl+Shift+S") : null);
+  ENCM( IDM_OPTIONS, GYED(wv.config_wnd) );
+  ENSM( IDM_OPTIONS, GYED(wv.config_wnd));
 
-  uint options_enabled = config_wnd ? MF_GRAYED : MF_ENABLED;
-  EnableMenuItem(ctxmenu, IDM_OPTIONS, options_enabled);
-    EnableMenuItem(sysmenu, IDM_OPTIONS, options_enabled);
-
-    // refresh remaining labels to facilitate (changed) localization
-    //__ Context menu:
-    modify_menu(sysmenu, IDM_COPYTITLE, 0, _W("Copy T&itle"), null);
-    //__ Context menu:
-    modify_menu(sysmenu, IDM_OPTIONS, 0, _W("&Options..."), null);
+  // refresh remaining labels to facilitate (changed) localization
+  MFSM( IDM_COPYTITLE, 0, _W("Copy T&itle"), null);
+  MFSM( IDM_OPTIONS, 0, _W("&Options..."), null);
   // update user-defined menu functions (checked/enabled)
   void
   check_commands(HMENU menu, wstring commands, UINT_PTR idm_cmd)
@@ -537,87 +514,85 @@ win_init_ctxmenu(bool extended_menu, bool with_user_commands)
 #ifdef debug_modify_menu
   printf("win_init_ctxmenu\n");
 #endif
-  //__ Context menu:
-  AppendMenuW(ctxmenu, MF_ENABLED, IDM_OPEN, _W("Ope&n"));
-  AppendMenuW(ctxmenu, MF_ENABLED, IDM_NEWTAB, _W("New tab\tCtrl+Shift+T"));
-  AppendMenuW(ctxmenu, MF_ENABLED, IDM_KILLTAB, _W("Kill tab"));
-  AppendMenuW(ctxmenu, MF_SEPARATOR, 0, 0);
-  AppendMenuW(ctxmenu, MF_ENABLED, IDM_PREVTAB, _W("Previous tab\tShift+<-"));
-  AppendMenuW(ctxmenu, MF_ENABLED, IDM_NEXTTAB, _W("Next tab\tShift+->"));
-  AppendMenuW(ctxmenu, MF_ENABLED, IDM_MOVELEFT, _W("Move to left\tCtrl+Shift+<-"));
-  AppendMenuW(ctxmenu, MF_ENABLED, IDM_MOVERIGHT, _W("Next to right\tCtrl+Shift+->"));
-  AppendMenuW(ctxmenu, MF_SEPARATOR, 0, 0);
-  AppendMenuW(ctxmenu, MF_ENABLED, IDM_COPY, 0);
-  if (extended_menu) {
-    //__ Context menu:
-    AppendMenuW(ctxmenu, MF_ENABLED, IDM_COPY_TEXT, _W("Copy as text"));
-    //__ Context menu:
-    AppendMenuW(ctxmenu, MF_ENABLED, IDM_COPY_TABS, _W("Copy with TABs"));
-    //__ Context menu:
-    AppendMenuW(ctxmenu, MF_ENABLED, IDM_COPY_RTF, _W("Copy as RTF"));
-    //__ Context menu:
-    AppendMenuW(ctxmenu, MF_ENABLED, IDM_COPY_HTXT, _W("Copy as HTML text"));
-    //__ Context menu:
-    AppendMenuW(ctxmenu, MF_ENABLED, IDM_COPY_HFMT, _W("Copy as HTML"));
-    //__ Context menu:
-    AppendMenuW(ctxmenu, MF_ENABLED, IDM_COPY_HTML, _W("Copy as HTML full"));
-  }
-  AppendMenuW(ctxmenu, MF_ENABLED, IDM_PASTE, 0);
-  if (extended_menu) {
-    AppendMenuW(ctxmenu, MF_ENABLED, IDM_COPASTE, 0);
+  void apcm(int id,int checked,wstring cap){
+    if(id) {
+      if(checked) AppendMenuW(ctxmenu, MF_ENABLED|MF_CHECKED  , id, cap);
+      else AppendMenuW(ctxmenu, MF_ENABLED, id, cap);
+    } else AppendMenuW(ctxmenu, MF_SEPARATOR, 0, 0);
   }
   //__ Context menu:
-  AppendMenuW(ctxmenu, MF_ENABLED, IDM_SELALL, _W("Select &All"));
-  //__ Context menu:
-  AppendMenuW(ctxmenu, MF_ENABLED, IDM_SAVEIMG, _W("Save as &Image"));
+  apcm( IDM_OPEN, 0,_W("Ope&n"));
+  apcm( IDM_NEWTAB,0, _W("New tab\tCtrl+Shift+T"));
+  apcm( IDM_KILLTAB,0, _W("Kill tab"));
+  apcm( 0,0, 0);
+  apcm( IDM_PREVTAB,0, _W("Previous tab\tShift+<-"));
+  apcm( IDM_NEXTTAB,0, _W("Next tab\tShift+->"));
+  apcm( IDM_MOVELEFT,0, _W("Move to left\tCtrl+Shift+<-"));
+  apcm( IDM_MOVERIGHT,0, _W("Next to right\tCtrl+Shift+->"));
+  apcm( 0,0, 0);
+  apcm( IDM_COPY,0, 0);
+  if (extended_menu) {
+    apcm( IDM_COPY_TEXT,0, _W("Copy as text"));
+    apcm( IDM_COPY_TABS,0, _W("Copy with TABs"));
+    apcm( IDM_COPY_RTF ,0, _W("Copy as RTF"));
+    apcm( IDM_COPY_HTXT,0, _W("Copy as HTML text"));
+    apcm( IDM_COPY_HFMT,0, _W("Copy as HTML"));
+    apcm( IDM_COPY_HTML,0, _W("Copy as HTML full"));
+  }
+  apcm( IDM_PASTE, 0,0);
+  if (extended_menu) {
+    apcm( IDM_COPASTE, 0,0);
+  }
+  apcm( IDM_SELALL, 0,_W("Select &All"));
+  apcm( IDM_SAVEIMG,0, _W("Save as &Image"));
   if (tek_mode) {
-    AppendMenuW(ctxmenu, MF_SEPARATOR, 0, 0);
-    AppendMenuW(ctxmenu, MF_ENABLED, IDM_TEKRESET, W("Tektronix RESET"));
-    AppendMenuW(ctxmenu, MF_ENABLED, IDM_TEKPAGE, W("Tektronix PAGE"));
-    AppendMenuW(ctxmenu, MF_ENABLED, IDM_TEKCOPY, W("Tektronix COPY"));
+    apcm( 0, 0,0);
+    apcm( IDM_TEKRESET,0, W("Tektronix RESET"));
+    apcm( IDM_TEKPAGE,0, W("Tektronix PAGE"));
+    apcm( IDM_TEKCOPY,0, W("Tektronix COPY"));
 
   }
-  AppendMenuW(ctxmenu, MF_SEPARATOR, 0, 0);
-  AppendMenuW(ctxmenu, MF_ENABLED, IDM_SEARCH, 0);
+  apcm( 0,0, 0);
+  apcm( IDM_SEARCH,0, 0);
   if (extended_menu) {
     //__ Context menu: write terminal window contents as HTML file
-    AppendMenuW(ctxmenu, MF_ENABLED, IDM_HTML, _W("HTML Screen Dump"));
-    AppendMenuW(ctxmenu, MF_ENABLED, IDM_TOGLOG, 0);
-    AppendMenuW(ctxmenu, MF_ENABLED, IDM_TOGCHARINFO, 0);
-    AppendMenuW(ctxmenu, MF_ENABLED, IDM_TOGVT220KB, 0);
+    apcm( IDM_HTML,0, _W("HTML Screen Dump"));
+    apcm( IDM_TOGLOG,0, 0);
+    apcm( IDM_TOGCHARINFO,0, 0);
+    apcm( IDM_TOGVT220KB,0, 0);
   }
-  AppendMenuW(ctxmenu, MF_ENABLED, IDM_RESET, 0);
+  apcm( IDM_RESET,0, 0);
   if (extended_menu) {
     //__ Context menu: clear scrollback buffer (lines scrolled off the window)
-    AppendMenuW(ctxmenu, MF_ENABLED, IDM_CLRSCRLBCK, _W("Clear Scrollback"));
+    apcm( IDM_CLRSCRLBCK,0, _W("Clear Scrollback"));
   }
-  AppendMenuW(ctxmenu, MF_SEPARATOR, 0, 0);
-  AppendMenuW(ctxmenu, MF_ENABLED | MF_UNCHECKED, IDM_DEFSIZE_ZOOM, 0);
-  AppendMenuW(ctxmenu, MF_ENABLED | MF_UNCHECKED, IDM_BORDERS  , 0);
-  AppendMenuW(ctxmenu, MF_ENABLED | MF_UNCHECKED, IDM_SCROLLBAR, 0);
-  AppendMenuW(ctxmenu, MF_ENABLED | MF_CHECKED  , IDM_TABBAR   , 0);
-  AppendMenuW(ctxmenu, MF_ENABLED | MF_UNCHECKED, IDM_PARTLINE , 0);
-  AppendMenuW(ctxmenu, MF_ENABLED | MF_UNCHECKED, IDM_INDICATOR, 0);
-  AppendMenuW(ctxmenu, MF_ENABLED | MF_UNCHECKED, IDM_FULLSCREEN_ZOOM, 0);
-  AppendMenuW(ctxmenu, MF_ENABLED | MF_UNCHECKED, IDM_FLIPSCREEN, 0);
-  AppendMenuW(ctxmenu, MF_SEPARATOR, 0, 0);
+  apcm( 0,0, 0);
+  apcm( IDM_DEFSIZE_ZOOM   ,0,  0);
+  apcm( IDM_BORDERS        ,0,  0);
+  apcm( IDM_SCROLLBAR      ,0,  0);
+  apcm( IDM_TABBAR         ,1,  0);
+  apcm( IDM_PARTLINE       ,0,  0);
+  apcm( IDM_INDICATOR      ,0,  0);
+  apcm( IDM_FULLSCREEN_ZOOM,0,  0);
+  apcm( IDM_FLIPSCREEN     ,0,  0);
+  apcm( 0,0, 0);
   if (extended_menu) {
     //__ Context menu: generate a TTY BRK condition (tty line interrupt)
-    AppendMenuW(ctxmenu, MF_ENABLED, IDM_BREAK, _W("Send Break"));
-    AppendMenuW(ctxmenu, MF_SEPARATOR, 0, 0);
+    apcm( IDM_BREAK,0, _W("Send Break"));
+    apcm( 0,0, 0);
   }
 
   if (with_user_commands && *cfg.ctx_user_commands) {
     append_commands(ctxmenu, cfg.ctx_user_commands, IDM_CTXMENUFUNCTION, false, false);
-    AppendMenuW(ctxmenu, MF_SEPARATOR, 0, 0);
+    apcm( 0,0, 0);
   }
   else if (with_user_commands && *cfg.user_commands) {
     append_commands(ctxmenu, cfg.user_commands, IDM_USERCOMMAND, false, false);
-    AppendMenuW(ctxmenu, MF_SEPARATOR, 0, 0);
+    apcm( 0,0, 0);
   }
 
   //__ Context menu:
-  AppendMenuW(ctxmenu, MF_ENABLED, IDM_OPTIONS, _W("&Options..."));
+  apcm( IDM_OPTIONS,0, _W("&Options..."));
 }
 
 void
@@ -627,39 +602,49 @@ win_init_menus(void)
   printf("win_init_menus\n");
 #endif
   HMENU smenu;
-  sysmenu = GetSystemMenu(wnd, false);
+  sysmenu = GetSystemMenu(wv.wnd, false);
+  void insm(int id,wstring cap){
+    if(id){
+      if(id>0x100000) InsertMenuW(sysmenu, 0,MF_BYPOSITION|MF_POPUP,   id, cap);
+      else InsertMenuW(sysmenu, 0,MF_BYPOSITION|MF_ENABLED, id, cap);
+    }else{
+      InsertMenuW(sysmenu, 0,MF_BYPOSITION|MF_SEPARATOR, 0, 0);
+    }
+  }
+  void apsm(int id,wstring cap){
+    AppendMenuW(smenu,  MF_ENABLED, id, cap);
+  }
 
-  InsertMenuW(sysmenu, 0,MF_BYPOSITION|MF_SEPARATOR, 0, 0);
-  InsertMenuW(sysmenu, 0,MF_BYPOSITION|MF_ENABLED, IDM_MOVERIGHT, _W("Next to right\tWin+Shift+->"));
-  InsertMenuW(sysmenu, 0,MF_BYPOSITION|MF_ENABLED, IDM_MOVELEFT, _W("Move to left\tWin+Shift+<-"));
-  InsertMenuW(sysmenu, 0,MF_BYPOSITION|MF_ENABLED, IDM_NEXTTAB, _W("Next tab\tWin+->"));
-  InsertMenuW(sysmenu, 0,MF_BYPOSITION|MF_ENABLED, IDM_PREVTAB, _W("Previous tab\tWin+<-"));
+  insm( 0, 0);
+  insm( IDM_MOVERIGHT , _W("Next to right\tWin+Shift+->"));
+  insm( IDM_MOVELEFT  , _W("Move to left\tWin+Shift+<-"));
+  insm( IDM_NEXTTAB   , _W("Next tab\tWin+->"));
+  insm( IDM_PREVTAB   , _W("Previous tab\tWin+<-"));
 
-  InsertMenuW(sysmenu, 0,MF_BYPOSITION|MF_ENABLED, IDM_KILLTAB, _W("Kill tab"));
-  InsertMenuW(sysmenu, 0,MF_BYPOSITION|MF_ENABLED, IDM_NEWTAB, _W("New tab\tCtrl+Shift+T"));
-  InsertMenuW(sysmenu, 0,MF_BYPOSITION|MF_ENABLED, IDM_NEW, 0);
+  insm( IDM_KILLTAB   , _W("Kill tab"));
+  insm( IDM_NEWTAB    , _W("New tab\tCtrl+Shift+T"));
+  insm( IDM_NEW       , 0);
   if (*cfg.sys_user_commands)
     append_commands(sysmenu, cfg.sys_user_commands, IDM_SYSMENUFUNCTION, false, true);
   else {
-    InsertMenuW(sysmenu,0, MF_BYPOSITION|MF_ENABLED, IDM_COPYTITLE, _W("&Copy Title"));
-    InsertMenuW(sysmenu,0, MF_BYPOSITION|MF_ENABLED, IDM_OPTIONS, _W("&Options..."));
+    insm( IDM_COPYTITLE , _W("&Copy Title"));
+    insm( IDM_OPTIONS   , _W("&Options..."));
   }
-  InsertMenuW(sysmenu, 0, MF_BYPOSITION|MF_SEPARATOR, 0, 0);
+  insm( 0, 0);
   smenu = CreatePopupMenu();
-  AppendMenuW(smenu,  MF_ENABLED, IDM_NEWWSLW, _W("WSL"         ));
-  AppendMenuW(smenu,  MF_ENABLED, IDM_NEWCYGW, _W("Cygwin"      ));
-  AppendMenuW(smenu,  MF_ENABLED, IDM_NEWCMDW, _W("CMD"         ));
-  AppendMenuW(smenu,  MF_ENABLED, IDM_NEWPSHW, _W("PowerShell"  ));
-  AppendMenuW(smenu,  MF_ENABLED, IDM_NEWUSRW, _W("faststart"   ));
-  InsertMenuW(sysmenu, 0,MF_BYPOSITION|MF_POPUP,   (UINT_PTR)(smenu), _W("New &Win"));
-
+  apsm( IDM_NEWWSLW, _W("WSL"         ));
+  apsm( IDM_NEWCYGW, _W("Cygwin"      ));
+  apsm( IDM_NEWCMDW, _W("CMD"         ));
+  apsm( IDM_NEWPSHW, _W("PowerShell"  ));
+  apsm( IDM_NEWUSRW, _W("faststart"   ));
+  insm((UINT_PTR)(smenu), _W("New &Win"));
   smenu = CreatePopupMenu();
-  AppendMenuW(smenu,  MF_ENABLED, IDM_NEWWSLT, _W("WSL"         ));
-  AppendMenuW(smenu,  MF_ENABLED, IDM_NEWCYGT, _W("Cygwin"      ));
-  AppendMenuW(smenu,  MF_ENABLED, IDM_NEWCMDT, _W("CMD"         ));
-  AppendMenuW(smenu,  MF_ENABLED, IDM_NEWPSHT, _W("PowerShell"  ));
-  AppendMenuW(smenu,  MF_ENABLED, IDM_NEWUSRT, _W("faststart"   ));
-  InsertMenuW(sysmenu,0,MF_BYPOSITION|MF_POPUP,   (UINT_PTR)(smenu), _W("New &Tab"));
+  apsm( IDM_NEWWSLT, _W("WSL"         ));
+  apsm( IDM_NEWCYGT, _W("Cygwin"      ));
+  apsm( IDM_NEWCMDT, _W("CMD"         ));
+  apsm( IDM_NEWPSHT, _W("PowerShell"  ));
+  apsm( IDM_NEWUSRT, _W("faststart"   ));
+  insm( (UINT_PTR)(smenu), _W("New &Tab"));
   if(0){
     DeleteMenu(sysmenu,SC_RESTORE ,0);
     DeleteMenu(sysmenu,SC_MOVE    ,0);
@@ -749,7 +734,7 @@ open_popup_menu(bool use_text_cursor, string menucfg, mod_keys mods)
   POINT p;
   if (use_text_cursor) {
     GetCaretPos(&p);
-    ClientToScreen(wnd, &p);
+    ClientToScreen(wv.wnd, &p);
   }
   else
     GetCursorPos(&p);
@@ -757,7 +742,7 @@ open_popup_menu(bool use_text_cursor, string menucfg, mod_keys mods)
   TrackPopupMenu
   (
     ctxmenu, TPM_LEFTALIGN | TPM_TOPALIGN | TPM_RIGHTBUTTON,
-    p.x, p.y, 0, wnd, null
+    p.x, p.y, 0, wv.wnd, null
   );
 }
 void 
@@ -837,7 +822,7 @@ update_mouse(mod_keys mods)
   if (new_app_mouse != last_app_mouse) {
     //HCURSOR cursor = LoadCursor(null, new_app_mouse ? IDC_ARROW : IDC_IBEAM);
     HCURSOR cursor = win_get_cursor(new_app_mouse);
-    SetClassLongPtr(wnd, GCLP_HCURSOR, (LONG_PTR)cursor);
+    SetClassLongPtr(wv.wnd, GCLP_HCURSOR, (LONG_PTR)cursor);
     SetCursor(cursor);
     last_app_mouse = new_app_mouse;
   }
@@ -849,7 +834,7 @@ win_update_mouse(void)
 
 void
 win_capture_mouse(void)
-{ SetCapture(wnd); }
+{ SetCapture(wv.wnd); }
 
 static bool mouse_showing = true;
 
@@ -866,7 +851,7 @@ static void
 hide_mouse(void)
 {
   POINT p;
-  if (cterm->hide_mouse && mouse_showing && GetCursorPos(&p) && WindowFromPoint(p) == wnd) {
+  if (cterm->hide_mouse && mouse_showing && GetCursorPos(&p) && WindowFromPoint(p) == wv.wnd) {
     ShowCursor(false);
     mouse_showing = false;
   }
@@ -890,7 +875,6 @@ pos last_pos = {-1, -1, -1, -1, false};
 static LPARAM last_lp = -1;
 static int button_state = 0;
 
-bool click_focus_token = false;
 static mouse_button last_button = -1;
 static mod_keys last_mods;
 static pos last_click_pos;
@@ -918,8 +902,8 @@ bool
 win_mouse_click(mouse_button b, LPARAM lp)
 {
   mouse_state = true;
-  bool click_focus = click_focus_token;
-  click_focus_token = false;
+  bool click_focus = wv.click_focus_token;
+  wv.click_focus_token = false;
 
   static uint last_time, count;
 
@@ -936,7 +920,7 @@ win_mouse_click(mouse_button b, LPARAM lp)
     count = 1;
   //printf("mouse %d (focus %d skipped %d) ×%d\n", b, click_focus, last_skipped, count);
 
-  SetFocus(wnd);  // in case focus was in search bar
+  SetFocus(wv.wnd);  // in case focus was in search bar
 
   bool res = false;
 
@@ -1061,7 +1045,7 @@ win_get_locator_info(int *x, int *y, int *buttons, bool by_pixels)
   POINT p = {-1, -1};
 
   if (GetCursorPos(&p)) {
-    if (ScreenToClient(wnd, &p)) {
+    if (ScreenToClient(wv.wnd, &p)) {
       if (p.x < PADDING)
         p.x = 0;
       else
@@ -1086,6 +1070,250 @@ win_get_locator_info(int *x, int *y, int *buttons, bool by_pixels)
   }
 
   *buttons = button_state;
+}
+struct KNVDef{
+  uint key;
+  char*name;
+}knvdef[]={
+#define DKNU(n,k) {VK_##k,#n}
+#define DKND(n) {VK_##n,#n}
+  DKND(LBUTTON            ),
+  DKND(RBUTTON            ),
+  DKND(CANCEL             ),
+  DKND(MBUTTON            ),
+  DKND(XBUTTON1           ),
+  DKND(XBUTTON2           ),
+  DKND(BACK               ),
+  DKND(TAB                ),
+  DKND(CLEAR              ),
+  DKND(RETURN             ),
+  DKND(SHIFT              ),
+  DKND(CONTROL            ),
+  DKND(MENU               ),
+  DKND(PAUSE              ),
+  DKND(CAPITAL            ),
+  DKND(KANA               ),
+  DKND(HANGEUL            ),
+  DKND(HANGUL             ),
+  DKND(IME_ON             ),
+  DKND(JUNJA              ),
+  DKND(FINAL              ),
+  DKND(HANJA              ),
+  DKND(KANJI              ),
+  DKND(IME_OFF            ),
+  DKND(ESCAPE             ),
+  DKND(CONVERT            ),
+  DKND(NONCONVERT         ),
+  DKND(ACCEPT             ),
+  DKND(MODECHANGE         ),
+  DKND(SPACE              ),
+  DKND(PRIOR              ),
+  DKND(NEXT               ),
+  DKND(END                ),
+  DKND(HOME               ),
+  DKND(LEFT               ),
+  DKND(UP                 ),
+  DKND(RIGHT              ),
+  DKND(DOWN               ),
+  DKND(SELECT             ),
+  DKND(PRINT              ),
+  DKND(EXECUTE            ),
+  DKND(SNAPSHOT           ),
+  DKND(INSERT             ),
+  DKND(DELETE             ),
+  DKND(HELP               ),
+  DKND(LWIN               ),
+  DKND(RWIN               ),
+  DKND(APPS               ),
+  DKND(SLEEP              ),
+  DKND(NUMPAD0            ),
+  DKND(NUMPAD1            ),
+  DKND(NUMPAD2            ),
+  DKND(NUMPAD3            ),
+  DKND(NUMPAD4            ),
+  DKND(NUMPAD5            ),
+  DKND(NUMPAD6            ),
+  DKND(NUMPAD7            ),
+  DKND(NUMPAD8            ),
+  DKND(NUMPAD9            ),
+  DKND(MULTIPLY           ),
+  DKND(ADD                ),
+  DKND(SEPARATOR          ),
+  DKND(SUBTRACT           ),
+  DKND(DECIMAL            ),
+  DKND(DIVIDE             ),
+  DKND(F1                 ),
+  DKND(F2                 ),
+  DKND(F3                 ),
+  DKND(F4                 ),
+  DKND(F5                 ),
+  DKND(F6                 ),
+  DKND(F7                 ),
+  DKND(F8                 ),
+  DKND(F9                 ),
+  DKND(F10                ),
+  DKND(F11                ),
+  DKND(F12                ),
+  DKND(F13                ),
+  DKND(F14                ),
+  DKND(F15                ),
+  DKND(F16                ),
+  DKND(F17                ),
+  DKND(F18                ),
+  DKND(F19                ),
+  DKND(F20                ),
+  DKND(F21                ),
+  DKND(F22                ),
+  DKND(F23                ),
+  DKND(F24                ),
+  DKND(NUMLOCK            ),
+  DKND(SCROLL             ),
+  DKND(OEM_NEC_EQUAL      ),
+  DKND(OEM_FJ_JISHO       ),
+  DKND(OEM_FJ_MASSHOU     ),
+  DKND(OEM_FJ_TOUROKU     ),
+  DKND(OEM_FJ_LOYA        ),
+  DKND(OEM_FJ_ROYA        ),
+  DKND(LSHIFT             ),
+  DKND(RSHIFT             ),
+  DKND(LCONTROL           ),
+  DKND(RCONTROL           ),
+  DKND(LMENU              ),
+  DKND(RMENU              ),
+  DKND(BROWSER_BACK       ),
+  DKND(BROWSER_FORWARD    ),
+  DKND(BROWSER_REFRESH    ),
+  DKND(BROWSER_STOP       ),
+  DKND(BROWSER_SEARCH     ),
+  DKND(BROWSER_FAVORITES  ),
+  DKND(BROWSER_HOME       ),
+  DKND(VOLUME_MUTE        ),
+  DKND(VOLUME_DOWN        ),
+  DKND(VOLUME_UP          ),
+  DKND(MEDIA_NEXT_TRACK   ),
+  DKND(MEDIA_PREV_TRACK   ),
+  DKND(MEDIA_STOP         ),
+  DKND(MEDIA_PLAY_PAUSE   ),
+  DKND(LAUNCH_MAIL        ),
+  DKND(LAUNCH_MEDIA_SELECT),
+  DKND(LAUNCH_APP1        ),
+  DKND(LAUNCH_APP2        ),
+  DKND(OEM_1              ),
+  DKND(OEM_PLUS           ),
+  DKND(OEM_COMMA          ),
+  DKND(OEM_MINUS          ),
+  DKND(OEM_PERIOD         ),
+  DKND(OEM_2              ),
+  DKND(OEM_3              ),
+  DKND(OEM_4              ),
+  DKND(OEM_5              ),
+  DKND(OEM_6              ),
+  DKND(OEM_7              ),
+  DKND(OEM_8              ),
+  DKND(OEM_AX             ),
+  DKND(OEM_102            ),
+  DKND(ICO_HELP           ),
+  DKND(ICO_00             ),
+  DKND(PROCESSKEY         ),
+  DKND(ICO_CLEAR          ),
+  DKND(PACKET             ),
+  DKND(OEM_RESET          ),
+  DKND(OEM_JUMP           ),
+  DKND(OEM_PA1            ),
+  DKND(OEM_PA2            ),
+  DKND(OEM_PA3            ),
+  DKND(OEM_WSCTRL         ),
+  DKND(OEM_CUSEL          ),
+  DKND(OEM_ATTN           ),
+  DKND(OEM_FINISH         ),
+  DKND(OEM_COPY           ),
+  DKND(OEM_AUTO           ),
+  DKND(OEM_ENLW           ),
+  DKND(OEM_BACKTAB        ),
+  DKND(ATTN               ),
+  DKND(CRSEL              ),
+  DKND(EXSEL              ),
+  DKND(EREOF              ),
+  DKND(PLAY               ),
+  DKND(ZOOM               ),
+  DKND(NONAME             ),
+  DKND(PA1                ),
+  DKND(OEM_CLEAR          ),
+  DKNU(BREAK      ,CANCEL ),
+  DKNU(ENTER      ,RETURN ),
+  DKNU(ESC        ,ESCAPE ),
+  DKNU(PRINTSCREEN,SNAPSHOT),
+  DKNU(MENU       ,APPS   ),
+  DKNU(CAPSLOCK   ,CAPITAL),
+  DKNU(SCROLLLOCK ,SCROLL ),
+  DKNU(EXEC       ,EXECUTE),
+  DKNU(BEGIN      ,CLEAR  ),
+//#if _WIN32_WINNT >= 0x0604
+//  DKND(NAVIGATION_VIEW    ),
+//  DKND(NAVIGATION_MENU    ),
+//  DKND(NAVIGATION_UP      ),
+//  DKND(NAVIGATION_DOWN    ),
+//  DKND(NAVIGATION_LEFT    ),
+//  DKND(NAVIGATION_RIGHT   ),
+//  DKND(NAVIGATION_ACCEPT  ),
+//  DKND(NAVIGATION_CANCEL  ),
+//#endif
+//#if _WIN32_WINNT >= 0x0604
+//  DKND(GAMEPAD_A                         ),
+//  DKND(GAMEPAD_B                         ),
+//  DKND(GAMEPAD_X                         ),
+//  DKND(GAMEPAD_Y                         ),
+//  DKND(GAMEPAD_RIGHT_SHOULDER            ),
+//  DKND(GAMEPAD_LEFT_SHOULDER             ),
+//  DKND(GAMEPAD_LEFT_TRIGGER              ),
+//  DKND(GAMEPAD_RIGHT_TRIGGER             ),
+//  DKND(GAMEPAD_DPAD_UP                   ),
+//  DKND(GAMEPAD_DPAD_DOWN                 ),
+//  DKND(GAMEPAD_DPAD_LEFT                 ),
+//  DKND(GAMEPAD_DPAD_RIGHT                ),
+//  DKND(GAMEPAD_MENU                      ),
+//  DKND(GAMEPAD_VIEW                      ),
+//  DKND(GAMEPAD_LEFT_THUMBSTICK_BUTTON    ),
+//  DKND(GAMEPAD_RIGHT_THUMBSTICK_BUTTON   ),
+//  DKND(GAMEPAD_LEFT_THUMBSTICK_UP        ),
+//  DKND(GAMEPAD_LEFT_THUMBSTICK_DOWN      ),
+//  DKND(GAMEPAD_LEFT_THUMBSTICK_RIGHT     ),
+//  DKND(GAMEPAD_LEFT_THUMBSTICK_LEFT      ),
+//  DKND(GAMEPAD_RIGHT_THUMBSTICK_UP       ),
+//  DKND(GAMEPAD_RIGHT_THUMBSTICK_DOWN     ),
+//  DKND(GAMEPAD_RIGHT_THUMBSTICK_RIGHT    ),
+//  DKND(GAMEPAD_RIGHT_THUMBSTICK_LEFT     ),
+//#endif 
+  {0,0}
+#undef DKNU 
+#undef DKND 
+};
+static string
+vk_name(uint key){
+  struct KNVDef*p;
+  for(p=knvdef;p->name;p++){
+    if(p->key==key)return p->name;
+  }
+  static char vk_name[3];
+  sprintf(vk_name, "%02X", key & 0xFF);
+  return vk_name;
+}
+static int getvk(const char *n){
+  struct KNVDef*p;
+  if(n[1]==0){
+    return (int)(unsigned char)n[0];
+  }
+  if(n[0]=='\\'){
+    int iv;
+    if((n[1]|0x20)=='x'){
+      sscanf(n+2,"%x",&iv);
+    }else iv=atoi(n+2);
+    return iv;
+  } 
+  for(p=knvdef;p->name;p++){
+    if(strcasecmp(p->name,n)==0)return p->key;
+  }
+  return -1;
 }
 #include "sckdef.h"
 
@@ -1132,30 +1360,10 @@ provide_input(wchar c1)
     cterm->ring_enabled = true;
 }
 
-#define dont_debug_virtual_key_codes
-#define dont_debug_key
-#define dont_debug_alt
-#define dont_debug_compose
-
-#ifdef debug_virtual_key_codes
-static struct {
-  uint vk_;
-  char * vk_name;
-} vk_names[] = {
-#include "_vk.t"
-};
-
-static string
-vk_name(uint key)
-{
-  for (uint i = 0; i < lengthof(vk_names); i++)
-    if (key == vk_names[i].vk_)
-      return vk_names[i].vk_name;
-  static char vk_name[3];
-  sprintf(vk_name, "%02X", key & 0xFF);
-  return vk_name;
-}
-#endif
+#define no_debug_virtual_key_codes
+#define no_debug_key
+#define no_debug_alt
+#define no_debug_compose
 
 #ifdef debug_compose
 # define debug_key
@@ -1446,8 +1654,6 @@ user_function(wstring commands, int n)
 {
   pick_key_function(commands, 0, n, 0, 0, 0, 0);
 }
-int lwinkey=0,rwinkey=0,winkey=0;
-ULONG last_wink_time;
 bool 
 win_whotkey(WPARAM wp, LPARAM lp){
   (void)lp;
@@ -1460,9 +1666,9 @@ win_whotkey(WPARAM wp, LPARAM lp){
   GetKeyboardState(kbd);
   inline bool is_key_down(uchar vk) { return kbd[vk] & 0x80; }
 
-  bool lwin=lwinkey;//(is_key_down(VK_LWIN) && key != VK_LWIN);
-  bool rwin=lwinkey;//(is_key_down(VK_RWIN) && key != VK_RWIN);
-  bool win =lwin|rwin; 
+  bool lwin=wv.lwinkey;//(is_key_down(VK_LWIN) && key != VK_LWIN);
+  bool rwin=wv.rwinkey;//(is_key_down(VK_RWIN) && key != VK_RWIN);
+  bool win =wv.winkey;
   bool shift = is_key_down(VK_SHIFT);
   // bool lshift = is_key_down(VK_RSHIFT);
   // bool rshift = is_key_down(VK_RSHIFT);
@@ -1519,6 +1725,7 @@ win_key_down(WPARAM wp, LPARAM lp)
   else if (comp_state == COMP_CLEAR && !repeat)
     comp_state = COMP_NONE;
 
+  (void)vk_name;
 #ifdef debug_virtual_key_codes
   printf("win_key_down %02X %s scan %d ext %d rpt %d/%d other %02X\n", key, vk_name(key), scancode, extended, repeat, count, HIWORD(lp) >> 8);
 #endif
@@ -1541,7 +1748,7 @@ win_key_down(WPARAM wp, LPARAM lp)
     last_key_time = message_time;
 
   if (key == VK_PROCESSKEY) {
-    MSG msg={.hwnd = wnd, .message = WM_KEYDOWN, .wParam = wp, .lParam = lp};
+    MSG msg={.hwnd = wv.wnd, .message = WM_KEYDOWN, .wParam = wp, .lParam = lp};
     TranslateMessage( &msg);
     return true;
   }
@@ -1601,10 +1808,6 @@ win_key_down(WPARAM wp, LPARAM lp)
   trace_alt("alt %d lalt %d ralt %d\n", alt, lalt, ralt);
   bool rctrl = is_key_down(VK_RCONTROL);
   bool ctrl = lctrl | rctrl;
-  //win key not to here,and win key not used
-  //bool lwin=(is_key_down(VK_LWIN) && key != VK_LWIN);
-  //bool rwin=(is_key_down(VK_RWIN) && key != VK_RWIN);
-  //bool win =lwin|rwin; 
   bool ctrl_lalt_altgr = cfg.ctrl_alt_is_altgr & ctrl & lalt & !ralt;
   //bool altgr0 = ralt | ctrl_lalt_altgr;
   // Alt/AltGr detection and handling could do with a complete revision 
@@ -1657,40 +1860,40 @@ win_key_down(WPARAM wp, LPARAM lp)
   if (alt_state > ALT_NONE)
     alt_state = ALT_CANCELLED;
 
-  switch(tabctrling){
+  switch(wv.tabctrling){
       when 0:
         if(key==VK_CONTROL){
-          tabctrling=1;
-          last_tabk_time=message_time ;
+          wv.tabctrling=1;
+          wv.last_tabk_time=message_time ;
         }
       when 1:
         if(key==VK_CONTROL){
-          if( message_time - last_tabk_time < 500 ){
-            tabctrling=2;
-            last_tabk_time=message_time ;
+          if( message_time - wv.last_tabk_time < 500 ){
+            wv.tabctrling=2;
+            wv.last_tabk_time=message_time ;
             return 1;
           }else{
-            tabctrling=1;
-            last_tabk_time=message_time ;
+            wv.tabctrling=1;
+            wv.last_tabk_time=message_time ;
           }
         }else{
-          tabctrling=0;
+          wv.tabctrling=0;
         } 
       when 2:
         if(key=='A'){
-          if( message_time - last_tabk_time < 500 ){
-            tabctrling=3;
-            last_tabk_time=message_time ;
+          if( message_time - wv.last_tabk_time < 500 ){
+            wv.tabctrling=3;
+            wv.last_tabk_time=message_time ;
             return 1;
           }else{
-            tabctrling=0;
-            last_tabk_time=message_time ;
+            wv.tabctrling=0;
+            wv.last_tabk_time=message_time ;
           }
         }else{
-          tabctrling=0;
+          wv.tabctrling=0;
         } 
       when 3:
-        if(message_time - last_tabk_time< 5000 ){
+        if(message_time - wv.last_tabk_time< 5000 ){
           int res=1;
           int zoom=-10000;
           switch (key) {
@@ -1702,7 +1905,7 @@ win_key_down(WPARAM wp, LPARAM lp)
                 else win_tab_change(1);
             when '1' ... '9': win_tab_go(key-'1');
             
-            when ' ': kb_select(0,mods); tabctrling=0;
+            when ' ': kb_select(0,mods); wv.tabctrling=0;
             when 'A': term_select_all();
             when 'C': term_copy();
             when 'V': win_paste();
@@ -1739,16 +1942,16 @@ win_key_down(WPARAM wp, LPARAM lp)
             when VK_OEM_PLUS:  zoom = 1; mods &= ~MDK_SHIFT;
             when '0':          zoom = 0;
             when VK_SHIFT :    res=-1;
-            when VK_ESCAPE: res=-1;tabctrling=0;
+            when VK_ESCAPE: res=-1;wv.tabctrling=0;
             otherwise: res=0;
           }
           if(zoom>=-1){
             win_zoom_font(zoom, mods & MDK_SHIFT);
             return true;
           }
-          last_tabk_time=message_time ;
+          wv.last_tabk_time=message_time ;
           if(res>0)return 1;
-        }else tabctrling=0;
+        }else wv.tabctrling=0;
   }
   // Handling special shifted key functions
   if (newwin_pending) {
@@ -1876,7 +2079,7 @@ win_key_down(WPARAM wp, LPARAM lp)
     }
     //if (scroll) {
     //  if (!cterm->app_scrollbar)
-    //    SendMessage(wnd, WM_VSCROLL, scroll, 0);
+    //    SendMessage(wv.wnd, WM_VSCROLL, scroll, 0);
     //  sel_adjust = true;
     //}
     if (sel_adjust) {
@@ -2455,6 +2658,7 @@ win_key_down(WPARAM wp, LPARAM lp)
     when VK_UP:     cursor_key('A', '8');
     when VK_DOWN:   cursor_key('B', '2');
     when VK_LEFT:   cursor_key('D', '4');
+        printf("VK_LEFT %x\n",mods);
     when VK_RIGHT:  cursor_key('C', '6');
     when VK_CLEAR:  cursor_key('E', '5');
     when VK_MULTIPLY ... VK_DIVIDE:
@@ -2546,7 +2750,7 @@ win_key_down(WPARAM wp, LPARAM lp)
     compose_clear();
     // set token to enforce immediate display of keyboard echo;
     // we cannot win_update_now here; need to wait for the echo (child_proc)
-    kb_input = true;
+    wv.kb_input = true;
     //printf("[%ld] win_key sent %02X\n", mtime(), key); kb_trace = key;
     if (tek_mode == TEKMODE_GIN)
       tek_send_address();
@@ -2630,7 +2834,7 @@ win_key_up(WPARAM wp, LPARAM lp)
       if (is_key_down(VK_SHIFT))
         newwin_shifted = true;
 #ifdef control_AltF2_size_via_token
-      if (newwin_shifted /*|| win_is_fullscreen*/)
+      if (newwin_shifted /*|| wv.win_is_fullscreen*/)
         clone_size_token = false;
 #endif
 

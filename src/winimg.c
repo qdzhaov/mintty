@@ -409,7 +409,7 @@ winimg_lazyinit(imglist *img)
 #endif
   cdc--;
 
-  HDC dc = GetDC(wnd);
+  HDC dc = GetDC(wv.wnd);
   if (!dc)
     return;
 
@@ -445,7 +445,7 @@ winimg_lazyinit(imglist *img)
     }
   }
 
-  ReleaseDC(wnd, dc);
+  ReleaseDC(wv.wnd, dc);
 }
 
 // serialize an image into a temp file to save the memory
@@ -587,7 +587,7 @@ draw_img(HDC dc, imglist * img)
     // that'll be tricky since we've transformed coordinates here,
     // so better do the padding before, in the GDI domain (FillRect below)
     GpSolidFill * br;
-    colour bg = colours[cterm->rvideo ? FG_COLOUR_I : BG_COLOUR_I];
+    colour bg = wv.colours[cterm->rvideo ? FG_COLOUR_I : BG_COLOUR_I];
     //bg = RGB(90, 150, 222);  // test background filling
     s = GdipCreateSolidFill(0xFF000000 | red(bg) << 16 | green(bg) << 8 | blue(bg), &br);
     gpcheck("brush create", s);
@@ -650,11 +650,11 @@ winimgs_paint(void)
     winimg_destroy(img);
   }
 
-  HDC dc = GetDC(wnd);
+  HDC dc = GetDC(wv.wnd);
 
   // clip off padding area, avoiding image artefacts when scrolling
   RECT rc;
-  GetClientRect(wnd, &rc);
+  GetClientRect(wv.wnd, &rc);
   IntersectClipRect(dc, rc.left + PADDING, rc.top + OFFSET + PADDING,
                     rc.left + PADDING + cterm->cols * wv.cell_width,
                     rc.top + OFFSET + PADDING + cterm->rows * wv.cell_height);
@@ -806,7 +806,7 @@ winimgs_paint(void)
             fill_background(dc, &(RECT){xlft, ibot, xrgt, ybot});
           }
           else {
-            colour bg = colours[cterm->rvideo ? FG_COLOUR_I : BG_COLOUR_I];
+            colour bg = wv.colours[cterm->rvideo ? FG_COLOUR_I : BG_COLOUR_I];
             //bg = RGB(90, 150, 222);  // test background filling
             HBRUSH br = CreateSolidBrush(bg);
             FillRect(dc, &(RECT){xlft + iwidth, ytop, xrgt, ibot}, br);
@@ -835,7 +835,7 @@ winimgs_paint(void)
             if (*cfg.background)
               fill_background(hdc, &(RECT){0, 0, xrgt, ybot});
             else {
-              colour bg = colours[cterm->rvideo ? FG_COLOUR_I : BG_COLOUR_I];
+              colour bg = wv.colours[cterm->rvideo ? FG_COLOUR_I : BG_COLOUR_I];
               //bg = RGB(90, 150, 222);  // test background filling
               HBRUSH br = CreateSolidBrush(bg);
               FillRect(hdc, &(RECT){0, 0, xrgt, ybot}, br);
@@ -862,8 +862,8 @@ winimgs_paint(void)
           }
           if (!backward_img_traversal) {
             // restore clipping region
-            ReleaseDC(wnd, dc);
-            dc = GetDC(wnd);
+            ReleaseDC(wv.wnd, dc);
+            dc = GetDC(wv.wnd);
           }
         }
         else if (top < 0 || top + img->height > cterm->rows) {
@@ -898,7 +898,7 @@ winimgs_paint(void)
     }
   }
 
-  ReleaseDC(wnd, dc);
+  ReleaseDC(wv.wnd, dc);
 }
 
 
@@ -1004,7 +1004,7 @@ win_emoji_show(int x, int y, const wchar * efn, void * * bufpoi, int * buflen, i
     }
   }
 
-  HDC dc = GetDC(wnd);
+  HDC dc = GetDC(wv.wnd);
 
   int coord_transformed = 0;
   XFORM old_xform;
@@ -1042,7 +1042,7 @@ win_emoji_show(int x, int y, const wchar * efn, void * * bufpoi, int * buflen, i
   if (coord_transformed)
     SetWorldTransform(dc, &old_xform);
 
-  ReleaseDC(wnd, dc);
+  ReleaseDC(wv.wnd, dc);
 
   if (fs) {
     // Release stream resources, close file.

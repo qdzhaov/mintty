@@ -805,7 +805,7 @@ tek_paint(void)
   }
   (void)pad_r; (void)pad_b;  // could be used to clear outer pane
 
-  HDC dc = GetDC(wnd);
+  HDC dc = GetDC(wv.wnd);
   HDC hdc = CreateCompatibleDC(dc);
   HBITMAP hbm = scale_mode == 1
                 ? CreateCompatibleBitmap(dc, 4096, 3120)
@@ -1085,6 +1085,6 @@ tek_paint(void)
 
   DeleteObject(hbm);
   DeleteDC(hdc);
-  ReleaseDC(wnd, dc);
+  ReleaseDC(wv.wnd, dc);
   //printf("tek_painted %ld\n", mtime() - now);
 }

@@ -51,6 +51,7 @@ extern void setup_config_box(controlbox *);
  * These are the various bits of data required to handle the
  * portable-dialog stuff in the config box.
  */
+#define SWND_CLASS "SWND"
 static controlbox *ctrlbox;
 /*
  * ctrls_base holds the OK and Cancel buttons: the controls which
@@ -81,38 +82,23 @@ int win_dialog_sc(int iv){
   return (heightsc*(iv)/100);
 }
 static HTREEITEM
-treeview_insert(treeview_faff * faff, int level, const char *text, const char *path)
+treeview_insert(treeview_faff * faff, int level, const wchar *text, const wchar *path)
 {
 // text will be the label of an Options dialog treeview item;
 // it is passed in here as the basename of path
 
   HTREEITEM newitem;
 
-  if (nonascii(path)) {
-    wchar * utext = cs__utftowcs(text);
-    TVINSERTSTRUCTW ins;
-    ins.hParent = (level > 0 ? faff->lastat[level - 1] : TVI_ROOT);
-    ins.hInsertAfter = faff->lastat[level];
-    ins.item.mask = TVIF_TEXT | TVIF_PARAM;
-    ins.item.pszText = utext;
-    //ins.item.cchTextMax = wcslen(utext) + 1;  // ignored when setting
-    ins.item.lParam = (LPARAM) path;
-    // It is essential to also use TVM_INSERTITEMW here!
-    newitem = (HTREEITEM)SendMessageW(faff->treeview, TVM_INSERTITEMW, 0, (LPARAM)&ins);
-    //TreeView_SetUnicodeFormat((HWND)newitem, TRUE);  // does not work
-    free(utext);
-  }
-  else {
-    TVINSERTSTRUCTA ins;
-    ins.hParent = (level > 0 ? faff->lastat[level - 1] : TVI_ROOT);
-    ins.hInsertAfter = faff->lastat[level];
-    ins.item.mask = TVIF_TEXT | TVIF_PARAM;
-    ins.item.pszText = (char*)text;
-    //ins.item.cchTextMax = strlen(text) + 1;  // ignored when setting
-    ins.item.lParam = (LPARAM) path;
-    //newitem = TreeView_InsertItem(faff->treeview, &ins);
-    newitem = (HTREEITEM)SendMessageA(faff->treeview, TVM_INSERTITEMA, 0, (LPARAM)&ins);
-  }
+  TVINSERTSTRUCTW ins;
+  ins.hParent = (level > 0 ? faff->lastat[level - 1] : TVI_ROOT);
+  ins.hInsertAfter = faff->lastat[level];
+  ins.item.mask = TVIF_TEXT | TVIF_PARAM;
+  ins.item.pszText = (wchar*)text;
+  //ins.item.cchTextMax = wcslen(utext) + 1;  // ignored when setting
+  ins.item.lParam = (LPARAM) path;
+  // It is essential to also use TVM_INSERTITEMW here!
+  newitem = (HTREEITEM)SendMessageW(faff->treeview, TVM_INSERTITEMW, 0, (LPARAM)&ins);
+  //TreeView_SetUnicodeFormat((HWND)newitem, TRUE);  // does not work
 
   if (level > 0)
     (void)TreeView_Expand(faff->treeview, faff->lastat[level - 1],
@@ -127,7 +113,7 @@ treeview_insert(treeview_faff * faff, int level, const char *text, const char *p
  * Create the panelfuls of controls in the configuration box.
  */
 static void
-create_controls(HWND wnd, const char *path)
+create_controls(HWND wnd, const wchar *path)
 {
   ctrlpos cp;
   int index;
@@ -232,7 +218,7 @@ static bool version_retrieving = false;
 static void
 display_update(const char * new)
 {
-  if (!config_wnd)
+  if (!wv.config_wnd)
     return;
 
   //__ Options: dialog title
@@ -248,7 +234,7 @@ display_update(const char * new)
 #endif
   wchar * wmsg = cs__utftowcs(msg);
   free(msg);
-  SendMessageW(config_wnd, WM_SETTEXT, 0, (LPARAM)wmsg);
+  SendMessageW(wv.config_wnd, WM_SETTEXT, 0, (LPARAM)wmsg);
   free(wmsg);
 }
 
@@ -365,7 +351,7 @@ deliver_available_version()
   free(wfn);
 
   // notify terminal window to display the new available version
-  SendMessageA(wnd, WM_APP, ok, 0);  // -> parent -> update_available_version
+  SendMessageA(wv.wnd, WM_APP, ok, 0);  // -> parent -> update_available_version
 #ifdef debug_version_check
   printf("deliver_available_version notified %d\n", ok);
 #endif
@@ -428,7 +414,7 @@ swnd_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR uid, DWORD
 		when WM_VSCROLL: OnVScroll(hwnd,LOWORD(wParam),HIWORD(wParam));
     when WM_COMMAND or WM_DRAWITEM: {
       debug("WM_COMMAND");
-      int ret = winctrl_handle_command(msg, wParam, lParam);
+      int ret = winctrl_handle_command(hwnd,msg, wParam, lParam);
       debug("WM_COMMAND: handle");
       if (dlg.ended) {
         PostMessage(hwnd, WM_CLOSE,0 , 0);
@@ -458,7 +444,7 @@ tree_proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp, UINT_PTR uid, DWORD_PTR dat
       if (support_dark_mode) {
         HDC hdc = (HDC)wp;
         RECT rc;
-        GetClientRect(wnd, &rc);
+        GetClientRect(wv.wnd, &rc);
         HBRUSH br = CreateSolidBrush(bg);
         int res = FillRect(hdc, &rc, br);
         DeleteObject(br);
@@ -480,7 +466,7 @@ tree_proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp, UINT_PTR uid, DWORD_PTR dat
  */
 static HFONT cfdfont=0;
 static INT_PTR CALLBACK
-config_dialog_proc(HWND wnd, UINT msg, WPARAM wParam, LPARAM lParam)
+config_dialog_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 #ifdef debug_messages
 #include <time.h>
@@ -518,14 +504,14 @@ config_dialog_proc(HWND wnd, UINT msg, WPARAM wParam, LPARAM lParam)
     when WM_SETFONT: cfdfont=(HFONT)wParam;
     when WM_GETFONT: return (WPARAM)cfdfont;
     when WM_INITDIALOG: {
-      win_set_font(wnd);
+      win_set_font(hwnd);
       RECT r,r2;
-      GetClientRect(wnd,&r);
-      GetWindowRect(wnd,&r2);
+      GetClientRect(hwnd,&r);
+      GetWindowRect(hwnd,&r2);
       int x,y,w,h;
       x=0;w=SC(dialog_width)+r2.right-r2.left-r.right;
       y=0;h=SC(dialog_height)+r2.bottom-r2.top-r.bottom; 
-      SetWindowPos(wnd,0,0,0,w,h , SWP_NOMOVE|SWP_NOZORDER);
+      SetWindowPos(hwnd,0,0,0,w,h , SWP_NOMOVE|SWP_NOZORDER);
       ctrlbox = ctrl_new_box();
       setup_config_box(ctrlbox);
       windlg_init();
@@ -533,24 +519,23 @@ config_dialog_proc(HWND wnd, UINT msg, WPARAM wParam, LPARAM lParam)
       winctrl_init(&ctrls_panel);
       windlg_add_tree(&ctrls_base);
       windlg_add_tree(&ctrls_panel);
-      copy_config("dialog", &new_cfg, &file_cfg);
 
      /*
       * Create the actual GUI widgets.
       */
       // here we need the correct DIALOG_HEIGHT already
-      create_controls(wnd, "");        /* Open and Cancel buttons etc */
+      create_controls(hwnd, W(""));        /* Open and Cancel buttons etc */
 
-      SendMessage(wnd, WM_SETICON, (WPARAM) ICON_BIG,
-                  (LPARAM) LoadIcon(inst, MAKEINTRESOURCE(IDI_MAINICON)));
+      SendMessage(hwnd, WM_SETICON, (WPARAM) ICON_BIG,
+                  (LPARAM) LoadIcon(wv.inst, MAKEINTRESOURCE(IDI_MAINICON)));
 
-      dlg.wnd = wnd;
+      dlg.wnd = hwnd;
 
       x = SC( 70); w = SC(dialog_width -70)-1;
       y = SC(  3); h = SC(dialog_height - 30);
 #ifdef USECTLWND
-      dlg.ctlwnd = CreateWindowExA(WS_EX_CLIENTEDGE, "SWND", "",
-                       WS_CHILD | WS_VISIBLE|WS_VSCROLL ,x,y,w,h,wnd, 0, inst, null);
+      dlg.ctlwnd = CreateWindowExA(WS_EX_CLIENTEDGE, SWND_CLASS , "",
+                       WS_CHILD | WS_VISIBLE|WS_VSCROLL ,x,y,w,h,hwnd, 0, wv.inst, null);
       SCROLLINFO si = {
         .cbSize = sizeof si,
         .fMask = SIF_ALL ,
@@ -565,7 +550,7 @@ config_dialog_proc(HWND wnd, UINT msg, WPARAM wParam, LPARAM lParam)
       SetWindowSubclass(dlg.ctlwnd , swnd_proc, 0, 0); 
 #else
       (void)swnd_proc;  
-      dlg.ctlwnd=wnd;
+      dlg.ctlwnd=hwnd;
 #endif
 
      /*
@@ -577,7 +562,7 @@ config_dialog_proc(HWND wnd, UINT msg, WPARAM wParam, LPARAM lParam)
         CreateWindowExA(WS_EX_CLIENTEDGE, WC_TREEVIEWA, "",
                        WS_CHILD | WS_VISIBLE | WS_TABSTOP | TVS_HASLINES |
                        TVS_DISABLEDRAGDROP | TVS_HASBUTTONS | TVS_LINESATROOT
-                       | TVS_SHOWSELALWAYS, x,y,w,h , wnd, (HMENU) IDCX_TREEVIEW, inst,
+                       | TVS_SHOWSELALWAYS, x,y,w,h , hwnd, (HMENU) IDCX_TREEVIEW, wv.inst,
                        null);
       win_set_font(treeview);
       treeview_faff tvfaff;
@@ -597,13 +582,13 @@ config_dialog_proc(HWND wnd, UINT msg, WPARAM wParam, LPARAM lParam)
       * Set up the tree view contents.
       */
       HTREEITEM hfirst = null;
-      const char *path = null;
+      const wchar *path = null;
 
       for (int i = 0; i < ctrlbox->nctrlsets; i++) {
         controlset *s = ctrlbox->ctrlsets[i];
         HTREEITEM item;
         int j;
-        const char *c;
+        const wchar *c;
 
         if (!s->pathname[0])
           continue;
@@ -620,7 +605,7 @@ config_dialog_proc(HWND wnd, UINT msg, WPARAM wParam, LPARAM lParam)
           to see A/D _explicitly_ before encountering A/D/E.
         */
 
-        c = strrchr(s->pathname, '/');
+        c = wcsrchr(s->pathname, '/');
         if (!c)
           c = s->pathname;
         else
@@ -651,12 +636,13 @@ config_dialog_proc(HWND wnd, UINT msg, WPARAM wParam, LPARAM lParam)
     }
 
 #ifdef darken_dialog_elements
-    when WM_CTLCOLORDLG      // dialog background
-      or WM_CTLCOLORSTATIC   // labels
+    when WM_CTLCOLOREDIT     // popup items
+      or WM_CTLCOLORLISTBOX  // popup menu
       or WM_CTLCOLORBTN      // button borders; for buttons, see doctl
-      or WM_CTLCOLOREDIT     // popup items
-      or WM_CTLCOLORLISTBOX: // popup menu
+      or WM_CTLCOLORDLG      // dialog background
+      or WM_CTLCOLORSTATIC   // labels
       // or WM_CTLCOLORMSGBOX or WM_CTLCOLORSCROLLBAR ?
+      :
         // setting fg fails for WM_CTLCOLORSTATIC
         if (support_dark_mode) {
           HDC hdc = (HDC)wParam;
@@ -672,7 +658,7 @@ config_dialog_proc(HWND wnd, UINT msg, WPARAM wParam, LPARAM lParam)
       if (support_dark_mode) {
         HDC hdc = (HDC)wParam;
         RECT rc;
-        GetClientRect(wnd, &rc);
+        GetClientRect(hwnd, &rc);
         HBRUSH br = CreateSolidBrush(bg);
         int res = FillRect(hdc, &rc, br);
         DeleteObject(br);
@@ -684,16 +670,16 @@ config_dialog_proc(HWND wnd, UINT msg, WPARAM wParam, LPARAM lParam)
     when WM_DPICHANGED:
       if (*cfg.options_font || cfg.options_fontsize != DIALOG_FONTSIZE)
         // rescaling does not work, so better drop the Options dialog
-        DestroyWindow(wnd);
+        DestroyWindow(hwnd);
 
     when WM_CLOSE:
-      DestroyWindow(wnd);
+      DestroyWindow(hwnd);
 
     when WM_DESTROY:
       winctrl_cleanup(&ctrls_base);
       winctrl_cleanup(&ctrls_panel);
       ctrl_free_box(ctrlbox);
-      config_wnd = 0;
+      wv.config_wnd = 0;
 
 #ifdef debug_dialog_crash
       signal(SIGSEGV, SIG_DFL);
@@ -714,9 +700,9 @@ config_dialog_proc(HWND wnd, UINT msg, WPARAM wParam, LPARAM lParam)
         if (c->ctrl)
           for (int k = 0; k < c->num_ids; k++) {
 #ifdef debug_dragndrop
-            printf(" [->%8p] %8p\n", target, GetDlgItem(wnd, c->base_id + k));
+            printf(" [->%8p] %8p\n", target, GetDlgItem(hwnd, c->base_id + k));
 #endif
-            if (target == GetDlgItem(wnd, c->base_id + k)) {
+            if (target == GetDlgItem(hwnd, c->base_id + k)) {
               ctrl = c->ctrl;
               break;
             }
@@ -758,7 +744,7 @@ config_dialog_proc(HWND wnd, UINT msg, WPARAM wParam, LPARAM lParam)
         debug("WM_NOTIFY: cleanup");
         OnVScroll(dlg.ctlwnd,SB_TOP,0);
         // here we need the correct DIALOG_HEIGHT already
-        create_controls(dlg.ctlwnd, (char *) item.lParam);
+        create_controls(dlg.ctlwnd, (wchar *) item.lParam);
         debug("WM_NOTIFY: create");
         dlg_refresh(null); /* set up control values */
         debug("WM_NOTIFY: refresh");
@@ -767,11 +753,11 @@ config_dialog_proc(HWND wnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
     when WM_COMMAND or WM_DRAWITEM: {
       debug("WM_COMMAND");
-      int ret = winctrl_handle_command(msg, wParam, lParam);
+      int ret = winctrl_handle_command(hwnd,msg, wParam, lParam);
       debug("WM_COMMAND: handle");
       if (dlg.ended) {
-        PostMessage(wnd, WM_CLOSE,0 , 0);
-        //DestroyWindow(wnd);
+        PostMessage(hwnd, WM_CLOSE,0 , 0);
+        //DestroyWindow(hwnd);
         debug("WM_COMMAND: Destroy");
       }
       debug("WM_COMMAND: end");
@@ -784,8 +770,6 @@ config_dialog_proc(HWND wnd, UINT msg, WPARAM wParam, LPARAM lParam)
 #endif
   return 0;
 }
-
-HWND config_wnd;
 
 static LRESULT CALLBACK
 scale_options(int nCode, WPARAM wParam, LPARAM lParam)
@@ -828,9 +812,8 @@ scale_options(int nCode, WPARAM wParam, LPARAM lParam)
     CREATESTRUCTW * cs = ((CBT_CREATEWNDW *)lParam)->lpcs;
     if (!(cs->style & WS_CHILD)) {
       //__ Options: dialog width scale factor (80...200)
-      int scale_options_width = atoi(_("100"));
-      if (scale_options_width >= 80 && scale_options_width <= 200)
-        cs->cx = cs->cx * scale_options_width / 100;
+      if (cfg.scale_options_width >= 80 && cfg.scale_options_width <= 200)
+        cs->cx = cs->cx * cfg.scale_options_width / 100;
       // scale Options dialog with custom font
       cs->cx = scale_dialog(cs->cx);
       cs->cy = scale_dialog(cs->cy);
@@ -840,11 +823,10 @@ scale_options(int nCode, WPARAM wParam, LPARAM lParam)
   //return CallNextHookEx(0, nCode, wParam, lParam);
   return 0;  // 0: let default dialog box procedure process the message
 }
-#define SWND_CLASS "SWND"
 void
 win_open_config(void)
 {
-  if (config_wnd)
+  if (wv.config_wnd)
     return;
 
 #ifdef debug_dialog_crash
@@ -862,7 +844,7 @@ win_open_config(void)
       .style = CS_DBLCLKS,
       .cbClsExtra = 0,
       .cbWndExtra = DLGWINDOWEXTRA + 2 * sizeof(LONG_PTR),
-      .hInstance = inst,
+      .hInstance = wv.inst,
       .hIcon = null,
       .hCursor = LoadCursor(null, IDC_ARROW),
       .hbrBackground = (HBRUSH)(COLOR_WINDOW),
@@ -875,7 +857,7 @@ win_open_config(void)
       .style = CS_DBLCLKS,
       .cbClsExtra = 0,
       .cbWndExtra = DLGWINDOWEXTRA + 2 * sizeof(LONG_PTR),
-      .hInstance = inst,
+      .hInstance = wv.inst,
       .hIcon = null,
       .hCursor = LoadCursor(null, IDC_ARROW),
       .hbrBackground = (HBRUSH)(COLOR_WINDOW),
@@ -883,15 +865,15 @@ win_open_config(void)
     });
     initialised = true;
   }
-  HDC dc = GetDC(wnd);
+  HDC dc = GetDC(wv.wnd);
   ldpi= GetDeviceCaps(dc, LOGPIXELSY) ;
-  ReleaseDC(wnd, dc);
+  ReleaseDC(wv.wnd, dc);
   heightsc=cfg.gui_font_size*100*ldpi/(720);
   dialog_width  = DLGW*10;//cfg.gui_font_size*72/ldpi;
   dialog_height = DLGH*10;//cfg.gui_font_size*72/ldpi;
 
   hook_windows(scale_options);
-  config_wnd = CreateDialog(inst, MAKEINTRESOURCE(IDD_MAINBOX), wnd, config_dialog_proc);
+  wv.config_wnd = CreateDialog(wv.inst, MAKEINTRESOURCE(IDD_MAINBOX), wv.wnd, config_dialog_proc);
   unhook_windows();
   // At this point, we could actually calculate the size of the 
   // dialog box used for the Options menu; however, the resulting 
@@ -902,15 +884,15 @@ win_open_config(void)
 
   // Set title of Options dialog explicitly to facilitate I18N
   //__ Options: dialog title
-  SendMessageW(config_wnd, WM_SETTEXT, 0, (LPARAM)_W("Options"));
+  SendMessageW(wv.config_wnd, WM_SETTEXT, 0, (LPARAM)_W("Options"));
   if (version_available && strcmp(CHECK_VERSION, version_available))
     display_update(version_available);
   deliver_available_version();
 
   // Apply dark mode to dialog title
-  win_dark_mode(config_wnd);
+  win_dark_mode(wv.config_wnd);
 
-  ShowWindow(config_wnd, SW_SHOW);
+  ShowWindow(wv.config_wnd, SW_SHOW);
   win_update_shortcuts();
   set_dpi_auto_scaling(false);
 }
@@ -1062,8 +1044,8 @@ win_show_about(void)
   hook_windows(set_labels);
   MessageBoxIndirectW(&(MSGBOXPARAMSW){
     .cbSize = sizeof(MSGBOXPARAMSW),
-    .hwndOwner = config_wnd,
-    .hInstance = inst,
+    .hwndOwner = wv.config_wnd,
+    .hInstance = wv.inst,
     .lpszCaption = W(APPNAME),
 #ifdef about_version_check
     .dwStyle = MB_USERICON | MB_OK | MB_HELP,

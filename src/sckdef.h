@@ -1,248 +1,5 @@
 //code for ShortCuts Key Process
 //included by wininput.c
-struct KNVDef{
-  char*name;
-  int key;
-}knvdef[]={
-#define DKNU(n,k) {#n,VK_##k}
-#define DKND(n) {#n,VK_##n}
-  DKND(LBUTTON            ),
-  DKND(RBUTTON            ),
-  DKND(CANCEL             ),
-  DKND(MBUTTON            ),
-  DKND(XBUTTON1           ),
-  DKND(XBUTTON2           ),
-  DKND(BACK               ),
-  DKND(TAB                ),
-  DKND(CLEAR              ),
-  DKND(RETURN             ),
-  DKND(SHIFT              ),
-  DKND(CONTROL            ),
-  DKND(MENU               ),
-  DKND(PAUSE              ),
-  DKND(CAPITAL            ),
-  DKND(KANA               ),
-  DKND(HANGEUL            ),
-  DKND(HANGUL             ),
-  DKND(IME_ON             ),
-  DKND(JUNJA              ),
-  DKND(FINAL              ),
-  DKND(HANJA              ),
-  DKND(KANJI              ),
-  DKND(IME_OFF            ),
-  DKND(ESCAPE             ),
-  DKND(CONVERT            ),
-  DKND(NONCONVERT         ),
-  DKND(ACCEPT             ),
-  DKND(MODECHANGE         ),
-  DKND(SPACE              ),
-  DKND(PRIOR              ),
-  DKND(NEXT               ),
-  DKND(END                ),
-  DKND(HOME               ),
-  DKND(LEFT               ),
-  DKND(UP                 ),
-  DKND(RIGHT              ),
-  DKND(DOWN               ),
-  DKND(SELECT             ),
-  DKND(PRINT              ),
-  DKND(EXECUTE            ),
-  DKND(SNAPSHOT           ),
-  DKND(INSERT             ),
-  DKND(DELETE             ),
-  DKND(HELP               ),
-  DKND(LWIN               ),
-  DKND(RWIN               ),
-  DKND(APPS               ),
-  DKND(SLEEP              ),
-  DKND(NUMPAD0            ),
-  DKND(NUMPAD1            ),
-  DKND(NUMPAD2            ),
-  DKND(NUMPAD3            ),
-  DKND(NUMPAD4            ),
-  DKND(NUMPAD5            ),
-  DKND(NUMPAD6            ),
-  DKND(NUMPAD7            ),
-  DKND(NUMPAD8            ),
-  DKND(NUMPAD9            ),
-  DKND(MULTIPLY           ),
-  DKND(ADD                ),
-  DKND(SEPARATOR          ),
-  DKND(SUBTRACT           ),
-  DKND(DECIMAL            ),
-  DKND(DIVIDE             ),
-  DKND(F1                 ),
-  DKND(F2                 ),
-  DKND(F3                 ),
-  DKND(F4                 ),
-  DKND(F5                 ),
-  DKND(F6                 ),
-  DKND(F7                 ),
-  DKND(F8                 ),
-  DKND(F9                 ),
-  DKND(F10                ),
-  DKND(F11                ),
-  DKND(F12                ),
-  DKND(F13                ),
-  DKND(F14                ),
-  DKND(F15                ),
-  DKND(F16                ),
-  DKND(F17                ),
-  DKND(F18                ),
-  DKND(F19                ),
-  DKND(F20                ),
-  DKND(F21                ),
-  DKND(F22                ),
-  DKND(F23                ),
-  DKND(F24                ),
-  DKND(NUMLOCK            ),
-  DKND(SCROLL             ),
-  DKND(OEM_NEC_EQUAL      ),
-  DKND(OEM_FJ_JISHO       ),
-  DKND(OEM_FJ_MASSHOU     ),
-  DKND(OEM_FJ_TOUROKU     ),
-  DKND(OEM_FJ_LOYA        ),
-  DKND(OEM_FJ_ROYA        ),
-  DKND(LSHIFT             ),
-  DKND(RSHIFT             ),
-  DKND(LCONTROL           ),
-  DKND(RCONTROL           ),
-  DKND(LMENU              ),
-  DKND(RMENU              ),
-  DKND(BROWSER_BACK       ),
-  DKND(BROWSER_FORWARD    ),
-  DKND(BROWSER_REFRESH    ),
-  DKND(BROWSER_STOP       ),
-  DKND(BROWSER_SEARCH     ),
-  DKND(BROWSER_FAVORITES  ),
-  DKND(BROWSER_HOME       ),
-  DKND(VOLUME_MUTE        ),
-  DKND(VOLUME_DOWN        ),
-  DKND(VOLUME_UP          ),
-  DKND(MEDIA_NEXT_TRACK   ),
-  DKND(MEDIA_PREV_TRACK   ),
-  DKND(MEDIA_STOP         ),
-  DKND(MEDIA_PLAY_PAUSE   ),
-  DKND(LAUNCH_MAIL        ),
-  DKND(LAUNCH_MEDIA_SELECT),
-  DKND(LAUNCH_APP1        ),
-  DKND(LAUNCH_APP2        ),
-  DKND(OEM_1              ),
-  DKND(OEM_PLUS           ),
-  DKND(OEM_COMMA          ),
-  DKND(OEM_MINUS          ),
-  DKND(OEM_PERIOD         ),
-  DKND(OEM_2              ),
-  DKND(OEM_3              ),
-  DKND(OEM_4              ),
-  DKND(OEM_5              ),
-  DKND(OEM_6              ),
-  DKND(OEM_7              ),
-  DKND(OEM_8              ),
-  DKND(OEM_AX             ),
-  DKND(OEM_102            ),
-  DKND(ICO_HELP           ),
-  DKND(ICO_00             ),
-  DKND(PROCESSKEY         ),
-  DKND(ICO_CLEAR          ),
-  DKND(PACKET             ),
-  DKND(OEM_RESET          ),
-  DKND(OEM_JUMP           ),
-  DKND(OEM_PA1            ),
-  DKND(OEM_PA2            ),
-  DKND(OEM_PA3            ),
-  DKND(OEM_WSCTRL         ),
-  DKND(OEM_CUSEL          ),
-  DKND(OEM_ATTN           ),
-  DKND(OEM_FINISH         ),
-  DKND(OEM_COPY           ),
-  DKND(OEM_AUTO           ),
-  DKND(OEM_ENLW           ),
-  DKND(OEM_BACKTAB        ),
-  DKND(ATTN               ),
-  DKND(CRSEL              ),
-  DKND(EXSEL              ),
-  DKND(EREOF              ),
-  DKND(PLAY               ),
-  DKND(ZOOM               ),
-  DKND(NONAME             ),
-  DKND(PA1                ),
-  DKND(OEM_CLEAR          ),
-  DKNU(BREAK      ,CANCEL ),
-  DKNU(ENTER      ,RETURN ),
-  DKNU(ESC        ,ESCAPE ),
-  DKNU(PRINTSCREEN,SNAPSHOT),
-  DKNU(MENU       ,APPS   ),
-  DKNU(CAPSLOCK   ,CAPITAL),
-  DKNU(SCROLLLOCK ,SCROLL ),
-  DKNU(EXEC       ,EXECUTE),
-  DKNU(BEGIN      ,CLEAR  ),
-//#if _WIN32_WINNT >= 0x0604
-//  DKND(NAVIGATION_VIEW    ),
-//  DKND(NAVIGATION_MENU    ),
-//  DKND(NAVIGATION_UP      ),
-//  DKND(NAVIGATION_DOWN    ),
-//  DKND(NAVIGATION_LEFT    ),
-//  DKND(NAVIGATION_RIGHT   ),
-//  DKND(NAVIGATION_ACCEPT  ),
-//  DKND(NAVIGATION_CANCEL  ),
-//#endif
-//#if _WIN32_WINNT >= 0x0604
-//  DKND(GAMEPAD_A                         ),
-//  DKND(GAMEPAD_B                         ),
-//  DKND(GAMEPAD_X                         ),
-//  DKND(GAMEPAD_Y                         ),
-//  DKND(GAMEPAD_RIGHT_SHOULDER            ),
-//  DKND(GAMEPAD_LEFT_SHOULDER             ),
-//  DKND(GAMEPAD_LEFT_TRIGGER              ),
-//  DKND(GAMEPAD_RIGHT_TRIGGER             ),
-//  DKND(GAMEPAD_DPAD_UP                   ),
-//  DKND(GAMEPAD_DPAD_DOWN                 ),
-//  DKND(GAMEPAD_DPAD_LEFT                 ),
-//  DKND(GAMEPAD_DPAD_RIGHT                ),
-//  DKND(GAMEPAD_MENU                      ),
-//  DKND(GAMEPAD_VIEW                      ),
-//  DKND(GAMEPAD_LEFT_THUMBSTICK_BUTTON    ),
-//  DKND(GAMEPAD_RIGHT_THUMBSTICK_BUTTON   ),
-//  DKND(GAMEPAD_LEFT_THUMBSTICK_UP        ),
-//  DKND(GAMEPAD_LEFT_THUMBSTICK_DOWN      ),
-//  DKND(GAMEPAD_LEFT_THUMBSTICK_RIGHT     ),
-//  DKND(GAMEPAD_LEFT_THUMBSTICK_LEFT      ),
-//  DKND(GAMEPAD_RIGHT_THUMBSTICK_UP       ),
-//  DKND(GAMEPAD_RIGHT_THUMBSTICK_DOWN     ),
-//  DKND(GAMEPAD_RIGHT_THUMBSTICK_RIGHT    ),
-//  DKND(GAMEPAD_RIGHT_THUMBSTICK_LEFT     ),
-//#endif 
-  {0,0}
-#undef DKNU 
-#undef DKND 
-};
-#ifdef us_vkname
-static char*getvkname(int key){
-  struct KNVDef*p;
-  for(p=knvdef;p->name;p++){
-    if(p->key==key)return p->name;
-  }
-  return "UNKOWN";
-}
-#endif
-static int getvk(const char *n){
-  struct KNVDef*p;
-  if(n[1]==0){
-    return (int)(unsigned char)n[0];
-  }
-  if(n[0]=='\\'){
-    int iv;
-    if((n[1]|0x20)=='x'){
-      sscanf(n+2,"%x",&iv);
-    }else iv=atoi(n+2);
-    return iv;
-  } 
-  for(p=knvdef;p->name;p++){
-    if(strcasecmp(p->name,n)==0)return p->key;
-  }
-  return -1;
-}
 /* Support functions */
 static int previous_transparency;
 static bool transparency_tuned;
@@ -358,14 +115,14 @@ kb_select(uint key, mod_keys mods)
   cterm->selection_pending = true;
   return 1;
 }
-static uint mflags_defsize() { return (IsZoomed(wnd) || cterm->cols != cfg.cols || cterm->rows != cfg.rows) ? MF_ENABLED : MF_GRAYED; }
+static uint mflags_defsize() { return (IsZoomed(wv.wnd) || cterm->cols != cfg.cols || cterm->rows != cfg.rows) ? MF_ENABLED : MF_GRAYED; }
 #ifdef allow_disabling_scrollbar
 static uint mflags_scrollbar_outer() { return cterm->show_scrollbar ? MF_CHECKED : MF_UNCHECKED | cfg.scrollbar ? 0 : MF_GRAYED ; }
 #else
 static uint mflags_scrollbar_outer() { return cterm->show_scrollbar ? MF_CHECKED : MF_UNCHECKED ; }
 #endif
 static uint mflags_scrollbar_inner() { return cfg.scrollbar?(  cterm->show_scrollbar ? MF_CHECKED : MF_UNCHECKED): MF_GRAYED; }
-static uint mflags_logging() { return (logging ? MF_CHECKED : MF_UNCHECKED) ; }
+static uint mflags_logging() { return (wv.logging ? MF_CHECKED : MF_UNCHECKED) ; }
 static uint mflags_bidi() { return (cfg.bidi == 0 || (cfg.bidi == 1 && (cterm->on_alt_screen ^ cterm->show_other_screen))) ? MF_GRAYED : cterm->disable_bidi ? MF_UNCHECKED : MF_CHECKED; }
 static void zoom_font_out   (){ win_zoom_font(-1, 0);}
 static void zoom_font_in    (){ win_zoom_font( 1, 0);}
@@ -377,7 +134,7 @@ static void menu_text() { open_popup_menu(true, null, get_mods()); }
 static void menu_pointer() { open_popup_menu(false, null, get_mods()); }
 static void window_full() { win_maximise(2); }
 static void window_max() { win_maximise(1); }
-static void window_toggle_max() { win_maximise(!IsZoomed(wnd)); }
+static void window_toggle_max() { win_maximise(!IsZoomed(wv.wnd)); }
 static void window_restore() { win_maximise(0); }
 static void window_min() { win_set_iconic(true); }
 static void switch_next() { win_switch(false, true); }
@@ -387,16 +144,16 @@ static void switch_visible_prev() { win_switch(true, false); }
 static void lock_title() { cfg.title_settable = false; }
 static void clear_title() { win_set_title(W("")); }
 static void refresh() { win_invalidate_all(false); }
-//static void scroll_key(int key) { SendMessage(wnd, WM_VSCROLL, key, 0); }
+//static void scroll_key(int key) { SendMessage(wv.wnd, WM_VSCROLL, key, 0); }
 static int  vtabclose    (){if(!child_is_alive(cterm)) {win_tab_clean();return 1;}return 0;}
-static void scroll_top	 (){SendMessage(wnd, WM_VSCROLL,SB_TOP      ,0);}      
-static void scroll_end	 (){SendMessage(wnd, WM_VSCROLL,SB_BOTTOM   ,0);}   
-static void scroll_pgup	 (){SendMessage(wnd, WM_VSCROLL,SB_PAGEUP   ,0);}   
-static void scroll_pgdn	 (){SendMessage(wnd, WM_VSCROLL,SB_PAGEDOWN ,0);} 
-static void scroll_lnup	 (){SendMessage(wnd, WM_VSCROLL,SB_LINEUP   ,0);}   
-static void scroll_lndn	 (){SendMessage(wnd, WM_VSCROLL,SB_LINEDOWN ,0);} 
-static void scroll_prev	 (){SendMessage(wnd, WM_VSCROLL,SB_PRIOR    ,0);}    
-static void scroll_next	 (){SendMessage(wnd, WM_VSCROLL,SB_NEXT     ,0);}     
+static void scroll_top	 (){SendMessage(wv.wnd, WM_VSCROLL,SB_TOP      ,0);}      
+static void scroll_end	 (){SendMessage(wv.wnd, WM_VSCROLL,SB_BOTTOM   ,0);}   
+static void scroll_pgup	 (){SendMessage(wv.wnd, WM_VSCROLL,SB_PAGEUP   ,0);}   
+static void scroll_pgdn	 (){SendMessage(wv.wnd, WM_VSCROLL,SB_PAGEDOWN ,0);} 
+static void scroll_lnup	 (){SendMessage(wv.wnd, WM_VSCROLL,SB_LINEUP   ,0);}   
+static void scroll_lndn	 (){SendMessage(wv.wnd, WM_VSCROLL,SB_LINEDOWN ,0);} 
+static void scroll_prev	 (){SendMessage(wv.wnd, WM_VSCROLL,SB_PRIOR    ,0);}    
+static void scroll_next	 (){SendMessage(wv.wnd, WM_VSCROLL,SB_NEXT     ,0);}     
 void toggle_vt220() { cterm->vt220_keys = !cterm->vt220_keys; }
 void toggle_auto_repeat() { cterm->auto_repeat = !cterm->auto_repeat; }
 void toggle_bidi() { cterm->disable_bidi = !cterm->disable_bidi; }
@@ -416,12 +173,12 @@ void new_win_cmd(){new_win(IDSS_CMD,0);}
 void new_win_psh(){new_win(IDSS_PSH,0);}
 void new_win_usr(){new_win(IDSS_USR,0);}
 void new_win_def(){new_win(IDSS_DEF,0);}
-static void win_hide() { ShowWindow(wnd, IsIconic(wnd) ?SW_RESTORE: SW_MINIMIZE ); }
+static void win_hide() { ShowWindow(wv.wnd, IsIconic(wv.wnd) ?SW_RESTORE: SW_MINIMIZE ); }
 static void super_down(uint key, mod_keys mods) { super_key = key; (void)mods; }
 static void hyper_down(uint key, mod_keys mods) { hyper_key = key; (void)mods; }
 static void win_ctrlmode(){
-  if(tabctrling!=3)tabctrling=3;else tabctrling=0;
-  last_tabk_time=GetMessageTime();
+  if(wv.tabctrling!=3)wv.tabctrling=3;else wv.tabctrling=0;
+  wv.last_tabk_time=GetMessageTime();
 }
 static uint mflags_lock_title() { return cfg.title_settable ? MF_ENABLED : MF_GRAYED; }
 static uint mflags_copy() { return cterm->selected ? MF_ENABLED : MF_GRAYED; }
@@ -457,7 +214,7 @@ clear_scroll_lock()
 }
 #define Funtion_def_OldName
 #ifdef Funtion_def_OldName
-static void win_toggle_screen_on() { win_keep_screen_on(!keep_screen_on); }
+static void win_toggle_screen_on() { win_keep_screen_on(!wv.keep_screen_on); }
 static int no_scroll(uint key, mod_keys mods) {
   (void)mods;
   (void)key;
@@ -508,17 +265,17 @@ static int toggle_scroll_mode(uint key, mod_keys mods) {
 }
 static uint mflags_no_scroll() { return cterm->no_scroll ? MF_CHECKED : MF_UNCHECKED; }
 static uint mflags_scroll_mode() { return cterm->scroll_mode ? MF_CHECKED : MF_UNCHECKED; }
-static uint mflags_always_top() { return win_is_always_on_top ? MF_CHECKED: MF_UNCHECKED; }
-static uint mflags_screen_on() { return keep_screen_on ? MF_CHECKED: MF_UNCHECKED; } 
+static uint mflags_always_top() { return wv.win_is_always_on_top ? MF_CHECKED: MF_UNCHECKED; }
+static uint mflags_screen_on() { return wv.keep_screen_on ? MF_CHECKED: MF_UNCHECKED; } 
 #endif
-static uint mflags_fullscreen() { return win_is_fullscreen ? MF_CHECKED : MF_UNCHECKED; }
-static uint mflags_zoomed() { return IsZoomed(wnd) ? MF_CHECKED: MF_UNCHECKED; }
+static uint mflags_fullscreen() { return wv.win_is_fullscreen ? MF_CHECKED : MF_UNCHECKED; }
+static uint mflags_zoomed() { return IsZoomed(wv.wnd) ? MF_CHECKED: MF_UNCHECKED; }
 static uint mflags_flipscreen() { return cterm->show_other_screen ? MF_CHECKED : MF_UNCHECKED; }
 static uint mflags_open() { return cterm->selected ? MF_ENABLED : MF_GRAYED; }
 static uint mflags_char_info() { return show_charinfo ? MF_CHECKED : MF_UNCHECKED; }
 static uint mflags_vt220() { return cterm->vt220_keys ? MF_CHECKED : MF_UNCHECKED; }
 static uint mflags_auto_repeat() { return cterm->auto_repeat ? MF_CHECKED : MF_UNCHECKED; }
-static uint mflags_options() { return config_wnd ? MF_GRAYED : MF_ENABLED; }
+static uint mflags_options() { return wv.config_wnd ? MF_GRAYED : MF_ENABLED; }
 static uint mflags_tek_mode() { return tek_mode ? MF_ENABLED : MF_GRAYED; }
 void win_close();
 typedef struct pstr{ short len; char s[1]; }pstr;
@@ -770,7 +527,7 @@ static int fundef_run(const char*cmd,uint key, mod_keys mods){
   struct function_def * fundef = function_def(cmd);
   if (fundef) {
     switch(fundef->type){
-      when FT_CMD :PostMessage(wnd, WM_SYSCOMMAND, fundef->cmd, 0); 
+      when FT_CMD :PostMessage(wv.wnd, WM_SYSCOMMAND, fundef->cmd, 0); 
       when FT_NORM:fundef->fct();
       when FT_KEY :fundef->fct_key(key,mods);
       when FT_NORV:return fundef->fctv();

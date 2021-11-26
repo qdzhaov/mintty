@@ -1947,7 +1947,7 @@ do_sgr(void)
         if (sub_pars >= 2 && cterm->csi_argv[i + 1] == 5) {
           // set foreground to palette colour
           attr.attr |= ATTR_ULCOLOUR;
-          attr.ulcolr = colours[cterm->csi_argv[i + 2] & 0xFF];
+          attr.ulcolr = wv.colours[cterm->csi_argv[i + 2] & 0xFF];
         }
         else if (sub_pars >= 4 && cterm->csi_argv[i + 1] == 2) {
           // set foreground to RGB
@@ -2507,7 +2507,7 @@ push_colours(uint ix)
       colours_num++;
   }
   if (colours_stack[ix])
-    memcpy(colours_stack[ix], colours, COLOUR_NUM * sizeof(COLORREF));
+    memcpy(colours_stack[ix], wv.colours, COLOUR_NUM * sizeof(COLORREF));
 }
 
 static void
@@ -2531,7 +2531,7 @@ pop_colours(uint ix)
   //printf("pop %d\n", ix);
 
   if (colours_stack[ix])
-    memcpy(colours, colours_stack[ix], COLOUR_NUM * sizeof(COLORREF));
+    memcpy(wv.colours, colours_stack[ix], COLOUR_NUM * sizeof(COLORREF));
 }
 
 /*
@@ -3884,7 +3884,7 @@ do_osc_control:
     child_printf(cterm,"\e]%u;", osc_num);
     if (has_index_arg)
       child_printf(cterm,"%u;", index);
-    c = i < COLOUR_NUM ? colours[i] : 0;  // should not be affected by rvideo
+    c = i < COLOUR_NUM ? wv.colours[i] : 0;  // should not be affected by rvideo
     char * osc_fini = cterm->state == CMD_ESCAPE ? "\e\\" : "\a";
     child_printf(cterm,"rgb:%04x/%04x/%04x%s",
                  red(c) * 0x101, green(c) * 0x101, blue(c) * 0x101, osc_fini);

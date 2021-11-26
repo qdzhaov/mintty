@@ -19,7 +19,6 @@
 #include <sys/cygwin.h>  // cygwin_internal
 #endif
 
-extern bool clipboard_token;
 
 static DWORD WINAPI
 shell_exec_thread(void *data)
@@ -31,7 +30,7 @@ shell_exec_thread(void *data)
   cygwin_internal(CW_SYNC_WINENV);
 #endif
 
-  if ((INT_PTR)ShellExecuteW(wnd, 0, wpath, 0, 0, SW_SHOWNORMAL) <= 32) {
+  if ((INT_PTR)ShellExecuteW(wv.wnd, 0, wpath, 0, 0, SW_SHOWNORMAL) <= 32) {
     uint error = GetLastError();
     if (error != ERROR_CANCELLED) {
       int msglen = 1024;
@@ -123,9 +122,9 @@ static bool
 wslmntmapped(void)
 {
   static bool wslmnt_init = false;
-  if (!wslmnt_init && *wsl_basepath) {
+  if (!wslmnt_init && *wv.wsl_basepath) {
     char linebuf[222];
-    char * rootfs = path_win_w_to_posix(wsl_basepath);
+    char * rootfs = path_win_w_to_posix(wv.wsl_basepath);
     char * wsl$conf = asform("%s/etc/wsl.conf", rootfs);
     char * fstab = asform("%s/etc/fstab", rootfs);
 
@@ -244,7 +243,7 @@ dewsl(const wchar * wpath) //free parameter
   printf("open <%ls>\n", wpath);
 #endif
   char * unwslp = unwslpath(wpath);
-  wchar *unwsl;
+  wchar *unwsl=NULL;
   if (unwslp) {
     unwsl = cs__utftowcs(unwslp);
     VFREE(unwslp);
@@ -254,10 +253,10 @@ dewsl(const wchar * wpath) //free parameter
     wcscpy(unwsl, W("/cygdrive"));
     wcscat(unwsl, wpath + 4);
   }
-  else if (*wpath == '/' && *wsl_basepath) {
+  else if (*wpath == '/' && *wv.wsl_basepath) {
     static wchar * wbase = 0;
     if (!wbase) {
-      char * pbase = path_win_w_to_posix(wsl_basepath);
+      char * pbase = path_win_w_to_posix(wv.wsl_basepath);
       wbase = cs__mbstowcs(pbase);
       VFREE(pbase);
     }
@@ -267,7 +266,7 @@ dewsl(const wchar * wpath) //free parameter
     wcscat(unwsl, wpath);
   }
   else if (*wpath == '/') {  // prepend %LOCALAPPDATA%\lxss[\rootfs]
-    // deprecated case; for WSL, wsl_basepath should be set
+    // deprecated case; for WSL, wv.wsl_basepath should be set
     char * appd = getenv("LOCALAPPDATA");
     if (appd) {
       wchar * wappd = cs__mbstowcs(appd);
@@ -505,9 +504,9 @@ win_copy_as(const wchar *data, cattr *cattrs, int len, char what)
       if (palette[i] != 0) {
         rtflen +=
           sprintf(&rtf[rtflen], "\\red%d\\green%d\\blue%d;",
-                  GetRValue(colours[i]),
-                  GetGValue(colours[i]),
-                  GetBValue(colours[i]));
+                  GetRValue(wv.colours[i]),
+                  GetGValue(wv.colours[i]),
+                  GetBValue(wv.colours[i]));
       }
     }
     strcpy(&rtf[rtflen], "}");
@@ -683,8 +682,8 @@ win_copy_as(const wchar *data, cattr *cattrs, int len, char what)
   GlobalUnlock(clipdata2);
 
   //printf("OpenClipboard win_copy\n");
-  if (OpenClipboard(wnd)) {
-    clipboard_token = true;
+  if (OpenClipboard(wv.wnd)) {
+    wv.clipboard_token = true;
     EmptyClipboard();
 
     // copy clipboard text formats
@@ -814,7 +813,7 @@ buf_add(char c)
 static void
 buf_path(const wchar * wfn, bool convert, bool quote)
 {
-    bool posix_path = convert || support_wsl;
+    bool posix_path = convert || wv.support_wsl;
     char * fn = posix_path
               ? path_win_w_to_posix(wfn)
               : cs__wcstoutf(wfn);
@@ -837,7 +836,7 @@ buf_path(const wchar * wfn, bool convert, bool quote)
     else if (*fn == '~')
       buf_add('\\');
     char *p = fn;
-    if (support_wsl) {
+    if (wv.support_wsl) {
 #ifdef debug_wsl
       printf("paste <%s>\n", p);
 #endif
@@ -847,10 +846,10 @@ buf_path(const wchar * wfn, bool convert, bool quote)
         fn = wslp;
         p = fn;
       }
-      else if (*wsl_basepath) {
+      else if (*wv.wsl_basepath) {
         static char * wsl_root = 0;
         if (!wsl_root) {
-          wsl_root = path_win_w_to_posix(wsl_basepath);
+          wsl_root = path_win_w_to_posix(wv.wsl_basepath);
         }
         // strip wsl_root
         int len = strlen(wsl_root);
@@ -870,7 +869,7 @@ buf_path(const wchar * wfn, bool convert, bool quote)
       }
       else {
         // check for prefix %LOCALAPPDATA%\lxss
-        // deprecated case; for WSL, wsl_basepath should be set
+        // deprecated case; for WSL, wv.wsl_basepath should be set
         char * appd = getenv("LOCALAPPDATA");
         if (appd) {
           wchar * wappd = cs__mbstowcs(appd);
@@ -964,7 +963,7 @@ paste_hdrop(HDROP drop)
     buf[buf_pos] = 0;
   }
 
-  if (!support_wsl && *cfg.drop_commands) {
+  if (!wv.support_wsl && *cfg.drop_commands) {
     // try to determine foreground program
     char * fg_prog = foreground_prog(cterm);
     if (fg_prog) {
@@ -1188,7 +1187,7 @@ dt_drop(IDropTarget *this, IDataObject *obj,
   // not the Options menu or any of its controls
   POINT p = {.x = pos.x, .y = pos.y};
   HWND h = WindowFromPoint(p);
-  if (h == wnd) {
+  if (h == wv.wnd) {
     dt_drag_enter(this, obj, keys, pos, effect_p);
     if (!effect_p)
       return 0;
@@ -1256,5 +1255,5 @@ void
 win_init_drop_target(void)
 {
   OleInitialize(null);
-  RegisterDragDrop(wnd, &dt);
+  RegisterDragDrop(wv.wnd, &dt);
 }

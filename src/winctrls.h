@@ -12,7 +12,7 @@ typedef struct {
   int ypos, width;
   int xoff;
   int boxystart, boxid;
-  const char *boxtext;
+  const wchar *boxtext;
 } ctrlpos;
 
 
@@ -80,6 +80,6 @@ void windlg_add_tree(winctrls *);
 void winctrl_init(winctrls *);
 void winctrl_cleanup(winctrls *);
 void winctrl_layout(winctrls *, ctrlpos *, controlset *, int *id);
-int winctrl_handle_command(UINT msg, WPARAM wParam, LPARAM lParam);
+int winctrl_handle_command(HWND hwnd,UINT msg, WPARAM wParam, LPARAM lParam);
 
 #endif

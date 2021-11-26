@@ -6,6 +6,10 @@
 
 typedef enum { MDK_SHIFT = 1, MDK_ALT = 2, MDK_CTRL = 4, 
                MDK_WIN = 8, MDK_SUPER = 16, MDK_HYPER = 32 } mod_keys;
+
+typedef enum { SMDK_SHIFT = 0, SMDK_ALT   = 1, SMDK_CTRL  = 2, 
+               SMDK_WIN   = 3, SMDK_SUPER = 4, SMDK_HYPER = 5 } smod_keys;
+
 enum { HOLD_NEVER, HOLD_START, HOLD_ERROR, HOLD_ALWAYS };
 enum { CUR_BLOCK, CUR_UNDERSCORE, CUR_LINE, CUR_BOX };
 enum { FS_DEFAULT, FS_PARTIAL, FS_NONE, FS_FULL };
@@ -53,11 +57,11 @@ typedef struct {
   colour fg_colour, bold_colour, blink_colour, bg_colour, cursor_colour;
   colour tek_fg_colour, tek_bg_colour, tek_cursor_colour;
   colour tek_write_thru_colour, tek_defocused_colour;
-  colour tab_fg_colour, tab_bg_colour;
-  colour tab_attention_bg_colour, tab_active_bg_colour;
+  colour tab_fg_colour, tab_bg_colour; //ZZ
   int tek_glow;
   int tek_strap;
   colour underl_colour, hover_colour;
+  colour ansi_colours[16];
   int disp_space, disp_clear, disp_tab;
   bool underl_manual;
   colour sel_fg_colour, sel_bg_colour;
@@ -70,6 +74,12 @@ typedef struct {
   bool opaque_when_focused;
   char cursor_type;
   bool cursor_blinks;
+  //ZZ Added
+  colour tab_attention_bg_colour, tab_active_bg_colour;
+  int tab_font_size,tab_bar_show,indicator,indicatory,indicatorx;
+  int gui_font_size; 
+  int scale_options_width ;
+  int padding,partline,usepartline;
   // Text
   font_spec font;
   font_spec fontfams[11];
@@ -87,6 +97,9 @@ typedef struct {
   bool old_locale;
   int fontmenu;
   wstring tek_font;
+  //ZZ Added
+  bool win_shortcuts;
+  bool hkwinkeyall;
   // Keys
   bool backspace_sends_bs;
   bool delete_sends_del;
@@ -104,11 +117,9 @@ typedef struct {
   bool zoom_shortcuts;
   bool zoom_font_with_window;
   bool alt_fn_shortcuts;
-  bool win_shortcuts;
   bool ctrl_shift_shortcuts;
   bool ctrl_exchange_shift;
   bool ctrl_controls;
-  bool hkwinkeyall;
   char compose_key;
   string key_prtscreen;	// VK_SNAPSHOT
   string key_pause;	// VK_PAUSE
@@ -147,10 +158,11 @@ typedef struct {
   char scrollbar;
   char scroll_mod;
   bool pgupdn_scroll;
-  bool allocconsole;
   wstring lang;
   wstring search_bar;
   int search_context;
+  //ZZ Added
+  bool allocconsole;
   // Terminal
   string Term;
   wstring answerback;
@@ -177,12 +189,12 @@ typedef struct {
   wstring log;
   int logging;
   wstring title;
-  bool title_settable;
   bool create_utmp;
   char window;
   int x, y;
   bool daemonize;
   bool daemonize_always;
+  bool title_settable;
   // "Hidden"
   int bidi;
   bool disable_alternate_screen;
@@ -223,11 +235,8 @@ typedef struct {
   string menu_title_ctrl_l;
   string menu_title_ctrl_r;
   int geom_sync;
-  int tab_font_size,tab_bar_show,indicator,indicatory,indicatorx;
-  int gui_font_size; 
   int col_spacing, row_spacing;
   int auto_leading;
-  int padding,partline,usepartline;
   int ligatures;
   int ligatures_support;
   int handle_dpichanged;
@@ -235,7 +244,6 @@ typedef struct {
   string word_chars;
   string word_chars_excl;
   colour ime_cursor_colour;
-  colour ansi_colours[16];
   wstring sixel_clip_char;
   bool short_long_opts;
   bool bold_as_special;
@@ -247,13 +255,14 @@ typedef struct {
   int options_fontsize;
   string old_options;
   bool old_xbuttons;
+  //removed tabbar
   // Legacy
   bool use_system_colours;
   bool old_bold;
 } config;
 
 
-typedef void (* str_fn)(wchar *);
+typedef void (* str_fn)(char *);
 
 extern string config_dir;
 extern config cfg, new_cfg, file_cfg;

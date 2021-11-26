@@ -10,8 +10,9 @@ static ATOM tip_class = 0;
 static HFONT tip_font;
 static COLORREF tip_bg;
 static COLORREF tip_text;
-
-static char sizetip[32] = "";
+static int tipshow=0;
+static wchar sizetip[32] = W("");
+static wchar *tipstr=NULL;
 
 static LRESULT CALLBACK
 tip_proc(HWND hWnd, UINT nMsg, WPARAM wParam, LPARAM lParam)
@@ -50,18 +51,10 @@ tip_proc(HWND hWnd, UINT nMsg, WPARAM wParam, LPARAM lParam)
 
       SetTextColor(dc, tip_text);
       SetBkColor(dc, tip_bg);
-
-#ifdef strange_detour
-#ifdef UNICODE
-#warning second number (rows) will sometimes be stripped for unknown reason
-#endif
       int wtlen = GetWindowTextLengthA(hWnd);
       char wt[wtlen + 1];
       GetWindowTextA(hWnd, wt, wtlen + 1);
       TextOutA(dc, cr.left + 3, cr.top + 3, wt, wtlen);
-#else
-      TextOutA(dc, cr.left + 3, cr.top + 3, sizetip, strlen(sizetip));
-#endif
 
       SelectObject(dc, holdbr);
       DeleteObject(hbr);
@@ -74,7 +67,7 @@ tip_proc(HWND hWnd, UINT nMsg, WPARAM wParam, LPARAM lParam)
 }
 
 void
-win_show_tip(int x, int y, int cols, int rows)
+win_show_tip(int x, int y, wstring text)
 {
   if (!tip_wnd) {
     NONCLIENTMETRICS nci;
@@ -86,7 +79,7 @@ win_show_tip(int x, int y, int cols, int rows)
       wc.lpfnWndProc = tip_proc;
       wc.cbClsExtra = 0;
       wc.cbWndExtra = 0;
-      wc.hInstance = inst;
+      wc.hInstance = wv.inst;
       wc.hIcon = null;
       wc.hCursor = null;
       wc.hbrBackground = null;
@@ -106,25 +99,47 @@ win_show_tip(int x, int y, int cols, int rows)
     tip_wnd =
       CreateWindowExA(WS_EX_TOOLWINDOW,  // don't include WS_EX_TOPMOST
                       MAKEINTRESOURCEA(tip_class), null, WS_POPUP, x, y, 1, 1,
-                      null, null, inst, null);
+                      null, null, wv.inst, null);
     ShowWindow(tip_wnd, SW_SHOWNOACTIVATE);
   }
   else {
+    if(!tipshow) ShowWindow(tip_wnd, SW_SHOWNOACTIVATE);
     SetWindowPos(tip_wnd, null, x, y, 0, 0,
                  SWP_NOZORDER | SWP_NOSIZE | SWP_NOACTIVATE);
   }
-
-  sprintf(sizetip, "%dx%d", cols, rows);
-  // even if this text is not used anymore, 
-  // apparently the call is needed to trigger WM_PAINT:
-  SetWindowTextA(tip_wnd, sizetip);
+  tipshow=1;
+  if(tipstr){
+    if(wcscmp(tipstr,text)){
+      delete(tipstr);
+      tipstr=wcsdup(text);
+    SetWindowTextW(tip_wnd, tipstr);
+    }
+  }else {
+    tipstr=wcsdup(text);
+    SetWindowTextW(tip_wnd, tipstr);
+  }
+}
+void
+win_show_tip_size(int x, int y, int cols, int rows)
+{
+  swprintf(sizetip,32, W("%dx%d"), cols, rows);
+  win_show_tip(x, y, sizetip);
 }
 
+void
+win_hide_tip(void)
+{
+  if (tip_wnd) {
+    tipshow=0;
+    ShowWindow(tip_wnd, SW_HIDE);
+  }
+}
 void
 win_destroy_tip(void)
 {
   if (tip_wnd) {
     DestroyWindow(tip_wnd);
     tip_wnd = null;
+    tipshow=0;
   }
 }

@@ -91,7 +91,7 @@ static void fix_window_size() {
   // doesn't work fully when you put fullscreen and then show or hide
   // tab bar, but it's not too terrible (just looks little off) so I
   // don't care. Maybe fix it later?
-  if (win_is_fullscreen) {
+  if (wv.win_is_fullscreen) {
     win_adapt_term_size(0,0);
   } else {
     STerm* t = tabs[active_tab]->terminal;
@@ -110,7 +110,7 @@ static void set_tab_bar_visibility() {
 static void update_window_state() {
   win_update_menus(0);
   if (cfg.title_settable)
-    SetWindowTextW(wnd, win_tab_get_title(active_tab));
+    SetWindowTextW(wv.wnd, win_tab_get_title(active_tab));
   win_adapt_term_size(0,0);
 }
 void win_tab_push(STab *tab){
@@ -260,7 +260,6 @@ void win_tab_clean() {
 static wchar State[5]=W("    ");
 static int Statel=4;
 
-extern int tabctrling;
 struct tabpaint{
   HGDIOBJ normfont,boldfont,fgpen,dcbuf,
           bgbrush,activebrush ,attentionbrush ;
@@ -330,7 +329,7 @@ static void paint_tab(HDC dc, int x0,int width, int tabh, const STab* tab) {
 
 void win_tab_paint(HDC dc) {
   RECT r;
-  GetClientRect(wnd, &r);
+  GetClientRect(wv.wnd, &r);
   int width = r.right-r.left - 2 * PADDING;
   int tabh=gtab_height();
   int tabfs=gtab_font_size();
@@ -339,12 +338,12 @@ void win_tab_paint(HDC dc) {
   if (tab_bar_visible||cfg.indicator){
     State[0]=' ';
     State[1]=cterm->selection_pending?'S':' ';
-    State[2]=tabctrling>2?'C':' ';
+    State[2]=wv.tabctrling>2?'C':' ';
     State[3]=cfg.partline&&cterm->usepartline?'P':' ';
     State[4]=0 ;
     Statel=4;
   }else{
-    if(tabctrling){
+    if(wv.tabctrling){
       State[0]='C';
       State[1]=0 ;
       Statel=1;
@@ -414,9 +413,9 @@ void win_tab_paint(HDC dc) {
     SetTextAlign(dc, TA_LEFT|TA_TOP);
     wchar s[20];
     if(ntabs>1){
-      wsprintfW(s,_W("  %d/%d %s"),active_tab,ntabs ,State);
+      swprintf(s,20,W("  %d/%d %ls"),active_tab,ntabs ,State);
     }else{
-      wsprintfW(s,_W(" %s"),State);
+      swprintf(s,20,W(" %ls"),State);
     }
     int sl=wcslen(s);
     SIZE sw;

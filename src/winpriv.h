@@ -28,35 +28,81 @@ enum {
   WIN_HIDE = 8,
 };
 typedef struct {
-//filled by win_adjust_borders:
+// State
+  int border_style ;
+  bool win_is_fullscreen;
+  bool win_is_always_on_top;
+  bool clipboard_token ;
+  bool keep_screen_on ;
+  bool is_init ;
+  bool go_fullscr_on_max;
+  bool resizing;
+  bool moving ;
+  bool wm_user ;
+  bool disable_poschange ;
+  bool poschanging ;
+  int  zoom_token ;  // for heuristic handling of Shift zoom (#467, #476)
+  bool default_size_token ;
+  int logging ;
+  wstring shortcut ;
+  bool icon_is_from_shortcut ;
+  char * home;
+
+  // Options
+  bool report_child_pid ;
+  bool support_wsl ;
+  wchar * wslname ;
+  wstring wsl_basepath ;
+  string report_geom ;
+  bool report_moni ;
+  bool report_winpid ;
+  int monitor ;
+  bool center ;
+  bool right ;
+  bool bottom ;
+  bool left ;
+  bool top ;
+  bool maxwidth ;
+  bool maxheight ;
+  bool store_taskbar_properties ;
+  bool prevent_pinning ;
+  uint wsl_ver ;
+  char * wsl_guid ;
+  bool wsl_launch ;
+  bool start_home ;
+  bool wsltty_appx ;
+  //filled by win_adjust_borders:
   int term_width, term_height;
   int width, height;
   int extra_width, extra_height, norm_extra_width, norm_extra_height;
   int ini_width, ini_height;
   // character cell size, including spacing:
   int cell_width, cell_height;
+
+  bool click_focus_token ;
+  int tabctrling;
+  LONG last_tabk_time  ;
+  ULONG last_wink_time;
+  uint pressedkey,pkeys,pwinkey;
+  int lwinkey,rwinkey,winkey,twinkey;
+  bool kb_input ;
+  //
+  HWND wnd;        // the main terminal window
+  HINSTANCE inst;  // The all-important instance handle
+  HWND config_wnd; // the options window
+  COLORREF colours[COLOUR_NUM];
+  HIMC imc;        // the input method context
 }winvar;
 extern winvar wv;
-extern HINSTANCE inst;  // The all-important instance handle
-extern HWND wnd;        // the main terminal window
-extern HIMC imc;        // the input method context
-extern HWND config_wnd; // the options window
-extern COLORREF colours[COLOUR_NUM];
 
 extern int font_size;  // logical font size, as configured (< 0: pixel size)
 extern bool font_ambig_wide;
 extern int PADDING;
 extern int OFFSET;
 extern bool show_charinfo;
-extern bool support_wsl;
-extern wchar * wslname;
-extern wstring wsl_basepath;
 
-extern bool win_is_fullscreen;
-extern bool win_is_always_on_top;
 extern uint dpi;
 extern int per_monitor_dpi_aware;
-extern bool keep_screen_on;
 
 extern pos last_pos;
 //extern uint kb_trace;//for keyboard debuging
@@ -64,7 +110,7 @@ extern pos last_pos;
 extern colour brighten(colour c, colour against, bool monotone);
 extern void toggle_charinfo(void);
 extern void toggle_vt220(void);
-extern char * fontpropinfo(void);
+extern wchar * fontpropinfo(void);
 
 
 extern void win_update_now(void);
@@ -96,7 +142,9 @@ extern void win_prefix_title(const wstring);
 extern void win_unprefix_title(const wstring);
 extern void win_set_icon(const char * s, int icon_index);
 
-extern void win_show_tip(int x, int y, int cols, int rows);
+extern void win_show_tip(int x, int y, wstring text);
+extern void win_show_tip_size(int x, int y, int cols, int rows);
+extern void win_hide_tip(void);
 extern void win_destroy_tip(void);
 
 extern void taskbar_progress(int percent);

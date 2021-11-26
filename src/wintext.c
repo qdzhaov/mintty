@@ -14,7 +14,6 @@
 #include <winnls.h>
 #include <usp10.h>  // Uniscribe
 //winmain
-extern char * home;
 
 #define dont_debug_bold 1
 
@@ -87,7 +86,6 @@ static const wchar linedraw_chars[LDRAW_CHAR_NUM][LDRAW_CHAR_TRIES] = {
 
 
 // colour values; this should perhaps be part of struct term
-COLORREF colours[COLOUR_NUM];
 
 // diagnostic information flag
 bool show_charinfo = false;
@@ -149,18 +147,19 @@ win_linedraw_char(int i)
 }
 
 
-char *
+wchar *
 fontpropinfo()
 {
   //__ Options - Text: font properties information: "Leading": total line padding (see option RowSpacing), Bold/Underline modes (font or manual, see options BoldAsFont/UnderlineManual/UnderlineColour)
-  const char * fontinfopat = _("Leading: %d, Bold: %s, Underline: %s");
+  const wchar * fontinfopat = _W("Leading: %d, Bold: %ls, Underline: %ls");
   //__ Options - Text: font properties: value taken from font
-  const char * fontinfo_font = _("font");
+  const wchar * fontinfo_font = _W("font");
   //__ Options - Text: font properties: value affected by option
-  const char * fontinfo_manual = _("manual");
-  int taglen = max(strlen(fontinfo_font), strlen(fontinfo_manual));
-  char * fontinfo = newn(char, strlen(fontinfopat) + 23 + 2 * taglen);
-  sprintf(fontinfo, fontinfopat, fontfamilies->row_spacing, 
+  const wchar * fontinfo_manual = _W("manual");
+  int taglen = max(wcslen(fontinfo_font), wcslen(fontinfo_manual));
+  int len=wcslen(fontinfopat) + 23 + 2 * taglen;
+  wchar * fontinfo = newn(wchar, len);
+  swprintf(fontinfo,len, fontinfopat, fontfamilies->row_spacing, 
           fontfamilies->bold_mode ? fontinfo_font : fontinfo_manual,
           fontfamilies->und_mode ? fontinfo_font : fontinfo_manual);
   return fontinfo;
@@ -912,7 +911,7 @@ win_init_fonts(int size, bool allfonts)
 {
   trace_resize(("--- init_fonts %d\n", size));
 
-  HDC dc = GetDC(wnd);
+  HDC dc = GetDC(wv.wnd);
 
   font_size = size;
 #ifdef debug_dpi
@@ -954,7 +953,7 @@ win_init_fonts(int size, bool allfonts)
     show_font_warnings();
   initinit = false;
 
-  ReleaseDC(wnd, dc);
+  ReleaseDC(wv.wnd, dc);
 }
 
 wstring
@@ -972,9 +971,9 @@ win_change_font(uint fi, wstring fn)
   if (fi < lengthof(fontfamilies)) {
     fontfamilies[fi].name = fn;
     fontfamilies[fi].name_reported = null;
-    HDC dc = GetDC(wnd);
+    HDC dc = GetDC(wv.wnd);
     win_init_fontfamily(dc, fi);
-    ReleaseDC(wnd, dc);
+    ReleaseDC(wv.wnd, dc);
     win_adapt_term_size(true, false);
     win_font_cs_reconfig(true);
   }
@@ -1134,11 +1133,11 @@ show_curchar_info(char tag)
       //printf("[%c]%s\n", tag, cs);
       if (nonascii(cs)) {
         wchar * wcs = cs__utftowcs(cs);
-        SetWindowTextW(wnd, wcs);
+        SetWindowTextW(wv.wnd, wcs);
         delete(wcs);
       }
       else
-        SetWindowTextA(wnd, cs);
+        SetWindowTextA(wv.wnd, cs);
     }
     if (prev)
       delete(prev);
@@ -1273,7 +1272,7 @@ do_update(void)
 
   show_curchar_info('u');
 
-  dc = GetDC(wnd);
+  dc = GetDC(wv.wnd);
 
   win_paint_exclude_search(dc);
   term_update_search();
@@ -1286,7 +1285,7 @@ do_update(void)
   }
   win_tab_paint(dc);
 
-  ReleaseDC(wnd, dc);
+  ReleaseDC(wv.wnd, dc);
 
   // Update scrollbar
   if (cfg.scrollbar && cterm->show_scrollbar && !cterm->app_scrollbar) {
@@ -1299,7 +1298,7 @@ do_update(void)
       .nPage = cterm->rows,
       .nPos = lines + cterm->disptop
     };
-    SetScrollInfo(wnd, SB_VERT, &si, true);
+    SetScrollInfo(wv.wnd, SB_VERT, &si, true);
   }
 
   // Update the positions of the system caret and the IME window.
@@ -1312,7 +1311,7 @@ do_update(void)
     SetCaretPos(x, y);
     if (ime_open) {
       COMPOSITIONFORM cf = {.dwStyle = CFS_POINT, .ptCurrentPos = {x, y}};
-      ImmSetCompositionWindow(imc, &cf);
+      ImmSetCompositionWindow(wv.imc, &cf);
     }
   }
 
@@ -1348,8 +1347,8 @@ sel_update(bool update_sel_tip)
         cols = cterm->cols;
     }
     RECT wr;
-    GetWindowRect(wnd, &wr);
-    LONG style = GetWindowLong(wnd, GWL_STYLE);
+    GetWindowRect(wv.wnd, &wr);
+    LONG style = GetWindowLong(wv.wnd, GWL_STYLE);
     int x = wr.left
           + ((style & WS_THICKFRAME) ? GetSystemMetrics(SM_CXSIZEFRAME) : 0)
           + PADDING + last_pos.x * wv.cell_width;
@@ -1367,11 +1366,11 @@ sel_update(bool update_sel_tip)
     int dx = wv.cell_width / 2 + rx * cos(phi) - w / 2;
     int dy = wv.cell_height / 2 + ry * sin(phi) - h / 2;
     //printf("selection_show_size [%d]: %.2f %.2f %.2f\n", cfg.selection_show_size, phi, cos(phi), sin(phi));
-    win_show_tip(x + dx, y + dy, cols, rows);
+    win_show_tip_size(x + dx, y + dy, cols, rows);
     selection_tip_active = true;
   }
   else if (!cterm->selected && selection_tip_active) {
-    win_destroy_tip();
+    win_hide_tip();
     selection_tip_active = false;
   }
 }
@@ -1389,11 +1388,11 @@ show_link(void)
 
     if (nonascii(url)) {
       wchar * wcs = cs__utftowcs(url);
-      SetWindowTextW(wnd, wcs);
+      SetWindowTextW(wv.wnd, wcs);
       delete(wcs);
     }
     else
-      SetWindowTextA(wnd, url);
+      SetWindowTextA(wv.wnd, url);
   }
 }
 
@@ -1574,7 +1573,7 @@ static void
 offset_bg(HDC dc)
 {
   RECT wr;
-  GetWindowRect(wnd, &wr);
+  GetWindowRect(wv.wnd, &wr);
   int wx = wr.left + GetSystemMetrics(SM_CXSIZEFRAME);
   int wy = wr.top + GetSystemMetrics(SM_CYSIZEFRAME) + GetSystemMetrics(SM_CYCAPTION);
 
@@ -1838,7 +1837,7 @@ load_background_image_brush(HDC dc, wstring fn)
       DeleteObject(hbm);
       if (bgbrush_bmp) {
         RECT cr;
-        GetClientRect(wnd, &cr);
+        GetClientRect(wv.wnd, &cr);
         // support tabbar
         cr.top += OFFSET;
 
@@ -2038,7 +2037,7 @@ get_bg_filename(void)
   else {
     // path transformations
     if (0 == strncmp("~/", bf, 2)) {
-      char * bfexp = asform("%s/%s", home, bf + 2);
+      char * bfexp = asform("%s/%s", wv.home, bf + 2);
       delete(bf);
       bf = bfexp;
     }
@@ -2051,7 +2050,7 @@ get_bg_filename(void)
       }
     }
 
-    if (support_wsl && !wallp) {
+    if (wv.support_wsl && !wallp) {
       const wchar * wbf = cs__utftowcs(bf);
       const wchar * wdewbf = dewsl(wbf);  // delete(wbf)
       char * dewbf = cs__wcstoutf(wdewbf);
@@ -2077,7 +2076,7 @@ load_background_brush(HDC dc)
   // screen background and reload the background on demand, 
   // but let's rather handle this autonomously here
   RECT cr;
-  GetClientRect(wnd, &cr);
+  GetClientRect(wv.wnd, &cr);
   if (cr.right - cr.left == w && cr.bottom - cr.top == h)
     return;  // keep brush
 
@@ -2197,7 +2196,7 @@ scale_to_image_ratio()
     return;
 
   RECT cr;
-  GetClientRect(wnd, &cr);
+  GetClientRect(wv.wnd, &cr);
   // remember terminal screen size
   int w = cr.right - cr.left;
   int h = cr.bottom - cr.top;
@@ -2565,11 +2564,11 @@ apply_bold_colour(colour_i *pfgi)
   }
   // switchable attribute colours
   if (cterm->enable_bold_colour && CCL_DEFAULT(*pfgi)
-      && colours[BOLD_COLOUR_I] != (colour)-1
+      && wv.colours[BOLD_COLOUR_I] != (colour)-1
      )
     *pfgi = BOLD_COLOUR_I;
   else if (cterm->enable_blink_colour && CCL_DEFAULT(*pfgi)
-      && colours[BLINK_COLOUR_I] != (colour)-1
+      && wv.colours[BLINK_COLOUR_I] != (colour)-1
      )
     *pfgi = BLINK_COLOUR_I;
   else
@@ -2835,7 +2834,7 @@ win_text(int tx, int ty,wchar *text, int len, cattr attr, cattr *textattr, ushor
     if (term_cursor_type() == CUR_BLOCK && (attr.attr & TATTR_ACTCURS))
       default_bg = false;
 
-    cursor_colour = colours[ime_open ? IME_CURSOR_COLOUR_I : CURSOR_COLOUR_I];
+    cursor_colour = wv.colours[ime_open ? IME_CURSOR_COLOUR_I : CURSOR_COLOUR_I];
     //printf("cc (ime_open %d) %06X\n", ime_open, cursor_colour);
 
     //static uint mindist = 32768;
@@ -2856,7 +2855,7 @@ win_text(int tx, int ty,wchar *text, int len, cattr attr, cattr *textattr, ushor
     }
 
     if ((attr.attr & TATTR_ACTCURS) && term_cursor_type() == CUR_BLOCK) {
-      fg = colours[CURSOR_TEXT_COLOUR_I];
+      fg = wv.colours[CURSOR_TEXT_COLOUR_I];
       if (too_close && colour_dist(cursor_colour, fg) < mindist)
         fg = bg;
       bg = cursor_colour;
@@ -3161,7 +3160,7 @@ win_text(int tx, int ty,wchar *text, int len, cattr attr, cattr *textattr, ushor
       bgbox.top = 0;
     if (ty == cterm->rows - 1) {
       RECT cr;
-      GetClientRect(wnd, &cr);
+      GetClientRect(wv.wnd, &cr);
       if (win_search_visible())
         cr.bottom -= SEARCHBAR_HEIGHT;
       bgbox.bottom = cr.bottom;
@@ -4153,7 +4152,7 @@ win_check_glyphs(wchar *wcs, uint num, cattrflags attr)
 
   HFONT f = font4(ff, attr);
 
-  HDC dc = GetDC(wnd);
+  HDC dc = GetDC(wv.wnd);
   SelectObject(dc, f);
   ushort glyphs[num];
   GetGlyphIndicesW(dc, wcs, num, glyphs, true);
@@ -4191,7 +4190,7 @@ win_check_glyphs(wchar *wcs, uint num, cattrflags attr)
     }
 #endif
 
-  ReleaseDC(wnd, dc);
+  ReleaseDC(wv.wnd, dc);
 }
 
 #define dont_debug_win_char_width 2
@@ -4256,7 +4255,7 @@ win_char_width(xchar c, cattrflags attr)
 
   HFONT f = font4(ff, attr);
 
-  HDC dc = GetDC(wnd);
+  HDC dc = GetDC(wv.wnd);
 #ifdef debug_win_char_width
   bool ok0 = !!
 #endif
@@ -4296,7 +4295,7 @@ win_char_width(xchar c, cattrflags attr)
     printf(" getcharwidth32 %04X %dpx(/cell %dpx)\n", c, ibuf, wv.cell_width);
 #endif
     if (!ok) {
-      ReleaseDC(wnd, dc);
+      ReleaseDC(wv.wnd, dc);
       return 0;
     }
 
@@ -4308,7 +4307,7 @@ win_char_width(xchar c, cattrflags attr)
 #ifdef debug_win_char_width
       printf(" enquired %04X %dpx/cell %dpx\n", c, ibuf, wv.cell_width);
 #endif
-      ReleaseDC(wnd, dc);
+      ReleaseDC(wv.wnd, dc);
       //printf(" win_char_width %04X -> %d\n", c, ibuf);
       return ibuf;
     }
@@ -4462,16 +4461,16 @@ win_char_width(xchar c, cattrflags attr)
   }
 
   if (c >= 0x2160 && c <= 0x2179) {  // Roman Numerals
-    ReleaseDC(wnd, dc);
+    ReleaseDC(wv.wnd, dc);
     return 2;
   }
   if (c >= 0x2500 && c <= 0x257F) {  // Box Drawing
-    ReleaseDC(wnd, dc);
+    ReleaseDC(wv.wnd, dc);
     return 2;  // do not stretch; vertical lines might get pushed out of cell
   }
   if ((c >= 0x2580 && c <= 0x2588) || (c >= 0x2592 && c <= 0x2594)) {
     // Block Elements
-    ReleaseDC(wnd, dc);
+    ReleaseDC(wv.wnd, dc);
     return 1;  // should be stretched to fill whole cell
                // does not have the desired effect, 
                // although FONT_WIDE is actually activated
@@ -4518,7 +4517,7 @@ win_char_width(xchar c, cattrflags attr)
     for (uint i = 0; i < ff->cpcachelen[font4index]; i++)
       if (ff->cpcache[font4index][i].ch == c) {
         if (ff->cpcache[font4index][i].width) {
-          ReleaseDC(wnd, dc);
+          ReleaseDC(wv.wnd, dc);
           return ff->cpcache[font4index][i].width;
         }
         else {
@@ -4530,7 +4529,7 @@ win_char_width(xchar c, cattrflags attr)
     int mbuf = act_char_width(c);
     // report char as wide if its measured width is more than 1½ cells
     int width = mbuf > wv.cell_width ? 2 : 1;
-    ReleaseDC(wnd, dc);
+    ReleaseDC(wv.wnd, dc);
 # ifdef debug_win_char_width
     if (c > '~' || c == 'A') {
       printf(" measured %04X %dpx cell %dpx width %d\n", c, mbuf, wv.cell_width, width);
@@ -4556,7 +4555,7 @@ win_char_width(xchar c, cattrflags attr)
 
 #endif // measure_width
 
-  ReleaseDC(wnd, dc);
+  ReleaseDC(wv.wnd, dc);
   //printf(" win_char_width %04X -> %d\n", c, ibuf);
   return ibuf;
 }
@@ -4580,10 +4579,10 @@ win_combine_chars(wchar c, wchar cc, cattrflags attr)
     HFONT f = font4(ff, attr);
 
     ushort glyph;
-    HDC dc = GetDC(wnd);
+    HDC dc = GetDC(wv.wnd);
     SelectObject(dc, f);
     GetGlyphIndicesW(dc, cs, 1, &glyph, true);
-    ReleaseDC(wnd, dc);
+    ReleaseDC(wv.wnd, dc);
 #ifdef debug_win_combine
     printf("win_combine %04X %04X -> %04X\n", c, cc, glyph == 0xFFFF ? 0 : *cs);
 #endif
@@ -4610,8 +4609,8 @@ win_set_colour(colour_i i, colour c)
   bool changed_something = false;
   void cc(colour_i i, colour c)
   {
-    if (c != colours[i]) {
-      colours[i] = c;
+    if (c != wv.colours[i]) {
+      wv.colours[i] = c;
       changed_something = true;
     }
   }
@@ -4629,7 +4628,7 @@ win_set_colour(colour_i i, colour c)
       if (cfg.bold_colour != (colour)-1)
         cc(BOLD_FG_COLOUR_I, cfg.bold_colour);
       else
-        cc(BOLD_FG_COLOUR_I, brighten(colours[FG_COLOUR_I], colours[BG_COLOUR_I], true));
+        cc(BOLD_FG_COLOUR_I, brighten(wv.colours[FG_COLOUR_I], wv.colours[BG_COLOUR_I], true));
     }
     else if (i == FG_COLOUR_I)
       cc(i, cfg.fg_colour);
@@ -4668,9 +4667,9 @@ win_set_colour(colour_i i, colour c)
           if (cfg.bold_colour != (colour)-1)
             cc(BOLD_FG_COLOUR_I, cfg.bold_colour);
           else {
-            cc(BOLD_FG_COLOUR_I, brighten(c, colours[BG_COLOUR_I], true));
+            cc(BOLD_FG_COLOUR_I, brighten(c, wv.colours[BG_COLOUR_I], true));
             // renew this too as brighten() may refer to contrast colour:
-            cc(BOLD_BG_COLOUR_I, brighten(colours[BG_COLOUR_I], colours[FG_COLOUR_I], true));
+            cc(BOLD_BG_COLOUR_I, brighten(wv.colours[BG_COLOUR_I], wv.colours[FG_COLOUR_I], true));
           }
         }
       when BOLD_FG_COLOUR_I:
@@ -4680,15 +4679,15 @@ win_set_colour(colour_i i, colour c)
           if (cfg.bold_colour != (colour)-1)
             cc(BOLD_FG_COLOUR_I, cfg.bold_colour);
           else {
-            cc(BOLD_BG_COLOUR_I, brighten(c, colours[FG_COLOUR_I], true));
+            cc(BOLD_BG_COLOUR_I, brighten(c, wv.colours[FG_COLOUR_I], true));
             // renew this too as brighten() may refer to contrast colour:
-            cc(BOLD_FG_COLOUR_I, brighten(colours[FG_COLOUR_I], colours[BG_COLOUR_I], true));
+            cc(BOLD_FG_COLOUR_I, brighten(wv.colours[FG_COLOUR_I], wv.colours[BG_COLOUR_I], true));
           }
         }
       when CURSOR_COLOUR_I: {
         // Set the colour of text under the cursor to whichever of foreground
         // and background colour is further away from the cursor colour.
-        colour fg = colours[FG_COLOUR_I], bg = colours[BG_COLOUR_I];
+        colour fg = wv.colours[FG_COLOUR_I], bg = wv.colours[BG_COLOUR_I];
         colour _cc = colour_dist(c, fg) > colour_dist(c, bg) ? fg : bg;
         cc(CURSOR_TEXT_COLOUR_I, _cc);
         if (cfg.ime_cursor_colour != DEFAULT_COLOUR) {
@@ -4728,31 +4727,31 @@ colour
 win_get_colour(colour_i i)
 {
   if (cterm->rvideo && CCL_DEFAULT(i))
-    return colours[i ^ 2];  // [BOLD]_FG_COLOUR_I  <-->  [BOLD]_BG_COLOUR_I
-  return i < COLOUR_NUM ? colours[i] : 0;
+    return wv.colours[i ^ 2];  // [BOLD]_FG_COLOUR_I  <-->  [BOLD]_BG_COLOUR_I
+  return i < COLOUR_NUM ? wv.colours[i] : 0;
 }
 
 void
 win_reset_colours(void)
 {
-  memcpy(colours, cfg.ansi_colours, sizeof cfg.ansi_colours);
+  memcpy(wv.colours, cfg.ansi_colours, sizeof cfg.ansi_colours);
   // duplicate 16 ANSI colours to facilitate distinct handling (implemented)
   // and also distinct colour values if desired
-  memcpy(&colours[ANSI0], cfg.ansi_colours, sizeof cfg.ansi_colours);
+  memcpy(&wv.colours[ANSI0], cfg.ansi_colours, sizeof cfg.ansi_colours);
 
   // Colour cube
   colour_i i = 16;
   for (uint r = 0; r < 6; r++)
     for (uint g = 0; g < 6; g++)
       for (uint b = 0; b < 6; b++)
-        colours[i++] = RGB(r ? r * 40 + 55 : 0,
+        wv.colours[i++] = RGB(r ? r * 40 + 55 : 0,
                            g ? g * 40 + 55 : 0,
                            b ? b * 40 + 55 : 0);
 
   // Grayscale
   for (uint s = 0; s < 24; s++) {
     uint c = s * 10 + 8;
-    colours[i++] = RGB(c, c, c);
+    wv.colours[i++] = RGB(c, c, c);
   }
 
   // Foreground, background, cursor
@@ -4771,10 +4770,10 @@ win_reset_colours(void)
 #if defined(debug_bold) || defined(debug_brighten)
   string ci[] = {"FG_COLOUR_I", "BOLD_FG_COLOUR_I", "BG_COLOUR_I", "BOLD_BG_COLOUR_I", "CURSOR_TEXT_COLOUR_I", "CURSOR_COLOUR_I", "IME_CURSOR_COLOUR_I", "SEL_COLOUR_I", "SEL_TEXT_COLOUR_I", "BOLD_COLOUR_I"};
   for (int i = FG_COLOUR_I; i < COLOUR_NUM; i++)
-    if (colours[i] == (colour)-1)
+    if (wv.colours[i] == (colour)-1)
       printf("colour %d ------ [%s]\n", i, ci[i - FG_COLOUR_I]);
     else
-      printf("colour %d %06X [%s]\n", i, (int)colours[i], ci[i - FG_COLOUR_I]);
+      printf("colour %d %06X [%s]\n", i, (int)wv.colours[i], ci[i - FG_COLOUR_I]);
 #endif
   win_set_colour(TEK_FG_COLOUR_I, cfg.tek_fg_colour);
   win_set_colour(TEK_BG_COLOUR_I, cfg.tek_bg_colour);
@@ -4788,7 +4787,7 @@ void
 win_paint(void)
 {
   PAINTSTRUCT p;
-  dc = BeginPaint(wnd, &p);
+  dc = BeginPaint(wv.wnd, &p);
   win_tab_actv();
   // better invalidate more than less; limited to text area in term_invalidate
   term_invalidate(
@@ -4833,7 +4832,7 @@ win_paint(void)
        * So let's keep finer control and paint background with text chunks 
          but not modify the established behaviour if there is no background.
      */
-    colour bg_colour = colours[cterm->rvideo ? FG_COLOUR_I : BG_COLOUR_I];
+    colour bg_colour = wv.colours[cterm->rvideo ? FG_COLOUR_I : BG_COLOUR_I];
 #ifdef debug_padding_background
     // visualize background for testing
     bg_colour = RGB(222, 0, 0);
@@ -4864,6 +4863,6 @@ win_paint(void)
 #endif
   }
 
-  EndPaint(wnd, &p);
+  EndPaint(wv.wnd, &p);
 }
 

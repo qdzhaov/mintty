@@ -381,7 +381,7 @@ old_update_locale(void)
   }
 
   if (cfg.charwidth >= 10 && wcwidth(0x4E00) == 2 && !strchr(default_locale, '@')) {
-    if (!support_wsl) {  // do not modify for WSL
+    if (!wv.support_wsl) {  // do not modify for WSL
       // Attach "@cjksingle" to locale if enforcing single-width mode
       string l = default_locale;
       default_locale = asform("%s@cjksingle", l);
@@ -394,7 +394,7 @@ old_update_locale(void)
     }
   }
   else if (cfg.charwidth == 2 && !cs_ambig_wide) {
-    if (!support_wsl) {  // do not modify for WSL
+    if (!wv.support_wsl) {  // do not modify for WSL
       // Attach "@cjkwide" to locale if running in ambiguous-wide mode
       // with an ambig-narrow locale setting
       string l = default_locale;
@@ -431,7 +431,7 @@ static void
 set_locale_env(string loc)
 {
   char * cut = 0;
-  if (support_wsl && strstr(loc, "@cjk")) {
+  if (wv.support_wsl && strstr(loc, "@cjk")) {
     // strip unsupported modifier for WSL
     loc = strdup(loc);
     cut = strstr(loc, "@cjk");
@@ -562,7 +562,7 @@ update_locale(void)
     cs_ambig_wide = true;
   }
   else if ((charwidth == 3 && cs_ambig_wide)
-           || (support_wsl && charwidth < 2 && cs_ambig_wide
+           || (wv.support_wsl && charwidth < 2 && cs_ambig_wide
                && strncasecmp(charset, "utf", 3) == 0
               )
           )
@@ -631,7 +631,7 @@ cs_reconfig(void)
     trace_locale("cs_reconfig", config_locale);
 #if HAS_LOCALES
     if (cfg.old_locale && setlocale(LC_CTYPE, config_locale) &&
-        !support_wsl) {  // set locale anyway, but do not modify for WSL
+        !wv.support_wsl) {  // set locale anyway, but do not modify for WSL
       if (cfg.charwidth >= 10) {
         // Attach "@cjksingle" to locale if enforcing single-width mode
         string l = config_locale;

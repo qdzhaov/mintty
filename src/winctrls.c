@@ -4,9 +4,9 @@
 // (corresponds to putty:windows/winctrls.c)
 // Licensed under the terms of the GNU General Public License v3 or later.
 
+#include "winpriv.h"
 #include "winctrls.h"
 
-#include "winpriv.h"
 #include "charset.h"  // wcscpy
 
 #include "res.h"  // DIALOG_FONT, DIALOG_FONTSIZE
@@ -14,10 +14,9 @@
 #define _RPCNDR_H
 #define _WTYPES_H
 #define _OLE2_H
+#include <winuser.h>
 #include <commdlg.h>
-#ifdef darken_dialog_elements
 #include <commctrl.h>  // Subclass
-#endif
 
 
 /*
@@ -27,6 +26,7 @@
 int win_dialog_sc(int iv);
 #define SC(a) win_dialog_sc(a)
 #define GAPBETWEEN    SC(3)
+#define GAPBETWEENV   SC(5)
 #define GAPWITHIN     SC(1)
 #define GAPXBOX       SC(6)
 #define GAPYBOX       SC(2)
@@ -102,27 +102,52 @@ ctrlposinit(ctrlpos * cp, HWND wnd, int leftborder, int rightborder,
   cp->xoff = leftborder;
   cp->width -= leftborder + rightborder;
 }
-
-#ifdef darken_dialog_elements
+static int bMouseTrack=1;
 static LRESULT CALLBACK
 ctl_proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp, UINT_PTR uid, DWORD_PTR data)
 {
   (void)uid; (void)data;
+  control *ctl;
+  ctl=(control *)GetWindowLongPtr(hwnd,GWLP_USERDATA);
   switch (msg) {
+#ifdef darken_dialog_elements
+    // try to darken further elements
     //when WM_ERASEBKGND:
       // makes things worse (flickering, invisible items)
     //when 0x0090 or 0x00F1 or 0x00F4 or 0x0143 or 0x014B:
       // these also occur
+#endif
+    when WM_MOUSEMOVE:{
+      if(bMouseTrack&&ctl&&ctl->tip){
+        TRACKMOUSEEVENT tme;
+        tme.cbSize = sizeof (tme);
+        tme.dwFlags = TME_LEAVE|TME_HOVER;
+        tme.hwndTrack = hwnd ;// 指定要 追踪 的窗口
+        tme.dwHoverTime = 100;  // 鼠标在按钮上停留超过 10ms ，才认为状态为 HOVER
+        TrackMouseEvent(&tme); // 开启 Windows 的 WM_MOUSELEAVE ， WM_MOUSEHOVER 事件支持
+        bMouseTrack=0;   // 若已经 追踪 ，则停止 追踪
+      }
+      return 0;
+    }
+    when WM_MOUSEHOVER:{
+      POINT   pt;
+      GetCursorPos(&pt);
+      win_show_tip(pt.x+20,pt.y-20,ctl->tip);
+      return 0;
+    }
+
+    when WM_MOUSELEAVE:
+      win_hide_tip();
+      bMouseTrack=1;   // 若已经 追踪 ，则停止 追踪
+      return 0;
   }
   return DefSubclassProc(hwnd, msg, wp, lp);
 }
-#endif
-
 static HWND
 doctl(control * ctrl, 
       ctrlpos * cp, RECT r, 
-      char * class, int wstyle, int exstyle, 
-      string text, int wid)
+      wchar * class, int wstyle, int exstyle, 
+      wstring text, int wid)
 {
   HWND ctl;
 
@@ -144,39 +169,24 @@ doctl(control * ctrl,
 #endif
 
  /*
-  * We can pass in cp->wnd == null, to indicate a dry run
+  109G* We can pass in cp->wnd == null, to indicate a dry run
   * without creating any actual controls.
   */
   if (cp->wnd) {
     // avoid changing text with SendMessageW(ctl, WM_SETTEXT, ...) 
     // as this produces large text artefacts
-    if (nonascii(text)) {
-      // transform label for proper Windows display
-      wchar * wtext = text ? cs__utftowcs(text) : 0;
-      wchar * wclass = class ? cs__utftowcs(class) : 0;
-      ctl =
-        CreateWindowExW(exstyle, wclass, wtext, wstyle,
+    ctl =
+        CreateWindowExW(exstyle, class, text, wstyle,
                         r.left, r.top, r.right, r.bottom,
-                        cp->wnd, (HMENU)(INT_PTR)wid, inst, null);
-      if (wtext)
-        free(wtext);
-      if (wclass)
-        free(wclass);
-    }
-    else {
-      ctl =
-        CreateWindowExA(exstyle, class, text, wstyle,
-                        r.left, r.top, r.right, r.bottom,
-                        cp->wnd, (HMENU)(INT_PTR)wid, inst, null);
-    }
+                        cp->wnd, (HMENU)(INT_PTR)wid, wv.inst, null);
 #ifdef darken_dialog_elements
     // apply dark mode to dialog buttons
     win_dark_mode(ctl);
-    // try to darken further elements
-    SetWindowSubclass(ctl, ctl_proc, 0, 0);
 #endif
+    SetWindowSubclass(ctl, ctl_proc, 0, 0);
+    SetWindowLongPtr(ctl,GWLP_USERDATA,(LONG_PTR)ctrl);
 #ifdef debug_widgets
-    printf("%8p %s %d '%s'\n", ctl, class, exstyle, text);
+    printf("%8p %S %d '%S'\n", ctl, class, exstyle, text);
 #endif
     SendMessage(ctl, WM_SETFONT, cp->font, MAKELPARAM(true, 0));
     if (ctrl) {
@@ -197,7 +207,7 @@ doctl(control * ctrl,
     EnumChildWindows(ctl, enumwin, 0);
 #endif
 
-    if (!strcmp(class, "LISTBOX")) {
+    if (!wcscmp(class, W("LISTBOX"))) {
      /*
       * Bizarre Windows bug: the list box calculates its
       * number of lines based on the font it has at creation
@@ -219,7 +229,7 @@ doctl(control * ctrl,
  * Begin a grouping box, with or without a group title.
  */
 static void
-beginbox(ctrlpos * cp, const char * name, int idbox)
+beginbox(ctrlpos * cp, const wchar * name, int idbox)
 {
   cp->boxystart = cp->ypos;
   if (name) cp->ypos += STATICHEIGHT;
@@ -240,13 +250,13 @@ endbox(ctrlpos * cp)
   RECT r;
   cp->xoff -= GAPXBOX;
   cp->width += 2 * GAPXBOX;
-  cp->ypos += GAPYBOX - GAPBETWEEN;
+  cp->ypos += GAPYBOX - GAPBETWEENV;
   r.left = GAPBETWEEN;
   r.right = cp->width;
   r.top = cp->boxystart;
   r.bottom = cp->ypos - cp->boxystart;
-  doctl(null, cp, r, "BUTTON", BS_GROUPBOX | WS_CHILD | WS_VISIBLE, 0,
-        cp->boxtext ? cp->boxtext : "", cp->boxid);
+  doctl(null, cp, r, W("BUTTON"), BS_GROUPBOX | WS_CHILD | WS_VISIBLE, 0,
+        cp->boxtext ? cp->boxtext : W(""), cp->boxid);
   cp->ypos += GAPYBOX;
 }
 
@@ -254,7 +264,7 @@ endbox(ctrlpos * cp)
  * A static line, followed by a full-width edit box.
  */
 static void
-editbox(control * ctrl, ctrlpos * cp, int password, const char * text, 
+editbox(control * ctrl, ctrlpos * cp, int password, const wchar * text, 
         int staticid, int editid)
 {
   RECT r;
@@ -265,23 +275,23 @@ editbox(control * ctrl, ctrlpos * cp, int password, const char * text,
   if (text) {
     r.top = cp->ypos;
     r.bottom = STATICHEIGHT;
-    doctl(null, cp, r, "STATIC", WS_CHILD | WS_VISIBLE, 0, text, staticid);
+    doctl(null, cp, r, W("STATIC"), WS_CHILD | WS_VISIBLE, 0, text, staticid);
     cp->ypos += STATICHEIGHT + GAPWITHIN;
   }
   r.top = cp->ypos;
   r.bottom = EDITHEIGHT;
-  doctl(ctrl, cp, r, "EDIT",
+  doctl(ctrl, cp, r, W("EDIT"),
         WS_CHILD | WS_VISIBLE | WS_TABSTOP 
         | ES_AUTOHSCROLL | (password ?  ES_PASSWORD : 0),
-        WS_EX_CLIENTEDGE, "", editid);
-  cp->ypos += EDITHEIGHT + GAPBETWEEN;
+        WS_EX_CLIENTEDGE, W(""), editid);
+  cp->ypos += EDITHEIGHT + GAPBETWEENV;
 }
 
 /*
  * A static line, followed by a full-width combo box.
  */
 static void
-combobox(control * ctrl, ctrlpos * cp, const char * text, int staticid, int listid)
+combobox(control * ctrl, ctrlpos * cp, const wchar * text, int staticid, int listid)
 {
   RECT r;
 
@@ -291,24 +301,24 @@ combobox(control * ctrl, ctrlpos * cp, const char * text, int staticid, int list
   if (text) {
     r.top = cp->ypos;
     r.bottom = STATICHEIGHT;
-    doctl(null, cp, r, "STATIC", WS_CHILD | WS_VISIBLE, 0, text, staticid);
+    doctl(null, cp, r, W("STATIC"), WS_CHILD | WS_VISIBLE, 0, text, staticid);
     cp->ypos += STATICHEIGHT + GAPWITHIN;
   }
   r.top = cp->ypos;
   r.bottom = COMBOHEIGHT * 10;
-  doctl(ctrl, cp, r, "COMBOBOX",
+  doctl(ctrl, cp, r, W("COMBOBOX"),
         WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_VSCROLL | CBS_DROPDOWN |
-        CBS_HASSTRINGS, WS_EX_CLIENTEDGE, "", listid);
-  cp->ypos += COMBOHEIGHT + GAPBETWEEN;
+        CBS_HASSTRINGS, WS_EX_CLIENTEDGE, W(""), listid);
+  cp->ypos += COMBOHEIGHT + GAPBETWEENV;
 }
 
 typedef struct {
-  string label;
+  wstring label;
   int id;
 } radio;
 
 static void
-radioline_common(ctrlpos * cp, const char * text, int id, int nacross,
+radioline_common(control * ctrl,ctrlpos * cp, const wchar * text, int id, int nacross,
                  radio * buttons, int nbuttons)
 {
   RECT r;
@@ -322,14 +332,14 @@ radioline_common(ctrlpos * cp, const char * text, int id, int nacross,
     r.right = cp->width;
     r.bottom = STATICHEIGHT;
     cp->ypos += r.bottom + GAPWITHIN;
-    doctl(null, cp, r, "STATIC", WS_CHILD | WS_VISIBLE, 0, text, id);
+    doctl(null, cp, r, W("STATIC"), WS_CHILD | WS_VISIBLE, 0, text, id);
   }
 
   group = WS_GROUP;
   i = 0;
   for (j = 0; j < nbuttons; j++) {
     if (i == nacross) {
-      cp->ypos += r.bottom + (nacross > 1 ? GAPBETWEEN : GAPWITHIN);
+      cp->ypos += r.bottom + (nacross > 1 ? GAPBETWEENV : GAPWITHIN);
       i = 0;
     }
     r.left = GAPBETWEEN + i * (cp->width + GAPBETWEEN) / nacross;
@@ -339,20 +349,20 @@ radioline_common(ctrlpos * cp, const char * text, int id, int nacross,
       r.right = cp->width - r.left;
     r.top = cp->ypos;
     r.bottom = RADIOHEIGHT;
-    doctl(null, cp, r, "BUTTON",
+    doctl(j==0?ctrl:NULL, cp, r, W("BUTTON"),
           BS_NOTIFY | BS_AUTORADIOBUTTON | WS_CHILD | WS_VISIBLE | WS_TABSTOP |
           group, 0, buttons[j].label, buttons[j].id);
     group = 0;
     i++;
   }
-  cp->ypos += r.bottom + GAPBETWEEN;
+  cp->ypos += r.bottom + GAPBETWEENV;
 }
 
 /*
  * A single standalone checkbox.
  */
 static void
-checkbox(ctrlpos * cp, const char * text, int id)
+checkbox(control * ctrl,ctrlpos * cp, const wchar * text, int id)
 {
   RECT r;
 
@@ -360,8 +370,8 @@ checkbox(ctrlpos * cp, const char * text, int id)
   r.top = cp->ypos;
   r.right = cp->width;
   r.bottom = CHECKBOXHEIGHT;
-  cp->ypos += r.bottom + GAPBETWEEN;
-  doctl(null, cp, r, "BUTTON",
+  cp->ypos += r.bottom + GAPBETWEENV;
+  doctl(ctrl, cp, r, W("BUTTON"),
         BS_NOTIFY | BS_AUTOCHECKBOX | WS_CHILD | WS_VISIBLE | WS_TABSTOP, 0,
         text, id);
 }
@@ -370,7 +380,7 @@ checkbox(ctrlpos * cp, const char * text, int id)
  * An owner-drawn static text control for a panel title.
  */
 static void
-paneltitle(ctrlpos * cp, int id)
+paneltitle(control * ctrl,ctrlpos * cp, int id)
 {
   RECT r;
 
@@ -378,33 +388,33 @@ paneltitle(ctrlpos * cp, int id)
   r.top = cp->ypos;
   r.right = cp->width;
   r.bottom = TITLEHEIGHT;
-  cp->ypos += r.bottom + GAPBETWEEN;
-  doctl(null, cp, r, "STATIC", WS_CHILD | WS_VISIBLE | SS_OWNERDRAW, 0, null, id);
+  cp->ypos += r.bottom + GAPBETWEENV;
+  doctl(ctrl, cp, r, W("STATIC"), WS_CHILD | WS_VISIBLE | SS_OWNERDRAW, 0, null, id);
 }
 
 /*
  * A plain text.
  */
 static void
-statictext(ctrlpos * cp, const char * stext, int sid)
+statictext(control * ctrl,ctrlpos * cp, const wchar * stext, int sid)
 {
   RECT r;
 
-  cp->ypos -= GAPBETWEEN;
+  cp->ypos -= GAPBETWEENV;
 
   r.left = GAPBETWEEN;
   r.top = cp->ypos;
   r.right = cp->width;
   r.bottom = STATICHEIGHT;
-  cp->ypos += r.bottom + GAPBETWEEN;
-  doctl(null, cp, r, "STATIC", WS_CHILD | WS_VISIBLE, 0, stext, sid);
+  cp->ypos += r.bottom + GAPBETWEENV;
+  doctl(ctrl, cp, r, W("STATIC"), WS_CHILD | WS_VISIBLE, 0, stext, sid);
 }
 
 /*
  * A button on the right hand side, with a static to its left.
  */
 static void
-staticbtn(ctrlpos * cp, const char * stext, int sid, const char *btext, int bid)
+staticbtn(control * ctrl,ctrlpos * cp, const wchar * stext, int sid, const wchar *btext, int bid)
 {
   const int height =
     (PUSHBTNHEIGHT > STATICHEIGHT ? PUSHBTNHEIGHT : STATICHEIGHT);
@@ -419,24 +429,24 @@ staticbtn(ctrlpos * cp, const char * stext, int sid, const char *btext, int bid)
   r.top = cp->ypos + (height - STATICHEIGHT) / 2 - 1;
   r.right = lwid;
   r.bottom = STATICHEIGHT;
-  doctl(null, cp, r, "STATIC", WS_CHILD | WS_VISIBLE, 0, stext, sid);
+  doctl(null, cp, r, W("STATIC"), WS_CHILD | WS_VISIBLE, 0, stext, sid);
 
   r.left = rpos;
   r.top = cp->ypos + (height - PUSHBTNHEIGHT) / 2 - 1;
   r.right = rwid;
   r.bottom = PUSHBTNHEIGHT;
-  doctl(null, cp, r, "BUTTON",
+  doctl(ctrl, cp, r, W("BUTTON"),
         BS_NOTIFY | WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_PUSHBUTTON, 0,
         btext, bid);
 
-  cp->ypos += height + GAPBETWEEN;
+  cp->ypos += height + GAPBETWEENV;
 }
 
 /*
  * A simple push button.
  */
 static void
-button(control * ctrl, ctrlpos * cp, const char *btext, int bid, int defbtn)
+button(control * ctrl, ctrlpos * cp, const wchar *btext, int bid, int bclr, int defbtn)
 {
   RECT r;
 
@@ -451,25 +461,41 @@ button(control * ctrl, ctrlpos * cp, const char *btext, int bid, int defbtn)
     SendMessage(cp->wnd, DM_SETDEFID, bid, 0);
 
   //HWND but = // if we'd want to send it a message right away
-  doctl(ctrl, cp, r, "BUTTON",
+  doctl(ctrl, cp, r, W("BUTTON"),
           BS_NOTIFY | WS_CHILD | WS_VISIBLE | WS_TABSTOP |
+          (bclr>0?  BS_OWNERDRAW :0)|
           (defbtn ? BS_DEFPUSHBUTTON : 0) | BS_PUSHBUTTON, 0, btext, bid);
-#ifdef need_to_disable_widgets_here
-  // disabled prototype hack to disable a widget initially;
-  // now achieved by enable_widget() in config.c
-  if (!strcmp(btext, _("Store"))) {
-    EnableWindow(but, FALSE);
-  }
-#endif
-
-  cp->ypos += PUSHBTNHEIGHT + GAPBETWEEN;
+  cp->ypos += PUSHBTNHEIGHT + GAPBETWEENV;
 }
+static void
+clrbutton(control * ctrl, ctrlpos * cp, const wchar *btext, int bid, int bclr, int defbtn)
+{
+  RECT r;
+  (void)bclr;
+  r.left = 0;
+  r.top = cp->ypos - 1;
+  r.right = cp->width+GAPBETWEEN/2;
+  r.bottom = STATICHEIGHT ;
+
+ /* Q67655: the _dialog box_ must know which button is default
+  * as well as the button itself knowing */
+  if (defbtn && cp->wnd)
+    SendMessage(cp->wnd, DM_SETDEFID, bid, 0);
+
+  //HWND but = // if we'd want to send it a message right away
+  doctl(ctrl, cp, r, W("BUTTON"),
+          BS_NOTIFY |SS_NOTIFY| WS_CHILD | WS_VISIBLE | WS_TABSTOP |
+          (bclr>=0?  BS_OWNERDRAW :0)|
+          (defbtn ? BS_DEFPUSHBUTTON : 0) | BS_PUSHBUTTON, 0, btext, bid);
+  cp->ypos += STATICHEIGHT + GAPBETWEENV;
+}
+
 
 /*
  * An edit control on the right hand side, with a static to its left.
  */
 static void
-staticedit_internal(ctrlpos * cp, const char * stext, int sid, int eid,
+staticedit_internal(control * ctrl,ctrlpos * cp, const wchar * stext, int sid, int eid,
                     int percentedit, int style)
 {
   const int height = (EDITHEIGHT > STATICHEIGHT ? EDITHEIGHT : STATICHEIGHT);
@@ -484,36 +510,36 @@ staticedit_internal(ctrlpos * cp, const char * stext, int sid, int eid,
   r.top = cp->ypos + (height - STATICHEIGHT) / 2;
   r.right = lwid;
   r.bottom = STATICHEIGHT;
-  doctl(null, cp, r, "STATIC", WS_CHILD | WS_VISIBLE, 0, stext, sid);
+  doctl(null, cp, r, W("STATIC"), WS_CHILD | WS_VISIBLE, 0, stext, sid);
 
   r.left = rpos;
   r.top = cp->ypos + (height - EDITHEIGHT) / 2;
   r.right = rwid;
   r.bottom = EDITHEIGHT;
-  doctl(null, cp, r, "EDIT",
+  doctl(ctrl, cp, r, W("EDIT"),
         WS_CHILD | WS_VISIBLE | WS_TABSTOP | ES_AUTOHSCROLL | style,
-        WS_EX_CLIENTEDGE, "", eid);
+        WS_EX_CLIENTEDGE, W(""), eid);
 
-  cp->ypos += height + GAPBETWEEN;
+  cp->ypos += height + GAPBETWEENV;
 }
 
 static void
-staticedit(ctrlpos * cp, const char * stext, int sid, int eid, int percentedit)
+staticedit(control * ctrl,ctrlpos * cp, const wchar * stext, int sid, int eid, int percentedit)
 {
-  staticedit_internal(cp, stext, sid, eid, percentedit, 0);
+  staticedit_internal(ctrl,cp, stext, sid, eid, percentedit, 0);
 }
 
 static void
-staticpassedit(ctrlpos * cp, const char * stext, int sid, int eid, int percentedit)
+staticpassedit(control * ctrl,ctrlpos * cp, const wchar * stext, int sid, int eid, int percentedit)
 {
-  staticedit_internal(cp, stext, sid, eid, percentedit, ES_PASSWORD);
+  staticedit_internal(ctrl,cp, stext, sid, eid, percentedit, ES_PASSWORD);
 }
 
 /*
  * A drop-down list box on the right hand side, with a static to its left.
  */
 static void
-staticddl(ctrlpos * cp, const char * stext, int sid, int lid, int percentlist)
+staticddl(control * ctrl,ctrlpos * cp, const wchar * stext, int sid, int lid, int percentlist)
 {
   const int height = (COMBOHEIGHT > STATICHEIGHT ? COMBOHEIGHT : STATICHEIGHT);
   RECT r;
@@ -527,24 +553,24 @@ staticddl(ctrlpos * cp, const char * stext, int sid, int lid, int percentlist)
   r.top = cp->ypos + (height - STATICHEIGHT) / 2;
   r.right = lwid;
   r.bottom = STATICHEIGHT;
-  doctl(null, cp, r, "STATIC", WS_CHILD | WS_VISIBLE, 0, stext, sid);
+  doctl(null, cp, r, W("STATIC"), WS_CHILD | WS_VISIBLE, 0, stext, sid);
 
   r.left = rpos;
   r.top = cp->ypos + (height - EDITHEIGHT) / 2;
   r.right = rwid;
   r.bottom = COMBOHEIGHT * 4;
-  doctl(null, cp, r, "COMBOBOX",
+  doctl(ctrl, cp, r, W("COMBOBOX"),
         WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_VSCROLL | CBS_DROPDOWNLIST |
-        CBS_HASSTRINGS, WS_EX_CLIENTEDGE, "", lid);
+        CBS_HASSTRINGS, WS_EX_CLIENTEDGE, W(""), lid);
 
-  cp->ypos += height + GAPBETWEEN;
+  cp->ypos += height + GAPBETWEENV;
 }
 
 /*
  * A combo box on the right hand side, with a static to its left.
  */
 static void
-staticcombo(ctrlpos * cp, const char * stext, int sid, int lid, int percentlist)
+staticcombo(control * ctrl,ctrlpos * cp, const wchar * stext, int sid, int lid, int percentlist)
 {
   const int height = (COMBOHEIGHT > STATICHEIGHT ? COMBOHEIGHT : STATICHEIGHT);
   RECT r;
@@ -558,24 +584,24 @@ staticcombo(ctrlpos * cp, const char * stext, int sid, int lid, int percentlist)
   r.top = cp->ypos + (height - STATICHEIGHT) / 2;
   r.right = lwid;
   r.bottom = STATICHEIGHT;
-  doctl(null, cp, r, "STATIC", WS_CHILD | WS_VISIBLE, 0, stext, sid);
+  doctl(null, cp, r, W("STATIC"), WS_CHILD | WS_VISIBLE, 0, stext, sid);
 
   r.left = rpos;
   r.top = cp->ypos + (height - EDITHEIGHT) / 2;
   r.right = rwid;
   r.bottom = COMBOHEIGHT * 10;
-  doctl(null, cp, r, "COMBOBOX",
+  doctl(ctrl, cp, r, W("COMBOBOX"),
         WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_VSCROLL | CBS_DROPDOWN |
-        CBS_HASSTRINGS, WS_EX_CLIENTEDGE, "", lid);
+        CBS_HASSTRINGS, WS_EX_CLIENTEDGE, W(""), lid);
 
-  cp->ypos += height + GAPBETWEEN;
+  cp->ypos += height + GAPBETWEENV;
 }
 
 /*
  * A static, with a full-width drop-down list box below it.
  */
 static void
-staticddlbig(ctrlpos * cp, const char * stext, int sid, int lid)
+staticddlbig(control * ctrl,ctrlpos * cp, const wchar * stext, int sid, int lid)
 {
   RECT r;
 
@@ -584,7 +610,7 @@ staticddlbig(ctrlpos * cp, const char * stext, int sid, int lid)
     r.top = cp->ypos;
     r.right = cp->width;
     r.bottom = STATICHEIGHT;
-    doctl(null, cp, r, "STATIC", WS_CHILD | WS_VISIBLE, 0, stext, sid);
+    doctl(null, cp, r, W("STATIC"), WS_CHILD | WS_VISIBLE, 0, stext, sid);
     cp->ypos += STATICHEIGHT;
   }
 
@@ -592,17 +618,17 @@ staticddlbig(ctrlpos * cp, const char * stext, int sid, int lid)
   r.top = cp->ypos;
   r.right = cp->width;
   r.bottom = COMBOHEIGHT * 4;
-  doctl(null, cp, r, "COMBOBOX",
+  doctl(ctrl, cp, r, W("COMBOBOX"),
         WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_VSCROLL | CBS_DROPDOWNLIST |
-        CBS_HASSTRINGS, WS_EX_CLIENTEDGE, "", lid);
-  cp->ypos += COMBOHEIGHT + GAPBETWEEN;
+        CBS_HASSTRINGS, WS_EX_CLIENTEDGE, W(""), lid);
+  cp->ypos += COMBOHEIGHT + GAPBETWEENV;
 }
 
 /*
  * A static, text/label only.
  */
 static void
-staticlabel(ctrlpos * cp, const char * stext, int sid)
+staticlabel(control * ctrl,ctrlpos * cp, const wchar * stext, int sid)
 {
   RECT r;
 
@@ -611,8 +637,8 @@ staticlabel(ctrlpos * cp, const char * stext, int sid)
     r.top = cp->ypos;
     r.right = cp->width;
     r.bottom = STATICHEIGHT;
-    doctl(null, cp, r, "STATIC", WS_CHILD | WS_VISIBLE, 0, stext, sid);
-    cp->ypos += STATICHEIGHT + GAPBETWEEN;
+    doctl(ctrl, cp, r, W("STATIC"), WS_CHILD | WS_VISIBLE, 0, stext, sid);
+    cp->ypos += STATICHEIGHT + GAPBETWEENV;
   }
 }
 
@@ -620,7 +646,7 @@ staticlabel(ctrlpos * cp, const char * stext, int sid)
  * A list box with a static labelling it.
  */
 static void
-listbox(control * ctrl, ctrlpos * cp, const char * stext, int sid, int lid, int lines)
+listbox(control * ctrl, ctrlpos * cp, const wchar * stext, int sid, int lid, int lines)
 {
   RECT r;
 
@@ -630,17 +656,17 @@ listbox(control * ctrl, ctrlpos * cp, const char * stext, int sid, int lid, int 
     r.right = cp->width;
     r.bottom = STATICHEIGHT;
     cp->ypos += r.bottom + GAPWITHIN;
-    doctl(null, cp, r, "STATIC", WS_CHILD | WS_VISIBLE, 0, stext, sid);
+    doctl(null, cp, r, W("STATIC"), WS_CHILD | WS_VISIBLE, 0, stext, sid);
   }
 
   r.left = GAPBETWEEN;
   r.top = cp->ypos;
   r.right = cp->width;
   r.bottom = LISTHEIGHT + (lines - 1) * LISTINCREMENT;
-  cp->ypos += r.bottom + GAPBETWEEN;
-  doctl(ctrl, cp, r, "LISTBOX",
+  cp->ypos += r.bottom + GAPBETWEENV;
+  doctl(ctrl, cp, r, W("LISTBOX"),
         WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_VSCROLL | LBS_NOTIFY |
-        LBS_HASSTRINGS | LBS_USETABSTOPS, WS_EX_CLIENTEDGE, "", lid);
+        LBS_HASSTRINGS | LBS_USETABSTOPS, WS_EX_CLIENTEDGE, W(""), lid);
 }
 
 /* ----------------------------------------------------------------------
@@ -706,7 +732,7 @@ new_winctrl(int base_id, void *data)
 void
 winctrl_layout(winctrls *wc, ctrlpos *cp, controlset *s, int *id)
 {
-  ctrlpos columns[16];
+  ctrlpos columns[20];
   int ncols, colstart, colspan;
 
   ctrlpos pos;
@@ -721,9 +747,9 @@ winctrl_layout(winctrls *wc, ctrlpos *cp, controlset *s, int *id)
 #endif
   if (!s->ncolumns) {
    /* Draw a title of an Options dialog panel. */
-    winctrl *c = new_winctrl(base_id, strdup(s->boxtitle));
+    winctrl *c = new_winctrl(base_id, wcsdup(s->boxtitle));
     winctrl_add(wc, c);
-    paneltitle(cp, base_id);
+    paneltitle(NULL,cp, base_id);
     base_id++;
   }
   else if (*s->pathname) {
@@ -754,9 +780,18 @@ winctrl_layout(winctrls *wc, ctrlpos *cp, controlset *s, int *id)
     * and doesn't require any control creation at all.
     */
     if (ctrl->type == CTRL_COLUMNS) {
-      assert((ctrl->columns.ncols == 1) ^ (ncols == 1));
-
-      if (ncols == 1) {
+      //assert((ctrl->columns.ncols == 1) ^ (ncols == 1));
+      if(ncols>1){
+        int maxy = columns[0].ypos;
+        int i;
+        for (i = 1; i < ncols; i++)
+          if (maxy < columns[i].ypos)
+            maxy = columns[i].ypos;
+        ncols = 1;
+        columns[0] = *cp;       /* structure copy */
+        columns[0].ypos = maxy;
+      }
+      if (ctrl->columns.ncols > 1) {
        /*
         * We're splitting into multiple columns.
         */
@@ -779,20 +814,6 @@ winctrl_layout(winctrls *wc, ctrlpos *cp, controlset *s, int *id)
           lpercent = rpercent;
         }
       }
-      else {
-       /*
-        * We're recombining the various columns into one.
-        */
-        int maxy = columns[0].ypos;
-        int i;
-        for (i = 1; i < ncols; i++)
-          if (maxy < columns[i].ypos)
-            maxy = columns[i].ypos;
-        ncols = 1;
-        columns[0] = *cp;       /* structure copy */
-        columns[0].ypos = maxy;
-      }
-
       continue;
     }
     else {
@@ -838,12 +859,12 @@ winctrl_layout(winctrls *wc, ctrlpos *cp, controlset *s, int *id)
         }
         else {
           if (ctrl->editbox.has_list) {
-            staticcombo(&pos, ctrl->label, base_id, base_id + 1,
+            staticcombo(ctrl,&pos, ctrl->label, base_id, base_id + 1,
                         ctrl->editbox.percentwidth);
           }
           else {
             (ctrl->editbox.password ? staticpassedit : staticedit)
-              (&pos, ctrl->label, base_id, base_id + 1, ctrl->editbox.percentwidth);
+              (ctrl,&pos, ctrl->label, base_id, base_id + 1, ctrl->editbox.percentwidth);
           }
         }
       }
@@ -856,27 +877,33 @@ winctrl_layout(winctrls *wc, ctrlpos *cp, controlset *s, int *id)
           buttons[i].id = base_id + 1 + i;
         }
 
-        radioline_common(&pos, ctrl->label, base_id, ctrl->radio.ncolumns,
+        radioline_common(ctrl,&pos, ctrl->label, base_id, ctrl->radio.ncolumns,
                          buttons, ctrl->radio.nbuttons);
       }
       when CTRL_CHECKBOX: {
         num_ids = 1;
-        checkbox(&pos, ctrl->label, base_id);
+        checkbox(ctrl,&pos, ctrl->label, base_id);
       }
       when CTRL_BUTTON: {
         if (ctrl->button.iscancel)
           actual_base_id = IDCANCEL;
         num_ids = 1;
-        button(ctrl, &pos, ctrl->label, actual_base_id, ctrl->button.isdefault);
+        button(ctrl, &pos, ctrl->label, actual_base_id, -1,ctrl->button.isdefault);
+      }
+      when CTRL_CLRBUTTON: {
+        if (ctrl->button.iscancel)
+          actual_base_id = IDCANCEL;
+        num_ids = 1;
+        clrbutton(ctrl, &pos, ctrl->label, actual_base_id, *(int*)ctrl->context,ctrl->button.isdefault);
       }
       when CTRL_LISTBOX: {
         num_ids = 2;
         if (ctrl->listbox.height == 0) {
          /* Drop-down list. */
           if (ctrl->listbox.percentwidth == 100)
-            staticddlbig(&pos, ctrl->label, base_id, base_id + 1);
+            staticddlbig(ctrl,&pos, ctrl->label, base_id, base_id + 1);
           else
-            staticddl(&pos, ctrl->label, base_id, base_id + 1,
+            staticddl(ctrl,&pos, ctrl->label, base_id, base_id + 1,
                       ctrl->listbox.percentwidth);
         }
         else {
@@ -904,17 +931,17 @@ winctrl_layout(winctrls *wc, ctrlpos *cp, controlset *s, int *id)
       }
       when CTRL_LABEL:
         num_ids = 1;
-        staticlabel(&pos, ctrl->label, base_id);
+        staticlabel(ctrl,&pos, ctrl->label, base_id);
       when CTRL_FONTSELECT: {
         num_ids = 3;
         //__ Options - Text: font chooser activation button
-        staticbtn(&pos, "", base_id + 1, _("&Select..."), base_id + 2);
+        staticbtn(ctrl,&pos, W(""), base_id + 1, _W("&Select..."), base_id + 2);
         data = new(font_spec);
 
-        char * fontinfo = fontpropinfo();
+        wchar * fontinfo = fontpropinfo();
         if (fontinfo) {
           num_ids++;
-          statictext(&pos, fontinfo, base_id + 3);
+          statictext(ctrl,&pos, fontinfo, base_id + 3);
           free(fontinfo);
         }
       }
@@ -1317,7 +1344,7 @@ set_labels(bool font_chooser, int nCode, WPARAM wParam, LPARAM lParam)
       WPARAM fnt = diafont() ?: (WPARAM)SendMessage(basic_colors, WM_GETFONT, 0, 0);
       DestroyWindow(basic_colors);
       //__ Colour chooser:
-      basic_colors = CreateWindowExW(4, W("Static"), lbl ?: _W("B&asic colours:"), 0x50020000, 6, 7, 210, 15, (HWND)wParam, 0, inst, 0);
+      basic_colors = CreateWindowExW(4, W("Static"), lbl ?: _W("B&asic colours:"), 0x50020000, 6, 7, 210, 15, (HWND)wParam, 0, wv.inst, 0);
                          //shortkey disambiguated from original "&Basic colors:"
       // this does not seem to apply dark mode to anything
       //win_dark_mode(basic_colors);
@@ -1548,7 +1575,7 @@ fonthook(HWND hdlg, UINT msg, WPARAM wParam, LPARAM lParam)
     // (few bytes per "Apply" click)
     fsp->name = wcsdup(lfapply.lfFaceName);
 
-    HDC dc = GetDC(wnd);
+    HDC dc = GetDC(wv.wnd);
     fsp->size = -MulDiv(lfapply.lfHeight, 72, GetDeviceCaps(dc, LOGPIXELSY));
     trace_fontsel(("Apply lfHeight %ld -> size %d <%ls>\n", (long int)lfapply.lfHeight, fsp->size, lfapply.lfFaceName));
     ReleaseDC(0, dc);
@@ -1592,7 +1619,7 @@ select_font(winctrl *c)
 {
   font_spec fs = *(font_spec *) c->data;
   LOGFONTW lf;
-  HDC dc = GetDC(wnd);
+  HDC dc = GetDC(wv.wnd);
  /* We could have the idea to consider `dpi` here, like for MulDiv in 
   * win_init_fonts, but that's wrong.
   */
@@ -1673,7 +1700,7 @@ dlg_text_paint(control *ctrl)
   int font_height;
   int size = new_cfg.font.size;
   // dup'ed from win_init_fonts()
-  HDC dc = GetDC(wnd);
+  HDC dc = GetDC(wv.wnd);
   if (cfg.handle_dpichanged && per_monitor_dpi_aware)
     font_height =
       size > 0 ? -MulDiv(size, dpi, 72) : -size;
@@ -1682,7 +1709,7 @@ dlg_text_paint(control *ctrl)
   else
     font_height =
       size > 0 ? -MulDiv(size, GetDeviceCaps(dc, LOGPIXELSY), 72) : -size;
-  ReleaseDC(wnd, dc);
+  ReleaseDC(wv.wnd, dc);
 
   fnt = CreateFontW(font_height, 0, 0, 0, new_cfg.font.weight, 
                     false, false, false,
@@ -1696,61 +1723,71 @@ dlg_text_paint(control *ctrl)
   }
   DeleteObject(fnt);
 }
-
 /*
  * The dialog-box procedure calls this function to handle Windows
  * messages on a control we manage.
  */
+HGDIOBJ acbrush[16];
 int
-winctrl_handle_command(UINT msg, WPARAM wParam, LPARAM lParam)
+winctrl_handle_command(HWND hwnd,UINT msg, WPARAM wParam, LPARAM lParam)
 {
   winctrl *c;
   control *ctrl;
-  int i, id, ret;
-
+  int i, id, ret,cid=LOWORD(wParam);
+  (void)hwnd;
  /*
   * Look up the control ID in our data.
   */
   c = null;
   for (i = 0; i < dlg.nctrltrees; i++) {
-    c = winctrl_findbyid(dlg.controltrees[i], LOWORD(wParam));
+    c = winctrl_findbyid(dlg.controltrees[i], cid);
     if (c)
       break;
   }
   if (!c)
     return 0;   /* we have nothing to do */
+  ctrl = c->ctrl;
+  id = cid - c->base_id;
 
   if (msg == WM_DRAWITEM) {
    /*
     * Owner-draw request for a panel title.
     */
-    LPDRAWITEMSTRUCT di = (LPDRAWITEMSTRUCT) lParam;
-    HDC dc = di->hDC;
-    RECT r = di->rcItem;
-    SIZE s;
+    if(c->ctrl==NULL){ //must confirm it is paneltitle.assume ctrl=NULL NOW
+      LPDRAWITEMSTRUCT di = (LPDRAWITEMSTRUCT) lParam;
+      HDC dc = di->hDC;
+      RECT r = di->rcItem;
+      SIZE s;
 
-    SetMapMode(dc, MM_TEXT);   /* ensure logical units == pixels */
+      SetMapMode(dc, MM_TEXT);   /* ensure logical units == pixels */
 
-    GetTextExtentPoint32A(dc, (char *) c->data, strlen((char *) c->data), &s);
-    DrawEdge(dc, &r, EDGE_ETCHED, BF_ADJUST | BF_RECT);
-    string text = (string) c->data;
-    if (nonascii(text)) {
-      // assuming that the panel title is stored in UTF-8,
-      // transform it for proper Windows display
-      wchar * us = cs__utftowcs(text);
-      TextOutW(dc, r.left + (r.right - r.left - s.cx) / 2,
-               r.top + (r.bottom - r.top - s.cy) / 2, us, wcslen(us));
-      free(us);
+      GetTextExtentPoint32A(dc, (char *) c->data, strlen((char *) c->data), &s);
+      DrawEdge(dc, &r, EDGE_ETCHED, BF_ADJUST | BF_RECT);
+      string text = (string) c->data;
+      if (nonascii(text)) {
+        // assuming that the panel title is stored in UTF-8,
+        // transform it for proper Windows display
+        wchar * us = cs__utftowcs(text);
+        TextOutW(dc, r.left + (r.right - r.left - s.cx) / 2,
+                 r.top + (r.bottom - r.top - s.cy) / 2, us, wcslen(us));
+        free(us);
+      }
+      else
+        TextOutA(dc, r.left + (r.right - r.left - s.cx) / 2,
+                 r.top + (r.bottom - r.top - s.cy) / 2, text, strlen(text));
+
+      return true;
+    } else{
+      if(ctrl->type==CTRL_CLRBUTTON){
+        LPDRAWITEMSTRUCT di = (LPDRAWITEMSTRUCT) lParam;
+        HBRUSH cbrush = CreateSolidBrush(*(colour*)ctrl->context);
+        FillRect(di->hDC,&di->rcItem,cbrush);
+        DeleteObject(cbrush);
+        return 1;
+      }
     }
-    else
-      TextOutA(dc, r.left + (r.right - r.left - s.cx) / 2,
-               r.top + (r.bottom - r.top - s.cy) / 2, text, strlen(text));
-
-    return true;
   }
 
-  ctrl = c->ctrl;
-  id = LOWORD(wParam) - c->base_id;
 
   if (!ctrl || !ctrl->handler)
     return 0;   /* nothing we can do here */
@@ -1771,6 +1808,16 @@ winctrl_handle_command(UINT msg, WPARAM wParam, LPARAM lParam)
   if (msg == WM_COMMAND) {
     WORD note = HIWORD(wParam);
     switch (ctrl->type) {
+      when CTRL_CLRBUTTON:
+        switch (note) {
+          when BN_SETFOCUS or BN_KILLFOCUS:
+            winctrl_set_focus(ctrl, note == BN_SETFOCUS);
+          when BN_CLICKED or BN_DOUBLECLICKED:
+            ctrl->handler(ctrl, EVENT_ACTION);
+          when BN_PAINT:  // unused
+            dlg_text_paint(ctrl);
+
+        }
       when CTRL_RADIO:
         switch (note) {
           when BN_SETFOCUS or BN_KILLFOCUS:
@@ -1872,7 +1919,7 @@ winctrl_handle_command(UINT msg, WPARAM wParam, LPARAM lParam)
     static DWORD custom[16] = { 0 };    /* zero initialisers */
     cc.lStructSize = sizeof(cc);
     cc.hwndOwner = dlg.ctlwnd;
-    cc.hInstance = (HWND) inst;
+    cc.hInstance = (HWND) wv.inst;
     cc.lpCustColors = custom;
     cc.rgbResult = dlg.coloursel_result;
     cc.Flags = CC_FULLOPEN | CC_RGBINIT;
@@ -1881,6 +1928,7 @@ winctrl_handle_command(UINT msg, WPARAM wParam, LPARAM lParam)
     unhook_windows();
     dlg.coloursel_result = cc.rgbResult;
     ctrl->handler(ctrl, EVENT_CALLBACK);
+    //InvalidateRect(GetDlgItem(hwnd,cid),NULL,1);
   }
 
   return ret;
