@@ -1,8 +1,7 @@
 # enhanced mintty #
-branch from github.com/mintty/mintty 3.4.3  
+branch from github.com/mintty/mintty 3.5.2  
 Please report bugs or suggest enhancements via the 
-   [github issue tracker](https://github.com/qdzhaov/mintty/issues).
-or [gitee  issue tracker](https://gitee.com/qdzhaov/mintty/issues).
+[gitee  issue tracker](https://gitee.com/qdzhaov/mintty/issues).
 
 ## main enhancement: ##
 + surport multiple Tab followed fatty,  
@@ -14,6 +13,7 @@ or [gitee  issue tracker](https://gitee.com/qdzhaov/mintty/issues).
 + optimize shortcuts key  
   easy use ,easy read,high effcient  
   user define shortcuts easy an high effcient  
++ surport colour & theme edit
 + TODO:
   Todo: user define shortcuts in config dialog  
   Todo: add user define shortcuts for every function  
@@ -23,6 +23,7 @@ or [gitee  issue tracker](https://gitee.com/qdzhaov/mintty/issues).
 + Important:   
   the golbal variable is term depend,should be in parameter,term is used many many times,  
   I can't modify it,I use global pointer cterm,be sure it pointer to correct term.  
+
 ## tab control shortcuts ## 
 ```
 win+Left        prevtab  
