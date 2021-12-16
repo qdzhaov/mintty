@@ -5,10 +5,9 @@
 // Enums for various options.
 
 typedef enum { MDK_SHIFT = 1, MDK_ALT = 2, MDK_CTRL = 4, 
-               MDK_WIN = 8, MDK_SUPER = 16, MDK_HYPER = 32 } mod_keys;
-
-typedef enum { SMDK_SHIFT = 0, SMDK_ALT   = 1, SMDK_CTRL  = 2, 
-               SMDK_WIN   = 3, SMDK_SUPER = 4, SMDK_HYPER = 5 } smod_keys;
+               MDK_MCMD= 8, MDK_SUPER = 16, MDK_HYPER = 32 ,
+               MDK_WIN=128
+             } mod_keys;
 
 enum { HOLD_NEVER, HOLD_START, HOLD_ERROR, HOLD_ALWAYS };
 enum { CUR_BLOCK, CUR_UNDERSCORE, CUR_LINE, CUR_BOX };
@@ -49,7 +48,15 @@ typedef struct {
   bool isbold;
 } font_spec;
 
-
+typedef struct {
+  string name;
+  string func;
+  string hotkey;
+} hotkeydef;
+enum{
+  HK_FULLSCREEN=0,
+  HK_NUMS,
+};
 // Configuration data.
 
 typedef struct {
@@ -126,7 +133,7 @@ typedef struct {
   string key_break;	// VK_CANCEL
   string key_menu;	// VK_APPS
   string key_scrlock;	// VK_SCROLL
-  wstring key_commands;
+  string key_commands;
   int manage_leds;
   // Mouse
   bool clicks_place_cursor;
@@ -180,6 +187,8 @@ typedef struct {
   int play_tone;
   wstring printer;
   bool confirm_exit;
+  //hotkey
+  string hks[HK_NUMS];
   // Command line
   wstring class;
   char hold;
@@ -217,14 +226,14 @@ typedef struct {
   wstring app_id;
   wstring app_name;
   wstring app_launch_cmd;
-  wstring drop_commands;
-  wstring exit_commands;
-  wstring user_commands;
-  wstring ctx_user_commands;
-  wstring sys_user_commands;
-  wstring user_commands_path;
-  wstring session_commands;
-  wstring task_commands;
+  string drop_commands;
+  string exit_commands;
+  string user_commands;
+  string ctx_user_commands;
+  string sys_user_commands;
+  string user_commands_path;
+  string session_commands;
+  string task_commands;
   int conpty_support;
   bool login_from_shortcut;
   string menu_mouse;
@@ -266,6 +275,7 @@ typedef void (* str_fn)(char *);
 
 extern string config_dir;
 extern config cfg, new_cfg, file_cfg;
+extern const hotkeydef hkdefs[HK_NUMS];
 
 extern void init_config(void);
 extern void list_fonts(bool report);

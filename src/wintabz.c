@@ -75,9 +75,9 @@ wchar_t* win_tab_title_pop(STerm*pterm) {
   return win_tab_get_title(active_tab);
 }
 void win_tab_for_each(void (*cb)(STerm*pterm)) {
-  for (STab** tab=tabs;*tab;tab++){
-    win_tab_v(*tab);
-    cb((*tab)->terminal);
+  for (STab** ptab=tabs;*ptab;ptab++){
+    win_tab_v(*ptab);
+    cb((*ptab)->terminal);
   }
 }
 

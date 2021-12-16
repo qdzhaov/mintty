@@ -285,6 +285,7 @@ child_create(struct STerm* pterm,SessDef*sd,
   }
   else if (!pid) { // Child process.
 #if CYGWIN_VERSION_DLL_MAJOR < 1007
+    if(cfg.allocconsole){
     // Some native console programs require a console to be attached to the
     // process, otherwise they pop one up themselves, which is rather annoying.
     // Cygwin's exec function from 1.5 onwards automatically allocates a console
@@ -306,6 +307,7 @@ child_create(struct STerm* pterm,SessDef*sd,
           (void *)GetProcAddress(kernel, "GetConsoleWindow");
         ShowWindowAsync(pGetConsoleWindow(), SW_HIDE);
       }
+    }
 #endif
     //close all fds 
     for (int ifd=3;ifd<100;ifd++){
@@ -835,8 +837,8 @@ child_sendw(STerm* pterm,const wchar *ws, uint wlen)
 void
 child_resize(STerm* pterm,struct winsize *winp)
 {
-  if (((pterm->child.pty_fd   ) >= 0)&& (memcmp(&cterm->cwinsize, winp, sizeof(struct winsize)) != 0)) {
-    cterm->cwinsize = *winp;
+  if (((pterm->child.pty_fd   ) >= 0)&& (memcmp(&pterm->cwinsize, winp, sizeof(struct winsize)) != 0)) {
+    pterm->cwinsize = *winp;
     ioctl((pterm->child.pty_fd   ), TIOCSWINSZ, winp);
   }
 }
@@ -897,10 +899,10 @@ foreground_prog(STerm* pterm)
 }
 
 void
-user_command(STerm* pterm,wstring commands, int n)
+user_command(STerm* pterm,string commands, int n)
 {
   if (*commands) {
-    char * cmds = cs__wcstombs(commands);
+    char * cmds = strdup(commands);
     char * cmdp = cmds;
     char sepch = ';';
     if ((uchar)*cmdp <= (uchar)' ')
@@ -1240,7 +1242,7 @@ child_launch(int n, SessDef*sd, int moni)
   int argc=sd->argc;
   const char **argv=sd->argv;
   if (*cfg.session_commands) {
-    char * cmds = cs__wcstombs(cfg.session_commands);
+    char * cmds = strdup(cfg.session_commands);
     char * cmdp = cmds;
     char sepch = ';';
     if ((uchar)*cmdp <= (uchar)' ')

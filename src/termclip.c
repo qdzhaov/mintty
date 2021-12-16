@@ -467,7 +467,7 @@ term_cmd(const char * cmd)
   char * path1 = 0;
   if (*cfg.user_commands_path) {
     path0 = getenv("PATH");
-    path1 = cs__wcstombs(cfg.user_commands_path);
+    path1 = strdup(cfg.user_commands_path);
     char * ph = strstr(path1, "%s");
     if (ph && !strchr(ph + 1, '%')) {
       char * path2 = asform(path1, path0);

@@ -48,7 +48,7 @@ extern void setenvi(const char * env, int val);
 extern void child_set_fork_dir(STerm* pterm,const char *);
 extern void child_launch(int n, SessDef*sd, int moni);
 extern void child_fork(SessDef*sd, int moni, bool config_size, bool in_cwd);
-extern void user_command(STerm* pterm,wstring commands, int n);
+extern void user_command(STerm* pterm,string commands, int n);
 
 //========= for wintab 
 extern void win_tog_scrollbar();

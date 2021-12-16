@@ -27,6 +27,9 @@ enum {
   WIN_INIT_POS = 5,
   WIN_HIDE = 8,
 };
+enum {
+  KS_NORM=0,KS_NEWW,KS_TPP,KS_TC1,KS_TC2,KS_TC3
+};
 typedef struct {
 // State
   int border_style ;
@@ -79,8 +82,20 @@ typedef struct {
   // character cell size, including spacing:
   int cell_width, cell_height;
 
+  uint newwin_key ;
+  bool newwin_shifted ;
+  bool newwin_home ;
+  int newwin_monix ,newwin_moniy ;
+
+  int previous_transparency;
+  bool transparency_tuned;
+
+  int tabctrling; //
+  int transparency_pending ;//
+  bool newwin_pending ;//
+  int kstate;
+
   bool click_focus_token ;
-  int tabctrling;
   LONG last_tabk_time  ;
   ULONG last_wink_time;
   uint pressedkey,pkeys,pwinkey;
@@ -153,7 +168,7 @@ extern void set_cursor_style(bool appmouse, const wchar * style);
 
 extern void win_init_menus(void);
 extern void win_update_menus(bool callback);
-extern void user_function(wstring commands, int n);
+extern void user_function(string commands, int n);
 
 extern void win_show_mouse(void);
 extern bool win_mouse_click(mouse_button, LPARAM);

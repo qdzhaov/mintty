@@ -25,6 +25,7 @@ enum {
   CTRL_FONTSELECT, /* label plus font selector */
   CTRL_LABEL,      /* static text/label only */
   CTRL_CLRBUTTON,  /* color push button (no label) */
+  CTRL_HOTKEY,/*  */
 };
 
 /*
@@ -208,6 +209,15 @@ struct control {
       int ncols;  /* number of columns */
       int * percentages;   /* % width of each column */
     } listbox;
+    struct {
+      /*
+       * Percentage of the dialog-box width used by the edit box.
+       * If this is set to 100, the label is on its own line;
+       * otherwise the label is on the same line as the box itself.
+       */
+      int percentwidth;
+      int hkid;
+    } hotkey;
 
     struct {
       /* In this variant, `label' MUST be null. */
@@ -296,30 +306,21 @@ extern void * ctrl_alloc(controlbox *, size_t size);
 /* `ncolumns' is followed by that many percentages, as integers. */
 extern control * ctrl_columns(controlset *, int ncolumns, ...);
 
-extern control * ctrl_label(controlset *, int col, const wchar * label,const wchar * tip);
-extern control * ctrl_editbox(controlset *, int col, const wchar * label,const wchar * tip, int percentage,
-                              handler_fn handler, void * context);
-extern control * ctrl_combobox(controlset *, int col, const wchar * label,const wchar * tip, int percentage,
-                               handler_fn handler, void * context);
-extern control * ctrl_listbox(controlset *, int col, const wchar * label,const wchar * tip, int lines, int percentage,
-                              handler_fn handler, void * context);
+extern control * ctrl_hotkey  (controlset *, int col, const wchar * label,const wchar * tip, handler_fn handler, void *context,int hkid);
+extern control * ctrl_label   (controlset *, int col, const wchar * label,const wchar * tip);
+extern control * ctrl_editbox (controlset *, int col, const wchar * label,const wchar * tip, int percentage, handler_fn handler, void * context);
+extern control * ctrl_combobox(controlset *, int col, const wchar * label,const wchar * tip, int percentage, handler_fn handler, void * context);
+extern control * ctrl_listbox (controlset *, int col, const wchar * label,const wchar * tip, int lines, int percentage, handler_fn handler, void * context);
+extern control * ctrl_droplist(controlset *, int col, const wchar * label,const wchar * tip, int percentage, handler_fn handler, void * context);
+extern control * ctrl_fontsel (controlset *, int col, const wchar * label,const wchar * tip, handler_fn handler, void * context);
+extern control * ctrl_checkbox(controlset *, int col, const wchar * label,const wchar * tip, handler_fn handler, void * context);
+extern control * ctrl_pushbutton(controlset *, int col, const wchar * label,const wchar * tip, handler_fn handler, void * context);
+extern control * ctrl_clrbutton (controlset *, int col, const wchar * label,const wchar * tip, handler_fn handler, void * context);
 /*
  * `ncolumns' is followed by (alternately) radio button titles and integers,
  * until a null in place of a title string is seen.
  */
-extern control * ctrl_radiobuttons(controlset *, int col, const wchar * label,const wchar * tip, int ncolumns,
-                                   handler_fn handler, char * context, ...);
-
-extern control * ctrl_pushbutton(controlset *, int col, const wchar * label,const wchar * tip,
-                                 handler_fn handler, void * context);
-extern control * ctrl_clrbutton(controlset *, int col, const wchar * label,const wchar * tip,
-                                 handler_fn handler, void * context);
-extern control * ctrl_droplist(controlset *, int col, const wchar * label,const wchar * tip, int percentage,
-                               handler_fn handler, void * context);
-extern control * ctrl_fontsel(controlset *, int col, const wchar * label,const wchar * tip,
-                              handler_fn handler, void * context);
-extern control * ctrl_checkbox(controlset *, int col, const wchar * label,const wchar * tip,
-                               handler_fn handler, void * context);
+extern control * ctrl_radiobuttons(controlset *, int col, const wchar * label,const wchar * tip, int ncolumns, handler_fn handler, char * context, ...);
 
 /*
  * Standard handler routines to cover most of the common cases in
@@ -332,6 +333,7 @@ extern void dlg_stdintbox_handler(control *, int event);
 extern void dlg_stdradiobutton_handler(control *, int event);
 extern void dlg_stdfontsel_handler(control *, int event);
 extern void dlg_stdcolour_handler(control *, int event);
+extern void dlg_hotkey_handler(control *, int event);
 
 /*
  * Routines the platform-independent dialog code can call to read

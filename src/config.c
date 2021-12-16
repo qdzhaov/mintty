@@ -162,7 +162,7 @@ const config default_cfg = {
   .key_break = "",	// VK_CANCEL
   .key_menu = "",	// VK_APPS
   .key_scrlock = "",	// VK_SCROLL
-  .key_commands = W(""),
+  .key_commands = (""),
   .manage_leds = 7,
   // Mouse
   .clicks_place_cursor = false,
@@ -216,6 +216,10 @@ const config default_cfg = {
   .play_tone = 2,
   .printer = W(""),
   .confirm_exit = true,
+  //hotkey
+  .hks[HK_FULLSCREEN]="A+RETRURN;",
+
+
   // Command line
   .class = W(""),
   .hold = HOLD_START,
@@ -254,14 +258,14 @@ const config default_cfg = {
   .app_id = W(""),
   .app_name = W(""),
   .app_launch_cmd = W(""),
-  .drop_commands = W(""),
-  .exit_commands = W(""),
-  .user_commands = W(""),
-  .ctx_user_commands = W(""),
-  .sys_user_commands = W(""),
-  .user_commands_path = W("/bin:%s"),
-  .session_commands = W(""),
-  .task_commands = W(""),
+  .drop_commands = (""),
+  .exit_commands = (""),
+  .user_commands = (""),
+  .ctx_user_commands = (""),
+  .sys_user_commands = (""),
+  .user_commands_path = ("/bin:%s"),
+  .session_commands = (""),
+  .task_commands = (""),
   .conpty_support = -1,
   .login_from_shortcut = true,
   .menu_mouse = "b",
@@ -296,6 +300,9 @@ const config default_cfg = {
   // Legacy
   .use_system_colours = false,
   .old_bold = false
+};
+const hotkeydef hkdefs[HK_NUMS]={
+  [HK_FULLSCREEN]={__("FullScreen"),  (void*)IDM_FULLSCREEN,"A+RETRURN;"  },
 };
 
 config cfg, new_cfg, file_cfg;
@@ -538,6 +545,8 @@ static cfg_option options[]= {
   {"PlayTone", OPT_INT, offcfg(play_tone),__("PlayTone")},
   {"Printer", OPT_WSTRING, offcfg(printer),__("Printer")},
   {"ConfirmExit", OPT_BOOL, offcfg(confirm_exit),__("ConfirmExit")},
+  //hotkey
+  {"hkFullScreen",OPT_STRING,offcfg(hks[HK_FULLSCREEN]),__("hotkey FullScreen")},
 
   // Command line
   {"Command line",OPT_COMMENT,0,0},
@@ -4309,10 +4318,8 @@ setup_config_box(controlbox * b)
   ctrl_columns(s, 2, 73, 27);
   ctrl_combobox( s,0, null,0, 100, bell_handler, 0);
   ctrl_pushbutton( s,1, _W("► &Play"),0, bell_tester, 0);
-  ctrl_columns(s, 1, 100);  // reset column stuff so we can rearrange them
   ctrl_columns(s, 2, 100, 0);
   ctrl_combobox( s,0, _W("&Wave"),0, 83, bellfile_handler, &new_cfg.bell_file[6]);
-  ctrl_columns(s, 1, 100);  // reset column stuff so we can rearrange them
   // balance column widths of the following 3 fields 
   // to accomodate different length of localized labels
   int strwidth(wstring s0) {
@@ -4354,5 +4361,12 @@ setup_config_box(controlbox * b)
   s = ctrl_new_set(b, _W("Terminal"), null, null);
   ctrl_checkbox( s,-1, _W("Prompt about running processes on &close"),0,
     dlg_stdcheckbox_handler, &new_cfg.confirm_exit
+  );
+ /*
+  * The hotkey panel.
+  */
+  s = ctrl_new_set(b, _W("Hotkey"), _W("hotkey define"), _W("hotkeys"));
+  ctrl_hotkey( s,-1, _W("&Fullscreen"),0,
+    dlg_hotkey_handler, &new_cfg.hks[HK_FULLSCREEN],HK_FULLSCREEN
   );
 }

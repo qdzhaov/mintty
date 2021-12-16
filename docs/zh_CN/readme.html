@@ -1,0 +1,73 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+<meta content="text/html; charset=ISO-8859-1" http-equiv="content-type">
+<title>mintty</title>
+</head>
+<body>
+<p>
+E mintty is copyright 2008-13 Andy Koppe, 2015 Thomas Wolff
+C Mintty 版权所有2008-13 Andy Koppe，2015 Thomas Wolff
+</p>
+<p>
+E This program is distributed in the hope that it will be useful, but without any warranty; 
+E without even the implied warranty of merchantability or fitness for a particular purpose. 
+E It is licensed under the terms of the 
+E <a href="https://www.gnu.org/licenses/gpl.html">
+E GNU General Public License version 3</a> or later. 
+E Updates and source code are available from the mintty home page at 
+E <a href="http://mintty.github.io/">http://mintty.github.io/</a>.
+C 这个程序是希望它将是有用的，但没有任何保证，甚至没有隐含的保证适销性或适用于某一特定目的。
+C 它是根据 <a href="https://www.gnu.org/licenses/gpl.html">
+C GNU通用公共许可协议版本3</a>或更高版本的条款授权的。
+C 更新和源代码可以在 http://mintty.github.io/的 mintty 主页上找到。
+</p>
+<p>
+E Mintty is based on parts of <a href="http://www.chiark.greenend.org.uk/%7Esgtatham/putty/">PuTTY</a> version 0.60 by Simon Tatham and contributors, available from <a href="http://the.earth.li/~sgtatham/putty/0.60">http://the.earth.li/~sgtatham/putty/0.60</a>. Big thanks to everyone involved. Thanks also to KDE's Oxygen team for the program icon.
+C Mintty 是基于 Simon Tatham 和贡献者提供的 PuTTY 0.60版本的部分内容，可在 http://the.earth.li/~sgtatham/PuTTY/0.60网站上找到。非常感谢所有参与其中的人。感谢 KDE 的 Oxygen 团队提供的程序图标。
+</p>
+E <h4>Running mintty</h4>
+C <h4>运行mintty</h4>
+<p>
+E First off, instead of installing mintty manually, consider installing it through Cygwin's <a href="http://cygwin.org/setup.exe">setup.exe</a>, where it can be found in the <i>Shells</i> category. This will place a shortcut to mintty in the Cygwin folder of the start menu.
+C 首先，与其手动安装 mintty，不如考虑通过 Cygwin 的 setup.exe 安装它，在那里可以在 Shells 类别中找到它。这将在开始菜单的 Cygwin 文件夹中放置 mintty 的快捷方式。
+</p>
+<p>
+E Otherwise, you need to ensure that Windows is able to find the Cygwin DLL (<i>cygwin1.dll</i>) when starting <i>mintty.exe</i>. There are several ways to do this:
+C 否则，您需要确保 Windows 在启动 mintty.exe 时能够找到 Cygwin DLL (cygwin1.DLL)。有几种方法可以做到:
+</p>
+<ul>
+<li>
+E Start it from within an existing Cygwin session.
+C 从现有的 Cygwin 会话启动它。
+</li>
+<li>
+E Place <i>mintty.exe</i> alongside <i>cygwin1.dll</i> in the Cygwin <i>/bin</i> directory and start it from there.
+C 将 <i>mintty.exe</i> 与 <i>cygwin1.dll</i> 放在 Cygwin <i>/bin</i> 目录中，然后从那里启动它。
+</li>
+<li>
+E Add the Cygwin <i>bin</i> directory (normally <i>C:\cygwin\bin</i>) to the Windows <i>PATH</i> variable, which can be found under 'Environment Variables' on the 'Advanced' tab of the System Properties control panel.
+C 将 Cygwin bin 目录(通常为 c: Cygwin bin)添加到 Windows PATH 变量中，可以在 System Properties 控制面板的“ Advanced”选项卡中的“ Environment Variables”下找到该变量。
+</li>
+<li>
+E Create a shortcut to <i>mintty.exe</i> with the working directory set to the Cygwin <i>bin</i> directory. This can be done with the <a href="create_shortcut.js"><i>create_shortcut.js</i></a> script.
+C 创建一个快捷方式到 mintty.exe，并将工作目录目录设置为 Cygwin bin 目录。这可以通过 create _ shortcut 完成。Js 脚本。
+</li>
+</ul>
+<p>
+E Invoke mintty with a dash as its only argument to obtain a login shell that sources all the usual startup scripts: <tt>mintty -</i></tt>
+C 以一个破折号作为它的唯一参数来调用 mintty，以获得一个登录 shell，它为所有常见的启动脚本提供源代码: mintty-
+<p>
+E Invoking <i>mintty</i> with <i>--version</i> or <i>--help</i> will print version or usage information. The mintty manual can be found on the home page at <a href="http://mintty.github.io/">http://mintty.github.io/</a>.
+C 调用 mintty with -- version 或 -- help 将打印版本或使用信息。明尼苏达州的手册可以在 http://mintty.github.io/的主页上找到。
+</p>
+<p>
+E Please report bugs or suggest enhancements via the <a href="https://github.com/mintty/mintty/issues">issue tracker</a>.
+E General Cygwin questions should be sent to the <a href="mailto:cygwin@cygwin.org">Cygwin mailing list</a>.
+C 请通过问题跟踪器报告 bug 或提出改进建议。一般的 Cygwin 问题应该发送到 Cygwin 邮件列表。
+</p>
+Enjoy!
+<br>
+Andy
+</body>
+</html>

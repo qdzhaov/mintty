@@ -319,6 +319,14 @@ ctrl_clrbutton(controlset *s, int col, const wchar * label,const wchar * tip,
   c->button.iscancel = 0;
   return c;
 }
+control *
+ctrl_hotkey(controlset *s, int col, const wchar * label,const wchar * tip,
+                handler_fn handler, void *context,int hkid)
+{
+  control *c = ctrl_new(s,col, CTRL_HOTKEY, label,tip,handler, context);
+  c->hotkey.hkid=hkid;
+  return c;
+}
 
 control *
 ctrl_label(controlset *s, int col, const wchar * label,const wchar * tip)
@@ -438,5 +446,15 @@ dlg_stdcolour_handler(control *ctrl, int event)
     if (dlg_coloursel_results(&c)){
       *cp = c;
     }
+  }
+}
+void
+dlg_hotkey_handler(control *ctrl, int event)
+{
+  (void)(ctrl);
+  //int hkid=ctrl->hotkey.hkid;
+  if (event == EVENT_ACTION){
+   // dlg_coloursel_start(*cp);
+  } else if (event == EVENT_CALLBACK) {
   }
 }

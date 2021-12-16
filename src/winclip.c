@@ -1121,7 +1121,7 @@ paste_hdrop(HDROP drop)
     char * fg_prog = foreground_prog(cterm);
     if (fg_prog) {
       // match program base name
-      char * drops = cs__wcstombs(cfg.drop_commands);
+      char * drops = strdup(cfg.drop_commands);
       char * paste = matchconf(drops, fg_prog);
       if (paste) {
         char * format = strchr(paste, '%');

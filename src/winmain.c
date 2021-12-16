@@ -2218,7 +2218,7 @@ app_close()
     char * fg_prog = foreground_prog(cterm);
     if (fg_prog) {
       // match program base name
-      char * exits = cs__wcstombs(cfg.exit_commands);
+      char * exits = strdup(cfg.exit_commands);
       char * paste = matchconf(exits, fg_prog);
       if (paste) {
         child_send(cterm,paste, strlen(paste));
@@ -2226,7 +2226,7 @@ app_close()
         free(fg_prog);
         return;  // don't close terminal
       }
-      free(exits);
+      free(exits);  
       free(fg_prog);
     }
   }
@@ -2502,12 +2502,12 @@ win_proc(HWND wnd, UINT message, WPARAM wp, LPARAM lp)
 {
   win_tab_actv();
 #ifdef debug_messages
-static struct {
-  uint wm_;
-  char * wm_name;
-} wm_names[] = {
+  static struct {
+    uint wm_;
+    char * wm_name;
+  } wm_names[] = {
 #include "_wm.t"
-};
+  };
   char * wm_name = "WM_?";
   for (uint i = 0; i < lengthof(wm_names); i++)
     if (message == wm_names[i].wm_ && !strstr(wm_names[i].wm_name, "FIRST")) {
@@ -2623,17 +2623,17 @@ static struct {
         }
       printf("                           %04X %s\n", (int)wp, idm_name);
 # endif
-      if ((wp & ~0xF) >= 0xF000)
+      if ((wp ) >= 0xF000)
         ; // skip WM_SYSCOMMAND from Windows here (but process own ones)
-      else if ((wp & ~0xF) >= IDM_GOTAB)
+      else if ((wp ) >= IDM_GOTAB)
         win_gotab(wp - IDM_GOTAB);
-      else if ((wp & ~0xF) >= IDM_CTXMENUFUNCTION)
+      else if ((wp ) >= IDM_CTXMENUFUNCTION)
         user_function(cfg.ctx_user_commands, wp - IDM_CTXMENUFUNCTION);
-      else if ((wp & ~0xF) >= IDM_SYSMENUFUNCTION)
+      else if ((wp ) >= IDM_SYSMENUFUNCTION)
         user_function(cfg.sys_user_commands, wp - IDM_SYSMENUFUNCTION);
-      else if ((wp & ~0xF) >= IDM_SESSIONCOMMAND)
+      else if ((wp ) >= IDM_SESSIONCOMMAND)
         win_launch(wp - IDM_SESSIONCOMMAND);
-      else if ((wp & ~0xF) >= IDM_USERCOMMAND)
+      else if ((wp ) >= IDM_USERCOMMAND)
         user_command(cterm,cfg.user_commands, wp - IDM_USERCOMMAND);
       else
       switch (wp & ~0xF) {  /* low 4 bits reserved to Windows */
@@ -4221,9 +4221,9 @@ wslicon(const wchar * params)
 }
 
 static void
-enum_commands(wstring commands, CMDENUMPROC cmdenum)
+enum_commands(string commands, CMDENUMPROC cmdenum)
 {
-  char * cmds = cs__wcstoutf(commands);
+  char * cmds = strdup(commands);
   char * cmdp = cmds;
   char sepch = ';';
   if ((uchar)*cmdp <= (uchar)' ')
@@ -5743,10 +5743,6 @@ main(int argc, const char *argv[])
       setenv(env, val, true);
     }
   }
-
-  // Create child process.
-  //struct winsize ws={term_rows, term_cols, term_width, term_height};
-  //child_create( cterm, argv, &ws    ,NULL);
 
   // Set up clipboard notifications.
   HRESULT (WINAPI * pAddClipboardFormatListener)(HWND) =
