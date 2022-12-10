@@ -439,6 +439,12 @@ term_mouse_click(mouse_button b, mod_keys mods, pos p, int count)
 {
   compose_clear();
 
+  /* (#1169) was_hovering considers the case when hovering is not directly 
+     triggered via state MS_OPENING but rather overrides state MS_SEL_CHAR,
+     in order to support its configuration to be applied without modifier
+  */
+  bool was_hovering = cterm->hovering;
+
   if (cterm->hovering) {
     cterm->hovering = false;
     win_update(true);
@@ -514,7 +520,10 @@ term_mouse_click(mouse_button b, mod_keys mods, pos p, int count)
     else if (b == MBT_LEFT && mods == MDK_SHIFT && rca == RC_EXTEND) {
       cterm->mouse_state = MS_PASTING;
     }
-    else if (b == MBT_LEFT && (mods & ~cfg.click_target_mod) == MDK_CTRL) {
+    else if (b == MBT_LEFT &&
+             ((char)(mods & ~cfg.click_target_mod) == cfg.opening_mod || was_hovering)
+            )
+    {
       if (count == cfg.opening_clicks) {
         // Open word under cursor
         p = get_selpoint(box_pos(p));
@@ -563,30 +572,47 @@ term_mouse_click(mouse_button b, mod_keys mods, pos p, int count)
   return res;
 }
 
+static void
+mouse_open(pos p)
+{
+  termline *line = fetch_line(p.y + cterm->disptop);
+  int urli = line->chars[p.x].attr.link;
+  release_line(line);
+  char * url = geturl(urli);
+  if (url)
+    win_open(cs__utftowcs(url), true);  // win_open frees its argument
+  else
+    term_open();
+  cterm->selected = false;
+  cterm->hovering = false;
+  win_update(true);
+}
+
 void
 term_mouse_release(mouse_button b, mod_keys mods, pos p)
 {
   compose_clear();
 
   int state = cterm->mouse_state;
+
   cterm->mouse_state = 0;
   switch (state) {
     when MS_COPYING: term_copy();
     when MS_PASTING: win_paste();
-    when MS_OPENING: {
-      termline *line = fetch_line(p.y + cterm->disptop);
-      int urli = line->chars[p.x].attr.link;
-      release_line(line);
-      char * url = geturl(urli);
-      if (url)
-        win_open(cs__utftowcs(url), true);  // win_open frees its argument
-      else
-        term_open();
-      cterm->selected = false;
-      cterm->hovering = false;
-      win_update(true);
-    }
+    when MS_OPENING: mouse_open(p);
     when MS_SEL_CHAR or MS_SEL_WORD or MS_SEL_LINE: {
+      // Open hovered link, accepting configurable modifiers
+      if (state == MS_SEL_CHAR && !cterm->selected
+          && ((char)(mods & ~cfg.click_target_mod) == cfg.opening_mod)
+         )
+      {
+        // support the case of hovering and link opening without modifiers 
+        // if so configured (#1169)
+        mouse_open(p);
+        cterm->mouse_state = 0;
+        return;
+      }
+
       // Finish selection.
       if (cterm->selected && cfg.copy_on_select)
         term_copy();
@@ -675,6 +701,7 @@ term_mouse_move(mod_keys mods, pos p)
   pos bp = box_pos(p);
 
   if (term_selecting()) {
+    //printf("term_mouse_move selecting\n");
     if (p.y < 0 || p.y >= cterm->rows) {
       if (!cterm->sel_scroll)
         win_set_timer(sel_scroll_cb, 200);
@@ -693,7 +720,26 @@ term_mouse_move(mod_keys mods, pos p)
 
     win_update(true);
   }
+  else if (cterm->mouse_state == MS_OPENING && 0 == cfg.opening_mod) {
+    //printf("term_mouse_move opening mods %X\n", mods);
+    // assumption: don't need to check mouse button state in this workflow
+
+    // if hover links are configured to work without modifier, 
+    // still enable text selection even over a link, after the mouse 
+    // has moved from initial click;
+    // not this is in opposite to the next case, which deliberately 
+    // catches this case to NOT switch to selection, in order to 
+    // support hover action even after tiny mouse shaking (#1039)
+
+    cterm->mouse_state = MS_SEL_CHAR;
+    // here we could already establish selection mode properly, 
+    // as it is done above in term_mouse_click, case 
+    // "Only clicks for selecting and extending should get here." -
+    // we save that effort as it will be achieved anyway by the 
+    // next tiny movement...
+  }
   else if (cterm->mouse_state == MS_OPENING) {
+    //printf("term_mouse_move opening mods %X\n", mods);
     // let's not clear link opening state when just moving the mouse (#1039)
     // but only after hovering out of the link area (below)
 #ifdef link_opening_only_if_unmoved
@@ -703,15 +749,22 @@ term_mouse_move(mod_keys mods, pos p)
 #endif
   }
   else if (cterm->mouse_state > 0) {
+    //printf("term_mouse_move >0\n");
     if (cterm->mouse_mode >= MM_BTN_EVENT)
       send_mouse_event(MA_MOVE, (mouse_button)cterm->mouse_state, mods, bp);
   }
   else {
+    //printf("term_mouse_move any\n");
     if (cterm->mouse_mode == MM_ANY_EVENT)
       send_mouse_event(MA_MOVE, 0, mods, bp);
   }
 
-  if (!check_app_mouse(&mods) && (mods & ~cfg.click_target_mod) == MDK_CTRL && cterm->has_focus) {
+  // hover indication
+  if (!check_app_mouse(&mods) && cterm->has_focus &&
+      ((char)(mods & ~cfg.click_target_mod) == cfg.opening_mod)
+     )
+  {
+    //printf("term_mouse_move link\n");
     p = get_selpoint(box_pos(p));
     cterm->hover_start = cterm->hover_end = p;
     if (!hover_spread_empty()) {

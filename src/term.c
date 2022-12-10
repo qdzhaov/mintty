@@ -253,6 +253,7 @@ term_cursor_reset(term_cursor *curs)
   curs->cset_single = CSET_ASCII;
 
   curs->bidimode = 0;
+  curs->rewrap_on_resize = true;
 
   curs->origin = false;
 }
@@ -300,6 +301,7 @@ term_reset(bool full)
 
   if (full) {
     cterm->lrmargmode = false;
+    cterm->dim_margins = cfg.dim_margins;
     cterm->deccolm_allowed = cfg.enable_deccolm_init;  // not reset by xterm
     cterm->vt220_keys = vt220(cfg.Term);  // not reset by xterm
     cterm->app_keypad = false;  // xterm only with RIS
@@ -308,6 +310,7 @@ term_reset(bool full)
     cterm->repeat_rate = 0;
     cterm->attr_rect = false;
     cterm->deccolm_noclear = false;
+    cterm->erase_to_screen = false;
   }
   cterm->modify_other_keys = 0;  // xterm resets this
 
@@ -368,6 +371,16 @@ term_reset(bool full)
   if (full) {
     cterm->blink_is_real = cfg.allow_blinking;
     cterm->hide_mouse = cfg.hide_mouse;
+  }
+
+  term_switch_status(false);
+  if (full) {
+    term_clear_status();
+    // restore initial status line unless type 2 selected
+    if (cfg.status_line && cterm->st_type == 0)
+      term_set_status_type(1, 0);
+    else if (!cfg.status_line && cterm->st_type == 1)
+      term_set_status_type(0, 0);
   }
 
   if (full) {
@@ -1044,47 +1057,103 @@ term_clear_search(void)
   cterm->results.xquery_length = 0;
 }
 
+/*
+   After term_reflow has expanded the scrollback buffer beyond its maximum 
+   (for shunting lines to be rewrapped), it should trim the buffer again 
+   to its limit.
+ */
 static void
-scrollback_push(uchar *line)
+scrollback_trim(void)
 {
-  if (cterm->sblines == cterm->sblen) {
+  // Trim scrollback buffer back to max size after shunting reflow lines
+  //printf("scrollback_trim %p %d len %d lines %d tmp %d pos %d disp %d\n", line, newrows, cterm->sbsize, cterm->sblines, cterm->tempsblines, cterm->sbpos, cterm->disptop);
+  uchar **scrollback = newn(uchar *, cfg.scrollback_lines);
+  if (!scrollback)
+    return;
+  int new_sblines = 0;
+  for (int i = 0; i < cterm->sblines; i++) {
+    uchar *cline = cterm->scrollback[(i + cterm->sbpos) % cterm->sblines];
+    if (i < cterm->sblines - cfg.scrollback_lines)
+      free(cline);
+    else
+      scrollback[new_sblines++] = cline;
+  }
+  free(cterm->scrollback);
+  cterm->scrollback = scrollback;
+  cterm->sblines = new_sblines;
+  cterm->sbpos = new_sblines;
+  cterm->sbsize = cfg.scrollback_lines;
+  cterm->tempsblines = cterm->sblines;
+
+  if (cterm->sbpos == cterm->sbsize)
+    cterm->sbpos = 0;
+  //printf("-> scrollback_trim len %d lines %d tmp %d pos %d disp %d\n", cterm->sbsize, cterm->sblines, cterm->tempsblines, cterm->sbpos, cterm->disptop);
+}
+
+static void
+scrollback_push(uchar *line, int newrows)
+{
+  //printf("scrollback_push %p %d len %d lines %d tmp %d pos %d disp %d\n", line, newrows, cterm->sbsize, cterm->sblines, cterm->tempsblines, cterm->sbpos, cterm->disptop);
+  if (cterm->sbpos == cterm->sbsize)
+    cterm->sbpos = 0;
+  if (cterm->sblines == cterm->sbsize) {
     // Need to make space for the new line.
-    if (cterm->sblen < cfg.scrollback_lines) {
+    if (newrows || cterm->sbsize < cfg.scrollback_lines) {
+      assert(newrows || cterm->sbpos == 0);
       // Expand buffer
-      assert(cterm->sbpos == 0);
-      int new_sblen = min(cfg.scrollback_lines, cterm->sblen * 3 + 1024);
-      cterm->scrollback = renewn(cterm->scrollback, new_sblen);
-      cterm->sbpos = cterm->sblen;
-      cterm->sblen = new_sblen;
+      int new_sbsize = newrows
+                      ? (cterm->sbsize + newrows) * 2
+                      : min(cfg.scrollback_lines, cterm->sbsize * 3 + 1024);
+      uchar **scrollback = renewn(cterm->scrollback, new_sbsize);
+      if (!scrollback)
+        goto scrollback_fallback;
+      if (cterm->sbpos) {
+        // Need to expand full buffer which may have wrapped around, so 
+        // we need to rebase the ring buffer for well-sorted linear expansion;
+        // use expanded part of buffer for shunting
+        for (int i = 0; i < cterm->sblines; i++)
+          scrollback[cterm->sbsize + i] = scrollback[(cterm->sbpos + i) % cterm->sbsize];
+        for (int i = 0; i < cterm->sblines; i++)
+          scrollback[i] = scrollback[cterm->sbsize + i];
+      }
+      cterm->scrollback = scrollback;
+      cterm->sbpos = cterm->sbsize;
+      cterm->sbsize = new_sbsize;
     }
-    else if (cterm->sblines) {
-      // Throw away the oldest line
+    else
+  scrollback_fallback:  // whoo! this works
+    if (cterm->sblines) {
+      // Throw away the oldest line;
+      // sbpos needs to be normalized % sbsize here
       delete(cterm->scrollback[cterm->sbpos]);
       cterm->sblines--;
     }
-    else
+    else {
       return;
+    }
   }
-  assert(cterm->sblines < cterm->sblen);
-  assert(cterm->sbpos < cterm->sblen);
+  assert(cterm->sblines < cterm->sbsize);
+  assert(cterm->sbpos < cterm->sbsize);
   cterm->scrollback[cterm->sbpos++] = line;
-  if (cterm->sbpos == cterm->sblen)
+  if (cterm->sbpos == cterm->sbsize)
     cterm->sbpos = 0;
   cterm->sblines++;
   if (cterm->tempsblines < cterm->sblines)
     cterm->tempsblines++;
+  //printf("-> scrollback_push len %d lines %d tmp %d pos %d disp %d\n", cterm->sbsize, cterm->sblines, cterm->tempsblines, cterm->sbpos, cterm->disptop);
 }
 
 static uchar *
 scrollback_pop(void)
 {
   assert(cterm->sblines > 0);
-  assert(cterm->sbpos < cterm->sblen);
+  assert(cterm->sbpos < cterm->sbsize);
   cterm->sblines--;
   if (cterm->tempsblines)
     cterm->tempsblines--;
   if (cterm->sbpos == 0)
-    cterm->sbpos = cterm->sblen;
+    cterm->sbpos = cterm->sbsize;
+  //printf("-> scrollback_pop len %d lines %d tmp %d pos %d disp %d\n", cterm->sbsize, cterm->sblines, cterm->tempsblines, cterm->sbpos - 1, cterm->disptop);
   return cterm->scrollback[--cterm->sbpos];
 }
 
@@ -1098,9 +1167,410 @@ term_clear_scrollback(STerm* pterm)
     delete(scrollback_pop());
   delete(pterm->scrollback);
   pterm->scrollback = 0;
-  pterm->sblen = pterm->sblines = pterm->sbpos = 0;
+  pterm->sbsize = pterm->sblines = pterm->sbpos = 0;
   pterm->tempsblines = 0;
   pterm->disptop = 0;
+}
+
+#define dont_debug_scrollback 1
+
+// mark cursor position in order not to lose it during reflow
+#define TATTR_MARKCURS (TATTR_ACTCURS | TATTR_PASCURS)
+// determine effective line length trimmed to printed characters;
+// need to include ATTR_BOLD | ATTR_DIM for proper TAB unwrapping
+// need to include TATTR_MARKCURS for proper detection of final cursor
+#define attr_clear(attr) ((attr & (TATTR_CLEAR | ATTR_BOLD | ATTR_DIM | TATTR_MARKCURS)) == TATTR_CLEAR)
+
+#ifdef debug_scrollback
+
+static void
+printline(char * tag, termline * tl, int col)
+{
+  char * sep = "[7m▒[27m";  // ┃┇┋▒
+  printf("%s%s", tag, sep);
+  if (col < 0) {
+    col = tl->cols;
+    while (col && attr_clear(tl->chars[col - 1].attr.attr))
+      col --;
+  }
+  for (int j = 0; j <= col; j++)
+    printf("%lc", tl->chars[j].chr);
+  printf("%s%04X %d/%d wr %d tmp %d cc %d\n", sep, tl->lattr, tl->cols, tl->size, tl->wrappos, tl->temporary, tl->cc_free);
+}
+
+static void
+printsb(char * tag)
+{
+  printf("sb %s[%d@%d]-------------\n", tag, cterm->sblines, cterm->sbpos);
+  for (int i = 0; i < cterm->sblines; i++) {
+    uchar *cline = cterm->scrollback[(i + cterm->sbpos) % cterm->sblines];
+    termline *line = decompressline(cline, null);
+    printline("=", line, -1);
+    freeline(line);
+  }
+  printf("--------------------\n");
+}
+
+static void
+printsc(char * tag, char * ltag, termline **lines, int rows)
+{
+  printf("%s[%d]-------------\n", tag, rows);
+  for (int i = 0; i < rows; i++) {
+    printline(ltag, lines[i], -1);
+  }
+  printf("--------------------\n");
+}
+
+#else
+#define printline(tag, tl, col)	
+#define printsb(tag)	
+#define printsc(tag, ltag, lines, rows)	
+#endif
+
+/*
+ * Line rebreaking for screen and scrollback lines
+ */
+static void
+term_reflow(int newrows, int newcols)
+{
+  // First, mark the current cursor position;
+  // also clear old marks elsewhere;
+  // to be sure to catch the cursor position, use the new height 
+  // (lines have already been rearranged) and respective widths of each line;
+  // in case of remaining problems, we couldl further move this marking 
+  // to the beginning of term_resize()
+  for (int i = newrows - 1; i >= 0; i--)
+    for (int j = cterm->lines[i]->cols - 1; j >= 0; j--)
+      if (i == cterm->curs.y && j == cterm->curs.x)
+        cterm->lines[i]->chars[j].attr.attr |= TATTR_MARKCURS;
+      else
+        cterm->lines[i]->chars[j].attr.attr &= ~TATTR_MARKCURS;
+
+  // Push all screen lines to scrollback buffer
+  for (int i = 0; i < newrows; i++) {
+    termline *line = cterm->lines[i];
+    scrollback_push(compressline(line), newrows);
+    freeline(line);
+  }
+  printsb("<rewrap");
+
+  // Handle old scrollback buffer in local variables
+  // so we can use scrollback_push to store it back 
+  // with implicit size management
+  uchar **scrollback = cterm->scrollback;
+  int sbpos = cterm->sbpos;
+  int sblines = cterm->sblines;
+  // Reset scrollback buffer (don't clear contents, which we hold locally)
+  cterm->scrollback = 0;
+  cterm->sbsize = cterm->sblines = cterm->sbpos = 0;
+  cterm->tempsblines = 0;
+
+  int cursor_scrolled = 0;
+  void cursor_scroll(termline *tl)
+  {
+    for (int k = 0; k < tl->cols; k++)
+      if (tl->chars[k].attr.attr & TATTR_MARKCURS) {
+        cursor_scrolled = 0;
+        break;
+      }
+    cursor_scrolled ++;
+  }
+
+  // Reflow scrollback buffer
+  int i = 0;
+  while (i < sblines) {
+#ifdef wrapbuf
+#warning missing wrap buffer size management
+    termline *linebuf[99];  // wrap buffer
+    int lin = 0;
+#define inbuf linebuf[lin]
+#else
+    termline * inbuf;
+#endif
+
+    // fetch (without resizeline)
+    uchar *cline = scrollback[(i + sbpos) % sblines];
+    inbuf = decompressline(cline, null);
+    int actcols = inbuf->cols;
+    // determine actual non-empty columns
+    while (actcols && attr_clear(inbuf->chars[actcols - 1].attr.attr))
+      actcols --;
+
+    if ((!(inbuf->lattr & LATTR_WRAPPED) && actcols <= newcols)
+        || !(inbuf->lattr & LATTR_REWRAP)
+       )
+    {
+      // shortcut: skip multiple lines handling
+
+      if (newcols <= inbuf->cols)
+        // skip compressline()
+        scrollback_push(cline, newrows);
+      else {  // need to resizeline when widening
+        free(cline);
+        resizeline(inbuf, newcols);
+        scrollback_push(compressline(inbuf), newrows);
+      }
+      cursor_scroll(inbuf);
+      freeline(inbuf);
+
+      i ++;
+      continue;
+    }
+
+    free(cline);
+
+    int j = 0;  // wrapped lines (buffer) counter
+#ifdef wrapbuf
+    while ((linebuf[j]->lattr & LATTR_WRAPPED) && i + j + 1 < sblines) {
+      j++;
+      uchar *cline = scrollback[(i + j + sbpos) % sblines];
+      linebuf[j] = decompressline(cline, null);
+      free(cline);
+      if (!(linebuf[j]->lattr & LATTR_WRAPCONTD)) {
+        // drop non-continuing line (could save for later)
+        freeline(linebuf[j]);
+        j--;
+        // drop stale wrapped flag from previous line
+        linebuf[j]->lattr &= ~LATTR_WRAPPED;
+        // finish wrapped lines group
+        break;
+      }
+    }
+    printsc("wrapbuf", "~", linebuf, j + 1);
+
+#ifdef skip_rewrap
+    // ignore rewrap and clear out input wrap buffer, for testing
+    for (int jj = 0; jj <= j; jj++) {
+      scrollback_push(compressline(linebuf[jj]), newrows);
+      cursor_scroll(linebuf[jj]);
+      freeline(linebuf[jj]);
+    }
+    cterm->virtuallines += j;
+    goto wrapped;
+#endif
+
+    bool advance_inbuf()
+    {
+      if (lin >= j)
+        return false;
+      lin ++;
+      return true;
+    }
+#else
+    bool advance_inbuf()
+    {
+      if ((inbuf->lattr & LATTR_WRAPPED) && i + j + 1 < sblines) {
+        // drop current line
+        freeline(inbuf);
+        // advance to next line
+        j++;
+        uchar *cline = scrollback[(i + j + sbpos) % sblines];
+        inbuf = decompressline(cline, null);
+        //free(cline) unless the fetch is reverted...
+        if (!(inbuf->lattr & LATTR_WRAPCONTD)) {
+          // drop non-continuing line (could save for later)
+          freeline(inbuf);
+          // revert look-ahead
+          j--;
+          // could we drop stale wrapped flag from previous line?
+          // restore previous inbuf; inbuf->lattr &= ~LATTR_WRAPPED; ...?
+
+          // cancel wrapped lines group
+          inbuf = 0;
+          return false;
+        }
+        else {
+          free(cline);
+          return true;
+        }
+      }
+      else {
+        // drop current line
+        freeline(inbuf);
+        // finish wrapped lines group
+        inbuf = 0;
+        return false;
+      }
+    }
+#endif
+
+    // now do the actual reflow of a wrapped line group
+    int incol = -1;
+    termline *outbuf = 0;  // rewrap buffer
+    int lout = -1;
+    int outcol = newcols;
+    do {
+      bool do_wrap = outcol >= newcols;
+      if (outcol == newcols - 1 && incol < actcols - 1
+          && inbuf->chars[incol + 1].chr == UCSWIDE
+         )
+      {
+        do_wrap = true;
+        if (lout >= 0)
+          outbuf->lattr |= LATTR_WRAPPED2;
+      }
+      if (do_wrap) {
+        // flush current outbuf line, then make a new one
+        if (lout >= 0) {
+          outbuf->lattr |= LATTR_WRAPPED;
+          scrollback_push(compressline(outbuf), newrows);
+          cterm->virtuallines++;
+          cursor_scroll(outbuf);
+          //printline("↑", outbuf, -1);
+          freeline(outbuf);
+        }
+
+        // make a new outbuf line
+        lout = 0;
+        outbuf = newline(newcols, true);
+        outbuf->lattr = inbuf->lattr & ~(LATTR_WRAPPED | LATTR_WRAPPED2 | LATTR_WRAPCONTD);
+        // position output column
+        if (incol >= 0) {
+          // subsequent lines
+          outcol = 0;
+          outbuf->lattr |= LATTR_WRAPCONTD;
+        }
+        else
+          // first line
+          outcol = -1;  // include initial combining character
+
+        // char copy follows line allocation => last wrapped line is not empty
+      }
+      copy_termchar(outbuf, outcol, &inbuf->chars[incol]);
+      outcol ++;
+      incol ++;
+      if (incol >= actcols) {
+        // fetch a new inbuf line
+        if (!advance_inbuf())
+          break;
+
+        incol = 0;
+        actcols = inbuf->cols;
+        // determine actual non-empty columns
+        while (actcols && attr_clear(inbuf->chars[actcols - 1].attr.attr))
+          actcols --;
+      }
+    } while (true);
+    // flush last outbuf line
+    if (outbuf) {
+      scrollback_push(compressline(outbuf), newrows);
+      cursor_scroll(outbuf);
+      //printline("↑", outbuf, -1);
+      freeline(outbuf);
+    }
+    //printf("end rewrap loop %d -> %d\n", j, lout);
+
+#ifdef skip_rewrap
+  wrapped:
+#endif
+
+    i += j + 1;
+    cterm->virtuallines -= j;
+  }
+  free(scrollback);
+  printsb(">rewrap");
+
+  // Rebase graphics positions.
+  // Make sure the anchor position (top-left cell of image) is registered 
+  // as the new image position:
+  // scan lines right to left, scan scrollback buffer bottom to top, so the 
+  // top-left cell of each image will be checked last and get registered; 
+  // this could be changed to a forward approach (reducing image searches) 
+  // if images already handled were remembered in a cache, or marked in 
+  // the image list somehow...
+  for (int i = cterm->sblines - 1; i >= 0; i--) {
+    uchar *cline = cterm->scrollback[(i + cterm->sbpos) % cterm->sblines];
+    termline *line = decompressline(cline, null);
+    for (int j = line->cols - 1; j >= 0; j--) {
+      termchar * tc = &line->chars[j];
+      if (tc->chr == SIXELCH) {
+        imglist * cur = 0;
+        for (cur = cterm->imgs.first; cur; cur = cur->next) {
+          if (cur->imgi == tc->attr.imgi)
+            break;
+          //if (cur->top - cterm->virtuallines >= topline)
+          //  cur->top += lines;
+        }
+        if (cur) {
+          //printf("%lld:%d -> @%d:%d (virt %lld dtop %d) imgi %d %d\n", cur->top, cur->left, i, j, cterm->virtuallines, cterm->disptop, tc->attr.imgi, cur->imgi);
+          cur->left = cur->left;
+          cur->top = cur->top;
+        }
+      }
+    }
+#ifdef change_sixel_cells
+    if (changed_line) {
+      uchar * nline = compressline(line);
+      if (nline) {
+        cterm->scrollback[(i + cterm->sbpos) % cterm->sblines] = nline;
+        free(cline);
+      }
+    }
+#endif
+    freeline(line);
+  }
+  cterm->virtuallines = cterm->sblines - newrows;
+
+  // Pop all screen lines back from scrollback buffer;
+  // we need to handle the case that, after reflow, there are fewer lines 
+  // available from the scrollback than we need to fill the screen;
+  // as a simple solution, we just align the restored lines towards the bottom
+  // and fill up above with empty lines;
+  // alternatively, we could push additional empty lines into the scrollback 
+  // before pulling back a full screen, in that case from the top and 
+  // handling screen lines as a stack, and apply some final fixing ...
+  for (int i = newrows - 1; i >= 0; i--) {
+#ifdef restore_to_top
+#warning this "fix" does not work after having pushed additional lines...
+    if (i >= cterm->sblines)
+      cterm->lines[i] = newline(newcols, false);
+    else
+#endif
+    if (cterm->sblines > 0) {
+      uchar *cline = scrollback_pop();
+      termline *line = decompressline(cline, null);
+      resizeline(line, newcols);  // to be safe; probably not needed here
+      //printline("↓", line, -1);
+      free(cline);
+      line->temporary = false;  /* reconstituted line is now real */
+      // don't free(cterm->lines[i]);  // freed above (pushing all screen lines)
+      cterm->lines[i] = line;
+    }
+    else {
+      cterm->lines[i] = newline(newcols, false);
+    }
+  }
+  printsc("screen >rewrap", ":", cterm->lines, newrows);
+
+  // Last, find the marked cursor position and target current cursor to it;
+  // go backwards in case an old cursor mark, that had been scrolled out 
+  // and thus not cleared, was now scrolled in again;
+  // use new size for scanning.
+  // Fallback in case cursor was wrapped / scrolled out of screen:
+  cterm->curs.y = 0;
+  cterm->curs.x = 0;
+  // search for cursor marker
+  for (int i = newrows - 1; i >= 0; i--)
+    // need to search whole stored line, even if longer than screen width,
+    // in order to find zoomed-out cursor position
+    for (int j = cterm->lines[i]->cols - 1; j >= 0; j--)
+      if (cterm->lines[i]->chars[j].attr.attr & TATTR_MARKCURS) {
+        cterm->curs.y = i;
+        cterm->curs.x = min(j, newcols - 1);
+        cterm->lines[i]->chars[j].attr.attr &= ~TATTR_MARKCURS;
+        i = 0;
+        break;
+      }
+
+  // Trim scrollback buffer to max config size
+  scrollback_trim();
+
+  if (cursor_scrolled > newrows) {
+    // scroll back to display previous cursor position
+    //cterm->new_disptop = newrows - cursor_scrolled;  // need to check for existence
+    // currently cancelled in term_resize()
+    //term_scroll(0, ...);  // do this later, would crash here
+  }
 }
 
 /*
@@ -1110,6 +1580,7 @@ void
 term_resize(int newrows, int newcols)
 {
   trace_resize(("--- term_resize %d %d\n", newrows, newcols));
+
   bool on_alt_screen = cterm->on_alt_screen;
   term_switch_screen(0, false);
 
@@ -1119,6 +1590,31 @@ term_resize(int newrows, int newcols)
   cterm->marg_bot = newrows - 1;
   cterm->marg_left = 0;
   cterm->marg_right = newcols - 1;
+
+  // Disable status area temporarily
+  // to avoid the complexity to consider it during resize or even reflow;
+  // to round up, we will finally clear it explicitly, so we also 
+  // do not need to save status area contents;
+  // ref: DEC clears status line on DECCOLM which we generalize to resize
+  int save_st_rows = cterm->st_rows;
+  bool save_st_act = cterm->st_active;
+  // adjust status line state
+  if (cterm->st_rows) {
+    if (save_st_act) {
+      term_switch_status(false);
+    }
+    for (int i = cterm->rows; i < term_allrows; i++) {
+      freeline(cterm->lines[i]);
+      cterm->lines[i] = newline(newcols, false);
+    }
+    newrows += cterm->st_rows;
+
+    // remove status area during resize
+    cterm->rows = term_allrows;
+    cterm->st_rows = 0;
+  }
+  // remember y of "normal" area
+  short old_term_y = cterm->curs.y;
 
  /*
   * Resize the screen and scrollback. We only need to shift
@@ -1142,7 +1638,6 @@ term_resize(int newrows, int newcols)
 
   termlines *lines = cterm->lines;
   term_cursor *curs = &cterm->curs;
-  term_cursor *saved_curs = &cterm->saved_cursors[cterm->on_alt_screen];
 
   // Shrink the screen if newrows < rows
   if (newrows < cterm->rows) {
@@ -1153,7 +1648,7 @@ term_resize(int newrows, int newcols)
     // Push removed lines into scrollback
     for (int i = 0; i < store; i++) {
       termline *line = lines[i];
-      scrollback_push(compressline(line));
+      scrollback_push(compressline(line), 0);
       cterm->virtuallines++;
       freeline(line);
     }
@@ -1167,7 +1662,6 @@ term_resize(int newrows, int newcols)
 
     // Adjust cursor position
     curs->y = max(0, curs->y - store);
-    saved_curs->y = max(0, saved_curs->y - store);
 
     // Adjust image position
     cterm->virtuallines += min(0, store);
@@ -1178,7 +1672,9 @@ term_resize(int newrows, int newcols)
   // Expand the screen if newrows > rows
   if (newrows > cterm->rows) {
     int added = newrows - cterm->rows;
+    // determine how many lines to restore from scrollback
     int restore = min(added, cterm->tempsblines);
+    // determine how many empty lines to add
     int create = added - restore;
 
     // Fill bottom of screen with blank lines
@@ -1199,7 +1695,6 @@ term_resize(int newrows, int newcols)
 
     // Adjust cursor position
     curs->y += restore;
-    saved_curs->y += restore;
 
     // Adjust image position
     cterm->virtuallines -= restore;
@@ -1208,6 +1703,10 @@ term_resize(int newrows, int newcols)
   // Resize lines
   for (int i = 0; i < newrows; i++)
     resizeline(lines[i], newcols);
+
+  // Reflow screen and scrollback buffer to new width
+  if (cfg.rewrap_on_resize && newcols != cterm->cols)
+    term_reflow(newrows, newcols);
 
   // Make a new displayed text buffer.
   if (cterm->displines) {
@@ -1240,8 +1739,11 @@ term_resize(int newrows, int newcols)
     cterm->tabs[i] = cterm->newtab && (i % 8 == 0);
 
   // Check that the cursor positions are still valid.
-  assert(0 <= curs->y && curs->y < newrows);
-  assert(0 <= saved_curs->y && saved_curs->y < newrows);
+  // assert(0 <= curs->y && curs->y < newrows);
+  // rather be on the safe side:
+
+  // Ensure valid cursor positions.
+  curs->y = min(curs->y, newrows - 1);
   curs->x = min(curs->x, newcols - 1);
 
   curs->wrapnext = false;
@@ -1253,6 +1755,48 @@ term_resize(int newrows, int newcols)
   cterm->rows0 = newrows;
   cterm->cols0 = newcols;
 
+  // Status area handling
+
+  // limit status size
+  // here cterm->rows still include cterm->st_rows
+  if (save_st_rows >= cterm->rows / 2) {
+    save_st_rows = max(0, cterm->rows / 2 - 1);
+    if (!save_st_rows) {
+      // clear status mode
+      save_st_act = false;
+      cterm->st_type = 0;
+    }
+  }
+  // restore status geometry
+  cterm->rows -= save_st_rows;
+  cterm->st_rows = save_st_rows;
+  // fix bottom margin in case status area got resized
+  newrows = cterm->rows;
+  cterm->marg_bot = newrows - 1;
+  // restore status line area
+  if (save_st_rows) {
+    for (int i = cterm->rows; i < term_allrows; i++) {
+      freeline(cterm->lines[i]);
+      cterm->lines[i] = newline(newcols, false);
+    }
+    // scroll cursor position out of status line area
+    int n = old_term_y - cterm->rows + 1;
+    if (n > 0) {
+      // this adjustment must be done after fixing rows/st_rows
+      // but before restoring st_active
+      term_do_scroll(cterm->marg_top, cterm->marg_bot + save_st_rows, n, true);
+      curs->y = max(0, curs->y - n);
+    }
+    // restore status mode
+    // must call after restoring (and adjusting) cterm->rows
+    term_switch_status(save_st_act);
+  }
+  // clear status area on resize (as DEC clears on DECCOLM);
+  // also this simplifies handling above
+  if (cterm->st_type == 2)
+    term_clear_status();
+
+  // Return to alternate screen
   term_switch_screen(on_alt_screen, false);
 }
 
@@ -1274,6 +1818,14 @@ term_switch_screen(bool to_alt, bool reset)
   cterm->lines = cterm->other_lines;
   cterm->other_lines = oldlines;
 
+  // keep status area (xterm 373)
+  if (cterm->st_type == 2)
+    for (int i = cterm->rows; i < term_allrows; i++) {
+      freeline(cterm->lines[i]);
+      cterm->lines[i] = cterm->other_lines[i];
+      cterm->other_lines[i] = newline(cterm->cols, false);
+    }
+
   /* swap image list */
   imglist * first = cterm->imgs.first;
   imglist * last = cterm->imgs.last;
@@ -1287,6 +1839,136 @@ term_switch_screen(bool to_alt, bool reset)
 
   if (to_alt && reset)
     term_erase(false, false, true, true);
+}
+
+/*
+ * Clear status area.
+ */
+void
+term_clear_status(void)
+{
+  term_cursor_reset(&cterm->st_other_curs);
+  term_cursor_reset(&cterm->st_saved_curs);
+
+  // clear status lines
+  for (int i = cterm->rows; i < term_allrows; i++) {
+    freeline(cterm->lines[i]);
+    cterm->lines[i] = newline(cterm->cols, false);
+  }
+
+  // home status cursor position
+  if (cterm->st_active) {
+    cterm->curs.y = cterm->rows;
+    cterm->curs.x = 0;
+  }
+  else {
+    cterm->st_other_curs.y = 0;  // saved status cursor is normalized to 0
+    cterm->st_other_curs.x = 0;
+  }
+}
+
+/*
+ * Set status type.
+ */
+void
+term_set_status_type(int type, int lines)
+{
+  /*
+    Unlike xterm, we do not resize the window when changing 
+    status area size; this does not only avoid trouble in full-screen 
+    or maximized mode, it also complies with DEC (VT420 p. 221, VT520 p. 5-147):
+	Notes on DECSSDT
+	• If you select no status line (Ps = 0), the terminal uses the 
+	  line as an additional user window line to display data.
+    As an extension, mintty supports a multi-line status area, 
+    configured with a second parameter to DECSSDT 2.
+    The suggestion of such an option could be interpreted from VT520 p. 2-35:
+	[The number of data display lines visible, not counting any status lines.]
+    although that may just be referring to status lines of multiple sessions.
+  */
+  int old_st_rows = cterm->st_rows;
+  switch (type) {
+    when 0: 
+            term_clear_status();
+            cterm->st_rows = 0;
+    when 1: 
+            if (cterm->st_type == 2)
+              term_clear_status();
+            cterm->st_type = 1; cterm->st_rows = 1;
+    when 2: 
+            if (cterm->st_type != 2)
+              term_clear_status();
+            cterm->st_type = 2;
+            if (lines) {
+              if (lines >= term_allrows / 2)
+                cterm->st_rows = max(0, term_allrows / 2 - 1);
+              else
+                cterm->st_rows = lines;
+            }
+            else
+              cterm->st_rows = 1;
+    otherwise: return;
+  }
+  if (!cterm->st_rows) {
+    cterm->st_type = 0;
+    term_switch_status(false);
+  }
+  if (cterm->st_type != 2)
+    term_switch_status(false);
+  if (cterm->st_rows != old_st_rows) {
+    // don't need to win_adapt_term_size(false, false);
+    int newrows = cterm->rows + old_st_rows - cterm->st_rows;
+    // scroll cursor position out of status line area
+    int n = cterm->curs.y - newrows + 1;
+    if (n > 0) {
+      bool old_st_act = cterm->st_active;
+      term_switch_status(false);
+      term_do_scroll(cterm->marg_top, cterm->marg_bot, n, true);
+      // fix up
+      cterm->curs.y = max(0, cterm->curs.y - n);
+      term_switch_status(old_st_act);
+    }
+    // don't need to term_resize(newrows, -cterm->cols);
+    cterm->rows = newrows;
+    cterm->marg_top = 0;
+    cterm->marg_bot = newrows - 1;
+    cterm->marg_left = 0;
+    cterm->marg_right = cterm->cols - 1;
+    // clear status lines
+    for (int i = cterm->rows; i < term_allrows; i++) {
+      freeline(cterm->lines[i]);
+      cterm->lines[i] = newline(cterm->cols, false);
+    }
+    // notify child process
+    struct winsize ws = {newrows, cterm->cols, cterm->cols * wv.cell_width, newrows * wv.cell_height};
+    child_resize(cterm,&ws);
+  }
+}
+
+/*
+ * Swap active status line / main display.
+ */
+void
+term_switch_status(bool status_line)
+{
+  if (status_line == cterm->st_active)
+    return;
+
+  cterm->st_active = status_line;
+
+  term_cursor oldcurs = cterm->curs;
+  cterm->curs = cterm->st_other_curs;
+  // saved status cursor line is normalized to 0, adjust
+  if (status_line) {
+    cterm->curs.y += cterm->rows;
+    if (cterm->curs.y >= term_allrows)
+      cterm->curs.y = term_allrows - 1;
+  }
+  else
+    oldcurs.y -= cterm->rows;
+  cterm->st_other_curs = oldcurs;
+
+  term_update_cs();
 }
 
 /*
@@ -1413,6 +2095,13 @@ term_do_scroll(int topline, int botline, int lines, bool sb)
     win_update(true);
   }
 
+  // Support scrolling within (multi-line) status area
+  if (cterm->st_active) {
+    topline = cterm->rows;
+    botline = term_allrows - 1;
+    sb = false;
+  }
+
   if (cterm->lrmargmode && (cterm->marg_left || cterm->marg_right != cterm->cols - 1)) {
     scroll_rect(topline, botline, lines);
     return;
@@ -1476,9 +2165,10 @@ term_do_scroll(int topline, int botline, int lines, bool sb)
       for (int i = topline + lines - 1; i >= topline && cterm->sblines > 0; i--) {
         uchar *cline = scrollback_pop();
         termline *line = decompressline(cline, null);
+        resizeline(line, cterm->cols);  // ensure sufficient line length
         delete(cline);
         line->temporary = false;  /* reconstituted line is now real */
-        delete(cterm->lines[i]);
+        freeline(cterm->lines[i]);
         cterm->lines[i] = line;
       }
     }
@@ -1510,7 +2200,7 @@ term_do_scroll(int topline, int botline, int lines, bool sb)
     // normal screen and scrollback is actually enabled.
     if (sb && topline == 0 && !cterm->on_alt_screen && cfg.scrollback_lines) {
       for (int i = 0; i < lines; i++)
-        scrollback_push(compressline(cterm->lines[i]));
+        scrollback_push(compressline(cterm->lines[i]), 0);
 
       // Shift viewpoint accordingly if user is looking at scrollback
       if (cterm->disptop < 0)
@@ -1549,6 +2239,10 @@ clear_wrapcontd(termline * line, int y)
   }
 }
 
+// consider status area for erasing
+#define top_y (cterm->st_active ? cterm->rows : 0)
+#define bot_y (cterm->st_active ? term_allrows : cterm->rows)
+
 /*
  * Erase a large portion of the screen: the whole screen, or the
  * whole line, or parts thereof.
@@ -1574,12 +2268,12 @@ term_erase(bool selective, bool line_only, bool from_begin, bool to_end)
   }
 
   if (from_begin)
-    start = (pos){.y = line_only ? curs->y : 0, .x = 0};
+    start = (pos){.y = line_only ? curs->y : top_y, .x = 0};
   else
     start = (pos){.y = curs->y, .x = curs->x};
 
   if (to_end)
-    end = (pos){.y = line_only ? curs->y + 1 : cterm->rows, .x = 0};
+    end = (pos){.y = line_only ? curs->y + 1 : bot_y, .x = 0};
   else
     end = (pos){.y = curs->y, .x = curs->x}, incpos(end);
 
@@ -1598,7 +2292,7 @@ term_erase(bool selective, bool line_only, bool from_begin, bool to_end)
     * we're fully erasing them, erase by scrolling and keep the
     * lines in the scrollback. This behaviour is not compatible with xterm. */
     int scrolllines = end.y;
-    if (end.y == cterm->rows) {
+    if (end.y == bot_y) {
      /* Shrink until we find a non-empty row. */
       scrolllines = term_last_nonempty_line() + 1;
     }
@@ -1626,11 +2320,12 @@ term_erase(bool selective, bool line_only, bool from_begin, bool to_end)
                !(line->chars[start.x].attr.attr & ATTR_PROTECTED)
               )
       {
-        line->chars[start.x] = cterm->erase_char;
+        line->chars[start.x] = 
+          cterm->erase_to_screen ? basic_erase_char : cterm->erase_char;
         if (!start.x)
           clear_cc(line, -1);
       }
-      if (inclpos(start, cols) && start.y < cterm->rows)
+      if (inclpos(start, cols) && start.y < bot_y)
         line = cterm->lines[start.y];
     }
   }
@@ -2120,7 +2815,7 @@ emoji_show(int x, int y, struct emoji e, int elen, cattr eattr, ushort lattr)
 #ifdef debug_win_text_invocation
 
 void
-_win_text(int line, int tx, int ty, wchar *text, int len, cattr attr, cattr *textattr, ushort lattr, bool has_rtl, bool clearpad, uchar phase)
+_win_text(int line, int tx, int ty, wchar *text, int len, cattr attr, cattr *textattr, ushort lattr, char has_rtl, bool clearpad, uchar phase)
 {
   if (*text != ' ') {
     printf("[%d] %d:%d(len %d) attr %08llX", line, ty, tx, len, attr.attr);
@@ -2181,7 +2876,8 @@ term_paint(void)
     cterm->cursor_on && !cterm->show_other_screen
     ? cterm->curs.y - cterm->disptop : -1;
 
-  for (int i = 0; i < cterm->rows; i++) {
+  // Paint all lines, including status area
+  for (int i = 0; i < term_allrows; i++) {
     pos scrpos;
     scrpos.y = i + cterm->disptop;
     termline *line = fetch_line(scrpos.y);
@@ -2556,6 +3252,7 @@ term_paint(void)
       */
       if (tchar >= 0x2320 &&
           ((tchar >= 0x2500 && tchar <= 0x259F)
+           || (tchar >= 0x25E2 && tchar <= 0x25E5)
            || (tchar >= 0x239B && tchar <= 0x23B3)
            || (tchar >= 0x23B7 && tchar <= 0x23BD)
            || wcschr(W("〳〴〵⌠⌡⏐"), tchar)
@@ -2599,6 +3296,14 @@ term_paint(void)
           termchar * cc = d + d->cc_next;
           if ((cc->chr & 0xFC00) == 0xDC00) {
             xch = ((xchar) (xch - 0xD7C0) << 10) | (cc->chr & 0x03FF);
+          }
+
+          if ((xch >= 0x1F67C && xch <= 0x1F67F)
+              || (xch >= 0x1FB00 && xch <= 0x1FBB3)
+             )
+          {
+            tattr.attr |= TATTR_ZOOMFULL;
+            tattr.attr &= ~ATTR_ITALIC;
           }
         }
 
@@ -2751,6 +3456,24 @@ term_paint(void)
       newchars[j].chr = tchar;
      /* Combining characters are still read from chars */
       newchars[j].cc_next = 0;
+
+     /* Margin indication */
+      if (cterm->dim_margins &&
+          (// in normal display:
+           i < cterm->marg_top || (i > cterm->marg_bot && i < cterm->rows)
+           // in status display:
+           || (i >= cterm->rows && i < cterm->marg_top + cterm->rows)
+           || (i > cterm->marg_bot + cterm->rows)
+           // outside left/right margins:
+           || j < cterm->marg_left || j > cterm->marg_right
+          )
+         )
+      {
+        cattr * ca = &newchars[j].attr;
+        ca->attr |= ATTR_DIM;
+        ca->attr ^= ATTR_REVERSE;
+      }
+
     }  // end first loop
 
     if (i == curs_y) {
@@ -2787,6 +3510,46 @@ term_paint(void)
         printf("INVALID c %d\n", curs_x),
 #endif
         dispchars[curs_x].attr.attr |= ATTR_INVALID;
+
+     /* Numeric input feedback */
+      uint what;
+      wchar * ifs = char_code_indication(&what);
+      if (ifs) {
+        curs_x = max(min(curs_x, (int)cterm->cols - (int)wcslen(ifs)), 0);
+        while (*ifs) {
+          newchars[curs_x].chr = *ifs++;
+          newchars[curs_x].attr.attr &= ~(TATTR_WIDE | TATTR_EXPAND);
+          newchars[curs_x].attr = CATTR_DEFAULT;
+          if (what >= 4) {
+            newchars[curs_x].attr.attr |= ATTR_ULCOLOUR | ATTR_BOLD;
+            newchars[curs_x].attr.ulcolr = RGB(255, 0, 0);
+          }
+          else {
+            newchars[curs_x].attr.attr |= ATTR_REVERSE | ATTR_DIM;
+            newchars[curs_x].attr.attr |= ATTR_ULCOLOUR | ATTR_BOLD;
+            newchars[curs_x].attr.ulcolr = RGB(255, 0, 0);
+          }
+          switch (what) {
+            when 16:
+              newchars[curs_x].attr.attr |= ATTR_DOUBLYUND;
+            when 10:
+              newchars[curs_x].attr.attr |= ATTR_CURLYUND;
+            when 8:
+              newchars[curs_x].attr.attr |= ATTR_BROKENUND;
+            when 4:  // ALT_ALONE
+              newchars[curs_x].attr.attr |= ATTR_BLINK2;
+            when 2:  // COMP_ACTIVE
+              newchars[curs_x].attr.attr |= ATTR_OVERL;
+            when 1:
+              newchars[curs_x].attr.attr |= ATTR_OVERL | ATTR_BLINK2;
+          }
+          dispchars[curs_x].attr.attr |= ATTR_INVALID;
+          curs_x++;
+        }
+        cterm->st_kb_flag = what;
+      }
+      else
+        cterm->st_kb_flag = 0;
 
      /* Progress indication */
       if (cterm->detect_progress) {
@@ -2956,7 +3719,7 @@ term_paint(void)
     cattr textattr[maxtextlen];
     int textlen = 0;
 
-    bool has_rtl = false;
+    char has_rtl = 0;
     uchar bc = 0;
     bool dirty_run = (line->lattr != displine->lattr);
     bool dirty_line = dirty_run;
@@ -2978,7 +3741,7 @@ term_paint(void)
     int ovl_x, ovl_y;
     cattr ovl_attr;
     ushort ovl_lattr;
-    bool ovl_has_rtl;
+    char ovl_has_rtl;
 
     void flush_text()
     {
@@ -2996,7 +3759,7 @@ term_paint(void)
 # define debug_out_text
 #endif
 
-    void out_text(int x, int y, wchar *text, int len, cattr attr, cattr *textattr, ushort lattr, bool has_rtl)
+    void out_text(int x, int y, wchar *text, int len, cattr attr, cattr *textattr, ushort lattr, char has_rtl)
     {
 #ifdef debug_out_text
       wchar t[len + 1]; wcsncpy(t, text, len); t[len] = 0;
@@ -3081,7 +3844,16 @@ term_paint(void)
       else if (overlaying) {
         return;
       }
-      else if (attr.attr & (ATTR_ITALIC | TATTR_COMBDOUBL | TATTR_OVERHANG)) {
+      else if (attr.attr
+          & (ATTR_ITALIC | TATTR_COMBDOUBL | TATTR_OVERHANG | TATTR_MARKCURS)
+        )
+      {
+        /* Split output into 2 phases, for background and foreground, 
+           to support overlay display in some cases:
+           * italics and other potential overhang situations (emojis)
+           * combining doubles
+           * cursor position, to support underlay cursor painting
+         */
         win_text(x, y, text, len, attr, textattr, lattr, has_rtl, false, 1);
         flush_text();
         ovl_x = x;
@@ -3206,8 +3978,11 @@ term_paint(void)
       uchar tbc = bidi_class(xtchar);
 
       if (textlen && tbc != bc) {
-        if (!is_sep_class(tbc) && !is_sep_class(bc))
-          // break at RTL and other changes to avoid glyph confusion (#285)
+        if (is_rtl_class(tbc) != is_rtl_class(bc))
+          // break at RTL to support RTL font fallback
+          trace_run("rtl"), break_run = true;
+        else if (!is_sep_class(tbc) && !is_sep_class(bc))
+          // break at other changes to avoid glyph confusion (#285)
           trace_run("bcs"), break_run = true;
         //else if (is_punct_class(tbc) || is_punct_class(bc))
         else if ((tbc == EN) ^ (bc == EN))
@@ -3216,12 +3991,13 @@ term_paint(void)
       }
       bc = tbc;
 
+     /* Flush previous output chunk on break_run */
       if (break_run || cfg.bloom) {
         if ((dirty_run && textlen) || overlaying)
           out_text(start, i, text, textlen, attr, textattr, line->lattr, has_rtl);
         start = j;
         textlen = 0;
-        has_rtl = false;
+        has_rtl = 0;
         attr = tattr;
         dirty_run = dirty_line;
 #if defined(debug_dirty) && debug_dirty > 1
@@ -3254,8 +4030,14 @@ term_paint(void)
       ///textattr[textlen] = tattr;
       textlen++;
 
-      if (!has_rtl)
-        has_rtl = is_rtl_class(tbc);
+      if (is_rtl_class(tbc)) {
+        if (tbc == R)
+          has_rtl |= 1;
+        else if (tbc == AL)
+          has_rtl |= 2;
+        else
+          has_rtl |= 4;
+      }
 
 #define dont_debug_surrogates
 

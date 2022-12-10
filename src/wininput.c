@@ -1,5 +1,5 @@
 // wininput.c (part of mintty)
-// Copyright 2008-12 Andy Koppe, 2015-2018 Thomas Wolff
+// Copyright 2008-22 Andy Koppe, 2015-2022 Thomas Wolff
 // Licensed under the terms of the GNU General Public License v3 or later.
 
 #include "winpriv.h"
@@ -12,7 +12,7 @@
 #include <math.h>
 #include <windowsx.h>  // GET_X_LPARAM, GET_Y_LPARAM
 #include <winnls.h>
-#include <termios.h>
+#include "term.h"
 
 uint kb_trace = 0;
 
@@ -293,9 +293,9 @@ win_update_menus(bool callback)
       mi.fState = state;
       mi.fType = MFT_STRING;
     }
-    wchar * tab = wcschr(mi.dwTypeData, '\t');
-    if (tab)
-      *tab = '\0';
+    wchar * tabp = wcschr(mi.dwTypeData, '\t');
+    if (tabp)
+      *tabp = '\0';
     if (key) {
       // append TAB and shortcut to label; localize "Ctrl+Alt+Shift+"
       mod_keys mod = 0;
@@ -561,7 +561,7 @@ win_init_ctxmenu(bool extended_menu, bool with_user_commands)
     apcm( IDM_TOGCHARINFO,0, 0);
     apcm( IDM_TOGVT220KB,0, 0);
   }
-  apcm( IDM_RESET,0, 0);
+  apcm( IDM_RESET_NOASK,0, 0);
   if (extended_menu) {
     //__ Context menu: clear scrollback buffer (lines scrolled off the window)
     apcm( IDM_CLRSCRLBCK,0, _W("Clear Scrollback"));
@@ -752,18 +752,6 @@ win_popup_menu(uint key,mod_keys mods)
   open_popup_menu(false, null, mods);
 }
 
-static int win_key_menu(uint key,mod_keys mods)
-{
-	(void)key;
-  if (*cfg.key_menu)return 0; 
-  if (mods&MDK_SHIFT)
-    send_syscommand(SC_KEYMENU);
-  else {
-    win_show_mouse();
-    open_popup_menu(false, null, mods);
-  }
-  return true;
-}
 
 bool
 win_title_menu(bool leftbut)
@@ -777,7 +765,6 @@ win_title_menu(bool leftbut)
     return false;
 }
 
-
 /* Mouse and Keyboard modifiers */
 
 typedef enum {
@@ -785,10 +772,27 @@ typedef enum {
   ALT_OCT = 8, ALT_DEC = 10, ALT_HEX = 16
 } alt_state_t;
 static alt_state_t alt_state;
+static alt_state_t old_alt_state;
 static uint alt_code;
+static bool alt_uni;
 
 static bool lctrl;  // Is left Ctrl pressed?
 static int lctrl_time;
+
+static int win_key_menu(uint key,mod_keys mods)
+{
+	(void)key;
+  if (*cfg.key_menu)return 0; 
+  if (mods&MDK_SHIFT)
+    send_syscommand(SC_KEYMENU);
+  else {
+    win_show_mouse();
+    open_popup_menu(true, null, mods);
+  }
+  alt_state = ALT_NONE;
+  return true;
+}
+
 
 mod_keys
 get_mods(void)
@@ -796,11 +800,15 @@ get_mods(void)
   inline bool is_key_down(uchar vk) { return GetKeyState(vk) & 0x80; }
   lctrl_time = 0;
   lctrl = is_key_down(VK_LCONTROL) && (lctrl || !is_key_down(VK_RMENU));
+  bool super = super_key && is_key_down(super_key);
+  bool hyper = hyper_key && is_key_down(hyper_key);
   return
     is_key_down(VK_SHIFT) * MDK_SHIFT
     | is_key_down(VK_MENU) * MDK_ALT
     | (lctrl | is_key_down(VK_RCONTROL)) * MDK_CTRL
     | (is_key_down(VK_LWIN) | is_key_down(VK_RWIN)) * MDK_WIN
+    | super * MDK_SUPER
+    | hyper * MDK_HYPER
     ;
 }
 
@@ -811,6 +819,12 @@ static void
 update_mouse(mod_keys mods)
 {
   static bool last_app_mouse = false;
+
+  // unhover (end hovering) if hover modifiers are withdrawn
+  if (cterm->hovering && (char)(mods & ~cfg.click_target_mod) != cfg.opening_mod) {
+    cterm->hovering = false;
+    win_update(false);
+  }
 
   bool new_app_mouse =
     (cterm->mouse_mode || cterm->locator_1_enabled)
@@ -860,11 +874,16 @@ hide_mouse(void)
 static pos
 translate_pos(int x, int y)
 {
+  int rows = cterm->rows;
+  if (cterm->st_active) {
+    rows = cterm->st_rows;
+    y = max(0, y - cterm->rows * wv.cell_height);
+  }
   return (pos){
     .x = floorf((x - PADDING) / (float)wv.cell_width),
     .y = floorf((y - PADDING - OFFSET) / (float)wv.cell_height),
-    .pix = min(max(0, x - PADDING), cterm->rows * wv.cell_height - 1),
-    .piy = min(max(0, y - PADDING - OFFSET), cterm->cols * wv.cell_width - 1),
+    .pix = min(max(0, x - PADDING), cterm->cols * wv.cell_width - 1),
+    .piy = min(max(0, y - PADDING - OFFSET), rows * wv.cell_height - 1),
     .r = (cfg.elastic_mouse && !cterm->mouse_mode)
          ? (x - PADDING) % wv.cell_width > wv.cell_width / 2
          : 0
@@ -1056,7 +1075,12 @@ win_get_locator_info(int *x, int *y, int *buttons, bool by_pixels)
         p.y = 0;
       else
         p.y -= OFFSET + PADDING;
-      if (p.y >= cterm->rows * wv.cell_height)
+      if (cterm->st_active) {
+        p.y = max(0, p.y - cterm->rows * wv.cell_height);
+        if (p.y >= cterm->st_rows * wv.cell_height)
+          p.y = cterm->st_rows * wv.cell_height - 1;
+      }
+      else if (p.y >= cterm->rows * wv.cell_height)
         p.y = cterm->rows * wv.cell_height - 1;
 
       if (by_pixels) {
@@ -1248,42 +1272,42 @@ struct KNVDef{
   DKNU(SCROLLLOCK ,SCROLL ),
   DKNU(EXEC       ,EXECUTE),
   DKNU(BEGIN      ,CLEAR  ),
-//#if _WIN32_WINNT >= 0x0604
-//  DKND(NAVIGATION_VIEW    ),
-//  DKND(NAVIGATION_MENU    ),
-//  DKND(NAVIGATION_UP      ),
-//  DKND(NAVIGATION_DOWN    ),
-//  DKND(NAVIGATION_LEFT    ),
-//  DKND(NAVIGATION_RIGHT   ),
-//  DKND(NAVIGATION_ACCEPT  ),
-//  DKND(NAVIGATION_CANCEL  ),
-//#endif
-//#if _WIN32_WINNT >= 0x0604
-//  DKND(GAMEPAD_A                         ),
-//  DKND(GAMEPAD_B                         ),
-//  DKND(GAMEPAD_X                         ),
-//  DKND(GAMEPAD_Y                         ),
-//  DKND(GAMEPAD_RIGHT_SHOULDER            ),
-//  DKND(GAMEPAD_LEFT_SHOULDER             ),
-//  DKND(GAMEPAD_LEFT_TRIGGER              ),
-//  DKND(GAMEPAD_RIGHT_TRIGGER             ),
-//  DKND(GAMEPAD_DPAD_UP                   ),
-//  DKND(GAMEPAD_DPAD_DOWN                 ),
-//  DKND(GAMEPAD_DPAD_LEFT                 ),
-//  DKND(GAMEPAD_DPAD_RIGHT                ),
-//  DKND(GAMEPAD_MENU                      ),
-//  DKND(GAMEPAD_VIEW                      ),
-//  DKND(GAMEPAD_LEFT_THUMBSTICK_BUTTON    ),
-//  DKND(GAMEPAD_RIGHT_THUMBSTICK_BUTTON   ),
-//  DKND(GAMEPAD_LEFT_THUMBSTICK_UP        ),
-//  DKND(GAMEPAD_LEFT_THUMBSTICK_DOWN      ),
-//  DKND(GAMEPAD_LEFT_THUMBSTICK_RIGHT     ),
-//  DKND(GAMEPAD_LEFT_THUMBSTICK_LEFT      ),
-//  DKND(GAMEPAD_RIGHT_THUMBSTICK_UP       ),
-//  DKND(GAMEPAD_RIGHT_THUMBSTICK_DOWN     ),
-//  DKND(GAMEPAD_RIGHT_THUMBSTICK_RIGHT    ),
-//  DKND(GAMEPAD_RIGHT_THUMBSTICK_LEFT     ),
-//#endif 
+#if _WIN32_WINNT >= 0x0604
+  //  DKND(NAVIGATION_VIEW    ),
+  //  DKND(NAVIGATION_MENU    ),
+  //  DKND(NAVIGATION_UP      ),
+  //  DKND(NAVIGATION_DOWN    ),
+  //  DKND(NAVIGATION_LEFT    ),
+  //  DKND(NAVIGATION_RIGHT   ),
+  //  DKND(NAVIGATION_ACCEPT  ),
+  //  DKND(NAVIGATION_CANCEL  ),
+#endif
+#if _WIN32_WINNT >= 0x0604
+  //  DKND(GAMEPAD_A                         ),
+  //  DKND(GAMEPAD_B                         ),
+  //  DKND(GAMEPAD_X                         ),
+  //  DKND(GAMEPAD_Y                         ),
+  //  DKND(GAMEPAD_RIGHT_SHOULDER            ),
+  //  DKND(GAMEPAD_LEFT_SHOULDER             ),
+  //  DKND(GAMEPAD_LEFT_TRIGGER              ),
+  //  DKND(GAMEPAD_RIGHT_TRIGGER             ),
+  //  DKND(GAMEPAD_DPAD_UP                   ),
+  //  DKND(GAMEPAD_DPAD_DOWN                 ),
+  //  DKND(GAMEPAD_DPAD_LEFT                 ),
+  //  DKND(GAMEPAD_DPAD_RIGHT                ),
+  //  DKND(GAMEPAD_MENU                      ),
+  //  DKND(GAMEPAD_VIEW                      ),
+  //  DKND(GAMEPAD_LEFT_THUMBSTICK_BUTTON    ),
+  //  DKND(GAMEPAD_RIGHT_THUMBSTICK_BUTTON   ),
+  //  DKND(GAMEPAD_LEFT_THUMBSTICK_UP        ),
+  //  DKND(GAMEPAD_LEFT_THUMBSTICK_DOWN      ),
+  //  DKND(GAMEPAD_LEFT_THUMBSTICK_RIGHT     ),
+  //  DKND(GAMEPAD_LEFT_THUMBSTICK_LEFT      ),
+  //  DKND(GAMEPAD_RIGHT_THUMBSTICK_UP       ),
+  //  DKND(GAMEPAD_RIGHT_THUMBSTICK_DOWN     ),
+  //  DKND(GAMEPAD_RIGHT_THUMBSTICK_RIGHT    ),
+  //  DKND(GAMEPAD_RIGHT_THUMBSTICK_LEFT     ),
+#endif 
   {0,0}
 #undef DKNU 
 #undef DKND 
@@ -1315,8 +1339,6 @@ static int getvk(const char *n){
   }
   return -1;
 }
-#include "sckdef.h"
-
 
 typedef enum {
   COMP_CLEAR = -1,
@@ -1350,6 +1372,45 @@ win_key_reset(void)
 {
   alt_state = ALT_NONE;
   compose_clear();
+}
+
+wchar *
+char_code_indication(uint * what)
+{
+static wchar cci_buf[13];
+
+  if (alt_state > ALT_ALONE) {
+    int ac = alt_code;
+    int i = lengthof(cci_buf);
+    cci_buf[--i] = 0;
+    do {
+      int digit = ac % alt_state;
+      cci_buf[--i] = digit > 9 ? digit - 10 + 'A' : digit + '0';
+      ac /= alt_state;
+    } while (ac && i);
+    if (alt_state == ALT_HEX && alt_uni && i > 1) {
+      cci_buf[--i] = '+';
+      cci_buf[--i] = 'U';
+    }
+    *what = alt_state;
+    return &cci_buf[i];
+  }
+  else if (alt_state == ALT_ALONE) {
+    *what = 4;
+    //return W(" ");
+    return 0;  // don't obscure text when just pressing Alt
+  }
+  else if (comp_state > COMP_NONE) {
+    int i;
+    for (i = 0; i < compose_buflen; i++)
+      cci_buf[i] = compose_buf[i];
+    cci_buf[i++] = ' ';
+    cci_buf[i] = 0;
+    *what = 2;
+    return cci_buf;
+  }
+  else
+    return 0;
 }
 
 // notify margin bell ring enabled
@@ -1654,60 +1715,173 @@ user_function(wstring commands, int n)
 {
   pick_key_function(commands, 0, n, 0, 0, 0, 0);
 }
-bool 
-win_whotkey(WPARAM wp, LPARAM lp){
-  (void)lp;
-  uint key = wp;
-  last_key_down = key;
-  last_key_up = 0;
 
+static void
+insert_alt_code(void)
+{
+  if (cs_cur_max < 4 && !alt_uni) {
+    char buf[4];
+    int pos = sizeof buf;
+    do
+      buf[--pos] = alt_code;
+    while (alt_code >>= 8);
+    provide_input(buf[pos]);
+    child_send(cterm,buf + pos, sizeof buf - pos);
+  }
+  else if (alt_code < 0x10000) {
+    wchar wc = alt_code;
+    if (wc < 0x20)
+      MultiByteToWideChar(CP_OEMCP, MB_USEGLYPHCHARS,
+                          (char[]){wc}, 1, &wc, 1);
+    provide_input(wc);
+    child_sendw(cterm,&wc, 1);
+  }
+  else {
+    xchar xc = alt_code;
+    provide_input(' ');
+    child_sendw(cterm,(wchar[]){high_surrogate(xc), low_surrogate(xc)}, 2);
+  }
+  compose_clear();
+}
 
-  uchar kbd[256];
-  GetKeyboardState(kbd);
-  inline bool is_key_down(uchar vk) { return kbd[vk] & 0x80; }
+// The ToUnicode function for converting keyboard states to characters may
+// return multiple wchars due to dead keys and ligatures defined in the
+// keyboard layout. The latter aren't limited to actual ligatures but can be any
+// sequence of wchars.
+//
+// Unfortunately MSDN doesn't define a maximum length.
+//
+// The semi-official limit is four:
+// http://www.siao2.com/2015/08/07/8770668856267196989.aspx
+//
+// However, KbdEdit supports up to nine:
+// http://www.kbdedit.com/manual/high_level_ligatures.html
+//
+// And in this ill-tempered thread on unicode.org, it was found that ligatures
+// can be up to sixteen wchars long:
+// https://www.unicode.org/mail-arch/unicode-ml/y2015-m08/0023.html
+//
+// So let's go with the biggest number.
+#define TO_UNICODE_MAX 16
 
-  bool lwin=wv.lwinkey;//(is_key_down(VK_LWIN) && key != VK_LWIN);
-  bool rwin=wv.rwinkey;//(is_key_down(VK_RWIN) && key != VK_RWIN);
-  bool win =wv.winkey;
-  bool shift = is_key_down(VK_SHIFT);
-  // bool lshift = is_key_down(VK_RSHIFT);
-  // bool rshift = is_key_down(VK_RSHIFT);
-  bool lalt = is_key_down(VK_LMENU);
-  bool ralt = is_key_down(VK_RMENU);
-  bool alt = lalt | ralt;
-  trace_alt("alt %d lalt %d ralt %d\n", alt, lalt, ralt);
-  bool rctrl = is_key_down(VK_RCONTROL);
-  bool lctrl = is_key_down(VK_LCONTROL); 
-  bool ctrl = lctrl | rctrl;
-  mod_keys mods = shift * MDK_SHIFT
-                | alt * MDK_ALT
-                | ctrl * MDK_CTRL
-                | win * MDK_WIN
-                ;
+void
+win_csi_seq(const char * pre, const char * suf)
+{
+  mod_keys mods = get_mods();
+  inline bool is_key_down(uchar vk) { return GetKeyState(vk) & 0x80; }
   bool super = super_key && is_key_down(super_key);
   bool hyper = hyper_key && is_key_down(hyper_key);
   mods |= super * MDK_SUPER | hyper * MDK_HYPER;
-  if(!win)return 0;
-  int kmask=sckwmask[key];//assume winkey not to here 
-  int modt=packmod(mods);
-  if(kmask&(1<<modt)){
-    bool lshift = is_key_down(VK_RSHIFT);
-    bool rshift = is_key_down(VK_RSHIFT);
-    mod_keys modl = lshift* MDK_SHIFT
-        | lalt  * MDK_ALT
-        | lctrl * MDK_CTRL
-        | lwin *  MDK_WIN
-        ;
-    mod_keys modr = rshift* MDK_SHIFT
-        | ralt  * MDK_ALT
-        | rctrl * MDK_CTRL
-        | rwin *  MDK_WIN
-        ;
-    int moda=mods|(modl<<8)|(modr<<16);
-    if(sckw_run(key,moda))return 1;
-  }
-  return 0;
+
+  if (mods)
+    child_printf(cterm,"\e[%s;%u%s", pre, mods + 1, suf);
+  else
+    child_printf(cterm,"\e[%s%s", pre, suf);
 }
+
+// simulate a key press/release sequence
+static int
+win_key_fake(int vk)
+{
+  if (!cfg.manage_leds || (cfg.manage_leds < 4 && vk == VK_SCROLL))
+    return 0;
+
+  //printf("-> win_key_fake %02X\n", vk);
+  INPUT ki[2];
+  ki[0].type = INPUT_KEYBOARD;
+  ki[1].type = INPUT_KEYBOARD;
+  ki[0].ki.dwFlags = 0;
+  ki[1].ki.dwFlags = KEYEVENTF_KEYUP;
+  ki[0].ki.wVk = vk;
+  ki[1].ki.wVk = vk;
+  ki[0].ki.wScan = 0;
+  ki[1].ki.wScan = 0;
+  ki[0].ki.time = 0;
+  ki[1].ki.time = 0;
+  ki[0].ki.dwExtraInfo = 0;
+  ki[1].ki.dwExtraInfo = 0;
+  return SendInput(2, ki, sizeof(INPUT));
+}
+
+void
+do_win_key_toggle(int vk, bool on)
+{
+  // this crap does not work
+  return;
+
+  // use some heuristic combination to detect the toggle state
+  int delay = 33333;
+  usleep(delay);
+  int st = GetKeyState(vk);  // volatile; save in case of debugging
+  int ast = GetAsyncKeyState(vk);  // volatile; save in case of debugging
+#define dont_debug_key_state
+#ifdef debug_key_state
+  uchar kbd[256];
+  GetKeyboardState(kbd);
+  printf("do_win_key_toggle %02X %d (st %02X as %02X kb %02X)\n", vk, on, st, ast, kbd[vk]);
+#endif
+  if (((st | ast) & 1) != on) {
+    win_key_fake(vk);
+    usleep(delay);
+  }
+  /* It is possible to switch the LED only and revert the actual 
+     virtual input state of the current thread as it was by using 
+     SetKeyboardState in win_key_down, but this "fix" would only 
+     apply to the current window while the effective state remains 
+     switched for other windows which makes no sense.
+   */
+}
+
+static void
+win_key_toggle(int vk, bool on)
+{
+  //printf("send IDM_KEY_DOWN_UP %02X\n", vk | (on ? 0x10000 : 0));
+  send_syscommand2(IDM_KEY_DOWN_UP, vk | (on ? 0x10000 : 0));
+}
+
+void
+win_led(int led, bool set)
+{
+  //printf("\n[%ld] win_led %d %d\n", mtime(), led, set);
+  int led_keys[] = {VK_NUMLOCK, VK_CAPITAL, VK_SCROLL};
+  if (led <= 0)
+    for (uint i = 0; i < lengthof(led_keys); i++)
+      win_key_toggle(led_keys[i], set);
+  else if (led <= (int)lengthof(led_keys))
+    win_key_toggle(led_keys[led - 1], set);
+}
+
+
+bool
+get_scroll_lock(void)
+{
+  return GetKeyState(VK_SCROLL);
+}
+
+void
+sync_scroll_lock(bool locked)
+{
+  //win_led(3, cterm->no_scroll);
+  //do_win_key_toggle(VK_SCROLL, locked);
+  int st = GetKeyState(VK_SCROLL);
+  //printf("sync_scroll_lock %d key %d\n", locked, st);
+  if (st ^ locked)
+    win_key_fake(VK_SCROLL);
+}
+static void clear_scroll_lock();
+static void cycle_transparency(void);
+static void set_transparency(int t);
+static int packmod(int mods);
+static int kb_select(uint key, mod_keys mods);
+static void cycle_pointer_style();
+static int  sckmask[256]={0};
+static int  sckwmask[256]={0};
+int sckw_run(uint key,int moda);
+int sck_run(uint key,int moda);
+
+static int previous_transparency;
+static bool transparency_tuned;
+
 bool
 win_key_down(WPARAM wp, LPARAM lp)
 {
@@ -1856,7 +2030,7 @@ win_key_down(WPARAM wp, LPARAM lp)
     return true;
   }
 
-  alt_state_t old_alt_state = alt_state;
+  old_alt_state = alt_state;
   if (alt_state > ALT_NONE)
     alt_state = ALT_CANCELLED;
 
@@ -1909,11 +2083,11 @@ win_key_down(WPARAM wp, LPARAM lp)
             when 'A': term_select_all();
             when 'C': term_copy();
             when 'V': win_paste();
-            when 'I': term_save_image();
+            when 'I': term_save_image(0);
             
             when 'D': send_syscommand(IDM_DEFSIZE);
             when 'F': send_syscommand(cfg.zoom_font_with_window ? IDM_FULLSCREEN_ZOOM : IDM_FULLSCREEN);
-            when 'R': send_syscommand(IDM_RESET);
+            when 'R': send_syscommand(IDM_RESET_NOASK);
             when 'S': send_syscommand(IDM_SEARCH);
             when 'T': new_tab_def();
             when 'W': win_close();
@@ -2125,7 +2299,7 @@ win_key_down(WPARAM wp, LPARAM lp)
       return true;
   }
   bool allow_shortcut = true;
-  if (!cterm->shortcut_override) {
+  if (!cterm->shortcut_override && old_alt_state <= ALT_ALONE) {
     int kmask=sckmask[key];//assume winkey not to here 
     int modt=packmod(mods);
     if(kmask&(1<<modt)){
@@ -2193,9 +2367,19 @@ win_key_down(WPARAM wp, LPARAM lp)
   }
 
   bool alt_code_key(char digit) {
-    if (old_alt_state > ALT_ALONE && digit < old_alt_state) {
-      alt_state = old_alt_state;
-      alt_code = alt_code * alt_state + digit;
+    if (old_alt_state > ALT_ALONE) {
+      alt_state = old_alt_state;  // stay in alt_state, process key
+      if (digit >= 0 && digit < alt_state) {
+        alt_code = alt_code * alt_state + digit;
+        if ((signed int)alt_code < 0 || alt_code > 0x10FFFF) {
+          win_bell(&cfg);
+          alt_state = ALT_NONE;
+        }
+        else
+          win_update(false);
+      }
+      else
+        win_bell(&cfg);
       return true;
     }
     return false;
@@ -2208,6 +2392,16 @@ win_key_down(WPARAM wp, LPARAM lp)
       return true;
     }
     return alt_code_key(digit);
+  }
+
+  bool alt_code_ignore(void) {
+    if (old_alt_state > ALT_ALONE) {
+      alt_state = old_alt_state;  // keep alt_state, ignore key
+      win_bell(&cfg);
+      return true;
+    }
+    else
+      return false;
   }
 
   bool app_pad_key(char symbol) {
@@ -2224,7 +2418,10 @@ win_key_down(WPARAM wp, LPARAM lp)
       app_pad_code(symbol);
       return true;
     }
-    return symbol != '.' && alt_code_numpad_key(symbol - '0');
+    if (symbol == '.')
+      return alt_code_ignore();
+    else
+      return alt_code_numpad_key(symbol - '0');
   }
 
   void edit_key(uchar code, char symbol) {
@@ -2254,7 +2451,7 @@ win_key_down(WPARAM wp, LPARAM lp)
     // ToUnicode returns up to 4 wchars according to
     // http://blogs.msdn.com/b/michkap/archive/2006/03/24/559169.aspx
     // https://web.archive.org/web/20120103012712/http://blogs.msdn.com/b/michkap/archive/2006/03/24/559169.aspx
-    wchar wbuf[4];
+    wchar wbuf[TO_UNICODE_MAX];
     int wlen = ToUnicode(key, scancode, kbd, wbuf, lengthof(wbuf), 0);
     trace_alt("layout %d alt %d altgr %d\n", wlen, alt, altgr);
     if (!wlen)     // Unassigned.
@@ -2291,6 +2488,8 @@ win_key_down(WPARAM wp, LPARAM lp)
 #endif
       for (int i = 0; i < wlen; i++)
         compose_buf[compose_buflen++] = wbuf[i];
+      win_update(false);
+
       uint comp_len = min((uint)compose_buflen, lengthof(composed->kc));
       bool found = false;
       for (uint k = 0; k < lengthof(composed); k++)
@@ -2530,21 +2729,26 @@ win_key_down(WPARAM wp, LPARAM lp)
 
   switch (key) {
     when VK_RETURN:
-      if (extended && cterm->vt52_mode && cterm->app_keypad)
+      if (old_alt_state > ALT_ALONE) {
+        insert_alt_code();
+        alt_state = ALT_NONE;
+      } else if (extended && cterm->vt52_mode && cterm->app_keypad)
         len = sprintf(buf, "\e?M");
       else if (extended && !numlock && cterm->app_keypad)
         app_pad_code('M' - '@');
       else if (!extended && cterm->modify_other_keys && (shift || ctrl))
         other_code('\r');
-#ifdef support_special_key_Enter
-      else if (ctrl)
+      else if (ctrl && (cfg.old_modify_keys & 32))
         ctrl_ch(CTRL('^'));
-#endif
       else
         esc_if(alt),
         cterm->newline_mode ? ch('\r'), ch('\n') : ch(shift ? '\n' : '\r');
     when VK_BACK:
-      if (cfg.old_modify_keys & 1) {
+      if (old_alt_state > ALT_ALONE) {
+        alt_state = old_alt_state;  // keep alt_state, process key
+        alt_code = alt_code / alt_state;
+        win_update(false);
+      } else if (cfg.old_modify_keys & 1) {
         if (!ctrl)
           esc_if(alt), ch(cterm->backspace_sends_bs ? '\b' : CDEL);
         else if (cterm->modify_other_keys)
@@ -2563,7 +2767,8 @@ win_key_down(WPARAM wp, LPARAM lp)
         }
       }
     when VK_TAB:
-      if (!(cfg.old_modify_keys & 2) && cterm->modify_other_keys > 1 && mods) {
+      if (alt_code_ignore()) {
+      } else if (!(cfg.old_modify_keys & 2) && cterm->modify_other_keys > 1 && mods) {
         // perhaps also partially if:
         // cterm->modify_other_keys == 1 && (mods & ~(MDK_SHIFT | MDK_ALT)) ?
         other_code('\t');
@@ -2598,7 +2803,11 @@ win_key_down(WPARAM wp, LPARAM lp)
       }
 
     when VK_ESCAPE:
-      if (!(cfg.old_modify_keys & 8) && cterm->modify_other_keys > 1 && mods)
+      if (old_alt_state > ALT_ALONE) {
+        alt_state = ALT_CANCELLED;
+      } else if (comp_state > COMP_NONE) {
+        compose_clear();
+      } else if (!(cfg.old_modify_keys & 8) && cterm->modify_other_keys > 1 && mods)
         other_code('\033');
       else
         cterm->app_escape_key
@@ -2633,12 +2842,18 @@ win_key_down(WPARAM wp, LPARAM lp)
       if (!vk_special(cfg.key_scrlock))
         return false;
     when VK_F1 ... VK_F24:
+      if (alt_code_ignore()) {
+        return true;
+      }
+
       if (key <= VK_F4 && cterm->vt52_mode) {
         len = sprintf(buf, "\e%c", key - VK_F1 + 'P');
         break;
       }
+
       if (cterm->vt220_keys && ctrl && VK_F3 <= key && key <= VK_F10)
         key += 10, mods &= ~MDK_CTRL;
+
       if (key <= VK_F4)
         mod_ss3(key - VK_F1 + 'P');
       else {
@@ -2664,15 +2879,22 @@ win_key_down(WPARAM wp, LPARAM lp)
     when VK_MULTIPLY ... VK_DIVIDE:
       if (cterm->vt52_mode && cterm->app_keypad)
         len = sprintf(buf, "\e?%c", key - VK_MULTIPLY + 'j');
+      // initiate hex numeric input
       else if (key == VK_ADD && old_alt_state == ALT_ALONE)
-        alt_state = ALT_HEX, alt_code = 0;
+        alt_state = ALT_HEX, alt_code = 0, alt_uni = false;
+      // initiate decimal numeric input; override user-assigned functions
+      else if (key == VK_SUBTRACT && old_alt_state == ALT_ALONE)
+        alt_state = ALT_DEC, alt_code = 0, alt_uni = false;
+      else if (alt_code_ignore()) {
+      }
       else if (mods || (cterm->app_keypad && !numlock) || !layout())
         app_pad_code(key - VK_MULTIPLY + '*');
     when VK_NUMPAD0 ... VK_NUMPAD9:
       if (cterm->vt52_mode && cterm->app_keypad)
         len = sprintf(buf, "\e?%c", key - VK_NUMPAD0 + 'p');
       else if ((cterm->app_cursor_keys || !cterm->app_keypad) &&
-          alt_code_numpad_key(key - VK_NUMPAD0));
+          alt_code_numpad_key(key - VK_NUMPAD0))
+        ;
       else if (layout())
         ;
       else
@@ -2685,7 +2907,11 @@ win_key_down(WPARAM wp, LPARAM lp)
 #ifdef debug_key
       printf("-- mods %X alt %d altgr %d/%d ctrl %d lctrl %d/%d (modf %d comp %d)\n", mods, alt, altgr, altgr0, ctrl, lctrl, lctrl0, cterm->modify_other_keys, comp_state);
 #endif
-      if (altgr_key())
+      if (key == ' ' && old_alt_state > ALT_ALONE) {
+        insert_alt_code();
+        alt_state = ALT_NONE;
+      } else if (key > 'F' && alt_code_ignore()) {
+      } else if (altgr_key())
         trace_key("altgr");
       else if (!modaltgr && !cfg.altgr_is_alt && altgr0 && !cterm->modify_other_keys)
         // prevent AltGr from behaving like Alt
@@ -2713,7 +2939,8 @@ win_key_down(WPARAM wp, LPARAM lp)
         ctrl_ch(CTRL(key));
     }
     when '0' ... '9' or VK_OEM_1 ... VK_OEM_102:
-      if (key <= '9' && alt_code_key(key - '0'))
+      if (key > '9' && alt_code_ignore()) {
+      } else if (key <= '9' && alt_code_key(key - '0'))
         ;
       else if (char_key())
         trace_key("0... char_key");
@@ -2761,21 +2988,6 @@ win_key_down(WPARAM wp, LPARAM lp)
   return true;
 }
 
-void
-win_csi_seq(const char * pre, const char * suf)
-{
-  mod_keys mods = get_mods();
-  inline bool is_key_down(uchar vk) { return GetKeyState(vk) & 0x80; }
-  bool super = super_key && is_key_down(super_key);
-  bool hyper = hyper_key && is_key_down(hyper_key);
-  mods |= super * MDK_SUPER | hyper * MDK_HYPER;
-
-  if (mods)
-    child_printf(cterm,"\e[%s;%u%s", pre, mods + 1, suf);
-  else
-    child_printf(cterm,"\e[%s%s", pre, suf);
-}
-
 bool
 win_key_up(WPARAM wp, LPARAM lp)
 {
@@ -2820,12 +3032,13 @@ win_key_up(WPARAM wp, LPARAM lp)
         || (cfg.compose_key == MDK_HYPER && key == hyper_key)
        )
     {
-      if (comp_state >= 0)
+      if (comp_state >= 0){
         comp_state = COMP_ACTIVE;
+        win_update(false);
+      }
     }
   }
-  else
-    comp_state = COMP_NONE;
+  //zz else comp_state = COMP_NONE;
 
   last_key_up = key;
 
@@ -2882,133 +3095,1069 @@ win_key_up(WPARAM wp, LPARAM lp)
       win_update_transparency(cfg.transparency, false);
   }
 
+#if 0
+  // "unhovering" is now handled in update_mouse, based on configured mods
   if (key == VK_CONTROL && cterm->hovering) {
     cterm->hovering = false;
     win_update(false);
   }
+#endif
 
-  if (key != VK_MENU)
-    return false;
-
-  if (alt_state > ALT_ALONE && alt_code) {
-    if (cs_cur_max < 4) {
-      char buf[4];
-      int pos = sizeof buf;
-      do
-        buf[--pos] = alt_code;
-      while (alt_code >>= 8);
-      provide_input(buf[pos]);
-      child_send(cterm,buf + pos, sizeof buf - pos);
-      compose_clear();
+  if (key == VK_MENU) {
+    if (alt_state > ALT_ALONE && alt_code) {
+      insert_alt_code();
     }
-    else if (alt_code < 0x10000) {
-      wchar wc = alt_code;
-      if (wc < 0x20)
-        MultiByteToWideChar(CP_OEMCP, MB_USEGLYPHCHARS,
-                            (char[]){wc}, 1, &wc, 1);
-      provide_input(wc);
-      child_sendw(cterm,&wc, 1);
-      compose_clear();
-    }
-    else {
-      xchar xc = alt_code;
-      provide_input(' ');
-      child_sendw(cterm,(wchar[]){high_surrogate(xc), low_surrogate(xc)}, 2);
-      compose_clear();
-    }
+    alt_state = ALT_NONE;
+    return true;
   }
-
-  alt_state = ALT_NONE;
-  return true;
+  return false;
 }
+bool 
+win_whotkey(WPARAM wp, LPARAM lp){
+  (void)lp;
+  uint key = wp;
+  //last_key_down = key; last_key_up = 0;
 
-// simulate a key press/release sequence
-static int
-win_key_fake(int vk)
-{
-  if (!cfg.manage_leds || (cfg.manage_leds < 4 && vk == VK_SCROLL))
-    return 0;
+  if(!wv.winkey)return 0;
 
-  //printf("-> win_key_fake %02X\n", vk);
-  INPUT ki[2];
-  ki[0].type = INPUT_KEYBOARD;
-  ki[1].type = INPUT_KEYBOARD;
-  ki[0].ki.dwFlags = 0;
-  ki[1].ki.dwFlags = KEYEVENTF_KEYUP;
-  ki[0].ki.wVk = vk;
-  ki[1].ki.wVk = vk;
-  ki[0].ki.wScan = 0;
-  ki[1].ki.wScan = 0;
-  ki[0].ki.time = 0;
-  ki[1].ki.time = 0;
-  ki[0].ki.dwExtraInfo = 0;
-  ki[1].ki.dwExtraInfo = 0;
-  return SendInput(2, ki, sizeof(INPUT));
-}
-
-void
-do_win_key_toggle(int vk, bool on)
-{
-  // this crap does not work
-  return;
-
-  // use some heuristic combination to detect the toggle state
-  int delay = 33333;
-  usleep(delay);
-  int st = GetKeyState(vk);  // volatile; save in case of debugging
-  int ast = GetAsyncKeyState(vk);  // volatile; save in case of debugging
-#define dont_debug_key_state
-#ifdef debug_key_state
   uchar kbd[256];
   GetKeyboardState(kbd);
-  printf("do_win_key_toggle %02X %d (st %02X as %02X kb %02X)\n", vk, on, st, ast, kbd[vk]);
-#endif
-  if (((st | ast) & 1) != on) {
-    win_key_fake(vk);
-    usleep(delay);
+  inline bool is_key_down(uchar vk) { return kbd[vk] & 0x80; }
+
+  bool lwin=wv.lwinkey;//(is_key_down(VK_LWIN) && key != VK_LWIN);
+  bool rwin=wv.rwinkey;//(is_key_down(VK_RWIN) && key != VK_RWIN);
+  bool win =wv.winkey;
+  bool shift = is_key_down(VK_SHIFT);
+  bool lalt = is_key_down(VK_LMENU);
+  bool ralt = is_key_down(VK_RMENU);
+  bool alt = lalt | ralt;
+  bool rctrl = is_key_down(VK_RCONTROL);
+  bool lctrl = is_key_down(VK_LCONTROL); 
+  bool ctrl = lctrl | rctrl;
+  mod_keys mods = shift * MDK_SHIFT
+                | alt * MDK_ALT
+                | ctrl * MDK_CTRL
+                | win * MDK_WIN
+                ;
+  bool super = super_key && is_key_down(super_key);
+  bool hyper = hyper_key && is_key_down(hyper_key);
+  mods |= super * MDK_SUPER | hyper * MDK_HYPER;
+  int kmask=sckwmask[key];//assume winkey not to here 
+  int modt=packmod(mods);
+  if(kmask&(1<<modt)){
+    bool lshift = is_key_down(VK_RSHIFT);
+    bool rshift = is_key_down(VK_RSHIFT);
+    mod_keys modl = lshift* MDK_SHIFT
+        | lalt  * MDK_ALT
+        | lctrl * MDK_CTRL
+        | lwin *  MDK_WIN
+        ;
+    mod_keys modr = rshift* MDK_SHIFT
+        | ralt  * MDK_ALT
+        | rctrl * MDK_CTRL
+        | rwin *  MDK_WIN
+        ;
+    int moda=mods|(modl<<8)|(modr<<16);
+    if(sckw_run(key,moda))return 1;
   }
-  /* It is possible to switch the LED only and revert the actual 
-     virtual input state of the current thread as it was by using 
-     SetKeyboardState in win_key_down, but this "fix" would only 
-     apply to the current window while the effective state remains 
-     switched for other windows which makes no sense.
+  return 0;
+}
+
+//#include "sckdef.h"
+
+#define dont_debug_transparency
+enum funct_type{
+  FT_NULL=0,FT_CMD,FT_NORM,FT_NORV,FT_KEY,FT_KEYV,FT_PAR1,FT_PAR2,
+  FT_RAWS,FT_ESCC,FT_SHEL
+};
+struct function_def {
+  string name;
+  int type;
+  union {
+    WPARAM cmd;
+    void *f;
+    void (*fct)(void);
+    int  (*fctv)(void);
+    void (*fct_key)(uint key, mod_keys mods);
+    int  (*fct_keyv)(uint key, mod_keys mods);
+    void (*fct_par1)(int p0);
+    void (*fct_par2)(int p0,int p1);
+  };
+  uint (*fct_status)(void);
+  int p0,p1;
+  /*type :
+   * 0: cmd;
+   * 1: fct();
+   * 2: fct_key(...)
+   * 3: fct_par(p0,...)
    */
+};
+
+static void nop() { }
+static void
+cycle_transparency(void)
+{
+  cfg.transparency = ((cfg.transparency + 16) / 16 * 16) % 128;
+  win_update_transparency(cfg.transparency, false);
 }
 
 static void
-win_key_toggle(int vk, bool on)
+set_transparency(int t)
 {
-  //printf("send IDM_KEY_DOWN_UP %02X\n", vk | (on ? 0x10000 : 0));
-  send_syscommand2(IDM_KEY_DOWN_UP, vk | (on ? 0x10000 : 0));
+  if (t >= 128)
+    t = 127;
+  else if (t < 0)
+    t = 0;
+  cfg.transparency = t;
+  win_update_transparency(t, false);
 }
 
-void
-win_led(int led, bool set)
+static void
+cycle_pointer_style()
 {
-  //printf("\n[%ld] win_led %d %d\n", mtime(), led, set);
-  int led_keys[] = {VK_NUMLOCK, VK_CAPITAL, VK_SCROLL};
-  if (led <= 0)
-    for (uint i = 0; i < lengthof(led_keys); i++)
-      win_key_toggle(led_keys[i], set);
-  else if (led <= (int)lengthof(led_keys))
-    win_key_toggle(led_keys[led - 1], set);
+  cfg.cursor_type = (cfg.cursor_type + 1) % 3;
+  cterm->cursor_invalid = true;
+  term_schedule_cblink();
+  win_update(false);
 }
 
 
-bool
-get_scroll_lock(void)
+/*
+   Some auxiliary functions for user-defined key assignments.
+ */
+
+static void
+unicode_char()
 {
-  return GetKeyState(VK_SCROLL);
+  alt_state = ALT_HEX;
+  old_alt_state = ALT_ALONE;
+  alt_code = 0;
+  alt_uni = true;
 }
 
-void
-sync_scroll_lock(bool locked)
+static void
+transparency_level()
 {
-  //win_led(3, cterm->no_scroll);
-  //do_win_key_toggle(VK_SCROLL, locked);
-  int st = GetKeyState(VK_SCROLL);
-  //printf("sync_scroll_lock %d key %d\n", locked, st);
-  if (st ^ locked)
-    win_key_fake(VK_SCROLL);
+  if (!transparency_pending) {
+    previous_transparency = cfg.transparency;
+    transparency_pending = 1;
+    transparency_tuned = false;
+  }
+  if (cfg.opaque_when_focused)
+    win_update_transparency(cfg.transparency, false);
+}
+
+static void
+transparency_opaque()
+{
+  win_update_transparency(cfg.transparency, true);
+}
+
+static void
+newwin(uint key, mod_keys mods)
+{
+	// defer send_syscommand(IDM_NEW) until key released
+	// monitor cursor keys to collect parameters meanwhile
+  newwin_pending = true;
+  newwin_home = false; newwin_monix = 0; newwin_moniy = 0;
+
+  newwin_key = key;
+  if (mods & MDK_SHIFT)
+    newwin_shifted = true;
+  else
+    newwin_shifted = false;
+}
+
+
+static uint mflags_paste() {
+  return
+    IsClipboardFormatAvailable(CF_TEXT) ||
+    IsClipboardFormatAvailable(CF_UNICODETEXT) ||
+    IsClipboardFormatAvailable(CF_HDROP)
+    ? MF_ENABLED : MF_GRAYED;
+}
+static int
+kb_select(uint key, mod_keys mods)
+{
+  (void)key;
+  // note kb_select_key for re-anchor handling?
+  //kb_select_key = key;
+  // start and anchor keyboard selection
+  cterm->sel_pos = (pos){.y = cterm->curs.y, .x = cterm->curs.x, .r = 0};
+  cterm->sel_anchor = cterm->sel_pos;
+  cterm->sel_start = cterm->sel_pos;
+  cterm->sel_end = cterm->sel_pos;
+  cterm->sel_rect = mods & MDK_ALT;
+  cterm->selection_pending = true;
+  return 1;
+}
+static uint mflags_defsize() { return (IsZoomed(wv.wnd) || cterm->cols != cfg.cols || cterm->rows != cfg.rows) ? MF_ENABLED : MF_GRAYED; }
+#ifdef allow_disabling_scrollbar
+static uint mflags_scrollbar_outer() { return cterm->show_scrollbar ? MF_CHECKED : MF_UNCHECKED | cfg.scrollbar ? 0 : MF_GRAYED ; }
+#else
+static uint mflags_scrollbar_outer() { return cterm->show_scrollbar ? MF_CHECKED : MF_UNCHECKED ; }
+#endif
+static uint mflags_scrollbar_inner() { return cfg.scrollbar?(  cterm->show_scrollbar ? MF_CHECKED : MF_UNCHECKED): MF_GRAYED; }
+static uint mflags_logging() { return (wv.logging ? MF_CHECKED : MF_UNCHECKED) ; }
+static uint mflags_bidi() { return (cfg.bidi == 0 || (cfg.bidi == 1 && (cterm->on_alt_screen ^ cterm->show_other_screen))) ? MF_GRAYED : cterm->disable_bidi ? MF_UNCHECKED : MF_CHECKED; }
+static uint mflags_dim_margins() { return cterm->dim_margins ? MF_CHECKED : MF_UNCHECKED; }
+static uint mflags_status_line() { return cterm->st_type == 1 ? MF_CHECKED : MF_UNCHECKED; }
+static void zoom_font_out   (){ win_zoom_font(-1, 0);}
+static void zoom_font_in    (){ win_zoom_font( 1, 0);}
+static void zoom_font_reset (){ win_zoom_font( 0, 0);}
+static void zoom_font_sout  (){ win_zoom_font(-1, 1);}
+static void zoom_font_sin   (){ win_zoom_font( 1, 1);}
+static void zoom_font_sreset(){ win_zoom_font( 0, 1);}
+static void menu_text() { open_popup_menu(true, null, get_mods()); }
+static void menu_pointer() { open_popup_menu(false, null, get_mods()); }
+static void window_full() { win_maximise(2); }
+static void window_max() { win_maximise(1); }
+static void window_toggle_max() { win_maximise(!IsZoomed(wv.wnd)); }
+static void window_restore() { win_maximise(0); }
+static void window_min() { win_set_iconic(true); }
+static void switch_next() { win_switch(false, true); }
+static void switch_prev() { win_switch(true, true); }
+static void switch_visible_next() { win_switch(false, false); }
+static void switch_visible_prev() { win_switch(true, false); }
+static void lock_title() { cfg.title_settable = false; }
+static void clear_title() { win_set_title(W("")); }
+static void refresh() { win_invalidate_all(false); }
+//static void scroll_key(int key) { SendMessage(wv.wnd, WM_VSCROLL, key, 0); }
+static int  vtabclose    (){if(!child_is_alive(cterm)) {win_tab_clean();return 1;}return 0;}
+static void scroll_top	 (){SendMessage(wv.wnd, WM_VSCROLL,SB_TOP      ,0);}      
+static void scroll_end	 (){SendMessage(wv.wnd, WM_VSCROLL,SB_BOTTOM   ,0);}   
+static void scroll_pgup	 (){SendMessage(wv.wnd, WM_VSCROLL,SB_PAGEUP   ,0);}   
+static void scroll_pgdn	 (){SendMessage(wv.wnd, WM_VSCROLL,SB_PAGEDOWN ,0);} 
+static void scroll_lnup	 (){SendMessage(wv.wnd, WM_VSCROLL,SB_LINEUP   ,0);}   
+static void scroll_lndn	 (){SendMessage(wv.wnd, WM_VSCROLL,SB_LINEDOWN ,0);} 
+static void scroll_prev	 (){SendMessage(wv.wnd, WM_VSCROLL,SB_PRIOR    ,0);}    
+static void scroll_next	 (){SendMessage(wv.wnd, WM_VSCROLL,SB_NEXT     ,0);}     
+void toggle_vt220() { cterm->vt220_keys = !cterm->vt220_keys; }
+void toggle_auto_repeat() { cterm->auto_repeat = !cterm->auto_repeat; }
+void toggle_bidi() { cterm->disable_bidi = !cterm->disable_bidi; }
+void toggle_dim_margins() { cterm->dim_margins = !cterm->dim_margins; }
+void toggle_status_line() {
+  if (cterm->st_type == 1) term_set_status_type(0, 0);
+  else term_set_status_type(1, 0);
+}
+void tab_prev	    (){win_tab_change(-1);}
+void tab_next	    (){win_tab_change( 1);}
+void tab_move_prev(){win_tab_move  (-1);}
+void tab_move_next(){win_tab_move  ( 1);}
+void new_tab_def(){new_tab(IDSS_CUR);}
+void new_tab_wsl(){new_tab(IDSS_WSL);}
+void new_tab_cyg(){new_tab(IDSS_CYG);}
+void new_tab_cmd(){new_tab(IDSS_CMD);}
+void new_tab_psh(){new_tab(IDSS_PSH);}
+void new_tab_usr(){new_tab(IDSS_USR);}
+void new_win_wsl(){new_win(IDSS_WSL,0);}
+void new_win_cyg(){new_win(IDSS_CYG,0);}
+void new_win_cmd(){new_win(IDSS_CMD,0);}
+void new_win_psh(){new_win(IDSS_PSH,0);}
+void new_win_usr(){new_win(IDSS_USR,0);}
+void new_win_def(){new_win(IDSS_DEF,0);}
+static void win_hide() { ShowWindow(wv.wnd, IsIconic(wv.wnd) ?SW_RESTORE: SW_MINIMIZE ); }
+static void super_down(uint key, mod_keys mods) { super_key = key; (void)mods; }
+static void hyper_down(uint key, mod_keys mods) { hyper_key = key; (void)mods; }
+static void win_ctrlmode(){
+  if(wv.tabctrling!=3)wv.tabctrling=3;else wv.tabctrling=0;
+  wv.last_tabk_time=GetMessageTime();
+}
+static uint mflags_lock_title() { return cfg.title_settable ? MF_ENABLED : MF_GRAYED; }
+static uint mflags_copy() { return cterm->selected ? MF_ENABLED : MF_GRAYED; }
+static uint mflags_kb_select() { return cterm->selection_pending; }
+
+static void
+refresh_scroll_title()
+{
+  win_unprefix_title(_W("[NO SCROLL] "));
+  win_unprefix_title(_W("[SCROLL MODE] "));
+  win_unprefix_title(_W("[NO SCROLL] "));
+  if (cterm->no_scroll)
+    win_prefix_title(_W("[NO SCROLL] "));
+  if (cterm->scroll_mode)
+    win_prefix_title(_W("[SCROLL MODE] "));
+}
+
+static void
+clear_scroll_lock()
+{
+  bool scrlock0 = cterm->no_scroll || cterm->scroll_mode;
+  if (cterm->no_scroll < 0) {
+    cterm->no_scroll = 0;
+  }
+  if (cterm->scroll_mode < 0) {
+    cterm->scroll_mode = 0;
+  }
+  bool scrlock = cterm->no_scroll || cterm->scroll_mode;
+  if (scrlock != scrlock0) {
+    sync_scroll_lock(cterm->no_scroll || cterm->scroll_mode);
+    refresh_scroll_title();
+  }
+}
+#define Funtion_def_OldName
+#ifdef Funtion_def_OldName
+static void win_toggle_screen_on() { win_keep_screen_on(!wv.keep_screen_on); }
+static int no_scroll(uint key, mod_keys mods) {
+  (void)mods;
+  (void)key;
+  if (!cterm->no_scroll) {
+    cterm->no_scroll = -1;
+    sync_scroll_lock(true);
+    win_prefix_title(_W("[NO SCROLL] "));
+    term_flush();
+  }
+  return 0;
+}
+static int scroll_mode(uint key, mod_keys mods) {
+  (void)mods;
+  (void)key;
+  if (!cterm->scroll_mode) {
+    cterm->scroll_mode = -1;
+    sync_scroll_lock(true);
+    win_prefix_title(_W("[SCROLL MODE] "));
+    term_flush();
+  }
+  return 0;
+}
+static int toggle_no_scroll(uint key, mod_keys mods) {
+  (void)mods;
+  (void)key;
+  cterm->no_scroll = !cterm->no_scroll;
+  sync_scroll_lock(cterm->no_scroll || cterm->scroll_mode);
+  if (!cterm->no_scroll) {
+    refresh_scroll_title();
+    term_flush();
+  }
+  else
+    win_prefix_title(_W("[NO SCROLL] "));
+  return 0;
+}
+static int toggle_scroll_mode(uint key, mod_keys mods) {
+  (void)mods;
+  (void)key;
+  cterm->scroll_mode = !cterm->scroll_mode;
+  sync_scroll_lock(cterm->no_scroll || cterm->scroll_mode);
+  if (!cterm->scroll_mode) {
+    refresh_scroll_title();
+    term_flush();
+  }
+  else
+    win_prefix_title(_W("[SCROLL MODE] "));
+  return 0;
+}
+static uint mflags_no_scroll() { return cterm->no_scroll ? MF_CHECKED : MF_UNCHECKED; }
+static uint mflags_scroll_mode() { return cterm->scroll_mode ? MF_CHECKED : MF_UNCHECKED; }
+static uint mflags_always_top() { return wv.win_is_always_on_top ? MF_CHECKED: MF_UNCHECKED; }
+static uint mflags_screen_on() { return wv.keep_screen_on ? MF_CHECKED: MF_UNCHECKED; } 
+#endif
+static uint mflags_fullscreen() { return wv.win_is_fullscreen ? MF_CHECKED : MF_UNCHECKED; }
+static uint mflags_zoomed() { return IsZoomed(wv.wnd) ? MF_CHECKED: MF_UNCHECKED; }
+static uint mflags_flipscreen() { return cterm->show_other_screen ? MF_CHECKED : MF_UNCHECKED; }
+static uint mflags_open() { return cterm->selected ? MF_ENABLED : MF_GRAYED; }
+static uint mflags_char_info() { return show_charinfo ? MF_CHECKED : MF_UNCHECKED; }
+static uint mflags_vt220() { return cterm->vt220_keys ? MF_CHECKED : MF_UNCHECKED; }
+static uint mflags_auto_repeat() { return cterm->auto_repeat ? MF_CHECKED : MF_UNCHECKED; }
+static uint mflags_options() { return wv.config_wnd ? MF_GRAYED : MF_ENABLED; }
+static uint mflags_tek_mode() { return tek_mode ? MF_ENABLED : MF_GRAYED; }
+
+static void hor_left_1() { horscroll(-1); }
+static void hor_right_1() { horscroll(1); }
+static void hor_out_1() { horsizing(1, false); }
+static void hor_in_1() { horsizing(-1, false); }
+static void hor_narrow_1() { horsizing(-1, true); }
+static void hor_wide_1() { horsizing(1, true); }
+static void hor_left_mult() { horscroll(-cterm->cols / 10); }
+static void hor_right_mult() { horscroll(cterm->cols / 10); }
+static void hor_out_mult() { horsizing(cterm->cols / 10, false); }
+static void hor_in_mult() { horsizing(-cterm->cols / 10, false); }
+static void hor_narrow_mult() { horsizing(-cterm->cols / 10, true); }
+static void hor_wide_mult() { horsizing(cterm->cols / 10, true); }
+
+void win_close();
+typedef struct pstr{ short len; char s[1]; }pstr;
+typedef struct pwstr{ short len; wchar s[1]; }pwstr;
+pwstr *pwsdup(const wchar*s){
+  int len=wcslen(s);
+  pwstr *d=(pwstr*)malloc(len+2);
+  wcsncpy(d->s,s,len);
+  d->len=len;
+  return d;
+}
+pstr *psdup(const char*s){
+  int len=strlen(s);
+  pstr *d=(pstr*)malloc(len+4);
+  strncpy(d->s,s,len);
+  d->len=len;
+  return d;
+}
+
+static void wpwstr(pwstr*s){//FT_RAWS
+  provide_input(s->s[0]);
+  child_sendw(cterm,s->s, s->len );
+}
+static void wpesccode(int code,int mods){//FT_ESCC
+  char buf[33];
+  int len = sprintf(buf, mods ? "\e[%i;%u~" : "\e[%i~", code, mods + 1);
+  child_send(cterm,buf, len);
+}
+static void shellcmd(const char*cmd){//FT_SHEL
+  term_cmd(cmd);
+}
+/* Keyboard handling */
+typedef void(*QFT)(int,int);
+static struct function_def cmd_defs[] = {
+#ifdef Funtion_def_OldName
+  //compatible 
+#define DFDC(n,f,s)     {#n,FT_CMD ,{.cmd     =f},s,0,0}
+#define DFDN(n,f,s)     {#n,FT_NORM,{.fct     =f},s,0,0}
+#define DFDK(n,f,s)     {#n,FT_KEY ,{.fct_key =f},s,0,0}
+#define DFDV(n,f,s)     {#n,FT_KEYV,{.fct_keyv=f},s,0,0}
+#define DFDP(n,f,s,p)   {#n,FT_PAR1,{.fct_par1=f},s,p,0}
+#define DFDQ(n,f,s,p,q) {#n,FT_PAR2,{.fct_par2=f},s,p,q}
+#ifdef support_sc_defs
+#warning these do not work, they crash
+  DFDC(restore	    ,SC_RESTORE , 0),
+  DFDC(move		      ,SC_MOVE    , 0),
+  DFDC(resize		    ,SC_SIZE    , 0),
+  DFDC(minimize	    ,SC_MINIMIZE, 0),
+  DFDC(maximize	    ,SC_MAXIMIZE, 0),
+  DFDC(menu		      ,SC_KEYMENU , 0),
+  DFDC(close		    ,SC_CLOSE   , 0),
+#endif
+  DFDC(new-window         ,IDM_NEW              , 0),
+  //DFDC(new-monitor      ,IDM_NEW_MONI         , 0),
+  //DFDC(default-size     ,IDM_DEFSIZE          , 0),
+  DFDN(hor-left-1			    ,hor_left_1				    , 0),
+  DFDN(hor-right-1			  ,hor_right_1				  , 0),
+  DFDN(hor-out-1			    ,hor_out_1				    , 0),
+  DFDN(hor-in-1			      ,hor_in_1				      , 0),
+  DFDN(hor-narrow-1			  ,hor_narrow_1				  , 0),
+  DFDN(hor-wide-1			    ,hor_wide_1				    , 0),
+  DFDN(hor-left-mult			,hor_left_mult				, 0),
+  DFDN(hor-right-mult			,hor_right_mult				, 0),
+  DFDN(hor-out-mult			  ,hor_out_mult				  , 0),
+  DFDN(hor-in-mult			  ,hor_in_mult				  , 0),
+  DFDN(hor-narrow-mult		,hor_narrow_mult			, 0),
+  DFDN(hor-wide-mult			,hor_wide_mult				, 0),
+
+  DFDC(default-size       ,IDM_DEFSIZE_ZOOM     , mflags_defsize),
+  DFDC(toggle-fullscreen  ,IDM_FULLSCREEN_ZOOM  , mflags_fullscreen),
+  DFDN(fullscreen         ,window_full          , mflags_fullscreen),
+  DFDN(win-max            ,window_max           , mflags_zoomed),
+  DFDN(win-toggle-max     ,window_toggle_max    , mflags_zoomed),
+  DFDN(win-restore        ,window_restore       , 0),
+  DFDN(win-icon           ,window_min           , 0),
+  DFDN(close              ,win_close            , 0),
+  DFDN(win-toggle-always-on-top ,win_toggle_on_top   , mflags_always_top),
+  DFDN(win-toggle-keep-screen-on,win_toggle_screen_on, mflags_screen_on ),
+
+  DFDN(unicode-char       ,unicode_char         , 0),
+
+  DFDK(new                ,newwin               , 0),  // deprecated
+  DFDK(new-key            ,newwin               , 0),
+  DFDC(options            ,IDM_OPTIONS          , mflags_options),
+  DFDN(menu-text          ,menu_text            , 0),
+  DFDN(menu-pointer       ,menu_pointer         , 0),
+
+  DFDC(search             ,IDM_SEARCH           , 0),
+  DFDC(scrollbar-outer    ,IDM_SCROLLBAR        , mflags_scrollbar_outer),
+  DFDN(scrollbar-inner    ,win_tog_scrollbar    , mflags_scrollbar_inner),
+  DFDN(cycle-pointer-style,cycle_pointer_style  , 0),
+  DFDN(cycle-transparency-level ,transparency_level, 0),
+  DFDN(transparency-opaque,transparency_opaque, 0),
+
+  DFDC(copy               ,IDM_COPY             , mflags_copy),
+  DFDC(copy-text          ,IDM_COPY_TEXT        , mflags_copy),
+  DFDC(copy-tabs          ,IDM_COPY_TABS        , mflags_copy),
+  DFDC(copy-plain         ,IDM_COPY_TXT         , mflags_copy),
+  DFDC(copy-rtf           ,IDM_COPY_RTF         , mflags_copy),
+  DFDC(copy-html-text     ,IDM_COPY_HTXT        , mflags_copy),
+  DFDC(copy-html-format   ,IDM_COPY_HFMT        , mflags_copy),
+  DFDC(copy-html-full     ,IDM_COPY_HTML        , mflags_copy),
+  DFDC(paste              ,IDM_PASTE            , mflags_paste),
+  DFDN(paste-path         ,win_paste_path       , mflags_paste),
+  DFDC(copy-paste         ,IDM_COPASTE          , mflags_copy),
+  DFDC(select-all         ,IDM_SELALL           , 0),
+  DFDC(clear-scrollback   ,IDM_CLRSCRLBCK       , 0),
+  DFDC(copy-title         ,IDM_COPYTITLE        , 0),
+  DFDN(lock-title         ,lock_title           , mflags_lock_title),
+  DFDN(clear-title        ,clear_title          , 0),
+  DFDC(reset              ,IDM_RESET            , 0),
+  DFDC(reset-noask        ,IDM_RESET_NOASK      , 0),
+  DFDC(tek-reset          ,IDM_TEKRESET         , mflags_tek_mode),
+  DFDC(tek-page           ,IDM_TEKPAGE          , mflags_tek_mode),
+  DFDC(tek-copy           ,IDM_TEKCOPY          , mflags_tek_mode),
+  DFDC(save-image         ,IDM_SAVEIMG          , 0),
+  DFDC(break              ,IDM_BREAK            , 0),
+  DFDC(flipscreen         ,IDM_FLIPSCREEN       , mflags_flipscreen),
+  DFDC(open               ,IDM_OPEN             , mflags_open),
+  DFDC(toggle-logging     ,IDM_TOGLOG           , mflags_logging),
+  DFDC(toggle-char-info   ,IDM_TOGCHARINFO      , mflags_char_info),
+  DFDC(export-html        ,IDM_HTML             , 0),
+  DFDN(print-screen       ,print_screen         , 0),
+  DFDN(toggle-vt220       ,toggle_vt220         , mflags_vt220),
+  DFDN(toggle-auto-repeat ,toggle_auto_repeat   , mflags_auto_repeat),
+  DFDN(toggle-bidi        ,toggle_bidi          , mflags_bidi),
+  DFDN(refresh            ,refresh              , 0),
+  DFDN(toggle-dim-margins ,toggle_dim_margins   , mflags_dim_margins),
+  DFDN(toggle-status-line ,toggle_status_line   , mflags_status_line),
+
+  DFDK(super              ,super_down           , 0),
+  DFDK(hyper              ,hyper_down           , 0),
+  DFDV(kb-select          ,kb_select            ,mflags_kb_select     ),
+  DFDV(no-scroll          ,no_scroll            , mflags_no_scroll),
+  DFDV(toggle-no-scroll   ,toggle_no_scroll     , mflags_no_scroll),
+  DFDV(scroll-mode        ,scroll_mode          , mflags_scroll_mode),
+  DFDV(toggle-scroll-mode ,toggle_scroll_mode   , mflags_scroll_mode),
+
+  DFDN(switch-prev		    ,switch_prev          , 0),
+  DFDN(switch-next		    ,switch_next          , 0),
+  DFDN(switch-visible-prev,switch_visible_prev  , 0),
+  DFDN(switch-visible-next,switch_visible_next  , 0),
+#endif
+
+#undef DFDC
+#undef DFDN
+#undef DFDK
+#undef DFDP
+#undef DFDQ
+#define DFSC(f,s)     {#f,FT_CMD ,{.cmd     =IDM_##f},s,0,0}
+#define DFSN(f,s)     {#f,FT_NORM,{.fct     =f},s,0,0}
+#define DFSK(f,s)     {#f,FT_KEY ,{.fct_key =f},s,0,0}
+#define DFSV(f,s)     {#f,FT_KEYV,{.fct_keyv=f},s,0,0}
+#define DFSP(f,s)     {#f,FT_PAR1,{.fct_par1=f},s,0,0}
+#define DFSQ(f,s)     {#f,FT_PAR2,{.fct_par2=(QFT)(void*)f},s,0,0}
+  DFSC(DEFSIZE_ZOOM       , mflags_defsize),
+  DFSC(FULLSCREEN_ZOOM    , mflags_fullscreen),
+  DFSC(FULLSCREEN         , mflags_fullscreen),
+  DFSN(window_full        , mflags_fullscreen),
+  DFSN(window_max         , mflags_zoomed),
+  DFSN(window_toggle_max  , mflags_zoomed),
+  DFSC(OPTIONS            , mflags_options),
+  DFSC(BORDERS            , 0),
+  DFSC(SCROLLBAR          , mflags_scrollbar_outer),
+  DFSN(win_tog_scrollbar  , mflags_scrollbar_inner),
+  DFSC(COPY               , mflags_copy),
+  DFSC(COPY_TEXT          , mflags_copy),
+  DFSC(COPY_TABS          , mflags_copy),
+  DFSC(COPY_TXT           , mflags_copy),
+  DFSC(COPY_RTF           , mflags_copy),
+  DFSC(COPY_HTXT          , mflags_copy),
+  DFSC(COPY_HFMT          , mflags_copy),
+  DFSC(COPY_HTML          , mflags_copy),
+  DFSC(PASTE              , mflags_paste),
+  DFSN(win_paste_path     , mflags_paste),
+  DFSC(COPASTE            , mflags_copy),
+  DFSN(lock_title         , mflags_lock_title),
+  DFSC(TEKRESET           , mflags_tek_mode),
+  DFSC(TEKPAGE            , mflags_tek_mode),
+  DFSC(TEKCOPY            , mflags_tek_mode),
+  DFSC(FLIPSCREEN         , mflags_flipscreen),
+  DFSC(OPEN               , mflags_open),
+  DFSC(TOGLOG             , mflags_logging),
+  DFSC(TOGCHARINFO        , mflags_char_info),
+  DFSN(toggle_vt220       , mflags_vt220),
+  DFSN(toggle_auto_repeat , mflags_auto_repeat),
+  DFSN(toggle_bidi        , mflags_bidi),
+  DFSV(kb_select          , mflags_kb_select),
+  DFSC(NEW                , 0),
+  DFSC(DEFSIZE            , 0),
+  DFSC(DEFSIZE_ZOOM       , 0),
+  DFSN(window_restore     , 0),
+  DFSN(window_min         , 0),
+  DFSN(win_close          , 0),
+  DFSN(app_close          , 0),
+  DFSK(newwin             , 0),
+  DFSN(menu_text          , 0),
+  DFSN(menu_pointer       , 0),
+  DFSC(SEARCH             , 0),
+  DFSN(cycle_pointer_style, 0),
+  DFSN(transparency_level , 0),
+  DFSC(SELALL             , 0),
+  DFSC(CLRSCRLBCK         , 0),
+  DFSC(COPYTITLE          , 0),
+  DFSN(clear_title        , 0),
+  DFSC(RESET              , 0),
+  DFSC(SAVEIMG            , 0),
+  DFSC(BREAK              , 0),
+  DFSC(HTML               , 0),
+  DFSN(print_screen       , 0),
+  DFSN(refresh            , 0),
+  DFSK(super_down         , 0),
+  DFSK(hyper_down         , 0),
+  DFSN(scroll_top		      , 0),      
+  DFSN(scroll_end		      , 0),   
+  DFSN(scroll_pgup	      , 0),   
+  DFSN(scroll_pgdn	      , 0), 
+  DFSN(scroll_lnup	      , 0),   
+  DFSN(scroll_lndn	      , 0), 
+  DFSN(scroll_prev	      , 0),    
+  DFSN(scroll_next	      , 0),     
+  DFSN(tab_prev	          , 0),    
+  DFSN(tab_next	          , 0),    
+  DFSN(tab_move_prev	    , 0),    
+  DFSN(tab_move_next	    , 0),    
+  DFSN(switch_prev        , 0),
+  DFSN(switch_next        , 0),
+  DFSN(switch_visible_prev, 0),
+  DFSN(switch_visible_next, 0),
+
+  DFSN(term_copy          , 0),
+  DFSN(win_paste          , 0),
+  DFSC(RESET              , 0),
+  DFSN(term_select_all    , 0),
+  DFSK(win_popup_menu     , 0),
+  DFSV(win_key_menu       , 0),
+  DFSN(win_tab_show       , 0),  
+  DFSN(win_tab_indicator  , 0),
+  DFSN(win_tog_partline   , 0),
+  DFSN(win_tog_scrollbar  , 0),
+  DFSN(zoom_font_out      , 0),
+  DFSN(zoom_font_in       , 0),
+  DFSN(zoom_font_reset    , 0),
+  DFSN(zoom_font_sout     , 0),
+  DFSN(zoom_font_sin      , 0),
+  DFSN(zoom_font_sreset   , 0),
+
+  DFSP(win_tab_change     , 0),    
+  DFSP(win_tab_go         , 0),    
+  DFSP(win_tab_move       , 0),    
+  DFSQ(win_zoom_font      , 0),
+#undef DFSC
+#undef DFSN
+#undef DFSK
+#undef DFSP
+#undef DFSQ
+  {0,0,{.fct=nop},0,0,0}
+};
+static struct function_def *
+function_def(const char * cmd)
+{
+  for (uint i = 0; i < lengthof(cmd_defs); i++)
+    if (!strcasecmp(cmd, cmd_defs[i].name))
+      return &cmd_defs[i];
+  return 0;
+}
+static int fundef_run(const char*cmd,uint key, mod_keys mods){
+  struct function_def * fundef = function_def(cmd);
+  if (fundef) {
+    switch(fundef->type){
+      when FT_CMD :PostMessage(wv.wnd, WM_SYSCOMMAND, fundef->cmd, 0); 
+      when FT_NORM:fundef->fct();
+      when FT_KEY :fundef->fct_key(key,mods);
+      when FT_NORV:return fundef->fctv();
+      when FT_KEYV:return fundef->fct_keyv(key,mods);
+      when FT_PAR1:fundef->fct_par1(fundef->p0);
+      when FT_PAR2:fundef->fct_par2(fundef->p0,fundef->p1);
+    }
+    return true;
+    // should we trigger ret = false if (fudef->fct_key == kb_select)
+    // so the case can be handled further in win_key_down ?
+  }
+  else {
+    // invalid definition (e.g. "A+Enter:foo;"), shall 
+    // not cause any action (return true) but provide a feedback
+    win_bell(&cfg);
+    return true;
+  }
+}
+static int fundef_stat(const char*cmd){
+  struct function_def * fudef = function_def(cmd);
+  if (fudef && fudef->fct_status) {
+    return fudef->fct_status();
+    //EnableMenuItem(menu, idm_cmd + n, status);  // done by modify_menu
+  }
+  return 0;
+} 
+struct SCKDef{
+  int moda,mods;
+  union {
+    WPARAM cmd;
+    void *f;
+    void (*fct)(void);
+    int  (*fctv)(void);
+    void (*fct_key)(uint key, mod_keys mods);
+    int  (*fct_keyv)(uint key, mod_keys mods);
+    void (*fct_par1)(int p0);
+    void (*fct_par2)(int p0,int p1);
+  };
+  short key,type;
+  int p0,p1,p2;
+  struct SCKDef*next;
+};
+//static int  sckmask[256]={0};
+//static int  sckwmask[256]={0};
+static struct SCKDef *sckdef[256]={0};
+static struct SCKDef *sckwdef[256]={0};
+//modkey < 7,
+static int modr2s(int moda){
+  int r=(moda&0xFF)|((moda>>8)&0xFF)|((moda>>16)&0xFF);
+  return r;
+}
+//asume MKD_WIN=8,depend on MDK_KEYS
+static int packmod(int mods){
+  if(mods&0x70)return 0x8|((mods>>4)&0x7);
+  return mods&7;
+}
+static void desck(struct SCKDef *sckd){
+  switch(sckd->type){
+    when FT_RAWS or FT_SHEL :
+        free(sckd->f);
+  }
+}
+static void setsck(int moda,uint key,int ft,void*func){
+  struct SCKDef **pp,*n;
+  int *pm;
+  int mods=modr2s(moda);;
+  moda|=mods;
+  if(ft==FT_NULL){
+    int nmask=0;
+    if(mods&MDK_WIN){
+      pm=&sckwmask[key];
+      pp=&sckwdef[key];
+    }else{
+      pm=&sckmask[key];
+      pp=&sckdef[key];
+    }
+    for(n=*pp;n;pp=&n->next,n=n->next){
+      int m=0;
+      if(n->moda&~0xF){
+        m=(moda==n->moda);
+      }else {
+        m=(n->moda==(moda&0xf));
+      }
+      if(m){
+        *pp=n->next;
+        desck(n);  
+      }else{
+        nmask|=(1<<packmod(n->mods));
+      }
+    }
+    *pm=nmask;
+  } else{
+    if(mods&MDK_WIN){
+      pm=&sckwmask[key];
+      pp=&sckwdef[key];
+    }else{
+      pm=&sckmask[key];
+      pp=&sckdef[key];
+    }
+    for(n=*pp;n;pp=&n->next,n=n->next){
+      int m=0;
+      if(n->moda&~0xF){
+        m=(moda==n->moda);
+      }else {
+        m=(n->moda==(moda&0xf));
+      }
+      if(m)break;
+    }
+    if(!n){
+      n=new(struct SCKDef);
+      n->next=*pp;
+      *pp=n;
+    }
+    n->f=func;
+    n->type=ft;
+    n->key=key;
+    n->mods=mods;
+    n->moda=moda;
+    *pm|=(1<<packmod(mods));
+  }
+}
+void desckk(int key,int mods,int moda){
+  sckmask[key]&=~(1<<mods);
+  struct SCKDef **pp=&sckdef[key],*p;
+  for(p=*pp;p;p=*pp){
+    if(p->moda==moda){
+      desck(p);
+      *pp=p->next;
+      free(p);
+      break;
+    }
+    pp=&p->next;
+  }
+}
+int sck_runr(struct SCKDef*pd,uint key,int moda){
+  int res=1;
+  switch(pd->type){
+    when FT_CMD : send_syscommand(pd->cmd);
+    when FT_NORM: pd->fct();
+    when FT_KEY : pd->fct_key(key,moda);
+    when FT_NORV: res=pd->fctv();
+    when FT_KEYV: res=pd->fct_keyv(key,moda);
+    when FT_PAR1: pd->fct_par1(pd->p0);
+    when FT_PAR2: pd->fct_par2(pd->p0,pd->p1);
+    when FT_RAWS: wpwstr(pd->f);
+    when FT_ESCC: wpesccode(pd->cmd,moda);
+    when FT_SHEL: shellcmd(pd->f);
+  }
+  return res;
+}
+
+int sckw_run(uint key,int moda){
+  struct SCKDef*pd;
+  for(pd=sckwdef[key];pd;pd=pd->next){
+    int m=0;
+    if(pd->moda&~0xF){
+      m=(moda==pd->moda);
+    }else {
+      m=(pd->moda==(moda&0xf));
+    }
+    if(m){
+      return sck_runr(pd,key,moda);
+    }
+  }
+  return 0;
+}
+int sck_run(uint key,int moda){
+  struct SCKDef*pd;
+  for(pd=sckdef[key];pd;pd=pd->next){
+    int m=0;
+    if(pd->moda&~0xF){
+      m=(moda==pd->moda);
+    }else {
+      m=(pd->moda==(moda&0xf));
+    }
+    if(m){
+      return sck_runr(pd,key,moda);
+    }
+  }
+  return 0;
+}
+void pstrsck(char*ssck){
+  char * cmdp = ssck;
+  char sepch = ';';
+  if ((uchar)*cmdp <= (uchar)' ') sepch = *cmdp++;
+    // check for multi-line separation
+  char*p,*pd;
+  for(pd=p=cmdp;*p;pd++,p++){
+    if (*p == '\\' && p[1] == '\n') {
+      p += 2;
+    }else{
+      *pd++=*p++;
+    }
+  }
+
+
+  // derive modifiers from specification prefix, module their order;
+  // in order to abstract from the order and support flexible configuration,
+  // the modifiers could have been collected separately already instead of 
+  // prefixing them to the tag (before calling pick_key_function) but 
+  // that would have been more substantial redesign; or the prefix could 
+  // be normalized here by sorting; better solution: collect info here
+  mod_keys tagmods(char * k,char**pn)
+  {
+    mod_keys m = 0;//mod0
+    *pn=k;
+    if(!k)return m;
+    char*p= strchr(k, '+');
+    if(!p)return m;
+    *pn=p+1;
+    int sc=1;
+    for (; k<p; k++){
+      switch (*k) {
+        when 'S': m |= (MDK_SHIFT<<sc);sc=0;
+        when 'A': m |= (MDK_ALT  <<sc);sc=0;
+        when 'C': m |= (MDK_CTRL <<sc);sc=0;
+        when 'W': m |= (MDK_WIN  <<sc);sc=0;
+        when 'U': m |= (MDK_SUPER<<sc);sc=0;
+        when 'Y': m |= (MDK_HYPER<<sc);sc=0;
+        when 'L': sc=8;
+        when 'R': sc=16;
+      }
+    } 
+    return m;
+  }
+  char*strsep(char*s,char sep){
+    char*p= strchr(s, sep);
+    if(!p)return p;
+    *p=0;
+    return p+1;
+  } 
+
+  //test: "-:'foo';A+F3:;A+F5:flipscreen;"
+  //"A+F9:\"f9\";C+F10:\"f10\";p:paste;"
+  //"d:`date`;o:\"oo\";ö:\"öö\";€:\"euro\";"
+  //"~:'tilde';[:'[[';µ:'µµ'")
+  char * paramp;
+  while ((paramp = strsep(cmdp, ':'))) {
+    char * sepp = strsep(paramp, sepch);
+    char * cmd0;
+    mod_keys mod_cmd = tagmods(cmdp,&cmd0);
+    int key=getvk(cmd0);
+#if defined(debug_def_keys) && debug_def_keys > 1
+    printf("tag <%s>: cmd <%s> cmd0 <%s> mod %X fct <%s>\n", tag, cmdp, cmd0, mod_cmd, paramp);
+#endif
+    for(;*paramp==' ';paramp++);
+    wchar * fct = cs__utftowcs(paramp);
+    uint code;
+    int len=wcslen(fct);
+    switch(*fct){
+      when 0:
+          // empty definition (e.g. "A+Enter:;"), shall disable 
+          // further shortcut handling for the input key but 
+          // trigger fall-back to "normal" key handling (with mods)
+            setsck(mod_cmd,key,FT_NULL,0);
+      when '"' or '\'' :
+          if(fct[len-1]==*fct) {//raww string "xxx" or 'xxx'
+            fct[len-1]=0;
+            pwstr *s=(pwstr*)malloc(len+2);
+            s->len=len-2;
+            wcsncpy(s->s,fct+1,len-2);
+            setsck(mod_cmd,key,FT_RAWS,s);
+          }
+      when '^':
+          if(len==2){
+            char cc[2];
+            char c=fct[1];
+            cc[1] = ' ';
+            if (c == '?')
+              cc[1] = '\177';
+            else if (c == ' ' || (c >= '@' && c <= '_')) {
+              cc[1] = fct[1] & 0x1F;
+            }
+            pwstr *s=(pwstr*)malloc(3+2);
+            s->len=1;
+            s->s[0]=cc[1];
+            s->s[1]=0;
+            setsck(mod_cmd,key,FT_RAWS,s);
+          }
+      when '`':
+          if (fct[len - 1] == '`') {//`shell cmd`
+            fct[len - 1] = 0;
+            char * cmd = cs__wcstombs(&fct[1]);
+            if (*cmd) {
+              setsck(mod_cmd,key,FT_SHEL,cmd);
+            }
+          }
+      when '0' ... '9':
+          if (sscanf (paramp, "%u%c", & code, &(char){0}) == 1) {//key escape
+            setsck(mod_cmd,key,FT_ESCC,(void*)(long)code);
+          }
+      otherwise: 
+      {
+        struct function_def * fd = function_def(paramp);
+          if(fd)setsck(mod_cmd,key,fd->type,fd->f);
+      }
+    }
+    free(fct);
+    if (!sepp)break; 
+    cmdp = sepp ;
+    // check for multi-line separation
+    if (*cmdp == '\\' && cmdp[1] == '\n') {
+      cmdp += 2;
+      while (iswspace(*cmdp)) cmdp++;
+    }
+  }
+
+}
+
+void win_update_shortcuts(){
+  int i;
+  memset (sckmask,0,sizeof(sckmask));
+  for(i=0;i<256;i++){
+    struct SCKDef *p=sckdef[i],*n;
+    for(;p;p=n){
+      desck(p); n=p->next; free(p);
+    }
+    sckdef[i]=NULL;
+  };
+  /*
+  typedef enum { MDK_SHIFT = 1, MDK_ALT = 2, MDK_CTRL = 4, 
+    MDK_WIN = 8, MDK_SUPER = 16, MDK_HYPER = 32 } mod_keys;
+    */
+#undef W
+#define S MDK_SHIFT
+#define A MDK_ALT
+#define C MDK_CTRL
+#define W MDK_WIN
+#define AS MDK_ALT+MDK_SHIFT
+#define CS MDK_CTRL+MDK_SHIFT
+#define WS MDK_WIN+MDK_SHIFT
+#define SETSCK(m,k,t,f) setsck(m,k,t,(void*)f)
+  SETSCK(AS,VK_RETURN    ,FT_CMD ,IDM_FULLSCREEN_ZOOM);
+  SETSCK(A,VK_RETURN     ,FT_CMD ,IDM_FULLSCREEN );
+  SETSCK(0,VK_RETURN     ,FT_NORV,vtabclose);
+  SETSCK(0,VK_ESCAPE     ,FT_NORV,vtabclose);
+  SETSCK(S,VK_APPS       ,FT_CMD ,SC_KEYMENU);
+  SETSCK(C,VK_APPS       ,FT_KEYV,win_key_menu);
+  SETSCK(0,VK_APPS       ,FT_KEYV,win_key_menu);
+  if(cfg.window_shortcuts){
+    SETSCK(A,VK_SPACE      ,FT_CMD ,SC_KEYMENU);
+  }
+
+  if (cfg.switch_shortcuts) {
+    SETSCK(CS,VK_TAB    ,FT_NORM,tab_prev	    );
+    SETSCK(C ,VK_TAB    ,FT_NORM,tab_next	    );
+  }
+  if(cfg.win_shortcuts ){
+    SETSCK(W ,'Q'        ,FT_NORM,app_close    );
+    SETSCK(W ,'T'        ,FT_CMD ,IDM_NEWTAB   );
+    SETSCK(W ,'W'        ,FT_NORM,win_close    );
+    SETSCK(W ,'X'        ,FT_NORM,win_ctrlmode );
+    SETSCK(W ,'Z'        ,FT_NORM,win_hide     );
+    SETSCK(W ,VK_LEFT    ,FT_NORM,tab_prev	   );
+    SETSCK(W ,VK_RIGHT   ,FT_NORM,tab_next	   );
+    SETSCK(WS,VK_LEFT    ,FT_NORM,tab_move_prev);
+    SETSCK(WS,VK_RIGHT   ,FT_NORM,tab_move_next);
+  }
+  if(cfg.clip_shortcuts ){
+    SETSCK(C,VK_INSERT  ,FT_NORM,term_copy);
+    SETSCK(S,VK_INSERT  ,FT_NORM,win_paste);
+    SETSCK(C,VK_F12     ,FT_NORM,term_copy);
+    SETSCK(S,VK_F12     ,FT_NORM,win_paste);
+  }
+  if(cfg.alt_fn_shortcuts){
+    SETSCK(A,VK_F2   ,FT_NORM,newwin);
+    SETSCK(A,VK_F3   ,FT_NORM,IDM_SEARCH);
+    SETSCK(A,VK_F4   ,FT_CMD ,SC_CLOSE);
+    SETSCK(A,VK_F8   ,FT_CMD ,IDM_RESET);
+    SETSCK(A,VK_F10  ,FT_CMD ,IDM_DEFSIZE_ZOOM);
+    SETSCK(A,VK_F11  ,FT_CMD ,IDM_FULLSCREEN);
+    SETSCK(A,VK_F12  ,FT_CMD ,IDM_FLIPSCREEN);
+  }
+  if(cfg.ctrl_shift_shortcuts  ){
+    SETSCK(CS,'A'     ,FT_NORM,term_select_all);
+    SETSCK(CS,'C'     ,FT_NORM,term_copy);
+    SETSCK(CS,'V'     ,FT_NORM,win_paste);
+    SETSCK(CS,'I'     ,FT_NORM,win_popup_menu);
+    SETSCK(CS,'N'     ,FT_NORM,new_tab_def);
+    SETSCK(CS,'R'     ,FT_CMD ,IDM_RESET_NOASK);
+    SETSCK(CS,'D'     ,FT_CMD ,IDM_DEFSIZE);
+    SETSCK(CS,'F'     ,FT_NORM,IDM_FULLSCREEN_ZOOM );
+    SETSCK(CS,'S'     ,FT_CMD ,IDM_FLIPSCREEN);
+    SETSCK(CS,'H'     ,FT_CMD ,IDM_SEARCH);
+    SETSCK(CS,'T'     ,FT_NORM,transparency_level); 
+    SETSCK(CS,'W'     ,FT_NORM,win_close);
+    SETSCK(CS,'P'     ,FT_NORM,cycle_pointer_style);
+    SETSCK(CS,'O'     ,FT_NORM,win_tog_scrollbar);
+    SETSCK(CS,'U'     ,FT_NORM,unicode_char);
+  }
+  if( cfg.zoom_shortcuts ){
+    SETSCK(C,VK_SUBTRACT   ,FT_NORM,zoom_font_out   );
+    SETSCK(C,VK_ADD        ,FT_NORM,zoom_font_in    );
+    SETSCK(C,VK_NUMPAD0    ,FT_NORM,zoom_font_reset );
+    SETSCK(C,VK_OEM_MINUS  ,FT_NORM,zoom_font_out   );
+    SETSCK(C,VK_OEM_PLUS   ,FT_NORM,zoom_font_in    );
+    SETSCK(C,'0'				   ,FT_NORM,zoom_font_reset );
+    SETSCK(CS,VK_SUBTRACT  ,FT_NORM,zoom_font_sout  );
+    SETSCK(CS,VK_ADD       ,FT_NORM,zoom_font_sin   );
+    SETSCK(CS,VK_NUMPAD0   ,FT_NORM,zoom_font_sreset);
+  }
+#undef S 
+#undef A 
+#undef C 
+#undef W 
+#undef AS
+#undef CS
+#undef WS
+#undef SETSCK
+  if(cfg.key_commands){
+    char * s= cs__wcstoutf(cfg.key_commands);
+    pstrsck(s);
+    free(s);
+  }
+
 }
 

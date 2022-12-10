@@ -4,7 +4,6 @@
 #include "term.h"
 #include "child.h"
 #include "winpriv.h"
-#include <termios.h>
 #include "charset.h"
 
 #define lengthof(array) (sizeof(array) / sizeof(*(array)))

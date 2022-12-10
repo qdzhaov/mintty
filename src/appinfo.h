@@ -6,15 +6,14 @@
 #define WEBSITE "https://gitee.com/qdzhaov/mintty"
 
 #define MAJOR_VERSION  3
-#define MINOR_VERSION  5
+#define MINOR_VERSION  6
 #define PATCH_NUMBER   2
 #define BUILD_NUMBER   0
 
 // needed for res.rc
 #define APPDESC "Terminal"
-#define AUTHOR  "Zhao Wei/Andy Koppe / Thomas Wolff"
-#define YEAR    "2013/2021"
-
+#define AUTHOR  "Zhao Wei,Thomas Wolff, Andy Koppe"
+#define YEAR    "2022"
 
 #define CONCAT_(a,b) a##b
 #define CONCAT(a,b) CONCAT_(a,b)

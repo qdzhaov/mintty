@@ -1,7 +1,154 @@
+Terminal features
+  * Fixed double-width characters not to wrap if auto-wrap disabled.
+  * TAB may wrap to next line, or cause subsequent wrap, if enabled (#1182).
+  * Fixed auto-wrap behaviour in double-width lines.
+  * Overstriking character writing mode also switched with DECSET 20 (VK100, #1184).
+
+Unicode and Emoji data
+  * Extend emoji information by considering Unicode file emoji-test.txt.
+
+Configuration
+  * Option WrapTab (#1182).
+
+Other
+  * Fixed crash in Options dialog when Printer Service is stopped (#1185).
+
+### 3.6.2 (13 Nov 2022) ###
+
+Unicode and Emoji data
+  * Unicode 15.0 update.
+
+Terminal features
+  * Status line area support (VT320, xterm 371), DECSSDT, DECSASD.
+  * Extended multi-line host-writable status area, DECSSDT 2 N.
+  * Combined sub/superscript attributes render small script (#1171).
+  * Adjusted subscript position (~#1171).
+  * Alternative DEC private SGRs for sub/superscript (#1171).
+  * Revamp line cursor handling, size changeable by CSI ? N c (#1157, #1175).
+  * Support DECSET 117 (DECECM, VT520).
+  * Added DECARR to DECRQSS.
+  * Prevent font zooming for resizing controls like CSI 8.
+  * Optionally visualize margins by dimming.
+
+Keyboard handling
+  * Not suppressing user-defined KeyFunctions for keypad keys in keypad modes (#1161).
+  * Alt+keypad-minus initiates decimal numeric input in case an Alt+numpad-digit key is assigned a user-defined function.
+
+Mouse handling
+  * Configurable modifiers for hovering and link opening (#1169).
+  * Support super and hyper modifiers with mouse functions.
+  * Fixed mouse pixel coordinates limits (DECSET 1016).
+
+Initialisation
+  * Grab focus again after showing the window, reducing focus delay for Windows 11 (#1113).
+
+Configuration
+  * Option OldKeyFunctionsKeypad (~#1161, not listed in manual).
+  * Option OpeningMod (#1169).
+  * New user-definable function reset-noask.
+  * Option DimMargins, user-definable function toggle-dim-margins.
+  * Option StatusLine, user-definable function toggle-status-line.
+  * Background image mode '+' for combined scaling and tiling (#1180).
+  * New user-definable function transparency-opaque (#1168).
+
+Other
+  * Fixed crash condition on user-defined commands (#1174).
+  * Add confirm dialog to Reset triggered by menu or Alt+F8 (#1173).
+
+### 3.6.1 (24 April 2022) ###
+
+Window handling
+  * Terminal reflow (#82, #219): fixed crash condition on irregular reflow chunks.
+  * Terminal reflow (#82, #219): fixed memory leak.
+
+Terminal features
+  * Visual input feedback: don't obscure text when just pressing Alt.
+  * Separate foreground and background values for ANSI colours (#1151).
+  * OSC 7704 for setting ANSI colours distinct from palette colours (#1151).
+
+Keyboard handling
+  * Support longer multi-char keyboard input (a.k.a. "ligatures" in Windows) (#1155).
+
+Configuration (contributed by Andy Koppe)
+  * ANSI colour specification accepts foreground ; background values (#1151).
+  * Tuned themes helmholtz (default) and kohlrausch for legibility (#1156).
+
+### 3.6.0 (20 March 2022) ###
+
+Highlights
+  * Optional feature: Reflow terminal lines when resizing terminal width.
+  * Visual feedback of numeric or composed character input.
+  * New themes helmholtz and luminous (contributed by Andy Koppe).
+  * Setting helmholtz theme as default colour scheme.
+
+Window handling
+  * Reflow terminal lines when resizing terminal width (#82, #219, mintty/wsltty#154).
+
+Terminal features
+  * Tweak pending auto-wrap state affected when switching wrap modes.
+  * Fixed unscroll (CSI +T) in case width has changed meanwhile.
+  * Visual feedback of numeric or composed character input.
+
+Keyboard handling
+  * Support user-defined mappings for Super-/Hyper-modified character keys.
+  * Support optional user-defined mappings for Control-/Alt-modified character keys (#399, #252, #523, #602, #645, ~#524, ~#817, ~#451).
+  * Suspend shortcut handling during numeric character input.
+  * Revise and fix numeric character input.
+  * Distinct Unicode vs. hexadecimal numeric character input.
+  * Menu key opens menu inside terminal, also stops numeric input.
+  * Fixed Compose sequences with more than 2 characters (broken since 3.1.5).
+
+Font rendering
+  * Right-to-left font fallback (#1148).
+  * Fixed auto-widening of ambiguous-width letters (broken since 3.4.4).
+  * Speedup rendering of replacement indication of invalid character codes (#1145).
+  * Extend cell zoom to some Geometric Shapes U+25E2.., Dingbats U+1F67C.., and Symbols U+1FB00..U+1FBB3.
+
+Startup
+  * Trimming irrelevant and possibly confusing environment variables before child invocation (xterm).
+
+Configuration
+  * New themes helmholtz and luminous (contributed by Andy Koppe).
+  * Setting helmholtz theme as default colour scheme.
+  * New option -Rt to report the tty name of the child process / shell.
+  * New option ShootFoot (#399, #252, #523, #602, #645, ~#524, ~#817, ~#451).
+  * New option RewrapOnResize (#82), interactive (Options dialog).
+  * New user-definable function unicode-char.
+  * Updated X11-derived data: compose sequences and colour names.
+
+### 3.5.3 (3 February 2022) ###
+
+Terminal features
+  * Fixed combining characters colour rendering (~#710).
+
 Desktop integration
   * WSL path conversion considers extended /etc/fstab entries (#1130).
   * WSL path conversion supports UNC paths (#1130).
   * Clipboard: strip terminating NUL (#1132).
+
+Window handling
+  * New key shortcut Shift+Shift+Alt+F2 (both Shift keys) to enforce new window outside tabbar.
+  * Distinct system menu items "New Window" and "New Tab" if tabbar enabled (mintty/wsltty#295).
+  * Limiting size of scrollback buffer to secure buffer and clipboard handling (#1134).
+  * Avoid position gap after Options Apply (~#1126) in more cases, especially scrollbar toggling.
+  * Always fix window position back to screen when widening beyond screen.
+  * Save as Image (from Ctrl+right-click) with Shift also opens the image (#1139).
+  * Horizontal scrolling feature (#138).
+
+Font rendering
+  * Tweak again handling of negative font leading (#948, #946).
+
+Hotkey functions and user-definable functions
+  * Deprecated default key assignments Control+Shift+N / +T / +P.
+  * New user-definable functions new-tab and new-tab-cwd.
+
+Configuration
+  * New option NewTabs (mintty/wsltty#295).
+  * New command-line option --newtabs.
+  * New option MaxScrollbackLines.
+  * Option OldModifyKeys to tune modified special keys.
+  * New command-line option --horbar.
+  * New user-definable functions for horizontal scrolling.
 
 ### 3.5.2 (13 November 2021) ###
 
@@ -32,7 +179,7 @@ Terminal features
   * Alternative escape sequence DECSET 2026 for synchronous screen update (#1098).
   * Optimise screen display speed on bell sound series (#1102, ~#865).
   * Italic emojis.
-  * Notify child process via iotcl also when scaling window with font size (xterm 368).
+  * Notify child process via ioctl also when scaling window with font size (xterm 368).
   * Bracketed paste mode: configurable splitting by line.
   * New user-definable functions no-scroll, toggle-no-scroll, scroll-mode, toggle-scroll-mode.
   * Management of the ScrollLock LED for consistence with actual status of special scroll features.

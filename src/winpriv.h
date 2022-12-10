@@ -50,6 +50,7 @@ typedef struct {
 
   // Options
   bool report_child_pid ;
+  bool report_child_tty;
   bool support_wsl ;
   wchar * wslname ;
   wstring wsl_basepath ;
@@ -91,6 +92,8 @@ typedef struct {
   HINSTANCE inst;  // The all-important instance handle
   HWND config_wnd; // the options window
   COLORREF colours[COLOUR_NUM];
+  // Xterm256 colour cube and greyscale
+  colour xterm_colours[240];
   HIMC imc;        // the input method context
 }winvar;
 extern winvar wv;
@@ -203,5 +206,5 @@ extern void app_close();
 
 extern unsigned long mtime(void);
 
-extern void term_save_image(void);
+extern void term_save_image(bool do_open);
 #endif
