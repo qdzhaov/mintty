@@ -209,7 +209,7 @@ of the shortcut may be set to `%USERPROFILE%`.
 On Windows 7, mintty may also be used as a terminal for the 
 Subsystem for UNIX-based applications (SUA), also known as Interix.
 For the mintty session launcher, this can be configured for the 
-available shells as follows (concatened with ‘;’ separator for multiple targets):
+available shells as follows (concatenated with ‘;’ separator for multiple targets):
 * `SessionCommands=Interix Korn Shell:/bin/winpty C:\Windows\posix.exe /u /c /bin/ksh -l`
 * `SessionCommands=Interix SVR-5 Korn Shell:/bin/winpty posix /u /p /svr-5/bin/ksh /c -ksh`
 * `SessionCommands=Interix C Shell:/bin/winpty posix /u /c /bin/csh -l`
@@ -293,6 +293,11 @@ environment (and note that MinGW is not msys in this context), and would
 occur in all pty-based terminals (like xterm, rxvt etc).
 
 Cygwin 3.1.0 compensates for this issue via the ConPTY API of Windows 10.
+On MSYS2, its usage can be enabled by setting the environment variable 
+MSYS=enable_pcon (or selecting this setting when installing an older version).
+You can also later set `MSYS=enable_pcon` in file `/etc/git-bash.config`.
+MSYS2 releases since 2022-10-28 enable ConPTY by default.
+You can also set mintty option `ConPTY=true` to override the MSYS2 setting.
 
 As a workaround on older versions of Cygwin or Windows, you can use 
 [winpty](https://github.com/rprichard/winpty) as a wrapper to invoke 
@@ -530,13 +535,44 @@ bind-key -n User1 previous-window
 
 A number of options are available to customize the keyboard behaviour, 
 including user-defined function and keypad keys and Ctrl+Shift+key shortcuts.
-See the manual page for options and details.
+See the manual page for options and details about
+* Backspace/DEL behaviour
+* AltGr and other modifiers
+* shortcut assignments
+* special key assignments
+* user-definable key functions
+
+See also the [[Keycodes]] wiki page.
 
 ### Windows-style copy/paste key assignments ###
 
 If both settings `CtrlShiftShortcuts` and `CtrlExchangeShift` are enabled, 
 copy & paste functions are assigned to plain (unshifted) _Ctrl+C_ 
 and _Ctrl+V_ for those who prefer them to be handled like in Windows.
+
+It’s also possible to assign user-defined functions to modified 
+character keys with setting `KeyFunctions`; however, redefining 
+control character assignment (e.g. Control+C) or Alt-modified characters 
+(prefixing them with ESC) is not supported by default. 
+This would disable basic terminal features and may result in users 
+„shooting themselves in the foot“; overriding this protection is 
+possible by setting `ShootFoot`.
+
+Finally, it’s also possible to define Control+V as a paste function 
+independently of the terminal; add the following to your .bashrc file:
+```
+paste () {
+  CLIP=$(cat /dev/clipboard)
+  COUNT=$(echo -n "$CLIP" | wc -c)
+  READLINE_LINE="${READLINE_LINE:0:$READLINE_POINT}${CLIP}${READLINE_LINE:$READLINE_POINT}"
+  READLINE_POINT=$(($READLINE_POINT + $COUNT))
+}
+bind -x '"\C-v": paste'
+```
+and the following to your .inputrc file:
+```
+set bind-tty-special-chars off
+```
 
 
 ## Compose key ##
@@ -623,12 +659,18 @@ In the Options menu, section _Looks_, the _Theme_ popup offers theme files
 as stored in a resource directory for selection.
 This dialog field (or the “Color Scheme Designer” button for drag-and-drop) 
 can be used in different ways:
-* Popup the selection to choose a theme configured in your resource directory
+* (*) Popup the selection to choose a theme configured in your resource directory
 * Insert a file name (e.g. by pasting or drag-and-drop from Windows Explorer)
-* Drag-and-drop a theme file from the Internet (may be embedded in HTML page)
-* Drag-and-drop a colour scheme directly from the Color Scheme Designer (see below)
+* (*) Drag-and-drop a theme file from the Internet (may be embedded in HTML page)
+* (*) Drag-and-drop a colour scheme directly from the Color Scheme Designer (see below)
 
-(Option 3) 
+(* Option 1) 
+The default theme (since 3.6.0) is 
+[helmholtz](https://raw.githubusercontent.com/mintty/mintty/master/themes/helmholtz) 
+which provides a colour scheme of well-balanced appearance and luminance;
+see the comments in the theme file about its crafting principles.
+
+(* Option 3) 
 A number of colour schemes have been published for mintty, also 
 mintty supports direct drag-and-drop import of theme files in 
 iTerm2 or Windows terminal formats.
@@ -645,7 +687,7 @@ theme file, the name will be filled with its basename as a suggestion.
 As long as a colour scheme is loaded but not yet stored, and a name is 
 available in the Theme field, the “Store” button will be enabled.
 
-(Option 4) The 
+(* Option 4) The 
 [4bit Terminal Color Scheme Designer](http://ciembor.github.io/4bit/#) 
 lets you download a tuned colour scheme (top-right button “Get Scheme”).
 Click on the button “Color Scheme Designer” below the Theme field 
@@ -903,7 +945,7 @@ support proportional fonts.
 
 For symbol characters and emojis that are single-width by definition 
 (e.g. locale) but visually double-width, double-width display is supported 
-if the character is following by an adjacent single-width space character.
+if the character is followed by an adjacent single-width space character.
 
 
 ## Font rendering and geometry ##
@@ -978,8 +1020,8 @@ ECMA-48 sub-parameters are supported.
 | 58:2::R:G:B            | 59                | underline RGB colour          |
 | 58:3:F:C:M:Y           | 59                | underline CMY colour (*)      |
 | 58:4:F:C:M:Y:K         | 59                | underline CMYK colour (*)     |
-| 73                     | 75                | superscript                   |
-| 74                     | 75                | subscript                     |
+| 73 _or_ ?4             | 75 _or_ ?24       | superscript (*)               |
+| 74 _or_ ?5             | 75 _or_ ?24       | subscript (*)                 |
 | _any_                  | 0 _or empty_      |                               |
 
 Note: Alternative fonts are configured with options Font1 ... Font10.
@@ -1006,9 +1048,10 @@ Note: The emoji style attribute sets the display preference for a number
 of characters that have emojis but would be displayed with text style 
 by default (e.g. decimal digits).
 
-Note: SGR codes for superscript and subscript display are subject to change.
-
 Note: Text attributes can be disabled with option SuppressSGR (see manual).
+
+Note: Combined SGR 73;74 results in small characters at normal position.
+This does not apply to the alternative DEC private SGRs ?4 and ?5.
 
 As a fancy add-on feature for text attributes, mintty supports distinct 
 (colour) attributes for combining characters, so a combined character 

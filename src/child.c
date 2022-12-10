@@ -1,5 +1,5 @@
 // child.c (part of mintty)
-// Copyright 2008-11 Andy Koppe, 2015-2017 Thomas Wolff
+// Copyright 2008-11 Andy Koppe, 2015-2022 Thomas Wolff
 // Licensed under the terms of the GNU General Public License v3 or later.
 
 #include "child.h"
@@ -20,7 +20,6 @@
 #ifdef __CYGWIN__
 #include <sys/cygwin.h>  // cygwin_internal
 #endif
-#include <termios.h>
 
 #if CYGWIN_VERSION_API_MINOR >= 93
 #include <pty.h>
@@ -245,6 +244,64 @@ child_update_charset(STerm *pterm   )
   }
 #endif
 }
+/*
+   Trim environment from variables set by launchers, other terminals, 
+   or other shells, in order to avoid confusing behaviour or invalid 
+   information (e.g. LINES, COLUMNS).
+ */
+static void
+trim_environment(void)
+{
+  void trimenv(string e) {
+    if (e[strlen(e) - 1] == '_') {
+#if CYGWIN_VERSION_API_MINOR >= 74
+      for (int ei = 0; environ[ei]; ei++) {
+        if (strncmp(e, environ[ei], strlen(e)) == 0) {
+          char * ee = strchr(environ[ei], '=');
+          if (ee) {
+            char * ev = strndup(environ[ei], ee - environ[ei]);
+            //printf("%s @%d - unsetenv %s: %s\n", e, ei, ev, environ[ei]);
+            unsetenv(ev);
+            free(ev);
+            // recheck current position after deletion
+            --ei;
+          }
+        }
+      }
+#endif
+    }
+    else
+      unsetenv(e);
+  }
+  // clear startup information from desktop launchers
+  trimenv("WINDOWID");
+  trimenv("GIO_LAUNCHED_");
+  trimenv("DESKTOP_STARTUP_ID");
+  // clear optional terminal configuration indications
+  trimenv("LINES");
+  trimenv("COLUMNS");
+  trimenv("TERMCAP");
+  trimenv("COLORFGBG");
+  trimenv("COLORTERM");
+  trimenv("DEFAULT_COLORS");
+  trimenv("WCWIDTH_CJK_LEGACY");
+  // clear identification from other terminals
+  trimenv("ITERM2_");
+  trimenv("MC_");
+  trimenv("PUTTY");
+  trimenv("RXVT_");
+  trimenv("URXVT_");
+  trimenv("VTE_");
+  trimenv("XTERM_");
+  trimenv("TERM_");
+  // clear indications from terminal multiplexers
+  trimenv("STY");
+  trimenv("WINDOW");
+  trimenv("TMUX");
+  trimenv("TMUX_PANE");
+  trimenv("BYOBU_");
+}
+
 
 void
 child_create(struct STerm* pterm,SessDef*sd,
@@ -257,6 +314,8 @@ child_create(struct STerm* pterm,SessDef*sd,
   const char**argv=sd->argv;
   const char*cmd=sd->cmd;
   trace_dir(asform("child_create: %s", getcwd(malloc(MAX_PATH), MAX_PATH)));
+
+  trim_environment();
 
   pterm->cwinsize = *winp;
 
@@ -397,6 +456,10 @@ child_create(struct STerm* pterm,SessDef*sd,
     (pterm->child.pid      )=pid;
     if (wv.report_child_pid) {
       printf("%d\n", pid);
+      fflush(stdout);
+    }
+    if (wv.report_child_tty) {
+      printf("%s\n", ptsname(pterm->child.pty_fd));
       fflush(stdout);
     }
 
@@ -835,8 +898,8 @@ child_sendw(STerm* pterm,const wchar *ws, uint wlen)
 void
 child_resize(STerm* pterm,struct winsize *winp)
 {
-  if (((pterm->child.pty_fd   ) >= 0)&& (memcmp(&cterm->cwinsize, winp, sizeof(struct winsize)) != 0)) {
-    cterm->cwinsize = *winp;
+  if (((pterm->child.pty_fd   ) >= 0)&& (memcmp(&pterm->cwinsize, winp, sizeof(struct winsize)) != 0)) {
+    pterm->cwinsize = *winp;
     ioctl((pterm->child.pty_fd   ), TIOCSWINSZ, winp);
   }
 }
@@ -1079,7 +1142,7 @@ setenvi(const char * env, int val)
  */
 extern SessDef main_sd;
 static void
-do_child_fork(SessDef*sd, int moni, bool launch, bool config_size, bool in_cwd)
+do_child_fork(STerm* pterm,SessDef*sd, int moni, bool launch, bool config_size, bool in_cwd)
 {
   const char**argv=sd->argv;
   trace_dir(asform("do_child_fork: %s", getcwd(malloc(MAX_PATH), MAX_PATH)));
@@ -1125,12 +1188,12 @@ do_child_fork(SessDef*sd, int moni, bool launch, bool config_size, bool in_cwd)
 
 
 
-    if (((cterm->child.child_dir) && *(cterm->child.child_dir))||set_dir) {
+    if (((pterm->child.child_dir) && *(pterm->child.child_dir))||set_dir) {
       if (set_dir) {
         // use cwd of foreground process if requested via in_cwd
       }
       else if (wv.support_wsl) {
-        const wchar * wcd = cs__utftowcs((cterm->child.child_dir));
+        const wchar * wcd = cs__utftowcs((pterm->child.child_dir));
 #ifdef debug_wsl
         printf("fork wsl <%ls>\n", wcd);
 #endif
@@ -1142,7 +1205,7 @@ do_child_fork(SessDef*sd, int moni, bool launch, bool config_size, bool in_cwd)
         delete(wcd);
       }
       else
-        set_dir = strdup(cterm->child.child_dir);
+        set_dir = strdup(pterm->child.child_dir);
 
       if (set_dir) {
         chdir(set_dir);
@@ -1174,11 +1237,11 @@ do_child_fork(SessDef*sd, int moni, bool launch, bool config_size, bool in_cwd)
         // insert additional parameters here
         newargv[j++] = "-o";
         static char parbuf1[28];  // static to prevent #530
-        sprintf(parbuf1, "Rows=%d", cterm->rows);
+        sprintf(parbuf1, "Rows=%d", pterm->rows);
         newargv[j++] = parbuf1;
         newargv[j++] = "-o";
         static char parbuf2[31];  // static to prevent #530
-        sprintf(parbuf2, "Columns=%d", cterm->cols);
+        sprintf(parbuf2, "Columns=%d", pterm->cols);
         newargv[j++] = parbuf2;
       }
       newargv[j] = argv[i];
@@ -1193,8 +1256,13 @@ do_child_fork(SessDef*sd, int moni, bool launch, bool config_size, bool in_cwd)
 
     // provide environment to clone size
     if (!config_size) {
-      setenvi("MINTTY_ROWS", cterm->rows0);
-      setenvi("MINTTY_COLS", cterm->cols0);
+      setenvi("MINTTY_ROWS", pterm->rows0);
+      setenvi("MINTTY_COLS", pterm->cols0);
+#ifdef support_horizontal_scrollbar_with_tabbar
+      // this does not work, so horizontal scrollbar is disabled with tabbar
+      extern int horsqueeze(void);  // should become horsqueeze_cols in win.h
+      setenvi("MINTTY_SQUEEZE", horsqueeze() / cell_width);
+#endif
       // provide environment to maximise window
       if (wv.win_is_fullscreen)
         setenvi("MINTTY_MAXIMIZE", 2);
@@ -1227,15 +1295,15 @@ do_child_fork(SessDef*sd, int moni, bool launch, bool config_size, bool in_cwd)
   Called from Alt+F2.
   */
 void
-child_fork(SessDef*sd, int moni, bool config_size, bool in_cwd)
+child_fork(STerm* pterm,SessDef*sd, int moni, bool config_size, bool in_cwd)
 {
-  do_child_fork(sd, moni, false, config_size, in_cwd);
+  do_child_fork(pterm,sd, moni, false, config_size, in_cwd);
 }
 /*
   Called from session launcher.
 */
 void
-child_launch(int n, SessDef*sd, int moni)
+child_launch(STerm* pterm,int n, SessDef*sd, int moni)
 {
   int argc=sd->argc;
   const char **argv=sd->argv;
@@ -1271,7 +1339,7 @@ child_launch(int n, SessDef*sd, int moni)
         }
         new_argv[argc] = 0;
         SessDef nsd={argc,0,sd->cmd,new_argv};
-        do_child_fork(&nsd, moni, true, true, false);
+        do_child_fork(pterm,&nsd, moni, true, true, false);
         delete(new_argv);
         break;
       }

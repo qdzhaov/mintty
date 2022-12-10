@@ -1,0 +1,31 @@
+#!/bin/bash 
+VER=`cat VERSION`;
+reldir=../mintty-$VER;
+vcp(){
+  mkdir -p $reldir/$2
+  cp $1 $reldir/$2/$3
+}
+set -v
+vcp bin/mintty.exe                bin
+vcp tools/mintheme                bin
+vcp LICENSE                       share/doc/mintty
+vcp LICENSE.GPL                   share/doc/mintty 
+vcp LICENSE.Oxygen                share/doc/mintty
+vcp LICENSE.PuTTY                 share/doc/mintty
+vcp LICENSE.bundling              share/doc/mintty
+vcp cygwin/README                 share/doc/mintty
+vcp cygwin/setup.hint             share/doc/mintty
+vcp ./icon/hi16-apps-mintty.png   share/icons/hicolor/16x16/apps   mintty.png
+vcp ./icon/hi24-apps-mintty.png   share/icons/hicolor/24x24/apps   mintty.png
+vcp ./icon/hi32-apps-mintty.png   share/icons/hicolor/32x32/apps   mintty.png
+vcp ./icon/hi48-apps-mintty.png   share/icons/hicolor/48x48/apps   mintty.png
+vcp ./icon/hi64-apps-mintty.png   share/icons/hicolor/64x64/apps   mintty.png
+vcp ./icon/hi256-apps-mintty.png  share/icons/hicolor/256x256/apps mintty.png
+vcp docs/mintty.1                 share/man/man1
+vcp lang/\*.po                    share/mintty/lang
+vcp icon/\*.ico                   share/mintty/icon
+vcp sounds/\*.wav                 share/mintty/sounds
+vcp themes/\*                     share/mintty/themes
+gzip -rf $reldir/share/man
+strip $reldir/bin/mintty.exe
+

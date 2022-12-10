@@ -5,12 +5,14 @@
 void
 strset(string *sp, string s)
 {
+  if(!s)s="";
   uint size = strlen(s) + 1;
   *sp = memcpy(renewn((char *)*sp, size), s, size);
 }
 void
 stradd(string *sp, string s)
 {
+  if(!s)s="";
   uint size = strlen(*sp)+strlen(s) + 1;
   *sp = strcat(renewn((char *)*sp, size), s);
 }
@@ -18,6 +20,7 @@ stradd(string *sp, string s)
 void
 wstrset(wstring *sp, wstring s)
 {
+  if(!s)s=W("");
   uint size = wcslen(s) + 1;
   *sp = memcpy(renewn((wchar *)*sp, size), s, size * sizeof(wchar));
 }
@@ -25,6 +28,7 @@ wstrset(wstring *sp, wstring s)
 void
 wstradd(wstring *sp, wstring s)
 {
+  if(!s)s=W("");
   uint size = wcslen(*sp)+wcslen(s) + 1;
   *sp = wcscat(renewn((wchar *)*sp, size), s);
 }

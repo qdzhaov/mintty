@@ -1,8 +1,6 @@
 //code for ShortCuts Key Process
 //included by wininput.c
 /* Support functions */
-static int previous_transparency;
-static bool transparency_tuned;
 
 #define dont_debug_transparency
 enum funct_type{
@@ -66,6 +64,15 @@ cycle_pointer_style()
  */
 
 static void
+unicode_char()
+{
+  alt_state = ALT_HEX;
+  old_alt_state = ALT_ALONE;
+  alt_code = 0;
+  alt_uni = true;
+}
+
+static void
 transparency_level()
 {
   if (!transparency_pending) {
@@ -75,6 +82,12 @@ transparency_level()
   }
   if (cfg.opaque_when_focused)
     win_update_transparency(cfg.transparency, false);
+}
+
+static void
+transparency_opaque()
+{
+  win_update_transparency(cfg.transparency, true);
 }
 
 static void
@@ -124,6 +137,8 @@ static uint mflags_scrollbar_outer() { return cterm->show_scrollbar ? MF_CHECKED
 static uint mflags_scrollbar_inner() { return cfg.scrollbar?(  cterm->show_scrollbar ? MF_CHECKED : MF_UNCHECKED): MF_GRAYED; }
 static uint mflags_logging() { return (wv.logging ? MF_CHECKED : MF_UNCHECKED) ; }
 static uint mflags_bidi() { return (cfg.bidi == 0 || (cfg.bidi == 1 && (cterm->on_alt_screen ^ cterm->show_other_screen))) ? MF_GRAYED : cterm->disable_bidi ? MF_UNCHECKED : MF_CHECKED; }
+static uint mflags_dim_margins() { return cterm->dim_margins ? MF_CHECKED : MF_UNCHECKED; }
+static uint mflags_status_line() { return cterm->st_type == 1 ? MF_CHECKED : MF_UNCHECKED; }
 static void zoom_font_out   (){ win_zoom_font(-1, 0);}
 static void zoom_font_in    (){ win_zoom_font( 1, 0);}
 static void zoom_font_reset (){ win_zoom_font( 0, 0);}
@@ -157,6 +172,11 @@ static void scroll_next	 (){SendMessage(wv.wnd, WM_VSCROLL,SB_NEXT     ,0);}
 void toggle_vt220() { cterm->vt220_keys = !cterm->vt220_keys; }
 void toggle_auto_repeat() { cterm->auto_repeat = !cterm->auto_repeat; }
 void toggle_bidi() { cterm->disable_bidi = !cterm->disable_bidi; }
+void toggle_dim_margins() { cterm->dim_margins = !cterm->dim_margins; }
+void toggle_status_line() {
+  if (cterm->st_type == 1) term_set_status_type(0, 0);
+  else term_set_status_type(1, 0);
+}
 void tab_prev	    (){win_tab_change(-1);}
 void tab_next	    (){win_tab_change( 1);}
 void tab_move_prev(){win_tab_move  (-1);}
@@ -277,6 +297,20 @@ static uint mflags_vt220() { return cterm->vt220_keys ? MF_CHECKED : MF_UNCHECKE
 static uint mflags_auto_repeat() { return cterm->auto_repeat ? MF_CHECKED : MF_UNCHECKED; }
 static uint mflags_options() { return wv.config_wnd ? MF_GRAYED : MF_ENABLED; }
 static uint mflags_tek_mode() { return tek_mode ? MF_ENABLED : MF_GRAYED; }
+
+static void hor_left_1() { horscroll(-1); }
+static void hor_right_1() { horscroll(1); }
+static void hor_out_1() { horsizing(1, false); }
+static void hor_in_1() { horsizing(-1, false); }
+static void hor_narrow_1() { horsizing(-1, true); }
+static void hor_wide_1() { horsizing(1, true); }
+static void hor_left_mult() { horscroll(-cterm->cols / 10); }
+static void hor_right_mult() { horscroll(cterm->cols / 10); }
+static void hor_out_mult() { horsizing(cterm->cols / 10, false); }
+static void hor_in_mult() { horsizing(-cterm->cols / 10, false); }
+static void hor_narrow_mult() { horsizing(-cterm->cols / 10, true); }
+static void hor_wide_mult() { horsizing(cterm->cols / 10, true); }
+
 void win_close();
 typedef struct pstr{ short len; char s[1]; }pstr;
 typedef struct pwstr{ short len; wchar s[1]; }pwstr;
@@ -331,6 +365,19 @@ static struct function_def cmd_defs[] = {
   DFDC(new-window         ,IDM_NEW              , 0),
   //DFDC(new-monitor      ,IDM_NEW_MONI         , 0),
   //DFDC(default-size     ,IDM_DEFSIZE          , 0),
+  DFDN(hor-left-1			    ,hor_left_1				    , 0),
+  DFDN(hor-right-1			  ,hor_right_1				  , 0),
+  DFDN(hor-out-1			    ,hor_out_1				    , 0),
+  DFDN(hor-in-1			      ,hor_in_1				      , 0),
+  DFDN(hor-narrow-1			  ,hor_narrow_1				  , 0),
+  DFDN(hor-wide-1			    ,hor_wide_1				    , 0),
+  DFDN(hor-left-mult			,hor_left_mult				, 0),
+  DFDN(hor-right-mult			,hor_right_mult				, 0),
+  DFDN(hor-out-mult			  ,hor_out_mult				  , 0),
+  DFDN(hor-in-mult			  ,hor_in_mult				  , 0),
+  DFDN(hor-narrow-mult		,hor_narrow_mult			, 0),
+  DFDN(hor-wide-mult			,hor_wide_mult				, 0),
+
   DFDC(default-size       ,IDM_DEFSIZE_ZOOM     , mflags_defsize),
   DFDC(toggle-fullscreen  ,IDM_FULLSCREEN_ZOOM  , mflags_fullscreen),
   DFDN(fullscreen         ,window_full          , mflags_fullscreen),
@@ -341,6 +388,8 @@ static struct function_def cmd_defs[] = {
   DFDN(close              ,win_close            , 0),
   DFDN(win-toggle-always-on-top ,win_toggle_on_top   , mflags_always_top),
   DFDN(win-toggle-keep-screen-on,win_toggle_screen_on, mflags_screen_on ),
+
+  DFDN(unicode-char       ,unicode_char         , 0),
 
   DFDK(new                ,newwin               , 0),  // deprecated
   DFDK(new-key            ,newwin               , 0),
@@ -353,6 +402,7 @@ static struct function_def cmd_defs[] = {
   DFDN(scrollbar-inner    ,win_tog_scrollbar    , mflags_scrollbar_inner),
   DFDN(cycle-pointer-style,cycle_pointer_style  , 0),
   DFDN(cycle-transparency-level ,transparency_level, 0),
+  DFDN(transparency-opaque,transparency_opaque, 0),
 
   DFDC(copy               ,IDM_COPY             , mflags_copy),
   DFDC(copy-text          ,IDM_COPY_TEXT        , mflags_copy),
@@ -371,6 +421,7 @@ static struct function_def cmd_defs[] = {
   DFDN(lock-title         ,lock_title           , mflags_lock_title),
   DFDN(clear-title        ,clear_title          , 0),
   DFDC(reset              ,IDM_RESET            , 0),
+  DFDC(reset-noask        ,IDM_RESET_NOASK      , 0),
   DFDC(tek-reset          ,IDM_TEKRESET         , mflags_tek_mode),
   DFDC(tek-page           ,IDM_TEKPAGE          , mflags_tek_mode),
   DFDC(tek-copy           ,IDM_TEKCOPY          , mflags_tek_mode),
@@ -386,6 +437,8 @@ static struct function_def cmd_defs[] = {
   DFDN(toggle-auto-repeat ,toggle_auto_repeat   , mflags_auto_repeat),
   DFDN(toggle-bidi        ,toggle_bidi          , mflags_bidi),
   DFDN(refresh            ,refresh              , 0),
+  DFDN(toggle-dim-margins ,toggle_dim_margins   , mflags_dim_margins),
+  DFDN(toggle-status-line ,toggle_status_line   , mflags_status_line),
 
   DFDK(super              ,super_down           , 0),
   DFDK(hyper              ,hyper_down           , 0),
@@ -570,8 +623,8 @@ struct SCKDef{
   int p0,p1,p2;
   struct SCKDef*next;
 };
-static int  sckmask[256]={0};
-static int  sckwmask[256]={0};
+//static int  sckmask[256]={0};
+//static int  sckwmask[256]={0};
 static struct SCKDef *sckdef[256]={0};
 static struct SCKDef *sckwdef[256]={0};
 //modkey < 7,
@@ -906,16 +959,17 @@ void win_update_shortcuts(){
     SETSCK(CS,'C'     ,FT_NORM,term_copy);
     SETSCK(CS,'V'     ,FT_NORM,win_paste);
     SETSCK(CS,'I'     ,FT_NORM,win_popup_menu);
-    SETSCK(CS,'N'     ,FT_CMD ,IDM_NEW);
-    SETSCK(CS,'R'     ,FT_CMD ,IDM_RESET);
+    SETSCK(CS,'N'     ,FT_NORM,new_tab_def);
+    SETSCK(CS,'R'     ,FT_CMD ,IDM_RESET_NOASK);
     SETSCK(CS,'D'     ,FT_CMD ,IDM_DEFSIZE);
     SETSCK(CS,'F'     ,FT_NORM,IDM_FULLSCREEN_ZOOM );
     SETSCK(CS,'S'     ,FT_CMD ,IDM_FLIPSCREEN);
     SETSCK(CS,'H'     ,FT_CMD ,IDM_SEARCH);
-    SETSCK(CS,'T'     ,FT_NORM,new_tab_def);
+    SETSCK(CS,'T'     ,FT_NORM,transparency_level); 
     SETSCK(CS,'W'     ,FT_NORM,win_close);
     SETSCK(CS,'P'     ,FT_NORM,cycle_pointer_style);
     SETSCK(CS,'O'     ,FT_NORM,win_tog_scrollbar);
+    SETSCK(CS,'U'     ,FT_NORM,unicode_char);
   }
   if( cfg.zoom_shortcuts ){
     SETSCK(C,VK_SUBTRACT   ,FT_NORM,zoom_font_out   );

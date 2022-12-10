@@ -61,7 +61,10 @@ else ifeq ($(TARGET), x86_64-w64-mingw32)
   zip_files := ../docs/readme-msys.html
   $(msg Target '$(TARGET)' '$(platform)' )
 else
-  $(error Target '$(TARGET)' not supported)
+  # just warning to support cross-generation of data files
+warn=[30;48;5;11m
+norm=[m
+  $(warning $(warn) Target '$(TARGET)' not supported $(norm))
 endif
 BINFOLDER = ../bin
 #BINDIR = $(BINFOLDER)/$(TARGET)
@@ -115,8 +118,11 @@ ifneq ($(platform), msys)
   #SECUR=-Wtrampolines
 endif
 # support cygwin debug package (use += to accept injected options)
+#-Wall 
 CFLAGS += -std=gnu99 -include std.h -Wall -Wextra -Wundef  $(SECUR) \
 					-Werror  -Wno-stringop-truncation -Wno-stringop-overflow
+# verify additional flags that are also injected into pkg build by cygport
+CFLAGS += -Wformat-security
 
 ifeq ($(shell VER=`$(CC) -dumpversion`; expr $${VER%.*} '>=' 4.5), 1)
   CFLAGS += -mtune=atom
@@ -210,6 +216,9 @@ $(bin): $(bins)
 WGET=curl -R -O --connect-timeout 55
 WGET+=-z $@
 
+clean-x11:
+	rm -f rgb.t composed.t
+
 rgb.t:	# /usr/share/X11/rgb.txt # X11 color names, from package 'rgb'
 #	255 250 250		snow
 #	->
@@ -221,7 +230,7 @@ unidata=$(combdata) ambiguous.t scripts.t blocks.t casefold.t bidiclasses.t mirr
 emojidata=emojibase.t emojiseqs.t
 
 unicodedata=UnicodeData.txt EastAsianWidth.txt Blocks.txt Scripts.txt CaseFolding.txt BidiMirroring.txt BidiBrackets.txt BidiCharacterTest.txt BidiTest.txt NameAliases.txt
-unicodeemoji=emoji-data.txt emoji-sequences.txt emoji-variation-sequences.txt emoji-zwj-sequences.txt
+unicodeemoji=emoji-data.txt emoji-sequences.txt emoji-variation-sequences.txt emoji-zwj-sequences.txt emoji-test.txt
 
 clean-unicode:
 	rm -f $(unidata) $(emojidata)
@@ -284,7 +293,8 @@ unibasever = `sed -e '/^\# Blocks-/ s,[^0-9]*\([0-9]*\)\..*,\1.0,' -e t -e d Blo
 
 # Emoji version may advance Unicode version
 emojiver = $(unibasever)
-emojiver = 13.1
+# override Emoji version if not in sync (or extract from emoji-data.txt)
+emojiver = 15.0
 
 # until 12.0:
 #emoji-%.txt:	Blocks.txt
@@ -293,6 +303,8 @@ emojiver = 13.1
 emoji-sequences.txt:	Blocks.txt
 	$(WGET) http://www.unicode.org/Public/emoji/$(emojiver)/$@
 emoji-zwj-sequences.txt:	Blocks.txt
+	$(WGET) http://www.unicode.org/Public/emoji/$(emojiver)/$@
+emoji-test.txt:	Blocks.txt
 	$(WGET) http://www.unicode.org/Public/emoji/$(emojiver)/$@
 emoji-data.txt:	Blocks.txt
 	$(WGET) http://www.unicode.org/Public/$(univer)/ucd/emoji/$@
@@ -315,7 +327,7 @@ univer:	Blocks.txt
 emojibase.t:	# emoji-data.txt emoji-variation-sequences.txt emoji-sequences.txt emoji-zwj-sequences.txt
 	bash ./mkemojis base > $@
 
-emojiseqs.t:	# emoji-sequences.txt emoji-zwj-sequences.txt
+emojiseqs.t:	# emoji-sequences.txt emoji-zwj-sequences.txt emoji-test.txt
 	bash ./mkemojis seqs > $@
 
 #compose_list=/usr/share/X11/locale/en_US.UTF-8/Compose
@@ -325,13 +337,16 @@ composed.t:	# $(compose_list) $(keysymdefs)
 	sh ./mkcomposedt > composed.t
 
 XGETTEXT_OPTS=--package-name=mintty #--package-version=$(version)
-#XGETTEXT_OPTS+=--msgid-bugs-address=mintty@...
+XGETTEXT_OPTS+=--msgid-bugs-address=https://github.com/mintty/mintty/issues/700
 
 _:	localization checkloc
-localization:
+localization:	pot po
+pot:
 	mkdir -p ../lang
-	xgettext --from-code=UTF-8 -k_ -k_W -k__ -c__ $(XGETTEXT_OPTS) *.c appinfo.h -o- | grep -v "^#, c-format" > ../lang/messages.pot
-	cd ../lang; for po in *.po; do  [ "$$po" = en.po ] || (echo -n $$po  : ;msgmerge -U "$$po" messages.pot;) done
+	xgettext --from-code=UTF-8 -k_ -k_W -k__ -c__ $(XGETTEXT_OPTS) *.c appinfo.h -o- | grep -v "^#, c-format" > ../lang/messages.pott
+	cd ../lang; if diff -I POT-Creation-Date messages.pot messages.pott | grep . > /dev/null; then /bin/mv messages.pott messages.pot; else /bin/rm messages.pott; fi
+po:
+	cd ../lang; for po in *.po; do [ "$$po" = en.po ] || msgmerge -U "$$po" messages.pot; done
 checkloc:
 	#cd ../lang; ! grep "^#, fuzzy" *.po
 
@@ -367,8 +382,8 @@ $(pdf): ../docs/$(NAME).1
 
 html := ../docs/$(NAME).1.html
 html: $(html)
-$(html): ../docs/$(NAME).1
-	sed -f html.sed $< | groff -t -man -mwww -Thtml > $@
+$(html): ../docs/$(NAME).1 htmlroff.sed htmlhtml.sed
+	sed -f htmlroff.sed $< | groff -t -man -mwww -Thtml | sed -f htmlhtml.sed > $@
 
 clean:
 	#rm -rf *.d *.o $(NAME)*

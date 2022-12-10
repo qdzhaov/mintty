@@ -32,6 +32,7 @@
 #define IDM_COPY_HFMT       0x01A0
 #define IDM_COPY_HTML       0x01B0
 #define IDM_SAVEIMG         0x01C0
+#define IDM_RESET_NOASK     0x01D0
 
 
 #define IDM_UNUSED          0x0200

@@ -115,12 +115,13 @@ add_cc(termline *line, int col, wchar chr, cattr attr)
 void
 clear_cc(termline *line, int col)
 {
-  int oldfree, origcol = col;
-
   assert(col >= -1 && col < line->cols);
 
   if (!line->chars[col].cc_next)
     return;     /* nothing needs doing */
+
+  int oldfree = line->cc_free;
+  int origcol = col;
 
   oldfree = line->cc_free;
   line->cc_free = col + line->chars[col].cc_next;
@@ -249,7 +250,7 @@ makeliteral_attr(struct buf *b, termchar *c)
   * ensures that attribute values remain 16-bit _unless_ the
   * user uses extended colour.
   */
-  cattrflags attr = c->attr.attr & ~DATTR_MASK;
+  cattrflags attr = c->attr.attr & ~DATTR_STARTRUN;  // keep cursor for reflow
   int link = c->attr.link;
   int imgi = c->attr.imgi;
   colour truefg = c->attr.truefg;
@@ -540,6 +541,13 @@ makerle(struct buf *b, termline *line,
 uchar *
 compressline(termline *line)
 {
+#ifdef dont_compress_scrollback_buffer
+  uchar * cl = malloc(sizeof(termline) + (line->size + 1) * sizeof(termchar));
+  memcpy(cl, line, sizeof(termline));
+  memcpy(cl + sizeof(termline), &line->chars[-1], (line->size + 1) * sizeof(termchar));
+  return cl;
+#endif
+
   struct buf buffer = { null, 0, 0 }, *b = &buffer;
 
  /*
@@ -644,6 +652,15 @@ readrle(struct buf *b, termline *line,
 termline *
 decompressline(uchar *data, int *bytes_used)
 {
+#ifdef dont_compress_scrollback_buffer
+  termline * tl = malloc(sizeof(termline));
+  memcpy(tl, data, sizeof(termline));
+  termchar * tc = malloc((tl->size + 1) * sizeof(termchar));
+  memcpy(tc, data + sizeof(termline), (tl->size + 1) * sizeof(termchar));
+  tl->chars = &tc[1];
+  return tl;
+#endif
+
   int ncols, byte, shift;
   struct buf buffer, *b = &buffer;
   termline *line;
@@ -799,14 +816,14 @@ fetch_line(int y)
 
   termline *line;
   if (y >= 0) {
-    assert(y < cterm->rows);
+    assert(y < term_allrows);
     line = lines[y];
   }
   else {
     assert(-y <= cterm->sblines);
     y += cterm->sbpos;
     if (y < 0)
-      y += cterm->sblen; // Scrollback has wrapped round
+      y += cterm->sbsize; // Scrollback has wrapped round
     uchar *cline = cterm->scrollback[y];
     line = decompressline(cline, null);
     resizeline(line, cterm->cols);
@@ -1048,6 +1065,8 @@ term_bidi_line(termline *line, int scr_y)
     ushort parabidi = (ushort)-1;
     bool brk = false;
     do {
+      if (cterm->disptop + y < -sblines())
+        break;  // skip attempt to look back beyond scrollback buffer
       termline *prevline = fetch_line(cterm->disptop + y);
       //printf("back @%d %04X %.22ls auto %d lvl %d\n", y, prevline->lattr, wcsline(prevline), autodir, level);
       if (prevline->lattr & LATTR_WRAPPED) {

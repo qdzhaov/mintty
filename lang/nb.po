@@ -6,8 +6,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: mintty\n"
-"Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2021-12-03 18:19+0800\n"
+"Report-Msgid-Bugs-To: https://github.com/mintty/mintty/issues/700\n"
+"POT-Creation-Date: 2022-12-12 14:49+0800\n"
 "PO-Revision-Date: 2019-09-06 18:08+0200\n"
 "Last-Translator: Imre Kristoffer Eilertsen <imreeil42@gmail.com>\n"
 "Language-Team: \n"
@@ -18,7 +18,7 @@ msgstr ""
 "X-Generator: Poedit 2.2.3\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: charset.c:226 charset.c:237 winmain.c:4645 winmain.c:4652 winmain.c:4989
+#: charset.c:226 charset.c:237 winmain.c:5104 winmain.c:5111 winmain.c:5463
 msgid "(Default)"
 msgstr "(Standard)"
 
@@ -30,1339 +30,1507 @@ msgstr "(OEM-kodeside)"
 msgid "(ANSI codepage)"
 msgstr "(ANSI-kodeside)"
 
-#: child.c:86
+#: child.c:85
 msgid "There are no available terminals"
 msgstr "Det er ingen tilgjengelige terminaler"
 
-#: child.c:160
+#: child.c:159
 msgid "Error: Could not open log file"
 msgstr "Feil: Klarte ikke å åpne loggfilen"
 
-#: child.c:278
+#: child.c:337
 msgid "Error: Could not fork child process"
 msgstr "Feil: Klarte ikke å adskille underprosessen"
 
-#: child.c:280
+#: child.c:339
 msgid "DLL rebasing may be required; see 'rebaseall / rebase --help'"
 msgstr "DLL-rebasing kan være nødvendig; se 'rebaseall / rebase --help'"
 
 #. __ %1$s: client command (e.g. shell) to be run; %2$s: error message
-#: child.c:384
+#: child.c:443
 msgid "Failed to run '%s': %s"
 msgstr "Klarte ikke å kjøre '%s': %s"
 
 #. __ %1$s: client command (e.g. shell) terminated, %2$i: exit code
-#: child.c:481
+#: child.c:544
 msgid "%s: Exit %i"
 msgstr "%s: Avslutt %i"
 
 #. __ default inline notification if ExitWrite=yes
-#: child.c:487
+#: child.c:550
 msgid "TERMINATED"
 msgstr "AVSLUTTET"
 
-#: child.c:1096
+#: child.c:1159
 msgid "Error: Could not fork child daemon"
 msgstr "Feil: Klarte ikke å adskille underdaemonen"
 
-#: config.c:330
+#: config.c:353
+#, fuzzy
 msgid "ForegroundColour"
-msgstr ""
+msgstr "&Forgrunn …"
 
-#: config.c:331
+#: config.c:354
+#, fuzzy
 msgid "BackgroundColour"
-msgstr ""
+msgstr "&Bakgrunn …"
 
-#: config.c:332
+#: config.c:355
+#, fuzzy
 msgid "UseSystemColours"
-msgstr ""
+msgstr "Farger"
 
-#: config.c:333
+#: config.c:356
+#, fuzzy
 msgid "BoldColour"
-msgstr ""
+msgstr "Farge"
 
-#: config.c:334
+#: config.c:357
+#, fuzzy
 msgid "BlinkColour"
-msgstr ""
+msgstr "Farge"
 
-#: config.c:335
+#: config.c:358
+#, fuzzy
 msgid "CursorColour"
-msgstr ""
+msgstr "Musepeker"
 
-#: config.c:336
+#: config.c:359
+#, fuzzy
 msgid "TekForegroundColour"
-msgstr ""
+msgstr "&Forgrunn …"
 
-#: config.c:337
+#: config.c:360
+#, fuzzy
 msgid "TekBackgroundColour"
-msgstr ""
+msgstr "&Bakgrunn …"
 
-#: config.c:338
+#: config.c:361
 msgid "TekCursorColour"
 msgstr ""
 
-#: config.c:339
+#: config.c:362
 msgid "TekWriteThruColour"
 msgstr ""
 
-#: config.c:340
+#: config.c:363
 msgid "TekDefocusedColour"
 msgstr ""
 
-#: config.c:341
+#: config.c:364
 msgid "TekGlow"
 msgstr ""
 
-#: config.c:342
+#: config.c:365
 msgid "TekStrap"
 msgstr ""
 
-#: config.c:343
+#: config.c:366
 msgid "UnderlineColour"
 msgstr ""
 
-#: config.c:345 config.c:3816
+#: config.c:368 config.c:3886
 msgid "Black"
 msgstr ""
 
-#: config.c:346 config.c:3817
+#: config.c:369 config.c:3887
+#, fuzzy
 msgid "Red"
-msgstr ""
+msgstr "&Rød:"
 
-#: config.c:347 config.c:3818
+#: config.c:370 config.c:3888
+#, fuzzy
 msgid "Green"
-msgstr ""
+msgstr "&Grønn:"
 
-#: config.c:348 config.c:3819
+#: config.c:371 config.c:3889
 msgid "Yellow"
 msgstr ""
 
-#: config.c:349 config.c:3820
+#: config.c:372 config.c:3890
+#, fuzzy
 msgid "Blue"
-msgstr ""
+msgstr "&Blå:"
 
-#: config.c:350 config.c:3821
+#: config.c:373 config.c:3891
 msgid "Magenta"
 msgstr ""
 
-#: config.c:351 config.c:3822
+#: config.c:374 config.c:3892
 msgid "Cyan"
 msgstr ""
 
-#: config.c:352 config.c:3823
+#: config.c:375 config.c:3893
 msgid "White"
 msgstr ""
 
-#: config.c:353 config.c:3826
+#: config.c:376 config.c:3896
 msgid "BoldBlack"
 msgstr ""
 
-#: config.c:354 config.c:3827
+#: config.c:377 config.c:3897
 msgid "BoldRed"
 msgstr ""
 
-#: config.c:355 config.c:3828
+#: config.c:378 config.c:3898
+#, fuzzy
 msgid "BoldGreen"
-msgstr ""
+msgstr "&Grønn:"
 
-#: config.c:356 config.c:3829
+#: config.c:379 config.c:3899
 msgid "BoldYellow"
 msgstr ""
 
-#: config.c:357 config.c:3830
+#: config.c:380 config.c:3900
 msgid "BoldBlue"
 msgstr ""
 
-#: config.c:358 config.c:3831
+#: config.c:381 config.c:3901
 msgid "BoldMagenta"
 msgstr ""
 
-#: config.c:359 config.c:3832
+#: config.c:382 config.c:3902
 msgid "BoldCyan"
 msgstr ""
 
-#: config.c:360 config.c:3833
+#: config.c:383 config.c:3903
 msgid "BoldWhite"
 msgstr ""
 
-#: config.c:362
+#: config.c:385
 msgid "DispSpace"
 msgstr ""
 
-#: config.c:363
+#: config.c:386
 msgid "DispClear"
 msgstr ""
 
-#: config.c:364
+#: config.c:387
 msgid "DispTab"
 msgstr ""
 
-#: config.c:365
+#: config.c:388
+#, fuzzy
 msgid "HoverColour"
-msgstr ""
+msgstr "Farge"
 
-#: config.c:366
+#: config.c:389
 msgid "UnderlineManual"
 msgstr ""
 
-#: config.c:367
+#: config.c:390
 msgid "HighlightBackgroundColour"
 msgstr ""
 
-#: config.c:368
+#: config.c:391
 msgid "HighlightForegroundColour"
 msgstr ""
 
-#: config.c:369
+#: config.c:392
 msgid "SearchForegroundColour"
 msgstr ""
 
-#: config.c:370
+#: config.c:393
 msgid "SearchBackgroundColour"
 msgstr ""
 
-#: config.c:371
+#: config.c:394
 msgid "SearchCurrentColour"
 msgstr ""
 
-#: config.c:372
+#: config.c:395
+#, fuzzy
 msgid "ThemeFile"
-msgstr ""
+msgstr "&Tema"
 
-#: config.c:373
+#: config.c:396
+#, fuzzy
 msgid "Background"
-msgstr ""
+msgstr "&Bakgrunn …"
 
-#: config.c:374
+#: config.c:397
+#, fuzzy
 msgid "ColourScheme"
-msgstr ""
+msgstr "Fargepalettutformer"
 
-#: config.c:375 config.c:3839
+#: config.c:398 config.c:3909
 msgid "Transparency"
 msgstr "Gjennomsiktighet"
 
-#: config.c:377
+#: config.c:400
 msgid "Blur"
 msgstr ""
 
-#: config.c:379
+#: config.c:402
+#, fuzzy
 msgid "OpaqueWhenFocused"
-msgstr ""
+msgstr "Fast&het ved fokus"
 
-#: config.c:380
+#: config.c:403
+#, fuzzy
 msgid "CursorType"
-msgstr ""
+msgstr "Musepeker"
 
-#: config.c:381
+#: config.c:404
+#, fuzzy
 msgid "CursorBlinks"
-msgstr ""
+msgstr "Musepeker"
 
-#: config.c:383
+#: config.c:406
+#, fuzzy
 msgid "TabForegroundColour"
-msgstr ""
+msgstr "&Forgrunn …"
 
-#: config.c:384
+#: config.c:407
+#, fuzzy
 msgid "TabBackgroundColour"
-msgstr ""
+msgstr "&Bakgrunn …"
 
-#: config.c:385
+#: config.c:408
 msgid "TabAttentionColour"
 msgstr ""
 
-#: config.c:386
+#: config.c:409
 msgid "TabActiveColour"
 msgstr ""
 
-#: config.c:387
+#: config.c:410
 msgid "tab_bar_show"
 msgstr ""
 
-#: config.c:388
+#: config.c:411
 msgid "indicator"
 msgstr ""
 
-#: config.c:389
+#: config.c:412
 msgid "indicatorx"
 msgstr ""
 
-#: config.c:390
+#: config.c:413
 msgid "indicatory"
 msgstr ""
 
-#: config.c:391
+#: config.c:414
 msgid "tab_font_size"
 msgstr ""
 
-#: config.c:392
+#: config.c:415
 msgid "gui_font_size"
 msgstr ""
 
-#: config.c:393
+#: config.c:416
 msgid "scale_options_width"
 msgstr ""
 
-#: config.c:394
+#: config.c:417
 msgid "partline"
 msgstr ""
 
-#: config.c:395
+#: config.c:418
 msgid "usepartline"
 msgstr ""
 
-#: config.c:399 config.c:3888
+#: config.c:422 config.c:3958
 msgid "Font"
 msgstr "Skrift"
 
-#: config.c:400
+#: config.c:423
+#, fuzzy
 msgid "FontSize"
-msgstr ""
+msgstr "Skrift"
 
-#: config.c:401
+#: config.c:424
 msgid "FontHeight"
 msgstr ""
 
-#: config.c:402
+#: config.c:425
 msgid "FontWeight"
 msgstr ""
 
-#: config.c:403
+#: config.c:426
 msgid "FontIsBold"
 msgstr ""
 
-#: config.c:405
+#: config.c:428
 msgid "FontChoice"
 msgstr ""
 
-#: config.c:406
+#: config.c:429
+#, fuzzy
 msgid "FontSample"
-msgstr ""
+msgstr "Prøveeksemplar"
 
-#: config.c:407
+#: config.c:430
 msgid "ShowHiddenFonts"
 msgstr ""
 
-#: config.c:408
+#: config.c:431
+#, fuzzy
 msgid "FontSmoothing"
-msgstr ""
+msgstr "Skrifttypeutjevning"
 
-#: config.c:409
+#: config.c:432
 msgid "BoldAsFont"
 msgstr ""
 
-#: config.c:410
+#: config.c:433
+#, fuzzy
 msgid "BoldAsColour"
-msgstr ""
+msgstr "Farge"
 
-#: config.c:411
+#: config.c:434
+#, fuzzy
 msgid "AllowBlinking"
-msgstr ""
+msgstr "&Tillat blinking"
 
-#: config.c:412
+#: config.c:435
+#, fuzzy
 msgid "Locale"
-msgstr ""
+msgstr "&Region"
 
-#: config.c:413
+#: config.c:436
+#, fuzzy
 msgid "Charset"
-msgstr ""
+msgstr "&Tegnsett"
 
-#: config.c:414
+#: config.c:437
 msgid "Charwidth"
 msgstr ""
 
-#: config.c:415
+#: config.c:438
+#, fuzzy
 msgid "OldLocale"
-msgstr ""
+msgstr "&Region"
 
-#: config.c:416
+#: config.c:439
 msgid "FontRender"
 msgstr ""
 
-#: config.c:417
+#: config.c:440
+#, fuzzy
 msgid "FontMenu"
-msgstr ""
+msgstr "Skrift"
 
-#: config.c:418
+#: config.c:441
 msgid "OldFontMenu"
 msgstr ""
 
-#: config.c:419
+#: config.c:442
+#, fuzzy
 msgid "Font1"
-msgstr ""
+msgstr "Skrift"
 
-#: config.c:420
+#: config.c:443
 msgid "Font1Weight"
 msgstr ""
 
-#: config.c:421
+#: config.c:444
+#, fuzzy
 msgid "Font2"
-msgstr ""
+msgstr "Skrift"
 
-#: config.c:422
+#: config.c:445
 msgid "Font2Weight"
 msgstr ""
 
-#: config.c:423
+#: config.c:446
+#, fuzzy
 msgid "Font3"
-msgstr ""
+msgstr "Skrift"
 
-#: config.c:424
+#: config.c:447
 msgid "Font3Weight"
 msgstr ""
 
-#: config.c:425
+#: config.c:448
+#, fuzzy
 msgid "Font4"
-msgstr ""
+msgstr "Skrift"
 
-#: config.c:426
+#: config.c:449
 msgid "Font4Weight"
 msgstr ""
 
-#: config.c:427
+#: config.c:450
+#, fuzzy
 msgid "Font5"
-msgstr ""
+msgstr "Skrift"
 
-#: config.c:428
+#: config.c:451
 msgid "Font5Weight"
 msgstr ""
 
-#: config.c:429
+#: config.c:452
+#, fuzzy
 msgid "Font6"
-msgstr ""
+msgstr "Skrift"
 
-#: config.c:430
+#: config.c:453
 msgid "Font6Weight"
 msgstr ""
 
-#: config.c:431
+#: config.c:454
+#, fuzzy
 msgid "Font7"
-msgstr ""
+msgstr "Skrift"
 
-#: config.c:432
+#: config.c:455
 msgid "Font7Weight"
 msgstr ""
 
-#: config.c:433
+#: config.c:456
+#, fuzzy
 msgid "Font8"
-msgstr ""
+msgstr "Skrift"
 
-#: config.c:434
+#: config.c:457
 msgid "Font8Weight"
 msgstr ""
 
-#: config.c:435
+#: config.c:458
+#, fuzzy
 msgid "Font9"
-msgstr ""
+msgstr "Skrift"
 
-#: config.c:436
+#: config.c:459
 msgid "Font9Weight"
 msgstr ""
 
-#: config.c:437
+#: config.c:460
+#, fuzzy
 msgid "Font10"
-msgstr ""
+msgstr "Skrift"
 
-#: config.c:438
+#: config.c:461
 msgid "Font10Weight"
 msgstr ""
 
-#: config.c:439
-msgid "TekFont"
-msgstr ""
-
-#: config.c:443
-msgid "BackspaceSendsBS"
-msgstr ""
-
-#: config.c:444
-msgid "DeleteSendsDEL"
-msgstr ""
-
-#: config.c:445
-msgid "CtrlAltIsAltGr"
-msgstr ""
-
-#: config.c:446
-msgid "AltGrIsAlsoAlt"
-msgstr ""
-
-#: config.c:447
-msgid "CtrlAltDelayAltGr"
-msgstr ""
-
-#: config.c:448
-msgid "OldAltGrDetection"
-msgstr ""
-
-#: config.c:449
-msgid "OldModifyKeys"
-msgstr ""
-
-#: config.c:450
-msgid "FormatOtherKeys"
-msgstr ""
-
-#: config.c:451
-msgid "AutoRepeat"
-msgstr ""
-
-#: config.c:452
-msgid "SupportExternalHotkeys"
-msgstr ""
-
-#: config.c:453
-msgid "ClipShortcuts"
-msgstr ""
-
-#: config.c:454
-msgid "WindowShortcuts"
-msgstr ""
-
-#: config.c:455
-msgid "SwitchShortcuts"
-msgstr ""
-
-#: config.c:456
-msgid "ZoomShortcuts"
-msgstr ""
-
-#: config.c:457
-msgid "ZoomFontWithWindow"
-msgstr ""
-
-#: config.c:458
-msgid "AltFnShortcuts"
-msgstr ""
-
-#: config.c:459
-msgid "WinShortcuts"
-msgstr ""
-
-#: config.c:460
-msgid "CtrlShiftShortcuts"
-msgstr ""
-
-#: config.c:461
-msgid "CtrlExchangeShift"
-msgstr ""
-
 #: config.c:462
-msgid "CtrlControls"
-msgstr ""
+#, fuzzy
+msgid "FontRTL"
+msgstr "Skrift"
 
 #: config.c:463
-msgid "ComposeKey"
+msgid "FontRTLWeight"
 msgstr ""
 
 #: config.c:464
-msgid "hkwinkeyall"
-msgstr ""
-
-#: config.c:465
-msgid "Key_PrintScreen"
-msgstr ""
-
-#: config.c:466
-msgid "Key_Pause"
-msgstr ""
-
-#: config.c:467
-msgid "Key_Break"
-msgstr ""
+#, fuzzy
+msgid "TekFont"
+msgstr "Skrift"
 
 #: config.c:468
-msgid "Key_Menu"
+msgid "BackspaceSendsBS"
 msgstr ""
 
 #: config.c:469
-msgid "Key_ScrollLock"
-msgstr ""
+#, fuzzy
+msgid "DeleteSendsDEL"
+msgstr "&Delete sender DEL"
 
 #: config.c:470
-msgid "Break"
-msgstr ""
+#, fuzzy
+msgid "CtrlAltIsAltGr"
+msgstr "Ctrl+LeftAlt er Alt&Gr"
 
 #: config.c:471
-msgid "Pause"
-msgstr ""
+#, fuzzy
+msgid "AltGrIsAlsoAlt"
+msgstr "AltGr er også Alt"
 
 #: config.c:472
-msgid "KeyFunctions"
-msgstr ""
+#, fuzzy
+msgid "CtrlAltDelayAltGr"
+msgstr "Ctrl+LeftAlt er Alt&Gr"
 
 #: config.c:473
-msgid "ManageLEDs"
+msgid "OldAltGrDetection"
+msgstr ""
+
+#: config.c:474
+msgid "OldModifyKeys"
+msgstr ""
+
+#: config.c:475
+msgid "FormatOtherKeys"
+msgstr ""
+
+#: config.c:476
+msgid "AutoRepeat"
 msgstr ""
 
 #: config.c:477
-msgid "ClicksPlaceCursor"
+msgid "SupportExternalHotkeys"
 msgstr ""
 
 #: config.c:478
-msgid "MiddleClickAction"
-msgstr ""
+#, fuzzy
+msgid "ClipShortcuts"
+msgstr "Snarveier"
 
 #: config.c:479
-msgid "RightClickAction"
-msgstr ""
+#, fuzzy
+msgid "WindowShortcuts"
+msgstr "Snarveier"
 
 #: config.c:480
-msgid "OpeningClicks"
-msgstr ""
+#, fuzzy
+msgid "SwitchShortcuts"
+msgstr "Snarveier"
 
 #: config.c:481
-msgid "ZoomMouse"
-msgstr ""
+#, fuzzy
+msgid "ZoomShortcuts"
+msgstr "Snarveier"
 
 #: config.c:482
-msgid "ClicksTargetApp"
+msgid "ZoomFontWithWindow"
 msgstr ""
 
 #: config.c:483
-msgid "ClickTargetMod"
-msgstr ""
+#, fuzzy
+msgid "AltFnShortcuts"
+msgstr "&Alt+Fn-snarveier"
 
 #: config.c:484
-msgid "HideMouse"
-msgstr ""
+#, fuzzy
+msgid "WinShortcuts"
+msgstr "Snarveier"
 
 #: config.c:485
-msgid "ElasticMouse"
-msgstr ""
+#, fuzzy
+msgid "CtrlShiftShortcuts"
+msgstr "&Ctrl+Shift+bokstav-snarveier"
 
 #: config.c:486
-msgid "LinesPerMouseWheelNotch"
+msgid "CtrlExchangeShift"
 msgstr ""
 
 #: config.c:487
-msgid "MousePointer"
+msgid "CtrlControls"
 msgstr ""
 
 #: config.c:488
-msgid "AppMousePointer"
+#, fuzzy
+msgid "ComposeKey"
+msgstr "Compose-tast"
+
+#: config.c:489
+msgid "hkwinkeyall"
+msgstr ""
+
+#: config.c:490
+msgid "Key_PrintScreen"
+msgstr ""
+
+#: config.c:491
+msgid "Key_Pause"
 msgstr ""
 
 #: config.c:492
-msgid "ClearSelectionOnInput"
-msgstr ""
+#, fuzzy
+msgid "Key_Break"
+msgstr "Send «Break»"
 
 #: config.c:493
-msgid "CopyOnSelect"
-msgstr ""
+#, fuzzy
+msgid "Key_Menu"
+msgstr "&Meny"
 
 #: config.c:494
-msgid "CopyTab"
-msgstr ""
+#, fuzzy
+msgid "Key_ScrollLock"
+msgstr "Tøm skrollehistorikkbufferen"
 
 #: config.c:495
-msgid "CopyAsRTF"
-msgstr ""
+#, fuzzy
+msgid "Break"
+msgstr "Send «Break»"
 
 #: config.c:496
-msgid "CopyAsHTML"
+msgid "Pause"
 msgstr ""
 
 #: config.c:497
-msgid "CopyAsRTFFont"
-msgstr ""
+#, fuzzy
+msgid "KeyFunctions"
+msgstr "Musefunksjoner"
 
 #: config.c:498
-msgid "CopyAsRTFFontSize"
+msgid "ManageLEDs"
 msgstr ""
 
 #: config.c:499
-msgid "CopyAsRTFFontHeight"
+msgid "ShootFoot"
 msgstr ""
 
 #: config.c:500
-msgid "TrimSelection"
+msgid "OldKeyFunctionsKeypad"
 msgstr ""
 
-#: config.c:501
-msgid "AllowSetSelection"
-msgstr ""
+#: config.c:504
+#, fuzzy
+msgid "ClicksPlaceCursor"
+msgstr "Kli&kk plasserer ledetekstmusepekeren"
 
-#: config.c:502
-msgid "SelectionShowSize"
-msgstr ""
+#: config.c:505
+#, fuzzy
+msgid "MiddleClickAction"
+msgstr "Klikkhandlinger"
 
 #: config.c:506
-msgid "Columns"
-msgstr ""
+#, fuzzy
+msgid "RightClickAction"
+msgstr "Klikkhandlinger"
 
 #: config.c:507
-msgid "Rows"
+msgid "OpeningClicks"
 msgstr ""
 
 #: config.c:508
-msgid "ScrollbackLines"
+msgid "OpeningMod"
 msgstr ""
 
-#: config.c:509 config.c:4260
-msgid "Scrollbar"
-msgstr "Rullefelt"
+#: config.c:509
+msgid "WrapTab"
+msgstr ""
 
 #: config.c:510
-msgid "ScrollMod"
-msgstr ""
+#, fuzzy
+msgid "ZoomMouse"
+msgstr "Mus"
 
 #: config.c:511
-msgid "PgUpDnScroll"
+msgid "ClicksTargetApp"
 msgstr ""
 
 #: config.c:512
-msgid "allocconsole"
+msgid "ClickTargetMod"
 msgstr ""
 
 #: config.c:513
-msgid "Language"
-msgstr ""
+#, fuzzy
+msgid "HideMouse"
+msgstr "Mus"
 
 #: config.c:514
-msgid "SearchBar"
+msgid "ElasticMouse"
 msgstr ""
 
 #: config.c:515
-msgid "SearchContext"
+msgid "LinesPerMouseWheelNotch"
 msgstr ""
 
-#: config.c:519
-msgid "Term"
-msgstr ""
+#: config.c:516
+#, fuzzy
+msgid "MousePointer"
+msgstr "Skriver"
 
-#: config.c:520
-msgid "Answerback"
+#: config.c:517
+msgid "AppMousePointer"
 msgstr ""
 
 #: config.c:521
-msgid "OldWrapModes"
-msgstr ""
+#, fuzzy
+msgid "ClearSelectionOnInput"
+msgstr "Tøm utvalget ved inndata"
 
 #: config.c:522
-msgid "Enable132ColumnSwitching"
-msgstr ""
+#, fuzzy
+msgid "CopyOnSelect"
+msgstr "Kop&ier ved velging"
 
 #: config.c:523
-msgid "BellType"
-msgstr ""
+#, fuzzy
+msgid "CopyTab"
+msgstr "&Kopier"
 
 #: config.c:524
-msgid "BellFile"
-msgstr ""
+#, fuzzy
+msgid "CopyAsRTF"
+msgstr "Kopier som RTF"
 
 #: config.c:525
-msgid "BellFile2"
-msgstr ""
+#, fuzzy
+msgid "CopyAsHTML"
+msgstr "Kopier som HTML"
 
 #: config.c:526
-msgid "BellFile3"
-msgstr ""
+#, fuzzy
+msgid "CopyAsRTFFont"
+msgstr "Kopier som RTF"
 
 #: config.c:527
-msgid "BellFile4"
+msgid "CopyAsRTFFontSize"
 msgstr ""
 
 #: config.c:528
-msgid "BellFile5"
+msgid "CopyAsRTFFontHeight"
 msgstr ""
 
 #: config.c:529
-msgid "BellFile6"
-msgstr ""
+#, fuzzy
+msgid "TrimSelection"
+msgstr "Markering"
 
 #: config.c:530
-msgid "BellFile7"
-msgstr ""
+#, fuzzy
+msgid "AllowSetSelection"
+msgstr "Tillat å fastsette utvalg"
 
 #: config.c:531
-msgid "BellFreq"
-msgstr ""
-
-#: config.c:532
-msgid "BellLen"
-msgstr ""
-
-#: config.c:533
-msgid "BellFlash"
-msgstr ""
-
-#: config.c:534
-msgid "BellFlashStyle"
-msgstr ""
+#, fuzzy
+msgid "SelectionShowSize"
+msgstr "Markering"
 
 #: config.c:535
-msgid "BellTaskbar"
-msgstr ""
+#, fuzzy
+msgid "Columns"
+msgstr "Kolo&nner"
 
 #: config.c:536
-msgid "BellPopup"
+msgid "Rows"
 msgstr ""
 
 #: config.c:537
-msgid "BellInterval"
-msgstr ""
+#, fuzzy
+msgid "RewrapOnResize"
+msgstr "Bryt på nytt ved endring av størrelse"
 
 #: config.c:538
-msgid "PlayTone"
+#, fuzzy
+msgid "ScrollbackLines"
+msgstr "Antall skrolle&historikklinjer"
+
+#: config.c:539
+#, fuzzy
+msgid "MaxScrollbackLines"
+msgstr "Antall skrolle&historikklinjer"
+
+#: config.c:540 config.c:4336
+msgid "Scrollbar"
+msgstr "Rullefelt"
+
+#: config.c:541
+#, fuzzy
+msgid "ScrollMod"
+msgstr "Rullefelt"
+
+#: config.c:542
+msgid "PgUpDnScroll"
 msgstr ""
 
-#: config.c:539 config.c:4346
-msgid "Printer"
-msgstr "Skriver"
-
-#: config.c:540
-msgid "ConfirmExit"
+#: config.c:543
+msgid "allocconsole"
 msgstr ""
 
 #: config.c:544
-msgid "Class"
-msgstr ""
+#, fuzzy
+msgid "Language"
+msgstr "Grensesnittsspråk"
 
 #: config.c:545
-msgid "Hold"
-msgstr ""
+#, fuzzy
+msgid "SearchBar"
+msgstr "S&øk"
 
 #: config.c:546
-msgid "Daemonize"
-msgstr ""
-
-#: config.c:547
-msgid "DaemonizeAlways"
-msgstr ""
-
-#: config.c:548
-msgid "ExitWrite"
-msgstr ""
-
-#: config.c:549
-msgid "ExitTitle"
-msgstr ""
+#, fuzzy
+msgid "SearchContext"
+msgstr "S&øk"
 
 #: config.c:550
-msgid "Icon"
-msgstr ""
+#, fuzzy
+msgid "Term"
+msgstr "Terminal"
 
 #: config.c:551
-msgid "Log"
-msgstr ""
+#, fuzzy
+msgid "Answerback"
+msgstr "&Tilbakemelding"
 
 #: config.c:552
-msgid "Logging"
+msgid "OldWrapModes"
 msgstr ""
 
 #: config.c:553
-msgid "Title"
+msgid "Enable132ColumnSwitching"
 msgstr ""
 
 #: config.c:554
-msgid "title_settable"
-msgstr ""
+#, fuzzy
+msgid "BellType"
+msgstr "Bjelle"
 
 #: config.c:555
-msgid "Utmp"
-msgstr ""
+#, fuzzy
+msgid "BellFile"
+msgstr "Bjelle"
 
-#: config.c:556 config.c:4232 config.c:4249 config.c:4255 config.c:4295
-msgid "Window"
-msgstr "Vindu"
+#: config.c:556
+#, fuzzy
+msgid "BellFile2"
+msgstr "Bjelle"
 
 #: config.c:557
-msgid "X"
-msgstr "X"
+#, fuzzy
+msgid "BellFile3"
+msgstr "Bjelle"
 
 #: config.c:558
-msgid "Y"
-msgstr ""
+#, fuzzy
+msgid "BellFile4"
+msgstr "Bjelle"
+
+#: config.c:559
+#, fuzzy
+msgid "BellFile5"
+msgstr "Bjelle"
+
+#: config.c:560
+#, fuzzy
+msgid "BellFile6"
+msgstr "Bjelle"
+
+#: config.c:561
+#, fuzzy
+msgid "BellFile7"
+msgstr "Bjelle"
 
 #: config.c:562
-msgid "Bidi"
-msgstr ""
+#, fuzzy
+msgid "BellFreq"
+msgstr "Bjelle"
 
 #: config.c:563
-msgid "NoAltScreen"
-msgstr ""
+#, fuzzy
+msgid "BellLen"
+msgstr "Bjelle"
 
 #: config.c:564
-msgid "EraseToScrollback"
-msgstr ""
+#, fuzzy
+msgid "BellFlash"
+msgstr "&Blink"
 
 #: config.c:565
-msgid "DisplaySpeedup"
+msgid "BellFlashStyle"
 msgstr ""
 
 #: config.c:566
-msgid "SuppressSGR"
+msgid "BellTaskbar"
 msgstr ""
 
 #: config.c:567
-msgid "SuppressDEC"
-msgstr ""
+#, fuzzy
+msgid "BellPopup"
+msgstr "&Oppsprett"
 
 #: config.c:568
-msgid "SuppressWIN"
+msgid "BellInterval"
 msgstr ""
 
 #: config.c:569
-msgid "SuppressOSC"
+msgid "PlayTone"
 msgstr ""
 
-#: config.c:570
-msgid "SuppressNRC"
-msgstr ""
+#: config.c:570 config.c:4422
+msgid "Printer"
+msgstr "Skriver"
 
 #: config.c:571
-msgid "SuppressMouseWheel"
-msgstr ""
-
-#: config.c:572
-msgid "FilterPasteControls"
-msgstr ""
-
-#: config.c:573
-msgid "BracketedPasteByLine"
-msgstr ""
-
-#: config.c:574
-msgid "SuspendWhileSelecting"
+msgid "ConfirmExit"
 msgstr ""
 
 #: config.c:575
-msgid "PrintableControls"
+msgid "Class"
 msgstr ""
 
 #: config.c:576
-msgid "CharNarrowing"
+msgid "Hold"
 msgstr ""
 
-#: config.c:577 config.c:3997 config.c:4000
-msgid "Emojis"
-msgstr "Emojier"
+#: config.c:577
+msgid "Daemonize"
+msgstr ""
 
 #: config.c:578
-msgid "EmojiPlacement"
+msgid "DaemonizeAlways"
 msgstr ""
 
 #: config.c:579
-msgid "SaveFilename"
+msgid "ExitWrite"
 msgstr ""
 
 #: config.c:580
-msgid "AppID"
+msgid "ExitTitle"
 msgstr ""
 
 #: config.c:581
-msgid "AppName"
+msgid "Icon"
 msgstr ""
 
 #: config.c:582
-msgid "AppLaunchCmd"
+msgid "Log"
+msgstr ""
+
+#: config.c:583
+msgid "Logging"
 msgstr ""
 
 #: config.c:584
-msgid "DropCommands"
+#, fuzzy
+msgid "Title"
+msgstr "Kopier &tittelen"
+
+#: config.c:585
+msgid "title_settable"
 msgstr ""
 
-#: config.c:585 config.c:586
-msgid "ExitCommands"
+#: config.c:586
+msgid "Utmp"
 msgstr ""
 
-#: config.c:587
-msgid "UserCommands"
-msgstr ""
+#: config.c:587 config.c:4302 config.c:4319 config.c:4331 config.c:4371
+msgid "Window"
+msgstr "Vindu"
 
 #: config.c:588
-msgid "CtxMenuFunctions"
-msgstr ""
+msgid "X"
+msgstr "X"
 
 #: config.c:589
-msgid "SysMenuFunctions"
-msgstr ""
-
-#: config.c:590
-msgid "UserCommandsPath"
-msgstr ""
-
-#: config.c:591
-msgid "SessionCommands"
-msgstr ""
-
-#: config.c:592
-msgid "TaskCommands"
+msgid "Y"
 msgstr ""
 
 #: config.c:593
-msgid "ConPTY"
+msgid "Bidi"
 msgstr ""
 
 #: config.c:594
-msgid "LoginFromShortcut"
-msgstr ""
+#, fuzzy
+msgid "NoAltScreen"
+msgstr "&Fullskjerm"
 
 #: config.c:595
-msgid "MenuMouse"
-msgstr ""
+#, fuzzy
+msgid "EraseToScrollback"
+msgstr "Tøm skrollehistorikkbufferen"
 
 #: config.c:596
-msgid "MenuCtrlMouse"
+msgid "DisplaySpeedup"
 msgstr ""
 
 #: config.c:597
-msgid "MenuMouse5"
+msgid "SuppressSGR"
 msgstr ""
 
 #: config.c:598
-msgid "MenuMenu"
+msgid "SuppressDEC"
 msgstr ""
 
 #: config.c:599
-msgid "MenuCtrlMenu"
+msgid "SuppressWIN"
 msgstr ""
 
 #: config.c:600
-msgid "MenuTitleCtrlLeft"
+msgid "SuppressOSC"
 msgstr ""
 
 #: config.c:601
-msgid "MenuTitleCtrlRight"
+msgid "SuppressNRC"
+msgstr ""
+
+#: config.c:602
+msgid "SuppressMouseWheel"
 msgstr ""
 
 #: config.c:603
-msgid "SessionGeomSync"
+msgid "FilterPasteControls"
 msgstr ""
 
+#: config.c:604
+msgid "BracketedPasteByLine"
+msgstr ""
+
+#: config.c:605
+#, fuzzy
+msgid "SuspendWhileSelecting"
+msgstr "Suspender utdata ved utvelging"
+
 #: config.c:606
-msgid "ColSpacing"
+msgid "PrintableControls"
 msgstr ""
 
 #: config.c:607
-msgid "RowSpacing"
+msgid "CharNarrowing"
 msgstr ""
 
-#: config.c:608
-msgid "AutoLeading"
-msgstr ""
+#: config.c:608 config.c:4067 config.c:4070
+msgid "Emojis"
+msgstr "Emojier"
 
 #: config.c:609
-msgid "Padding"
-msgstr ""
+#, fuzzy
+msgid "EmojiPlacement"
+msgstr "Plassering"
 
 #: config.c:610
-msgid "Ligatures"
+msgid "SaveFilename"
 msgstr ""
 
 #: config.c:611
-msgid "LigaturesSupport"
+msgid "AppID"
 msgstr ""
 
 #: config.c:612
-msgid "HandleDPI"
+msgid "AppName"
 msgstr ""
 
 #: config.c:613
-msgid "CheckVersionUpdate"
-msgstr ""
-
-#: config.c:614
-msgid "WordChars"
+msgid "AppLaunchCmd"
 msgstr ""
 
 #: config.c:615
-msgid "WordCharsExcl"
-msgstr ""
+#, fuzzy
+msgid "DropCommands"
+msgstr "Brukerkommandoer"
 
-#: config.c:616
-msgid "IMECursorColour"
-msgstr ""
-
-#: config.c:617
-msgid "SixelClipChars"
+#: config.c:616 config.c:617
+msgid "ExitCommands"
 msgstr ""
 
 #: config.c:618
-msgid "OldBold"
-msgstr ""
+#, fuzzy
+msgid "UserCommands"
+msgstr "Brukerkommandoer"
 
 #: config.c:619
-msgid "ShortLongOpts"
-msgstr ""
+#, fuzzy
+msgid "CtxMenuFunctions"
+msgstr "Musefunksjoner"
 
 #: config.c:620
-msgid "BoldAsRainbowSparkles"
-msgstr ""
+#, fuzzy
+msgid "SysMenuFunctions"
+msgstr "Musefunksjoner"
 
 #: config.c:621
-msgid "HoverTitle"
-msgstr ""
+#, fuzzy
+msgid "UserCommandsPath"
+msgstr "Brukerkommandoer"
 
 #: config.c:622
-msgid "ProgressBar"
+msgid "SessionCommands"
 msgstr ""
 
 #: config.c:623
-msgid "Baud"
-msgstr ""
+#, fuzzy
+msgid "TaskCommands"
+msgstr "Brukerkommandoer"
 
 #: config.c:624
-msgid "Bloom"
+msgid "ConPTY"
 msgstr ""
 
 #: config.c:625
-msgid "OldXButtons"
-msgstr ""
+#, fuzzy
+msgid "LoginFromShortcut"
+msgstr "Snarveier"
 
 #: config.c:626
-msgid "OptionsFont"
-msgstr ""
+#, fuzzy
+msgid "MenuMouse"
+msgstr "Mus"
 
 #: config.c:627
-msgid "OptionsFontSize"
+msgid "MenuCtrlMouse"
 msgstr ""
 
 #: config.c:628
-msgid "OptionsFontHeight"
-msgstr ""
+#, fuzzy
+msgid "MenuMouse5"
+msgstr "Mus"
 
 #: config.c:629
-msgid "OldOptions"
+#, fuzzy
+msgid "MenuMenu"
+msgstr "&Meny"
+
+#: config.c:630
+msgid "MenuCtrlMenu"
 msgstr ""
 
-#: config.c:633
-msgid "BoldAsBright"
+#: config.c:631
+msgid "MenuTitleCtrlLeft"
+msgstr ""
+
+#: config.c:632
+msgid "MenuTitleCtrlRight"
 msgstr ""
 
 #: config.c:634
-msgid "FontQuality"
+msgid "SessionGeomSync"
+msgstr ""
+
+#: config.c:637
+msgid "ColSpacing"
+msgstr ""
+
+#: config.c:638
+msgid "RowSpacing"
+msgstr ""
+
+#: config.c:639
+msgid "AutoLeading"
+msgstr ""
+
+#: config.c:640
+msgid "Padding"
+msgstr ""
+
+#: config.c:641
+msgid "Ligatures"
+msgstr ""
+
+#: config.c:642
+msgid "LigaturesSupport"
+msgstr ""
+
+#: config.c:643
+msgid "HandleDPI"
+msgstr ""
+
+#: config.c:644
+msgid "CheckVersionUpdate"
+msgstr ""
+
+#: config.c:645
+msgid "WordChars"
+msgstr ""
+
+#: config.c:646
+msgid "WordCharsExcl"
+msgstr ""
+
+#: config.c:647
+msgid "IMECursorColour"
+msgstr ""
+
+#: config.c:648
+msgid "SixelClipChars"
+msgstr ""
+
+#: config.c:649
+msgid "OldBold"
+msgstr ""
+
+#: config.c:650
+#, fuzzy
+msgid "ShortLongOpts"
+msgstr "Snarveier"
+
+#: config.c:651
+msgid "BoldAsRainbowSparkles"
+msgstr ""
+
+#: config.c:652
+msgid "HoverTitle"
+msgstr ""
+
+#: config.c:653
+msgid "ProgressBar"
 msgstr ""
 
 #: config.c:654
-msgid "locale"
+msgid "Baud"
 msgstr ""
 
 #: config.c:655
-msgid "unicode"
+msgid "Bloom"
 msgstr ""
 
 #: config.c:656
-msgid "ambig-wide"
+msgid "DimMargins"
 msgstr ""
 
 #: config.c:657
-msgid "ambig-narrow"
+msgid "StatusLine"
 msgstr ""
 
 #: config.c:658
-msgid "single"
+msgid "OldXButtons"
 msgstr ""
 
 #: config.c:659
-msgid "single-unicode"
+#, fuzzy
+msgid "OptionsFont"
+msgstr "Innstillinger"
+
+#: config.c:660
+#, fuzzy
+msgid "OptionsFontSize"
+msgstr "Innstillinger"
+
+#: config.c:661
+msgid "OptionsFontHeight"
 msgstr ""
 
-#: config.c:663 config.c:747
-msgid "none"
-msgstr ""
-
-#: config.c:664
-msgid "openmoji"
-msgstr ""
-
-#: config.c:665
-msgid "noto"
-msgstr ""
+#: config.c:662
+#, fuzzy
+msgid "OldOptions"
+msgstr "Innstillinger"
 
 #: config.c:666
-msgid "joypixels"
+msgid "BoldAsBright"
 msgstr ""
 
 #: config.c:667
+msgid "FontQuality"
+msgstr ""
+
+#: config.c:687
+#, fuzzy
+msgid "locale"
+msgstr "&Region"
+
+#: config.c:688
+msgid "unicode"
+msgstr ""
+
+#: config.c:689
+msgid "ambig-wide"
+msgstr ""
+
+#: config.c:690
+msgid "ambig-narrow"
+msgstr ""
+
+#: config.c:691
+msgid "single"
+msgstr ""
+
+#: config.c:692
+msgid "single-unicode"
+msgstr ""
+
+#: config.c:696 config.c:780
+msgid "none"
+msgstr ""
+
+#: config.c:697
+msgid "openmoji"
+msgstr ""
+
+#: config.c:698
+msgid "noto"
+msgstr ""
+
+#: config.c:699
+msgid "joypixels"
+msgstr ""
+
+#: config.c:700
 msgid "emojione"
 msgstr ""
 
-#: config.c:668
+#: config.c:701
 msgid "apple"
 msgstr ""
 
-#: config.c:669
+#: config.c:702
 msgid "google"
 msgstr ""
 
-#: config.c:670
+#: config.c:703
 msgid "twitter"
 msgstr ""
 
-#: config.c:671
+#: config.c:704
 msgid "facebook"
 msgstr ""
 
-#: config.c:672
+#: config.c:705
 msgid "samsung"
 msgstr ""
 
-#: config.c:673
+#: config.c:706
+#, fuzzy
 msgid "windows"
-msgstr ""
+msgstr "Vindu"
 
-#: config.c:674
+#: config.c:707
 msgid "zoom"
 msgstr ""
 
-#: config.c:678
+#: config.c:711
 msgid "stretch"
 msgstr ""
 
-#: config.c:679
+#: config.c:712
 msgid "align"
 msgstr ""
 
-#: config.c:680
+#: config.c:713
 msgid "middle"
 msgstr ""
 
-#: config.c:681
+#: config.c:714
 msgid "full"
 msgstr ""
 
-#: config.c:704
+#: config.c:737
 msgid "off"
 msgstr ""
 
-#: config.c:705
+#: config.c:738
 msgid "low"
 msgstr ""
 
-#: config.c:706
+#: config.c:739
+#, fuzzy
 msgid "medium"
-msgstr ""
+msgstr "&Middels"
 
-#: config.c:707
+#: config.c:740
 msgid "high"
 msgstr ""
 
-#: config.c:708
+#: config.c:741
 msgid "glass"
 msgstr ""
 
-#: config.c:712
+#: config.c:745
 msgid "line"
 msgstr ""
 
-#: config.c:713
+#: config.c:746
 msgid "block"
 msgstr ""
 
-#: config.c:714
+#: config.c:747
 msgid "box"
 msgstr ""
 
-#: config.c:715
+#: config.c:748
+#, fuzzy
 msgid "underscore"
-msgstr ""
+msgstr "&Understreking"
 
-#: config.c:719
+#: config.c:752
+#, fuzzy
 msgid "Default"
-msgstr ""
+msgstr "&Standard"
 
-#: config.c:720
+#: config.c:753
+#, fuzzy
 msgid "None"
-msgstr ""
+msgstr "&Ingen"
 
-#: config.c:721
+#: config.c:754
+#, fuzzy
 msgid "Partial"
-msgstr ""
+msgstr "&Delvis"
 
-#: config.c:722
+#: config.c:755
+#, fuzzy
 msgid "Full"
-msgstr ""
+msgstr "&Full"
 
-#: config.c:726
+#: config.c:759
 msgid "textout"
 msgstr ""
 
-#: config.c:727
+#: config.c:760
 msgid "uniscribe"
 msgstr ""
 
-#: config.c:731 config.c:738
+#: config.c:764 config.c:771
+#, fuzzy
 msgid "enter"
-msgstr ""
+msgstr "Skriver"
 
-#: config.c:732 config.c:739
+#: config.c:765 config.c:772
+#, fuzzy
 msgid "paste"
-msgstr ""
+msgstr "&Lim inn"
 
-#: config.c:733 config.c:740
+#: config.c:766 config.c:773
+#, fuzzy
 msgid "extend"
-msgstr ""
+msgstr "U&tvid"
 
-#: config.c:734
+#: config.c:767
 msgid "void"
 msgstr ""
 
-#: config.c:741
+#: config.c:774
 msgid "menu"
 msgstr ""
 
-#: config.c:745
+#: config.c:778
 msgid "left"
 msgstr ""
 
-#: config.c:746
+#: config.c:779
+#, fuzzy
 msgid "right"
-msgstr ""
+msgstr "&Høyre"
 
-#: config.c:751
+#: config.c:784
 msgid "hide"
 msgstr ""
 
-#: config.c:752
+#: config.c:785
 msgid "normal"
 msgstr ""
 
-#: config.c:753
+#: config.c:786
 msgid "min"
 msgstr ""
 
-#: config.c:754
+#: config.c:787
 msgid "max"
 msgstr ""
 
-#: config.c:755
+#: config.c:788
 msgid "FULL"
 msgstr ""
 
-#: config.c:759
+#: config.c:792
 msgid "never"
 msgstr ""
 
-#: config.c:760
+#: config.c:793
 msgid "start"
 msgstr ""
 
-#: config.c:761
+#: config.c:794
+#, fuzzy
 msgid "error"
-msgstr ""
+msgstr "Feil"
 
-#: config.c:762
+#: config.c:795
 msgid "always"
 msgstr ""
 
 #. __ %s: unknown option name
-#: config.c:860 config.c:872
+#: config.c:893 config.c:905
 msgid "Ignoring unknown option '%s'"
 msgstr "Ignorerer det ukjente alternativet '%s'"
 
 #. __ %2$s: option name, %1$s: invalid value
 #. report errors only during initialisation
-#: config.c:1099
+#: config.c:1145
 msgid "Ignoring invalid value '%s' for option '%s'"
 msgstr "Ignorerer den ukjente verdien '%s' for '%s'-innstillingen"
 
 #. __ %s: option name
-#: config.c:1111
+#: config.c:1157
 msgid "Ignoring option '%s' with missing value"
 msgstr "Ignorerer '%s'-innstillingen som mangler en verdi"
 
 #. __ %1$s: config file name, %2$s: error message
-#: config.c:1779
+#: config.c:1844
 msgid ""
 "Could not save options to '%s':\n"
 "%s."
@@ -1370,583 +1538,591 @@ msgstr ""
 "Klarte ikke å lagre innstillingene til '%s':\n"
 "%s."
 
-#: config.c:2301
+#: config.c:2371
 msgid "◇ None (printing disabled) ◇"
 msgstr "◇ Ingen (utskriving er skrudd av) ◇"
 
-#: config.c:2303
+#: config.c:2373
 msgid "◆ Default printer ◆"
 msgstr "◆ Standardskriver ◆"
 
 #. __ UI language
-#: config.c:2412
+#: config.c:2482
 msgid "– None –"
 msgstr "– Ingen –"
 
-#: config.c:2413
+#: config.c:2483
 msgid "@ Windows language @"
 msgstr "@ Windows-språk @"
 
-#: config.c:2414
+#: config.c:2484
 msgid "* Locale environm. *"
 msgstr "* Regionsområde *"
 
-#: config.c:2415
+#: config.c:2485
 msgid "= cfg. Text Locale ="
 msgstr "= Oppsatt tekstregion ="
 
-#: config.c:2519
+#: config.c:2589
 msgid "simple beep"
 msgstr "enkelt bipp"
 
-#: config.c:2520
+#: config.c:2590
 msgid "no beep"
 msgstr "ingen bipp"
 
-#: config.c:2521
+#: config.c:2591
 msgid "Default Beep"
 msgstr "Standardbipp"
 
-#: config.c:2522
+#: config.c:2592
 msgid "Critical Stop"
 msgstr "Kritisk stopp"
 
-#: config.c:2523
+#: config.c:2593
 msgid "Question"
 msgstr "Spørsmål"
 
-#: config.c:2524
+#: config.c:2594
 msgid "Exclamation"
 msgstr "Utropstegn"
 
-#: config.c:2525
+#: config.c:2595
 msgid "Asterisk"
 msgstr "Asterisk"
 
-#: config.c:2568
+#: config.c:2638
 msgid "◇ None (system sound) ◇"
 msgstr "◇ Ingen (systemlyd) ◇"
 
 #. __ terminal theme / colour scheme
 #. __ emojis style
-#: config.c:2944 config.c:3547
+#: config.c:3014 config.c:3617
 msgid "◇ None ◇"
 msgstr "◇ Ingen ◇"
 
 #. __ indicator of unsaved downloaded colour scheme
-#: config.c:2947
+#: config.c:3017
 msgid "downloaded / give me a name!"
 msgstr "lastet ned / gi meg et navn!"
 
-#: config.c:3060
+#: config.c:3130
 msgid "Could not load web theme"
 msgstr "Klarte ikke å laste ned nett-temaet"
 
-#: config.c:3103 config.c:3111 config.c:3167
+#: config.c:3173 config.c:3181 config.c:3237
 msgid "Cannot store theme file"
 msgstr "Klarte ikke å lagre temafilen"
 
-#: config.c:3162
+#: config.c:3232
 msgid "Cannot write theme file"
 msgstr "Klarte ikke å skrive til temafilen"
 
-#: config.c:3624 config.c:3911 config.c:3971
+#: config.c:3694 config.c:3981 config.c:4041
 msgid "as font"
 msgstr "som skrifttype"
 
-#: config.c:3625 config.c:3914 config.c:3972
+#: config.c:3695 config.c:3984 config.c:4042
 msgid "as colour"
 msgstr "som farge"
 
-#: config.c:3626
+#: config.c:3696
 msgid "as font & as colour"
-msgstr "Vis &fet tekst som farge"
+msgstr "skrifttype & farge"
 
-#: config.c:3627 config.c:3917 config.c:3973
+#: config.c:3697 config.c:3987 config.c:4043
 msgid "xterm"
 msgstr ""
 
-#: config.c:3789
+#: config.c:3859
 msgid "About..."
-msgstr ""
+msgstr "Om …"
 
-#: config.c:3790
+#: config.c:3860
+#, fuzzy
 msgid "&Save"
-msgstr ""
+msgstr "Lagre"
 
-#: config.c:3792
+#: config.c:3862
+#, fuzzy
 msgid "&Cancel"
-msgstr ""
+msgstr "Avbrytt"
 
 #. __ Font chooser: button
-#: config.c:3794 winctrls.c:1286
+#: config.c:3864 winctrls.c:1286
 msgid "&Apply"
 msgstr "&Anvend"
 
-#: config.c:3803 config.c:3839 config.c:3872
+#: config.c:3873 config.c:3909 config.c:3942
 msgid "Looks"
 msgstr "Utseende"
 
-#: config.c:3803
+#: config.c:3873
 msgid "Looks in Terminal"
 msgstr "Utseende i terminalen"
 
-#: config.c:3803
+#: config.c:3873
 msgid "Colours"
 msgstr "Farger"
 
-#: config.c:3805
+#: config.c:3875
 msgid "&Foreground..."
 msgstr "&Forgrunn …"
 
-#: config.c:3806
+#: config.c:3876
 msgid "&Background..."
 msgstr "&Bakgrunn …"
 
-#: config.c:3807
+#: config.c:3877
 msgid "&Cursor..."
 msgstr "&Musepeker …"
 
-#: config.c:3810
+#: config.c:3880
 msgid "&Theme"
 msgstr "&Tema"
 
-#: config.c:3811
+#: config.c:3881
 msgid "T&heme Save"
 msgstr ""
 
-#: config.c:3815
+#: config.c:3885
 msgid "Ansi:"
 msgstr ""
 
-#: config.c:3825
+#: config.c:3895
 msgid "BOLD:"
 msgstr ""
 
-#: config.c:3843 config.c:4055 config.c:4163 config.c:4274
+#: config.c:3913 config.c:4125 config.c:4233 config.c:4350
 msgid "&Off"
 msgstr "&Av"
 
-#: config.c:3844
+#: config.c:3914
 msgid "&Low"
 msgstr "&Lav"
 
-#: config.c:3845
+#: config.c:3915
 msgid "&Med."
 msgstr "&Mid."
 
-#: config.c:3845
+#: config.c:3915
 msgid "&Medium"
 msgstr "&Middels"
 
-#: config.c:3846
+#: config.c:3916
 msgid "&High"
 msgstr "&Høy"
 
-#: config.c:3847
+#: config.c:3917
 msgid "Gla&ss"
 msgstr "Gla&ss"
 
-#: config.c:3852 config.c:3860 config.c:3865
+#: config.c:3922 config.c:3930 config.c:3935
 msgid "Opa&que when focused"
 msgstr "Fast&het ved fokus"
 
-#: config.c:3855
+#: config.c:3925
 msgid "Blu&r"
 msgstr "Ukla&rhet"
 
-#: config.c:3867
+#: config.c:3937
 msgid "◄"
-msgstr "◀"
+msgstr ""
 
-#: config.c:3868
+#: config.c:3938
 msgid "►"
-msgstr "▶"
+msgstr ""
 
-#: config.c:3872
+#: config.c:3942
 msgid "Cursor"
 msgstr "Musepeker"
 
-#: config.c:3875
+#: config.c:3945
 msgid "Li&ne"
 msgstr "Li&nje"
 
-#: config.c:3876
+#: config.c:3946
 msgid "Bloc&k"
 msgstr "Blok&kmerking"
 
-#: config.c:3878
+#: config.c:3948
 msgid "Bo&x"
 msgstr ""
 
-#: config.c:3880
+#: config.c:3950
 msgid "&Underscore"
 msgstr "&Understreking"
 
-#: config.c:3883
+#: config.c:3953
 msgid "Blinkin&g"
 msgstr "Blinkin&g"
 
-#: config.c:3888 config.c:3898 config.c:3909 config.c:3937 config.c:3969
-#: config.c:3977 config.c:3986 config.c:3995 config.c:4000
+#: config.c:3958 config.c:3968 config.c:3979 config.c:4007 config.c:4039
+#: config.c:4047 config.c:4056 config.c:4065 config.c:4070
 msgid "Text"
 msgstr "Tekst"
 
-#: config.c:3888
+#: config.c:3958
 msgid "Text and Font properties"
 msgstr "Tekst- og skrifttypeegenskaper"
 
 #. __ Font chooser:
-#: config.c:3892 winctrls.c:1290
+#: config.c:3962 winctrls.c:1290
 msgid "Font st&yle:"
 msgstr "Skrifttypest&il:"
 
 #. __ Font chooser:
-#: config.c:3894 winctrls.c:1292
+#: config.c:3964 winctrls.c:1292
 msgid "&Size:"
 msgstr "&Størrelse:"
 
-#: config.c:3900 config.c:3948
+#: config.c:3970 config.c:4018
 msgid "Sho&w bold as font"
 msgstr "Vi&s fet tekst som skrifttype"
 
-#: config.c:3903 config.c:3951
+#: config.c:3973 config.c:4021
 msgid "Show &bold as colour"
 msgstr "Vis &fet tekst som farge"
 
-#: config.c:3909 config.c:3922 config.c:3969 config.c:3978
+#: config.c:3979 config.c:3992 config.c:4039 config.c:4048
 msgid "Show bold"
 msgstr "Vis fet tekst"
 
-#: config.c:3924 config.c:3954 config.c:3980
+#: config.c:3994 config.c:4024 config.c:4050
 msgid "&Allow blinking"
 msgstr "&Tillat blinking"
 
-#: config.c:3939 config.c:3960 config.c:3976
+#: config.c:4009 config.c:4030 config.c:4046
 msgid "Font smoothing"
 msgstr "Skrifttypeutjevning"
 
-#: config.c:3941 config.c:3962 config.c:4093 config.c:4119 config.c:4208
-#: config.c:4218
+#: config.c:4011 config.c:4032 config.c:4163 config.c:4189 config.c:4278
+#: config.c:4288
 msgid "&Default"
 msgstr "&Standard"
 
-#: config.c:3942 config.c:3963 config.c:4091 config.c:4117 config.c:4206
-#: config.c:4216 config.c:4263
+#: config.c:4012 config.c:4033 config.c:4161 config.c:4187 config.c:4276
+#: config.c:4286 config.c:4339
 msgid "&None"
 msgstr "&Ingen"
 
-#: config.c:3943 config.c:3964 config.c:4092 config.c:4118 config.c:4207
-#: config.c:4217
+#: config.c:4013 config.c:4034 config.c:4162 config.c:4188 config.c:4277
+#: config.c:4287
 msgid "&Partial"
 msgstr "&Delvis"
 
-#: config.c:3944 config.c:3965 config.c:4094 config.c:4120 config.c:4209
-#: config.c:4219
+#: config.c:4014 config.c:4035 config.c:4164 config.c:4190 config.c:4279
+#: config.c:4289
 msgid "&Full"
 msgstr "&Full"
 
-#: config.c:3988
+#: config.c:4058
 msgid "&Locale"
 msgstr "&Region"
 
-#: config.c:3989
+#: config.c:4059
 msgid "&Character set"
 msgstr "&Tegnsett"
 
-#: config.c:4002
+#: config.c:4072
 msgid "Style"
 msgstr "Stil"
 
-#: config.c:4004
+#: config.c:4074
 msgid "Placement"
 msgstr "Plassering"
 
-#: config.c:4010 config.c:4025 config.c:4049 config.c:4060
+#: config.c:4080 config.c:4095 config.c:4119 config.c:4130
 msgid "Keys"
 msgstr "Nøkler"
 
-#: config.c:4010
+#: config.c:4080
 msgid "Keyboard features"
 msgstr "Tastaturegenskaper"
 
-#: config.c:4012
+#: config.c:4082
 msgid "&Backarrow sends ^H"
 msgstr "&Bakoverpil sender ^H"
 
-#: config.c:4015
+#: config.c:4085
 msgid "&Delete sends DEL"
 msgstr "&Delete sender DEL"
 
-#: config.c:4018
+#: config.c:4088
 msgid "Ctrl+LeftAlt is Alt&Gr"
 msgstr "Ctrl+LeftAlt er Alt&Gr"
 
-#: config.c:4021
+#: config.c:4091
 msgid "AltGr is also Alt"
 msgstr "AltGr er også Alt"
 
-#: config.c:4025
+#: config.c:4095
 msgid "Shortcuts"
 msgstr "Snarveier"
 
-#: config.c:4026
+#: config.c:4096
 msgid "Cop&y and Paste (Ctrl/Shift+Ins)"
 msgstr "Kop&ier og lim inn (Ctrl/Shift+Ins)"
 
-#: config.c:4029
+#: config.c:4099
 msgid "&Menu and Full Screen (Alt+Space/Enter)"
 msgstr "&Meny og fullskjerm (Alt+Space/Enter)"
 
-#: config.c:4032
+#: config.c:4102
 msgid "&Switch window (Ctrl+[Shift+]Tab)"
 msgstr "&Bytt vindu (Ctrl+[Shift+]Tab)"
 
-#: config.c:4035
+#: config.c:4105
 msgid "&Zoom (Ctrl+plus/minus/zero)"
 msgstr "&Forstørr (Ctrl+pluss/minus/null)"
 
-#: config.c:4038
+#: config.c:4108
 msgid "&Alt+Fn shortcuts"
 msgstr "&Alt+Fn-snarveier"
 
-#: config.c:4041
+#: config.c:4111
+#, fuzzy
 msgid "&Win+x shortcuts"
 msgstr "&Alt+Fn-snarveier"
 
-#: config.c:4044
+#: config.c:4114
 msgid "&Ctrl+Shift+letter shortcuts"
 msgstr "&Ctrl+Shift+bokstav-snarveier"
 
-#: config.c:4049 config.c:4062
+#: config.c:4119 config.c:4132
 msgid "Compose key"
 msgstr "Compose-tast"
 
-#: config.c:4052 config.c:4159 config.c:4170 config.c:4270 config.c:4281
+#: config.c:4122 config.c:4229 config.c:4240 config.c:4346 config.c:4357
 msgid "&Shift"
 msgstr "&Shift"
 
-#: config.c:4053 config.c:4160 config.c:4172 config.c:4271 config.c:4283
+#: config.c:4123 config.c:4230 config.c:4242 config.c:4347 config.c:4359
 msgid "&Ctrl"
 msgstr "&Ctrl"
 
-#: config.c:4054 config.c:4161 config.c:4171 config.c:4272 config.c:4282
+#: config.c:4124 config.c:4231 config.c:4241 config.c:4348 config.c:4358
 msgid "&Alt"
 msgstr "&Alt"
 
-#: config.c:4068 config.c:4130 config.c:4148
+#: config.c:4138 config.c:4200 config.c:4218
 msgid "Mouse"
 msgstr "Mus"
 
-#: config.c:4068
+#: config.c:4138
 msgid "Mouse functions"
 msgstr "Musefunksjoner"
 
-#: config.c:4074 config.c:4097 config.c:4107 config.c:4193
+#: config.c:4144 config.c:4167 config.c:4177 config.c:4263
 msgid "Cop&y on select"
 msgstr "Kop&ier ved velging"
 
-#: config.c:4077 config.c:4100 config.c:4196 wininput.c:536
+#: config.c:4147 config.c:4170 config.c:4266 wininput.c:536
 msgid "Copy with TABs"
 msgstr "Kopier som &TABs"
 
-#: config.c:4080 config.c:4103 config.c:4111 config.c:4200
+#: config.c:4150 config.c:4173 config.c:4181 config.c:4270
 msgid "Copy as &rich text"
 msgstr "Kopier som &rik tekst"
 
-#: config.c:4084 config.c:4089 config.c:4115 config.c:4204 config.c:4214
+#: config.c:4154 config.c:4159 config.c:4185 config.c:4274 config.c:4284
 msgid "Copy as &HTML"
 msgstr "Kopier som &HTML"
 
-#: config.c:4126
+#: config.c:4196
 msgid "Clic&ks place command line cursor"
 msgstr "Kli&kk plasserer ledetekstmusepekeren"
 
-#: config.c:4130
+#: config.c:4200
 msgid "Click actions"
 msgstr "Klikkhandlinger"
 
-#: config.c:4131
+#: config.c:4201
 msgid "Right mouse button"
 msgstr "Høyre museknapp"
 
-#: config.c:4133 config.c:4141
+#: config.c:4203 config.c:4211
 msgid "&Paste"
 msgstr "&Lim inn"
 
-#: config.c:4134 config.c:4142
+#: config.c:4204 config.c:4212
 msgid "E&xtend"
 msgstr "U&tvid"
 
-#: config.c:4135
+#: config.c:4205
 msgid "&Menu"
 msgstr "&Meny"
 
-#: config.c:4136 config.c:4144
+#: config.c:4206 config.c:4214
 msgid "Ente&r"
 msgstr "Ente&r"
 
-#: config.c:4139
+#: config.c:4209
 msgid "Middle mouse button"
 msgstr "Midtre museknapp"
 
-#: config.c:4143
+#: config.c:4213
 msgid "&Nothing"
 msgstr "&Ingenting"
 
-#: config.c:4148
+#: config.c:4218
 msgid "Application mouse mode"
 msgstr "Programmusemodus"
 
-#: config.c:4149
+#: config.c:4219
 msgid "Default click target"
 msgstr "Standard klikkmålpunkt"
 
-#: config.c:4151
+#: config.c:4221
 msgid "&Window"
 msgstr "&Vindu"
 
-#: config.c:4152
+#: config.c:4222
 msgid "&Application"
 msgstr "&Program"
 
-#: config.c:4157 config.c:4168
+#: config.c:4227 config.c:4238
 msgid "Modifier for overriding default"
 msgstr "Modifikator for å overstyre standardene"
 
-#: config.c:4162 config.c:4173 config.c:4273 config.c:4284
+#: config.c:4232 config.c:4243 config.c:4349 config.c:4360
 msgid "&Win"
 msgstr "&Win"
 
-#: config.c:4174 config.c:4285
+#: config.c:4244 config.c:4361
 msgid "&Sup"
 msgstr "&Sup"
 
-#: config.c:4175 config.c:4286
+#: config.c:4245 config.c:4362
 msgid "&Hyp"
 msgstr "&Hyp"
 
-#: config.c:4183 config.c:4191 config.c:4232
+#: config.c:4253 config.c:4261 config.c:4302
 msgid "Selection"
 msgstr "Markering"
 
-#: config.c:4183
+#: config.c:4253
 msgid "Selection and clipboard"
 msgstr "Utvalg og utklippstavle"
 
-#: config.c:4185
+#: config.c:4255
 msgid "Clear selection on input"
 msgstr "Tøm utvalget ved inndata"
 
-#: config.c:4191
+#: config.c:4261
 msgid "Clipboard"
 msgstr "Utklippstavle"
 
-#: config.c:4225
+#: config.c:4295
 msgid "Trim space from selection"
 msgstr "Trim vekk mellomrom fra utvalg"
 
-#: config.c:4228
+#: config.c:4298
 msgid "Allow setting selection"
 msgstr "Tillat å fastsette utvalg"
 
-#: config.c:4235
+#: config.c:4305
 msgid "Show size while selecting (0..12)"
 msgstr "Vis størrelsen under utvelging (0..12)"
 
-#: config.c:4240
+#: config.c:4310
 msgid "Suspend output while selecting"
 msgstr "Suspender utdata ved utvelging"
 
-#: config.c:4249
+#: config.c:4319
 msgid "Window properties"
 msgstr "Vindusegenskaper"
 
-#: config.c:4249
+#: config.c:4319
 msgid "Default size"
 msgstr "Standardstørrelse"
 
-#: config.c:4251
+#: config.c:4321
 msgid "Colu&mns"
 msgstr "Kolo&nner"
 
-#: config.c:4252
+#: config.c:4322
 msgid "Ro&ws"
 msgstr "Ra&der"
 
-#: config.c:4253
+#: config.c:4323
 msgid "C&urrent size"
 msgstr "Nå&værende størrelse"
 
-#: config.c:4257
+#. __ Options - Window:
+#: config.c:4328
+msgid "Re&wrap on resize"
+msgstr "Bryt på nytt ved endring av størrelse"
+
+#: config.c:4333
 msgid "Scroll&back lines"
 msgstr "Antall skrolle&historikklinjer"
 
-#: config.c:4262
+#: config.c:4338
 msgid "&Left"
 msgstr "&Venstre"
 
-#: config.c:4264
+#: config.c:4340
 msgid "&Right"
 msgstr "&Høyre"
 
-#: config.c:4268 config.c:4279
+#: config.c:4344 config.c:4355
 msgid "Modifier for scrolling"
 msgstr "Modifikator for skrolling"
 
-#: config.c:4288
+#: config.c:4364
 msgid "&PgUp and PgDn scroll without modifier"
 msgstr "&PgUp- og PgDn-skrolling uten modifikator"
 
-#: config.c:4291
+#: config.c:4367
 msgid "&AllocConsole ,Some console programs need it."
 msgstr ""
 
-#: config.c:4295
+#: config.c:4371
 msgid "UI language"
 msgstr "Grensesnittsspråk"
 
-#: config.c:4302 config.c:4307 config.c:4346 config.c:4353
+#: config.c:4378 config.c:4383 config.c:4422 config.c:4429
 msgid "Terminal"
 msgstr "Terminal"
 
-#: config.c:4302
+#: config.c:4378
 msgid "Terminal features"
 msgstr "Terminalegenskaper"
 
-#: config.c:4304
+#: config.c:4380
 msgid "&Type"
 msgstr "&Type"
 
-#: config.c:4305
+#: config.c:4381
 msgid "&Answerback"
 msgstr "&Tilbakemelding"
 
-#: config.c:4307
+#: config.c:4383
 msgid "Bell"
 msgstr "Bjelle"
 
-#: config.c:4310
+#: config.c:4386
 msgid "► &Play"
 msgstr "► &Ring"
 
-#: config.c:4313
+#: config.c:4389
 msgid "&Wave"
 msgstr "&Vink"
 
-#: config.c:4333 config.c:4342
+#: config.c:4409 config.c:4418
 msgid "&Flash"
 msgstr "&Blink"
 
-#: config.c:4334 config.c:4343
+#: config.c:4410 config.c:4419
 msgid "&Highlight in taskbar"
 msgstr "&Fremhev i verktøylinjen"
 
-#: config.c:4335 config.c:4344
+#: config.c:4411 config.c:4420
 msgid "&Popup"
 msgstr "&Oppsprett"
 
-#: config.c:4354
+#: config.c:4430
 msgid "Prompt about running processes on &close"
 msgstr "Spør om pågående prosesser ved &avslutning"
 
@@ -2095,8 +2271,9 @@ msgstr "&Lukk"
 
 #. __ System menu:
 #: wininput.c:360
-msgid "Ne&w"
-msgstr "N&y"
+#, fuzzy
+msgid "New &Win"
+msgstr "Nytt &Vindu"
 
 #. __ Context menu:
 #: wininput.c:363
@@ -2116,16 +2293,19 @@ msgid "S&earch"
 msgstr "S&øk"
 
 #: wininput.c:388
+#, fuzzy
 msgid "&Log to File[I]"
-msgstr ""
+msgstr "&Loggfør til fil"
 
 #: wininput.c:389
+#, fuzzy
 msgid "&Log to File[O]"
-msgstr ""
+msgstr "&Loggfør til fil"
 
 #: wininput.c:390
+#, fuzzy
 msgid "&Log to File[IO]"
-msgstr ""
+msgstr "&Loggfør til fil"
 
 #: wininput.c:392
 msgid "&Log to File"
@@ -2152,6 +2332,7 @@ msgid "Tabbar(&H)"
 msgstr ""
 
 #: wininput.c:412
+#, fuzzy
 msgid "Scrollbar(&S)"
 msgstr "Rullefelt"
 
@@ -2180,15 +2361,17 @@ msgid "&Full Screen"
 msgstr "&Fullskjerm"
 
 #: wininput.c:432
+#, fuzzy
 msgid "Flip Screen(&W)"
 msgstr "Speilvend &skjermen"
 
-#: wininput.c:438
-msgid "Copy T&itle"
+#: wininput.c:438 wininput.c:631
+#, fuzzy
+msgid "Copy T&Itle"
 msgstr "Kopier &tittelen"
 
 #. __ Context menu:
-#: wininput.c:439 wininput.c:595 wininput.c:631
+#: wininput.c:439 wininput.c:595 wininput.c:632
 msgid "&Options..."
 msgstr "&Innstillinger …"
 
@@ -2197,28 +2380,29 @@ msgstr "&Innstillinger …"
 msgid "Ope&n"
 msgstr "Åp&ne"
 
-#: wininput.c:525 wininput.c:625
-msgid "New tab\tCtrl+Shift+T"
+#: wininput.c:525 wininput.c:626
+#, fuzzy
+msgid "New &Tab\twin+T"
+msgstr "Ny &Fane"
+
+#: wininput.c:526 wininput.c:625
+msgid "&Kill tab\twin+w"
 msgstr ""
 
-#: wininput.c:526 wininput.c:624
-msgid "Kill tab"
+#: wininput.c:528 wininput.c:623
+msgid "&Previous tab\twin+<-"
 msgstr ""
 
-#: wininput.c:528
-msgid "Previous tab\tShift+<-"
+#: wininput.c:529 wininput.c:622
+msgid "&Next tab\twin+->"
 msgstr ""
 
-#: wininput.c:529
-msgid "Next tab\tShift+->"
+#: wininput.c:530 wininput.c:620
+msgid "Move to &Left\twin+<-"
 msgstr ""
 
-#: wininput.c:530
-msgid "Move to left\tCtrl+Shift+<-"
-msgstr ""
-
-#: wininput.c:531
-msgid "Next to right\tCtrl+Shift+->"
+#: wininput.c:531 wininput.c:621
+msgid "Move to &Right\twin+->"
 msgstr ""
 
 #: wininput.c:535
@@ -2264,85 +2448,80 @@ msgstr "Tøm skrollehistorikkbufferen"
 msgid "Send Break"
 msgstr "Send «Break»"
 
-#: wininput.c:619
-msgid "Next to right\tWin+Shift+->"
-msgstr ""
-
-#: wininput.c:620
-msgid "Move to left\tWin+Shift+<-"
-msgstr ""
-
-#: wininput.c:621
-msgid "Next tab\tWin+->"
-msgstr ""
-
-#: wininput.c:622
-msgid "Previous tab\tWin+<-"
-msgstr ""
-
-#: wininput.c:630
-msgid "&Copy Title"
-msgstr "Kopier &tittelen"
-
-#: wininput.c:635 wininput.c:642 winmain.c:3853
+#: wininput.c:636 wininput.c:643 winmain.c:4309
 msgid "WSL"
 msgstr ""
 
-#: wininput.c:636 wininput.c:643
+#: wininput.c:637 wininput.c:644
 msgid "Cygwin"
 msgstr ""
 
-#: wininput.c:637 wininput.c:644
+#: wininput.c:638 wininput.c:645
 msgid "CMD"
 msgstr ""
 
-#: wininput.c:638 wininput.c:645
+#: wininput.c:639 wininput.c:646
 msgid "PowerShell"
 msgstr ""
 
-#: wininput.c:639 wininput.c:646
+#: wininput.c:640 wininput.c:647
 msgid "faststart"
 msgstr ""
 
-#: wininput.c:640
-msgid "New &Win"
-msgstr "&Win"
-
-#: wininput.c:647
-msgid "New &Tab"
+#: wininput.c:641
+msgid "N&Ew Win"
 msgstr ""
 
+#: wininput.c:648
+#, fuzzy
+msgid "New T&Ab"
+msgstr "Ny &Fane"
+
 #. __ Context menu, user commands
-#: wininput.c:715
+#: wininput.c:716
 msgid "User commands"
 msgstr "Brukerkommandoer"
 
-#: winmain.c:2188
+#: wininput.c:3374 wininput.c:3376 wininput.c:3378 wininput.c:3408
+#: wininput.c:3434
+msgid "[NO SCROLL] "
+msgstr ""
+
+#: wininput.c:3375 wininput.c:3380 wininput.c:3419 wininput.c:3447
+msgid "[SCROLL MODE] "
+msgstr ""
+
+#: winmain.c:2472
 msgid "Processes are running in session:"
 msgstr "Prosesser som pågår i denne økten:"
 
-#: winmain.c:2189
+#: winmain.c:2473
 msgid "Close anyway?"
 msgstr "Vil du lukke det likevel?"
 
-#: winmain.c:2404
+#: winmain.c:2497
+msgid "Reset terminal?"
+msgstr "Tilbakestill terminal?"
+
+#: winmain.c:2702
 msgid "Try '--help' for more information"
 msgstr "Prøv med '--help' for mere informasjon"
 
-#: winmain.c:2412
+#: winmain.c:2710
 msgid "Could not load icon"
 msgstr "Klarte ikke å laste inn ikonet"
 
-#: winmain.c:4426
+#: winmain.c:4882
 msgid "Usage:"
 msgstr "Bruk:"
 
-#: winmain.c:4427
+#: winmain.c:4883
 msgid "[OPTION]... [ PROGRAM [ARG]... | - ]"
 msgstr "[OPTION]... [ PROGRAM [ARG]... | - ]"
 
 #. __ help text (output of -H / --help), after initial line ("synopsis")
-#: winmain.c:4430
+#: winmain.c:4886
+#, fuzzy
 msgid ""
 "Start a new terminal session running the specified program or the user's "
 "shell.\n"
@@ -2415,80 +2594,81 @@ msgstr ""
 "  -V, --version     Skriv versjonsinformasjon og avslutt\n"
 "Se bruksanvisningssiden for ytterligere ledetekstinnstillinger og oppsett.\n"
 
-#: winmain.c:4645 winmain.c:4652 winmain.c:4989
+#: winmain.c:5104 winmain.c:5111 winmain.c:5463
 msgid "WSL distribution '%s' not found"
 msgstr "WSL-distribusjonen '%s' ble ikke funnet"
 
-#: winmain.c:4683
+#: winmain.c:5142
 msgid "Duplicate option '%s'"
 msgstr "Duplikatinnstilling '%s'"
 
-#: winmain.c:4691 winmain.c:4764
+#: winmain.c:5150 winmain.c:5238
 msgid "Unknown option '%s'"
 msgstr "Ukjent alternativ '%s'"
 
-#: winmain.c:4693
+#: winmain.c:5152
 msgid "Option '%s' requires an argument"
 msgstr "'%s'-innstillingen krever et argument"
 
-#: winmain.c:4720
+#: winmain.c:5179
 msgid "Syntax error in position argument '%s'"
 msgstr "Syntaksfeil i posisjonsargumentet '%s'"
 
-#: winmain.c:4731
+#: winmain.c:5190
 msgid "Syntax error in size argument '%s'"
 msgstr "Syntaksfeil i størrelsesargumentet '%s'"
 
-#: winmain.c:4868
+#: winmain.c:5342
 msgid "Syntax error in geometry argument '%s'"
 msgstr "Syntaksfeil i geometriargumentet '%s'"
 
-#: winmain.c:5062
+#: winmain.c:5544
 msgid "Mintty could not detach from caller, starting anyway"
 msgstr ""
 "Mintty klarte ikke å løsrive seg fra påkalleren, men starter opp likevel"
 
-#: winmain.c:5348
+#: winmain.c:5830
 msgid "Using default title due to invalid characters in program name"
 msgstr "Benytter standardtittelen på grunn av ugyldige tegn i programnavnet"
 
 #. __ Options - Text: font properties information: "Leading": total line padding (see option RowSpacing), Bold/Underline modes (font or manual, see options BoldAsFont/UnderlineManual/UnderlineColour)
-#: wintext.c:154
+#: wintext.c:156
+#, fuzzy
 msgid "Leading: %d, Bold: %ls, Underline: %ls"
-msgstr ""
+msgstr "Linjeskille: %d, Fet: %s, Understreket: %s"
 
 #. __ Options - Text: font properties: value taken from font
-#: wintext.c:156
+#: wintext.c:158
 msgid "font"
 msgstr "skrifttype"
 
 #. __ Options - Text: font properties: value affected by option
-#: wintext.c:158
+#: wintext.c:160
 msgid "manual"
 msgstr "manual"
 
-#: wintext.c:481
+#: wintext.c:483
 msgid "Font not found, using system substitute"
 msgstr "Skrifttypen ble ikke funnet, benytter systemerstatningen"
 
-#: wintext.c:496
+#: wintext.c:498
 msgid "Font has limited support for character ranges"
 msgstr "Skrifttypen har begrenset støtte for tegnseksjoner"
 
-#: wintext.c:601
+#: wintext.c:605
 msgid "Font installation corrupt, using system substitute"
 msgstr "Skrifttypeinstallasjonen er korrumpert, benytter systemerstatningen"
 
-#: wintext.c:614
+#: wintext.c:618
 msgid "Font does not support system locale"
 msgstr "Skrifttypen støtter ikke systemets regioninnstilling"
 
-#: appinfo.h:65
+#: appinfo.h:64
 msgid "There is no warranty, to the extent permitted by law."
 msgstr "Det gis ingen forsikringer, i den grad loven tillater det."
 
 #. __ %s: WEBSITE (URL)
-#: appinfo.h:70
+#: appinfo.h:69
 #, fuzzy
 msgid ""
 "This Software is branched from mintty,http://mintty.github.io/\n"
@@ -2503,6 +2683,14 @@ msgstr ""
 "%s.\n"
 "Se også wikien der for flere tips, takk, og krediteringer."
 
+#, fuzzy
+#~ msgid "Copy T&itle"
+#~ msgstr "Kopier &tittelen"
+
+#, fuzzy
+#~ msgid "&Copy Title"
+#~ msgstr "Kopier &tittelen"
+
 #~ msgid "Internal error: too many options"
 #~ msgstr "Intern feil: For mange innstillinger"
 
@@ -2511,6 +2699,9 @@ msgstr ""
 
 #~ msgid "Apply"
 #~ msgstr "Bruk"
+
+#~ msgid "Store"
+#~ msgstr "Lagre"
 
 #~ msgid "100"
 #~ msgstr "100"
@@ -2523,15 +2714,6 @@ msgstr ""
 
 #~ msgid "Shift+"
 #~ msgstr "Skift+"
-
-#~ msgid "Store"
-#~ msgstr "Lagre"
-
-#~ msgid "◀"
-#~ msgstr "◀"
-
-#~ msgid "▶"
-#~ msgstr "▶"
 
 #~ msgid "&Restore"
 #~ msgstr "&Gjenoppretting"
@@ -2550,3 +2732,9 @@ msgstr ""
 
 #~ msgid "Scroll&bar"
 #~ msgstr "Skrolle&linje"
+
+#~ msgid "◀"
+#~ msgstr "◀"
+
+#~ msgid "▶"
+#~ msgstr "▶"

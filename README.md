@@ -1,5 +1,5 @@
 # enhanced mintty #
-branch from github.com/mintty/mintty 3.5.2  
+branch from github.com/mintty/mintty 3.6.2  
 Please report bugs or suggest enhancements via the 
 [gitee  issue tracker](https://gitee.com/qdzhaov/mintty/issues).
 

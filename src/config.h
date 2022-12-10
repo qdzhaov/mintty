@@ -27,6 +27,7 @@ enum { EMPL_STRETCH = 0, EMPL_ALIGN = 1, EMPL_MIDDLE = 2, EMPL_FULL = 3 };
 // Colour values.
 
 typedef uint colour;
+typedef struct { colour fg, bg; } colour_pair;
 
 enum { DEFAULT_COLOUR = UINT_MAX };
 
@@ -61,7 +62,7 @@ typedef struct {
   int tek_glow;
   int tek_strap;
   colour underl_colour, hover_colour;
-  colour ansi_colours[16];
+  colour_pair ansi_colours[16];
   int disp_space, disp_clear, disp_tab;
   bool underl_manual;
   colour sel_fg_colour, sel_bg_colour;
@@ -82,7 +83,7 @@ typedef struct {
   int padding,partline,usepartline;
   // Text
   font_spec font;
-  font_spec fontfams[11];
+  font_spec fontfams[12];
   wstring font_choice;
   wstring font_sample;
   bool show_hidden_fonts;
@@ -128,11 +129,14 @@ typedef struct {
   string key_scrlock;	// VK_SCROLL
   wstring key_commands;
   int manage_leds;
+  bool enable_remap_ctrls;
+  bool old_keyfuncs_keypad;
   // Mouse
   bool clicks_place_cursor;
   char middle_click_action;
   char right_click_action;
   int opening_clicks;
+  char opening_mod;
   bool zoom_mouse;
   char clicks_target_app;
   char click_target_mod;
@@ -154,7 +158,9 @@ typedef struct {
   int selection_show_size;
   // Window
   int cols, rows;
+  bool rewrap_on_resize;
   int scrollback_lines;
+  int max_scrollback_lines;
   char scrollbar;
   char scroll_mod;
   bool pgupdn_scroll;
@@ -166,6 +172,7 @@ typedef struct {
   // Terminal
   string Term;
   wstring answerback;
+  int wrap_tab;
   bool old_wrapmodes;
   bool enable_deccolm_init;
   int bell_type;
@@ -254,8 +261,11 @@ typedef struct {
   wstring options_font;
   int options_fontsize;
   string old_options;
+  bool dim_margins;
+  bool status_line;
   bool old_xbuttons;
   //removed tabbar
+  //int new_tabs;
   // Legacy
   bool use_system_colours;
   bool old_bold;

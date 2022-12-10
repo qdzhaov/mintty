@@ -73,10 +73,13 @@ extern char *asform(const char *fmt, ...);
 
 
 //#define WINVER 0x0500	// Windows 2000
-  #define WINVER 0x0501	// Windows XP
+#define WINVER 0x0501	// Windows XP
 //#define WINVER 0x0601	// Windows 7
 //#define WINVER 0x0A00	// Windows 10
+
+#ifdef __CYGWIN__
 #define _WIN32_WINNT WINVER
+#endif
 #define _WIN32_IE WINVER
 
 #include <windef.h>
@@ -138,7 +141,9 @@ extern const wchar * wloctext(string msg);
 #define endof(array) (&(array)[lengthof(array)])
 
 
+#ifdef __CYGWIN__
 extern void strset(string *sp, string s);
+#endif
 extern void stradd(string *sp, string s);
 extern void wstrset(wstring *sp, wstring s);
 extern void wstradd(wstring *sp, wstring s);
