@@ -45,15 +45,16 @@
 
 #define IDM_DEFSIZE         0x0300
 #define IDM_DEFSIZE_ZOOM    0x0310
-#define IDM_BORDERS         0x0320
-#define IDM_SCROLLBAR       0x0330
-#define IDM_TABBAR          0x0340
-#define IDM_PARTLINE        0x0350
-#define IDM_INDICATOR       0x0360
-#define IDM_FULLSCREEN      0x0370
-#define IDM_FULLSCREEN_ZOOM 0x0380
-#define IDM_BREAK           0x0390
-#define IDM_FLIPSCREEN      0x03A0
+#define IDM_SCROLLBAR       0x0320
+#define IDM_STATUSLINE      0x0330
+#define IDM_FULLSCREEN      0x0340
+#define IDM_FULLSCREEN_ZOOM 0x0350
+#define IDM_BREAK           0x0360
+#define IDM_FLIPSCREEN      0x0370
+#define IDM_BORDERS         0x0380
+#define IDM_TABBAR          0x0390
+#define IDM_PARTLINE        0x03A0
+#define IDM_INDICATOR       0x03B0
 
 #define IDM_NEWTAB          0x0400
 #define IDM_KILLTAB         0x0410

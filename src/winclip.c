@@ -20,6 +20,45 @@
 #endif
 
 
+#ifdef check_cygdrive
+// adapt /cygdrive prefix to actual configured one (like / or anything else);
+// this experimental approach is not enabled as it is 
+// only used for WSL and dynamic adaptation is hardly useful
+
+static char * _cygdrive = 0;
+static wchar * _wcygdrive = 0;
+
+static char *
+cygdrive(void)
+{
+  if (!_cygdrive) {
+    char target [99];
+    int ret = readlink ("/proc/cygdrive", target, sizeof (target) - 1);
+    if (ret >= 0) {
+      target [ret] = '\0';
+      _cygdrive = strdup(target);
+    }
+    else
+#if defined(__MSYS__) || defined(__MINGW32)
+      _cygdrive = "/";
+#else
+      _cygdrive = "/cygdrive";
+#endif
+    _wcygdrive = cs__mbstowcs(target);
+  }
+  return _cygdrive;
+}
+
+static wchar *
+wcygdrive(void)
+{
+  (void)cygdrive();
+  return _wcygdrive;
+}
+
+#endif
+
+
 static DWORD WINAPI
 shell_exec_thread(void *data)
 {
@@ -308,7 +347,7 @@ unwslpath(const wchar * wpath)
                          "/cygdrive"
 #endif
                          "/%c%s%s", 
-                         tolower(wsl_fstab[i].dev_fs[0]), 
+                         tolower((int)wsl_fstab[i].dev_fs[0]), 
                          &wsl_fstab[i].dev_fs[2], 
                          &wslpath[strlen(wsl_fstab[i].mount_point)]);
             break;
@@ -353,7 +392,7 @@ wslpath(char * path)
 #if defined(debug_wslpath) && debug_wslpath > 2
         printf("wslpath <%s> fstab <%s> <%s>\n", path, wsl_fstab[i].dev_fs, wsl_fstab[i].mount_point);
 #endif
-        if (tolower(*path) == tolower(wsl_fstab[i].dev_fs[0])
+        if (tolower((int)*path) == tolower((int)wsl_fstab[i].dev_fs[0])
          && wsl_fstab[i].dev_fs[1] == ':'
            )
         {

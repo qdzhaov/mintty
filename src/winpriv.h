@@ -34,6 +34,7 @@ typedef struct {
   bool win_is_always_on_top;
   bool clipboard_token ;
   bool keep_screen_on ;
+  bool force_opaque;
   bool is_init ;
   bool go_fullscr_on_max;
   bool resizing;
@@ -186,6 +187,8 @@ extern wstring wslicon(const wchar * params);
 
 typedef struct SChild SChild;
 extern char * foreground_cwd(STerm* pterm);
+
+extern void toggle_status_line(void);
 
 extern void win_switch(bool back, bool alternate);
 

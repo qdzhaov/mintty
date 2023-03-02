@@ -2265,6 +2265,8 @@ win_update_transparency(int trans, bool opaque)
   if (trans) {
     if (opaque && cterm->has_focus)
       trans = 0;
+    if (wv.force_opaque)
+      trans = 0;
     SetLayeredWindowAttributes(wv.wnd, 0, 255 - (uchar)trans, LWA_ALPHA);
   }
 
@@ -3029,6 +3031,7 @@ static struct {
         when IDM_INDICATOR: win_tab_indicator();
         when IDM_SEARCH: win_open_search();
         when IDM_FLIPSCREEN: term_flip_screen();
+        when IDM_STATUSLINE: toggle_status_line();
         when IDM_OPTIONS: win_open_config();
         when IDM_NEW: new_win_def();
         when IDM_NEW_MONI: new_win(IDSS_DEF,lp);
@@ -5705,7 +5708,22 @@ main(int argc, const char *argv[])
 
     // prevent HOME from being propagated back to Windows applications 
     // if called from WSL (mintty/wsltty#76)
-    unsetenv("HOME");
+    wchar * HOME = getregstr(HKEY_CURRENT_USER, W("Environment"), W("HOME"));
+    if (HOME && *HOME){
+      char * _HOME = cs__wcstoutf(HOME);
+      if (*_HOME == '%') {
+        char * varend = strchr(&_HOME[1], '%');
+        if (varend) {
+          *varend = 0;
+          char * varval = getenv(&_HOME[1]);
+          if (varval)
+            _HOME = asform("%s%s", varval, varend + 1);
+        }
+      }
+      setenv("HOME", _HOME, true);
+    }
+    else
+      unsetenv("HOME");
   }
   else if (*argv && (argv[1] || strcmp(*argv, "-")))  // argv is a command
     cmd = *argv;
@@ -6108,7 +6126,7 @@ main(int argc, const char *argv[])
   wv.disable_poschange = false;
 
   // Adapt window position (and maybe size) to special parameters,
-  // we need to reconsider maxwidth/maxheight here to accomodate 
+  // we need to reconsider maxwidth/maxheight here to accommodate 
   // circular dependencies of 
   // positioning, monitor selection, DPI adjustment and window size
   if (wv.center || wv.right || wv.bottom || wv.left || wv.top || wv.maxwidth || wv.maxheight) {

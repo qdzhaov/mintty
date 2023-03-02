@@ -431,6 +431,12 @@ win_update_menus(bool callback)
 
   MFCM( IDM_FLIPSCREEN, CKED(cterm->show_other_screen), _W("Flip Screen(&W)"), 
         alt_fn ? W("Alt+F12") : ct_sh ? W("Ctrl+Shift+S") : null);
+  uint status_line = cterm->st_type == 1 ? MF_CHECKED
+                   : cterm->st_type == 0 ? MF_UNCHECKED
+                   : MF_GRAYED;
+  //__ Context menu:
+  MFCM( IDM_STATUSLINE, status_line,_W("Status Line"),null  );
+
   ENCM( IDM_OPTIONS, GYED(wv.config_wnd) );
   ENSM( IDM_OPTIONS, GYED(wv.config_wnd));
 
@@ -517,7 +523,7 @@ win_init_ctxmenu(bool extended_menu, bool with_user_commands)
   void apcm(int id,int checked,wstring cap){
     if(id) {
       if(checked) AppendMenuW(ctxmenu, MF_ENABLED|MF_CHECKED  , id, cap);
-      else AppendMenuW(ctxmenu, MF_ENABLED, id, cap);
+      else AppendMenuW(ctxmenu, MF_ENABLED|MF_UNCHECKED, id, cap);
     } else AppendMenuW(ctxmenu, MF_SEPARATOR, 0, 0);
   }
   //__ Context menu:
@@ -575,6 +581,7 @@ win_init_ctxmenu(bool extended_menu, bool with_user_commands)
   apcm( IDM_INDICATOR      ,0,  0);
   apcm( IDM_FULLSCREEN_ZOOM,0,  0);
   apcm( IDM_FLIPSCREEN     ,0,  0);
+  apcm( IDM_STATUSLINE     ,0,  0);
   apcm( 0,0, 0);
   if (extended_menu) {
     //__ Context menu: generate a TTY BRK condition (tty line interrupt)
@@ -3249,9 +3256,10 @@ transparency_level()
 }
 
 static void
-transparency_opaque()
+toggle_opaque()
 {
-  win_update_transparency(cfg.transparency, true);
+  wv.force_opaque = !wv.force_opaque;
+  win_update_transparency(cfg.transparency, wv.force_opaque);
 }
 
 static void
@@ -3299,10 +3307,11 @@ static uint mflags_scrollbar_outer() { return cterm->show_scrollbar ? MF_CHECKED
 static uint mflags_scrollbar_outer() { return cterm->show_scrollbar ? MF_CHECKED : MF_UNCHECKED ; }
 #endif
 static uint mflags_scrollbar_inner() { return cfg.scrollbar?(  cterm->show_scrollbar ? MF_CHECKED : MF_UNCHECKED): MF_GRAYED; }
+static uint mflags_opaque() { return wv.force_opaque ? MF_CHECKED : MF_UNCHECKED; }
 static uint mflags_logging() { return (wv.logging ? MF_CHECKED : MF_UNCHECKED) ; }
 static uint mflags_bidi() { return (cfg.bidi == 0 || (cfg.bidi == 1 && (cterm->on_alt_screen ^ cterm->show_other_screen))) ? MF_GRAYED : cterm->disable_bidi ? MF_UNCHECKED : MF_CHECKED; }
 static uint mflags_dim_margins() { return cterm->dim_margins ? MF_CHECKED : MF_UNCHECKED; }
-static uint mflags_status_line() { return cterm->st_type == 1 ? MF_CHECKED : MF_UNCHECKED; }
+static uint mflags_status_line() { return cterm->st_type == 1 ? MF_CHECKED : cterm->st_type == 0 ? MF_UNCHECKED : MF_GRAYED; }
 static void zoom_font_out   (){ win_zoom_font(-1, 0);}
 static void zoom_font_in    (){ win_zoom_font( 1, 0);}
 static void zoom_font_reset (){ win_zoom_font( 0, 0);}
@@ -3339,7 +3348,7 @@ void toggle_bidi() { cterm->disable_bidi = !cterm->disable_bidi; }
 void toggle_dim_margins() { cterm->dim_margins = !cterm->dim_margins; }
 void toggle_status_line() {
   if (cterm->st_type == 1) term_set_status_type(0, 0);
-  else term_set_status_type(1, 0);
+  else if (cterm->st_type == 0) term_set_status_type(1, 0);
 }
 void tab_prev	    (){win_tab_change(-1);}
 void tab_next	    (){win_tab_change( 1);}
@@ -3566,7 +3575,7 @@ static struct function_def cmd_defs[] = {
   DFDN(scrollbar-inner    ,win_tog_scrollbar    , mflags_scrollbar_inner),
   DFDN(cycle-pointer-style,cycle_pointer_style  , 0),
   DFDN(cycle-transparency-level ,transparency_level, 0),
-  DFDN(transparency-opaque,transparency_opaque, 0),
+  DFDN(toggle-opaque      ,toggle_opaque        , mflags_opaque),
 
   DFDC(copy               ,IDM_COPY             , mflags_copy),
   DFDC(copy-text          ,IDM_COPY_TEXT        , mflags_copy),

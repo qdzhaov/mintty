@@ -271,7 +271,7 @@ const config default_cfg = {
   .printable_controls = 0,
   .char_narrowing = 75,
   .emojis = 0,
-  .emoji_placement = 0,
+  .emoji_placement = EMPL_STRETCH,
   .save_filename = W("mintty.%Y-%m-%d_%H-%M-%S"),
   .app_id = W(""),
   .app_name = W(""),
@@ -675,12 +675,18 @@ typedef const struct {
 
 static opt_val * const opt_vals[] = {
   [OPT_BOOL] = (opt_val[]) {
-    {("no"), false},
-    {("yes"), true},
-    {("false"), false},
-    {("true"), true},
-    {("off"), false},
-    {("on"), true},
+    //__ Setting false for Boolean options (localization optional)
+    {__("no"), false},
+    //__ Setting true for Boolean options (localization optional)
+    {__("yes"), true},
+    //__ Setting false for Boolean options (localization optional)
+    {__("false"), false},
+    //__ Setting true for Boolean options (localization optional)
+    {__("true"), true},
+    //__ Setting false for Boolean options (localization optional)
+    {__("off"), false},
+    //__ Setting true for Boolean options (localization optional)
+    {__("on"), true},
     {0, 0}
   },
   [OPT_CHARWIDTH] = (opt_val[]) {
@@ -708,9 +714,13 @@ static opt_val * const opt_vals[] = {
     {0, 0}
   },
   [OPT_EMOJI_PLACEMENT] = (opt_val[]) {
+    //__ Options - Text - Emojis - Placement (localization optional)
     {__("stretch"), EMPL_STRETCH},
+    //__ Options - Text - Emojis - Placement (localization optional)
     {__("align"), EMPL_ALIGN},
+    //__ Options - Text - Emojis - Placement (localization optional)
     {__("middle"), EMPL_MIDDLE},
+    //__ Options - Text - Emojis - Placement (localization optional)
     {__("full"), EMPL_FULL},
     {0, 0}
   },
@@ -2368,9 +2378,9 @@ current_size_handler(control *unused(ctrl), int event)
 static void
 printer_handler(control *ctrl, int event)
 {
-  const wstring NONE = _W("â—‡ None (printing disabled) â—‡");  // â™¢â—‡
+  const wstring NONE = _W("¿ None (printing disabled) ¿");  // ¿¿
   const wstring CFG_NONE = W("");
-  const wstring DEFAULT = _W("â—† Default printer â—†");  // â™¦â—†
+  const wstring DEFAULT = _W("¿ Default printer ¿");  // ¿¿
   const wstring CFG_DEFAULT = W("*");
   wstring printer = new_cfg.printer;
   if (event == EVENT_REFRESH) {
@@ -2478,10 +2488,13 @@ charset_handler(control *ctrl, int event)
 static void
 lang_handler(control *ctrl, int event)
 {
-  //__ UI language
-  const wstring NONE = _W("â€“ None â€“");
+  //__ UI localization disabled
+  const wstring NONE = _W("- None -");
+  //__ UI localization: use Windows desktop setting
   const wstring WINLOC = _W("@ Windows language @");
+  //__ UI localization: use environment variable setting (LANGUAGE, LC_*)
   const wstring LOCENV = _W("* Locale environm. *");
+  //__ UI localization: use mintty configuration setting (Text - Locale)
   const wstring LOCALE = _W("= cfg. Text Locale =");
   switch (event) {
     when EVENT_REFRESH:
@@ -2635,7 +2648,7 @@ bell_handler(control *ctrl, int event)
 static void
 bellfile_handler(control *ctrl, int event)
 {
-  const wstring NONE = _W("â—‡ None (system sound) â—‡");  // â™¢â—‡
+  const wstring NONE = _W("¿ None (system sound) ¿");  // ¿¿
   const wstring CFG_NONE = W("");
   wstring bell_file = new_cfg.bell_file[6];
   if (event == EVENT_REFRESH) {
@@ -3011,7 +3024,7 @@ static void
 theme_handler(control *ctrl, int event)
 {
   //__ terminal theme / colour scheme
-  const wstring NONE = _W("â—‡ None â—‡");  
+  const wstring NONE = _W("¿ None ¿");  // ¿¿
   const wstring CFG_NONE = W("");
   //__ indicator of unsaved downloaded colour scheme
   const wstring DOWNLOADED = _W("downloaded / give me a name!");
@@ -3614,7 +3627,7 @@ static void
 emojis_handler(control *ctrl, int event)
 {
   //__ emojis style
-  const string NONE = _("â—‡ None â—‡");  // â™¢â—‡
+  const string NONE = _("¿ None ¿");  // ¿¿
   string emojis = NONE;
   for (opt_val * o = opt_vals[OPT_EMOJIS]; o->name; o++) {
     if (new_cfg.emojis == o->val) {
@@ -3934,8 +3947,8 @@ setup_config_box(controlbox * b)
   ctrl_columns(s, 4, 64, 10, 16, 10);
   ctrl_checkbox( s,0, _W("Opa&que when focused"),0, dlg_stdcheckbox_handler, &new_cfg.opaque_when_focused);
   transparency_valbox = ctrl_editbox( s,2, 0,0, 100, transparency_valhandler, &new_cfg.transparency);
-  ctrl_pushbutton( s,1, _W("â—„"),0, transparency_slider, "-");
-  ctrl_pushbutton( s,3, _W("â–º"),0, transparency_slider, "+");
+  ctrl_pushbutton( s,1, _W("¿"),0, transparency_slider, "-");
+  ctrl_pushbutton( s,3, _W("¿"),0, transparency_slider, "+");
 #endif
 #endif
 
@@ -4302,7 +4315,8 @@ setup_config_box(controlbox * b)
     s = ctrl_new_set(b, _W("Selection"), null, _W("Window"));
     ctrl_columns(s, 2, 100, 0);
     // window-related
-    ctrl_editbox( s,-1, _W("Show size while selecting (0..12)"), 0,24,
+    //__ Options - Selection: clock position of info popup for text size
+    ctrl_editbox( s,-1, _W("Show size while selecting (0..12)"), 0,15,
       dlg_stdintbox_handler, &new_cfg.selection_show_size
     );
 #define dont_config_suspbuf
@@ -4317,7 +4331,7 @@ setup_config_box(controlbox * b)
   * The Window panel.
   */
   s = ctrl_new_set(b, _W("Window"), _W("Window properties"), _W("Default size"));
-  ctrl_columns(s, 5, 35, 3, 28, 4, 30);
+  ctrl_columns(s, 5, 35, 4, 28, 3, 30);
   cols_box = ctrl_editbox( s,0, _W("Colu&mns"),0, 44, dlg_stdintbox_handler, &new_cfg.cols);
   rows_box = ctrl_editbox( s,2, _W("Ro&ws"),0, 55, dlg_stdintbox_handler, &new_cfg.rows);
   ctrl_pushbutton( s,4, _W("C&urrent size"),0, current_size_handler, 0);
@@ -4378,18 +4392,19 @@ setup_config_box(controlbox * b)
   s = ctrl_new_set(b, _W("Terminal"), _W("Terminal features"), null);
   ctrl_columns(s, 2, 50, 50);
   ctrl_combobox( s,0, _W("&Type"),0, 100, term_handler, 0);
+    //__ Options - Terminal: answerback string for ^E request
   ctrl_editbox( s,1, _W("&Answerback"),0, 100, dlg_stdstringbox_handler, &new_cfg.answerback);
 
   s = ctrl_new_set(b, _W("Terminal"), null, _W("Bell"));
   ctrl_columns(s, 2, 73, 27);
   ctrl_combobox( s,0, null,0, 100, bell_handler, 0);
-  ctrl_pushbutton( s,1, _W("â–º &Play"),0, bell_tester, 0);
+  ctrl_pushbutton( s,1, _W("¿ &Play"),0, bell_tester, 0);
   ctrl_columns(s, 1, 100);  // reset column stuff so we can rearrange them
   ctrl_columns(s, 2, 100, 0);
   ctrl_combobox( s,0, _W("&Wave"),0, 83, bellfile_handler, &new_cfg.bell_file[6]);
   ctrl_columns(s, 1, 100);  // reset column stuff so we can rearrange them
   // balance column widths of the following 3 fields 
-  // to accomodate different length of localized labels
+  // to accommodate different length of localized labels
   int strwidth(wstring s0) {
     int len = 0;
     wchar * sp = (wchar *)s0;
@@ -4427,7 +4442,12 @@ setup_config_box(controlbox * b)
   ctrl_combobox( s,-1, null,0, 100, printer_handler, 0);
 #endif
   s = ctrl_new_set(b, _W("Terminal"), null, null);
+    //__ Options - Terminal:
   ctrl_checkbox( s,-1, _W("Prompt about running processes on &close"),0,
     dlg_stdcheckbox_handler, &new_cfg.confirm_exit
+  );
+    //__ Options - Terminal:
+  ctrl_checkbox( s,-1, _W("Status Line"),0,
+    dlg_stdcheckbox_handler, &new_cfg.status_line
   );
 }

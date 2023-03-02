@@ -351,6 +351,9 @@ term_reset(bool full)
     cterm->disable_bidi = false;
     cterm->enable_bold_colour = cfg.bold_as_colour;
     cterm->enable_blink_colour = true;
+    cterm->readline_mouse_1 = cfg.clicks_place_cursor;
+    cterm->readline_mouse_2 = cfg.clicks_place_cursor;
+    cterm->readline_mouse_3 = cfg.clicks_place_cursor;
   }
 
   cterm->virtuallines = 0;
@@ -516,6 +519,10 @@ term_reconfig(void)
     cterm->bell_popup = new_cfg.bell_popup;
   if (strcmp(new_cfg.Term, cfg.Term))
     cterm->vt220_keys = vt220(new_cfg.Term);
+  // status line
+  if (new_cfg.status_line != cfg.status_line
+      && new_cfg.status_line != cterm->st_type && cterm->st_type != 2)
+    toggle_status_line();
 }
 
 static int
@@ -2301,7 +2308,7 @@ term_erase(bool selective, bool line_only, bool from_begin, bool to_end)
 
    /* After an erase of lines from the top of the screen, we shouldn't
     * bring the lines back again if the terminal enlarges (since the user or
-    * application has explictly thrown them away). */
+    * application has explicitly thrown them away). */
     if (!cterm->on_alt_screen)
       cterm->tempsblines = 0;
   }
@@ -2343,8 +2350,8 @@ struct emoji_base {
   void * buf;  // cached image
   int buflen;  // cached image
   struct {
-    uint tags: 11;
     xchar ch: 21;
+    uint tags: 11;
   } __attribute__((packed));
 };
 

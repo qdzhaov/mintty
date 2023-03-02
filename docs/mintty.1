@@ -136,6 +136,8 @@ the extended context menu.
 \fB-o\fP, \fB--option\fP \fINAME\fP=\fIVALUE\fP
 Override the named config file option with the given value, e.g.
 \fB-o ScrollbackLines=1000\fP.
+Note that for option settings that are localized in the Options menu, 
+the value in the config file or on the command line must be unlocalized.
 
 .TQ
 \fB-p\fP, \fB--position\fP \fIX\fP\fB,\fP\fIY\fP
@@ -752,7 +754,7 @@ to the Break key (or other user-defined key) by configuration.
 Note, however, that a BRK can be ignored by configuration of the terminal 
 device (pty) or can be ignored by an application by catching the SIGINT signal.
 For more forceful interruption of the terminal client application, see the 
-Tips wiki page \fIhttps://github.com/mintty/mintty/wiki/Tips#terminating-the-foreground-program\fP.
+Tips wiki page \fIhttps://github.com/mintty/mintty/wiki/Tips#terminating-the-foreground-program-the-hard-way\fP.
 
 Note that Ctrl+C is often configured to raise a SIGINT signal. However, 
 this is not a terminal feature and can also be reconfigured (stty), so 
@@ -1359,7 +1361,11 @@ Script names are as specified in the Unicode file Scripts.txt, listed
 in \fIhttps://en.wikipedia.org/wiki/Script_(Unicode)\fP column "Alias".
 (The definition list can be split over multiple lines if a separator is 
 followed by a backslash, newline, and optional whitespace indentation.)
-.br
+
+Note that the setting string must not be terminated with a Windows lineend, 
+as its CR would be considered part of the last item; this can be prevented 
+with a final semicolon separator.
+
 A special name is \fBPictoSymbols\fP to assign an alternative font to 
 ranges of pictographic symbols from Unicode blocks matching 
 Arrows, Mathematical Operators, Technical, Enclosed Alphanumerics, 
@@ -1743,9 +1749,15 @@ Note that the repeat rate can be adjusted dynamically by an escape sequence.
 
 .TQ
 \fBBackarrow sends ^H\fP (BackspaceSendsBS=no)
-By default, mintty sends \fB^?\fP (ASCII DEL) as the keycode for the backspace key.
+By default, mintty sends \fB^?\fP (ASCII DEL) as the keycode for the \fBBackspace\fP key.
 If this option is enabled, \fB^H\fP is sent instead.
-This also changes the \fBCtrl+Backspace\fP code from \fB^_\fP to \fB^?\fP.
+This also changes the \fBCtrl+Backspace\fP code from \fB^H\fP to \fB^?\fP.
+
+\fINote:\fP This setting also causes the tty setting \fBERASE character\fP 
+to be aligned accordingly (see \fIman termios\fP and command \fIstty erase\fP).
+Mind that this may affect certain applications, for example emacs which 
+cannot interpret the explicit Ctrl+h command anymore.
+
 .br
 (Corresponds to the xterm resource \fBbackarrowKey\fP.)
 
@@ -1933,9 +1945,13 @@ the extended context menu.
 .TQ
 \fBClicks place command line cursor\fP (ClicksPlaceCursor=no)
 If enabled, the command line cursor can be placed by pressing the left
-mouse button.
+mouse button. Also pasting in the command line positions the cursor first.
+Also double right-click (if right-click is configured to Extend selection) 
+deletes the selection up to the current mouse position.
 This works by sending the number of cursor keycodes needed to get to the
-destination.
+destination, and erase characters (of current tty setting) in the third case.
+The setting presets the readline mouse modes (DECSET 2001, 2002, 2003) 
+initially and on hard reset; they can also be switched by escape sequences.
 
 .TQ
 \fBRight mouse button\fP (RightClickAction=menu)
@@ -2199,6 +2215,7 @@ tool uses a dedicated variable (\fBGNUTERM\fP) to trigger its usage.
 \fBAnswerback\fP (Answerback=)
 The answerback string is sent in response to the \fB^E\fP (ENQ) character.
 By default, this is empty.
+(Corresponds to the xterm resource \fBanswerbackString\fP.)
 
 .TQ
 \fBAlternate screen\fP (NoAltScreen=false)
@@ -2232,8 +2249,10 @@ set the pending wrap condition, so that a subsequent character will wrap.
 
 .TQ
 \fBEnable indicator status line\fP (StatusLine=false)
-This setting enables the DEC indicator status line initially.
-On terminal reset, this setting is restored unless host-writable status line is selected.
+This setting enables the DEC indicator status line initially (or on hard terminal reset).
+The status line can also be toggled from the context menu.
+Note that an active host-writable status line overrides the setting 
+and disables the context menu function.
 
 .TQ
 \fBAllow control sequence to set selection\fP (AllowSetSelection=false)
@@ -2588,7 +2607,7 @@ in a line is included in the selection buffer.
 
 .TQ
 \fBSelection size indication\fP (SelectionShowSize=0)
-The current selection size can optionally been indicated with a popup, 
+The current text selection size can optionally be indicated with a popup, 
 with a value between 1 and 12, setting the popup position by clock hour.
 
 .TQ
@@ -2847,12 +2866,17 @@ followed by a backslash, newline, and optional whitespace indentation.
 (Corresponds roughly to the xterm resource \fBtranslations\fP.)
 
 Note that Win+key combinations are often reserved by Windows.
+
 Note that Shift+char combinations of plain character keys can not be remapped 
 as they have a character assigned already within the basic keyboard layout.
 Likewise, Ctrl+char and Alt+char combinations have their traditional 
 terminal functions (sending control characters or ESC followed by the 
 character), so they are protected from accidental remapping by default; 
 remapping them to a key function needs additional setting \fBShootFoot=on\fP.
+
+Note that the setting string must not be terminated with a Windows lineend, 
+as its CR would be considered part of the last item; this can be prevented 
+with a final semicolon separator.
 
 Supported keys are described as follows:
 .br
@@ -2952,6 +2976,8 @@ Supported actions are described as follows:
 .br
 \(en \fBnew-tab-cwd\fP: opens a new terminal tab in working directory of current foreground process
 .br
+\(en \fBtoggle-tabbar\fP: toggles the tabbar
+.br
 \(en \fBoptions\fP: opens the Options dialog
 .br
 \(en \fBmenu-text\fP (*): opens the context menu at the cursor position
@@ -2970,7 +2996,7 @@ Supported actions are described as follows:
 .br
 \(en \fBcycle-transparency-level\fP: cycles the transparency level
 .br
-\(en \fBtransparency-opaque\fP: temporarily overrides transparency
+\(en \fBtoggle-opaque\fP: toggles temporary transparency override
 .br
 \(en \fBunicode-char\fP: enter Unicode character by its hexadecimal code
 .br
@@ -3477,6 +3503,10 @@ specified as an alternative separator by starting the whole setting with it.
 The definition list can be split over multiple lines if a separator is 
 followed by a backslash, newline, and optional whitespace indentation.
 
+Note that the setting string must not be terminated with a Windows lineend, 
+as its CR would be considered part of the last item; this can be prevented 
+with a final semicolon separator.
+
 \fINote:\fP This feature potentially makes mintty vulnerable against command injection.
 Be careful what commands you configure! For shell commands, it is 
 advisable to embed the "%s" parameter placeholder in single quotation 
@@ -3518,6 +3548,10 @@ specified as an alternative separator by starting the whole setting with it.
 The definition list can be split over multiple lines if a separator is 
 followed by a backslash, newline, and optional whitespace indentation.
 
+Note that the setting string must not be terminated with a Windows lineend, 
+as its CR would be considered part of the last item; this can be prevented 
+with a final semicolon separator.
+
 \fINote:\fP This feature potentially makes mintty vulnerable against command injection.
 Be careful what strings you configure!
 
@@ -3541,6 +3575,10 @@ a non-whitespace control character (i.e. none of \fB^I^J^K^L^M\fP) can be
 specified as an alternative separator by starting the whole setting with it.
 The definition list can be split over multiple lines if a separator is 
 followed by a backslash, newline, and optional whitespace indentation.
+
+Note that the setting string must not be terminated with a Windows lineend, 
+as its CR would be considered part of the last item; this can be prevented 
+with a final semicolon separator.
 
 Mintty provides useful information in environment variables:
 .br
@@ -3621,6 +3659,10 @@ The configuration is similar to the \fBUserCommands\fP setting with respect
 to menu labels, and to \fBKeyFunctions\fP setting with respect to function 
 designations; respective notes and warnings apply.
 
+Note that the setting string must not be terminated with a Windows lineend, 
+as its CR would be considered part of the last item; this can be prevented 
+with a final semicolon separator.
+
 .TQ
 \fBSystem menu user commands\fP (SysMenuFunctions=)
 This setting lists user-defined functions or commands for the system menu 
@@ -3635,6 +3677,10 @@ a non-whitespace control character (i.e. none of \fB^I^J^K^L^M\fP) can be
 specified as an alternative separator by starting the whole setting with it).
 The definition list can be split over multiple lines if a separator is 
 followed by a backslash, newline, and optional whitespace indentation.
+
+Note that the setting string must not be terminated with a Windows lineend, 
+as its CR would be considered part of the last item; this can be prevented 
+with a final semicolon separator.
 
 The configuration is similar to the \fBUserCommands\fP setting with respect 
 to menu labels, and to \fBKeyFunctions\fP setting with respect to function 
@@ -3661,6 +3707,10 @@ specified as an alternative separator by starting the whole setting with it.)
 The definition list can be split over multiple lines if a separator is 
 followed by a backslash, newline, and optional whitespace indentation.
 
+Note that the setting string must not be terminated with a Windows lineend, 
+as its CR would be considered part of the last item; this can be prevented 
+with a final semicolon separator.
+
 \fINote:\fP Session launch names are subject to localization if they are 
 added to the localization file of the selected UI localization language 
 (in subdirectory \fIlang\fP of a mintty resource directory).
@@ -3686,6 +3736,10 @@ a non-whitespace control character (i.e. none of \fB^I^J^K^L^M\fP) can be
 specified as an alternative separator by starting the whole setting with it.)
 The definition list can be split over multiple lines if a separator is 
 followed by a backslash, newline, and optional whitespace indentation.
+
+Note that the setting string must not be terminated with a Windows lineend, 
+as its CR would be considered part of the last item; this can be prevented 
+with a final semicolon separator.
 
 \fINote:\fP This feature only works in combination with a parameter 
 \fB-o AppID=...\fP. If the taskbar icon is "pinned" to the taskbar, 
@@ -3784,6 +3838,10 @@ an alternative session switcher. It raises the effective window position
 synchronization to the given level as if also setting 
 \fBSessionGeomSync=\fP\fIlevel\fP. It is recommended to use level 3 or higher.
 
+\fINote:\fP The tabbar can also be switched dynamically 
+with the user-definable function toggle-tabbar assigned to a hotkey or 
+configured into the context menu.
+
 .TQ
 \fBTabbar grouping\fP (NewTabs=0)
 Setting \fBNewTabs=1\fP is applicable to mintty if started from a 
@@ -3812,7 +3870,7 @@ Mintty, like xterm and rxvt and other terminals, communicates with the
 child process through a pseudo terminal device, which Cygwin emulates 
 using Windows pipes, causing issues with native Windows command line programs.
 Cygwin 3.1.0 compensates for this issue via the ConPTY API of Windows 10.
-MSYS2, however, does not enable this support by default.
+MSYS2, however, did not enable this support by default until end of 2022.
 See \fIhttps://github.com/mintty/mintty/wiki/Tips#inputoutput-interaction-with-alien-programs\fP 
 for further hints, also on the \fIwinpty\fP wrapper for older systems.
 
@@ -3832,6 +3890,7 @@ except DECRLM (right-to-left cursor motion),
 also supporting VT52 mode, thus being fully VT100-compatible, 
 and VT320 status lines.
 It also includes most other xterm-specific control sequences and modes.
+See \fIhttps://invisible-island.net/xterm/ctlseqs/ctlseqs.html\fPfor a list.
 
 In addition, mintty supports a maximum of ANSI and ECMA-48 character attribute controls 
 (including RGB and CMYK true-colour support, italic, overline, 
@@ -3845,6 +3904,9 @@ flexible bidi controls according to the draft bidi mode model of the
 \fBBiDi in Terminal Emulators\fP recommendation 
 (\fIhttps://terminal-wg.pages.freedesktop.org/bidi/\fP).
 However, emoji rendering does not work properly within right-to-left text.
+
+For mintty-specific private escape sequences and extensions, see 
+\fIhttps://github.com/mintty/mintty/wiki/CtrlSeqs\fP.
 
 Mintty also provides emulation of the Tektronix 4014 vector graphics terminal,
 including "writethru" and "defocused" beam modes (for which colour indication 

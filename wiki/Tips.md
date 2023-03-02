@@ -324,7 +324,7 @@ In addition, from mintty 3.1.5, an additional escape sequence causes mintty
 to report its name and version; furthermore, although using 
 environment variables for this purpose is not reliable (see 
 [issue #776](https://github.com/mintty/mintty/issues/776) for a discussion), 
-mintty sets environment variables TERM_PROGRAM and TERM_PROGRAM_VERION 
+mintty sets environment variables TERM_PROGRAM and TERM_PROGRAM_VERSION 
 as various other terminals do.
 
 
@@ -420,6 +420,13 @@ and based on the resulting setting of the environment variable TERM,
 the application expects other key sequences than mintty sends.
 (While mintty could be changed to send VT100 application keypad codes in 
 that case, the current behaviour is compatible with xterm.)
+
+### Control+H in emacs ###
+
+If you configure the Backarrow key to send a Backspace character rather 
+than the Linux default DEL character (setting `BackspaceSendsBS=yes`), 
+emacs will not be able to recognize an explicit Ctrl+h command anymore.
+It is recommended to leave this setting at its default.
 
 ### Shift+up/down for text selection in emacs ###
 
@@ -543,6 +550,18 @@ See the manual page for options and details about
 * user-definable key functions
 
 See also the [[Keycodes]] wiki page.
+
+### Backarrow key configuration ###
+
+By default, mintty sends `^?` (ASCII DEL) as the keycode for the Backarrow key.
+This is the Linux default (as opposed to sending `^H` which was the 
+default in many Unix environments).
+This can be changed with setting `BackspaceSendsBS=yes`.
+The tty setting `ERASE character` will be aligned accordingly 
+(see `man termios` and command `stty erase`).
+
+Mind that this may affect certain applications, for example emacs which 
+cannot interpret the explicit Control+h command anymore.
 
 ### Windows-style copy/paste key assignments ###
 
@@ -1317,8 +1336,9 @@ The localization language can be selected with the option `Language`,
 see manual page for details.
 
 Example:
-`Language=*`, environment variables `LANGUAGE=de_CH:français:de:fr_FR` and 
-`LC_MESSAGES=en_GB.UTF-8`, `LC_ALL` not set:
+Assume setting `Language=*`, environment variables 
+`LANGUAGE=de_CH:français:de:fr_FR` and `LC_MESSAGES=en_GB.UTF-8`, 
+environment variable `LC_ALL` not set:
 mintty tries to find localization files (in this order) for 
 `de_CH`, `français`, `de`, `fr_FR`, `en_GB`, 
 then (as generic fallback) `fr` and `en`, 
@@ -1326,9 +1346,8 @@ each in all resource configuration folders (subfolder `lang`).
 
 Note that Windows may already have localized the default entries of the 
 system menu, which makes the system menu language inconsistent because 
-mintty adds a few items here. Choose `Language=en` to 
+mintty adds a few items here. Choose `Language=en` or `en_US` to 
 “reverse-localize” this, as well as the font and colour chooser dialogs.
-
 Choose `Language=en_US` to change `Colour` to `Color` in the menus.
 
 ### Adding translations to localization ###
@@ -1345,6 +1364,13 @@ be used but remember to use UTF-8 encoding.
 Check the translations for strings that may be too long and get clipped 
 by a careful walkthrough of the Options dialog, opening all popups and 
 sub-dialogs (colours and font) and also checking `mintty -o FontMenu=0`.
+
+_Note:_ For setting values in popup menus of some of the options 
+in the Options dialog, localization is also supported. Note however 
+that the corresponding values in the config file or on the command line 
+must not be localized, so apparent inconsistencies may arise.
+It is therefore suggested _not_ to localize these values 
+(marked “(localization optional)” in the localization template `messages.pot`).
 
 _Note:_ There is one special pseudo-string in the localization template which 
 facilitates scaling of the Options dialog width. It is labelled 
@@ -1415,7 +1441,9 @@ ExitCommands=bash:exit^M;mined:^[q;emacs:^X^C
 To install mintty outside a cygwin environment, follow a few rules:
 * Compile mintty statically.
 * Install mintty.exe together with cygwin1.dll and cygwin-console-helper.exe.
-* Call the directory in which to install mintty and libraries ‘bin’.
+* Call the directory in which to install mintty and libraries `bin` (optional).
+* The parent directory of `bin` will be considered the mintty root directory.
+* Aside the `bin` directory (in the root directory), install folder tree `usr/share/mintty` with subdirectories for mintty resources, e.g. `lang/*.po`, `themes/*`, `sounds/*` etc.
 
 ### Bundling mintty with dedicated software ###
 

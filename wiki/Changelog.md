@@ -1,14 +1,36 @@
 Terminal features
+  * Tweak response code to XTQALLOWED OSC 60 and XTQDISALLOWED OSC 61 (xterm 378).
+  * Readline mouse modes (DECSET 2001 / 2002 / 2003, xterm 379).
+  * Hover and open URL: support parentheses (#1196).
+  * Fix cursor artefacts in connection with ClicksPlaceCursor=yes.
+  * Fix mouse-paste while still selecting.
+
+Windows integration
+  * Manage user-set HOME for calling Windows from WSL (mintty/wsltty#324, ~mintty/wsltty#76).
+
+Configuration
+  * Status line is configurable in Options menu, switchable from context menu.
+  * New user-definable function toggle-tabbar (#1201).
+  * Setting ClicksPlaceCursor presets all readline mouse modes.
+
+### 3.6.3 (18 Dec 2022) ###
+
+Terminal features
   * Fixed double-width characters not to wrap if auto-wrap disabled.
   * TAB may wrap to next line, or cause subsequent wrap, if enabled (#1182).
   * Fixed auto-wrap behaviour in double-width lines.
   * Overstriking character writing mode also switched with DECSET 20 (VK100, #1184).
+  * Fixed OSC 7 (set working directory) to handle ~ prefix.
+  * Added XTQMODKEYS state query (xterm 373).
+  * Withdrawn DEC private SGRs (/#1171, conflict with XTQMODKEYS).
+  * Added XTQALLOWED OSC 60 and OSC 61 (xterm 373).
 
 Unicode and Emoji data
   * Extend emoji information by considering Unicode file emoji-test.txt.
 
 Configuration
   * Option WrapTab (#1182).
+  * New user-definable function toggle-opaque (#1168), replaces transparency-opaque.
 
 Other
   * Fixed crash in Options dialog when Printer Service is stopped (#1185).
@@ -227,7 +249,7 @@ Configuration
   * New option BlinkColour.
   * New options MousePointer, AppMousePointer.
   * Restored "Allow blinking" in Options dialog (#1097).
-  * WSL-specific detection of Term info availabilities (mintty/wsltty#278).
+  * WSL-specific detection of available settings for Terminal Type (option Term) (mintty/wsltty#278).
   * Export TERM to WSL (mintty/wsltty#278).
 
 ### 3.4.7 (16 March 2021) ###

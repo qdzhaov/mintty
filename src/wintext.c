@@ -200,7 +200,7 @@ brighten(colour c, colour against, bool monotone)
   }
 
   colour bright;
-  uint thrsh = 22222;  // contrast threshhold;
+  uint thrsh = 22222;  // contrast threshold;
                        // if we're closer to either fg or bg,
                        // turn "brightening" into the other direction
 
@@ -1670,7 +1670,7 @@ drop_background_image_brush(void)
 static void
 init_gdiplus(void)
 {
-  static GdiplusStartupInput gi = (GdiplusStartupInput){1, NULL, FALSE, FALSE};
+  static GdiplusStartupInput gi = {1, NULL, FALSE, FALSE};
   static ULONG_PTR gis = 0;
   if (!gis) {
     GpStatus s = GdiplusStartup(&gis, &gi, NULL);
@@ -2388,7 +2388,7 @@ text_out_start(HDC hdc, LPCWSTR psz, int cch, int *dxs)
     return;
 
 #if CYGWIN_VERSION_API_MINOR >= 74
-  static SCRIPT_CONTROL sctrl_lig = (SCRIPT_CONTROL){.fMergeNeutralItems = 1};
+  static SCRIPT_CONTROL sctrl_lig = {.fMergeNeutralItems = 1};
 #else
   SCRIPT_CONTROL sctrl_lig = (SCRIPT_CONTROL){.fReserved = 1};
 #endif

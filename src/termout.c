@@ -2247,11 +2247,17 @@ set_modes(bool state)
           }
         when 1061:       /* VT220 keyboard emulation */
           cterm->vt220_keys = state;
+        when 2001:       /* Readline mouse button-1 */
+          cterm->readline_mouse_1 = state;
+        when 2002:       /* Readline mouse button-2 */
+          cterm->readline_mouse_2 = state;
+        when 2003:       /* Readline mouse button-3 */
+          cterm->readline_mouse_3 = state;
         when 2004:       /* xterm bracketed paste mode */
           cterm->bracketed_paste = state;
 
         /* Mintty private modes */
-        when 7700:       /* CJK ambigous width reporting */
+        when 7700:       /* CJK ambiguous width reporting */
           cterm->report_ambig_width = state;
         when 7711:       /* Scroll marker in current line */
           if (state)
@@ -2441,7 +2447,7 @@ get_mode(bool privatemode, int arg)
         return 2 - cterm->bracketed_paste;
 
       /* Mintty private modes */
-      when 7700:       /* CJK ambigous width reporting */
+      when 7700:       /* CJK ambiguous width reporting */
         return 2 - cterm->report_ambig_width;
       when 7711:       /* Scroll marker in current line */
         return 2 - !!(cterm->lines[cterm->curs.y]->lattr & LATTR_MARKED);
@@ -3074,6 +3080,8 @@ do_csi(uchar c)
       restore_cursor();
     when 'm':        /* SGR: set graphics rendition */
       do_sgr();
+#if 0
+    /* added in 3.6.2 (#1171), withdrawn in 3.6.3 (conflict with XTQMODKEYS) */
     when CPAIR('?', 'm'):  /* DEC private SGR (EK-PPLV2-PM-B01) */
       switch (arg0) {
         when 4: cterm->curs.attr.attr &= ~ATTR_SUBSCR;
@@ -3082,6 +3090,7 @@ do_csi(uchar c)
                 cterm->curs.attr.attr |= ATTR_SUBSCR;
         when 24: cterm->curs.attr.attr &= ~(ATTR_SUPERSCR | ATTR_SUBSCR);
       }
+#endif
     when 't':
      /*
       * VT340/VT420 sequence DECSLPP, for setting the height of the window.
@@ -3149,12 +3158,16 @@ do_csi(uchar c)
           }
         child_printf(cterm,"\e\\");
       }
-    when CPAIR('>', 'm'):     /* xterm: modifier key setting */
+    when CPAIR('>', 'm'):     /* xterm XTMODKEYS: modifier key setting */
       /* only the modifyOtherKeys setting is implemented */
       if (!arg0)
         cterm->modify_other_keys = 0;
       else if (arg0 == 4)
         cterm->modify_other_keys = arg1;
+    when CPAIR('?', 'm'):     /* xterm XTQMODKEYS: query XTMODKEYS */
+      /* only the modifyOtherKeys setting is implemented */
+      if (arg0 == 4)
+        child_printf(cterm,")\e[>4;%dm", cterm->modify_other_keys);
     when CPAIR('>', 'p'):     /* xterm: pointerMode */
       if (arg0 == 0)
         cterm->hide_mouse = false;
@@ -3939,7 +3952,7 @@ otherwise: {
             otherwise:  ok=0;  
           }
           if(ok==0) {
-            child_printf(cterm,"\eP0$r%s\e\\", s);
+            child_printf(cterm,"\eP0$r\e\\");
           }
         }
         otherwise:
@@ -4247,7 +4260,12 @@ do_cmd(void)
         s += 11;
       else if (!strncmp(s, "///", 3))
         s += 2;
-      if (!*s || *s == '/')
+      if (s[0] == '~' && (!s[1] || s[1] == '/')) {
+        char * dir = asform("%s%s", wv.home, s + 1);
+        child_set_fork_dir(cterm,dir);
+        free(dir);
+      }
+      else if (!*s || *s == '/')
         child_set_fork_dir(cterm,s);
     when 701:  // Set/get locale (from urxvt).
       if (!strcmp(s, "?"))
@@ -4255,7 +4273,8 @@ do_cmd(void)
       else
         cs_set_locale(s);
     when 7721:  // Copy window title to clipboard.
-      win_copy_title();
+      if (cfg.allow_set_selection)
+        win_copy_title();
     when 7704:  // Change ANSI foreground/background colours.
       do_ansi_colour_osc();
     when 7773: {  // Change icon.
@@ -4363,6 +4382,74 @@ do_cmd(void)
       }
       else
         cterm->curs.attr.link = -1;
+    }
+    when 60: {  // xterm XTQALLOWED: query allowed runtime features
+      child_printf(cterm,")\e]60;%s%s%s%s%s", 
+        // check foreground/background colour setting as an approximation
+        contains(cfg.suppress_osc, 10) || contains(cfg.suppress_osc, 11) 
+          ? "" : ",allowColorOps",
+        contains(cfg.suppress_osc, 50) ? "" : ",allowFontOps",
+        contains(cfg.suppress_osc, 2) ? "" : ",allowTitleOps",
+        *cfg.filter_paste ? "" : ",allowPasteControls",
+        //allowWindowOps
+        osc_fini());
+    }
+    when 61: {  // xterm XTQDISALLOWED: query disallowed runtime subfeatures
+      if (!strcasecmp(s, "allowColorOps"))
+        child_printf(cterm,")\e]61%s%s",
+          contains(cfg.suppress_osc, 4) ? ";GetAnsiColor,SetAnsiColor" : "",
+          osc_fini());
+      else if (!strcasecmp(s, "allowFontOps"))
+        child_printf(cterm,")\e]61;GetFont,SetFont%s", osc_fini());
+      else if (!strcasecmp(s, "allowMouseOps"))
+        child_printf(cterm,")\e]61;VT200Hilite%s%s%s%s%s%s%s%s%s%s%s%s%s%s",
+          strstr(cfg.suppress_wheel, "scrollwin") ? ",Scrollback" : "",
+          strstr(cfg.suppress_wheel, "zoom") ? ",ZoomMouse" : "",
+          strstr(cfg.suppress_wheel, "report") ? ",WheelEvent" : "",
+          //(strstr(cfg.suppress_wheel, "scrollapp") || !cterm->wheel_reporting_xterm) ? ",AlternateScroll" : "",
+          (strstr(cfg.suppress_wheel, "scrollapp") ||
+           (contains(cfg.suppress_dec, 1007) && !contains(cfg.suppress_dec, 7786))
+          ) ? ",AlternateScroll" : "",
+          contains(cfg.suppress_dec, 9) ? ",X10" : "",
+          contains(cfg.suppress_dec, 1000) ? ",VT200Click" : "",
+          contains(cfg.suppress_dec, 1002) ? ",AnyButton" : "",
+          contains(cfg.suppress_dec, 1003) ? ",AnyEvent" : "",
+          contains(cfg.suppress_dec, 1005) ? ",Extended" : "",
+          contains(cfg.suppress_dec, 1006) ? ",SGR" : "",
+          contains(cfg.suppress_dec, 1015) ? ",URXVT" : "",
+          contains(cfg.suppress_dec, 1016) ? ",PixelPosition" : "",
+          contains(cfg.suppress_dec, 1004) ? ",FocusEvent" : "",
+          osc_fini());
+      else if (!strcasecmp(s, "allowTitleOps"))
+        child_printf(cterm,")\e]61%s", osc_fini());
+      else if (!strcasecmp(s, "allowWindowOps"))
+        child_printf(cterm,")\e]61;SetChecksum,SetXprop,GetIconTitle,GetWinTitle%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s",
+          contains(cfg.suppress_osc, 52) ? ",GetSelection" : "",
+          (contains(cfg.suppress_osc, 52) || !cfg.allow_set_selection)
+            ? "SetSelection" : "",
+          contains(cfg.suppress_win, 24) ? ",SetWinLines" : "",
+          contains(cfg.suppress_win, 19) ? ",GetScreenSizeChars" : "",
+          contains(cfg.suppress_win, 13) ? ",GetWinPosition" : "",
+          contains(cfg.suppress_win, 18) ? ",GetWinSizeChars" : "",
+          contains(cfg.suppress_win, 14) ? ",GetWinSizePixels" : "",
+          contains(cfg.suppress_win, 11) ? ",GetWinState" : "",
+          contains(cfg.suppress_win, 6) ? ",LowerWin" : "",
+          contains(cfg.suppress_win, 9) ? ",MaximizeWin" : "",
+          contains(cfg.suppress_win, 10) ? ",FullscreenWin" : "",
+          contains(cfg.suppress_win, 2) ? ",MinimizeWin" : "",
+          contains(cfg.suppress_win, 23) ? ",PopTitle" : "",
+          contains(cfg.suppress_win, 22) ? ",PushTitle" : "",
+          contains(cfg.suppress_win, 5) ? ",RaiseWin" : "",
+          contains(cfg.suppress_win, 7) ? ",RefreshWin" : "",
+          contains(cfg.suppress_win, 1) ? ",RestoreWin" : "",
+          contains(cfg.suppress_win, 3) ? ",SetWinPosition" : "",
+          contains(cfg.suppress_win, 8) ? ",SetWinSizeChars" : "",
+          contains(cfg.suppress_win, 4) ? ",SetWinSizePixels" : "",
+          osc_fini());
+      else if (!strcasecmp(s, "allowTcapOps"))
+        child_printf(cterm,")\e]61;SetTcap,GetTcap%s", osc_fini());
+      else if (!strcasecmp(s, "allowPasteControls"))
+        child_printf(cterm,")\e]61;%s%s", cfg.filter_paste, osc_fini());
     }
     when 1337: {  // iTerm2 image protocol
                   // https://www.iterm2.com/documentation-images.html
