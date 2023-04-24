@@ -201,7 +201,7 @@ open_logfile(struct STerm* pterm)
   // use cygwin conversion function to escape unencoded characters 
   // and thus avoid the locale trick (2.2.3)
   char  logf[128];
-  sprintf(logf, "mt%d.log", pterm->child.pid);
+  sprintf(logf, "%S%d.log", cfg.log,pterm->child.pid);
   pterm->log_fd = open(logf, O_WRONLY | O_CREAT | O_EXCL, 0600);
 }
 void
@@ -225,6 +225,18 @@ vtlog(STerm* pterm,const char *buf, uint len,int mode){
 } 
 #endif
 
+void
+vt_printf(const char *fmt, ...)
+{
+    va_list va;
+    va_start(va, fmt);
+    char *s;
+    int len = vasprintf(&s, fmt, va);
+    va_end(va);
+    if (len > 0)
+      vtlog(&term,s,len,1);
+    free(s);
+}
 
 void
 child_update_charset(STerm *pterm   )
@@ -240,7 +252,7 @@ child_update_charset(STerm *pterm   )
     else
       attr.c_iflag &= ~IUTF8;
     tcsetattr(pterm->child.pty_fd, TCSANOW, &attr);
-    vtlog(pterm,"setattr",7,2);
+    //vtlog(pterm,"setattr",7,2);
   }
 #endif
 }
@@ -302,6 +314,21 @@ trim_environment(void)
   trimenv("BYOBU_");
 }
 
+static bool
+ispathprefix(string pref, string path)
+{
+  if (*pref == '/')
+    pref++;
+  if (*path == '/')
+    path++;
+  int len = strlen(pref);
+  if (0 == strncmp(pref, path, len)) {
+    path += len;
+    if (!*path || *path == '/')
+      return true;
+  }
+  return false;
+}
 
 void
 child_create(struct STerm* pterm,SessDef*sd,
@@ -325,6 +352,19 @@ child_create(struct STerm* pterm,SessDef*sd,
   signal(SIGINT, sigexit);
   signal(SIGTERM, sigexit);
   signal(SIGQUIT, sigexit);
+  //
+  // support OSC 7 directory cloning if cloning WSL window while in rootfs
+  if (wv.support_wsl && wv.wslname) {
+    // this is done once in a new window, so don't care about memory leaks
+    char * rootfs = path_win_w_to_posix(wv.wsl_basepath);
+    char * cwd = getcwd(malloc(MAX_PATH), MAX_PATH);
+    if (ispathprefix(rootfs, cwd)) {
+      char * dist = cs__wcstombs(wv.wslname);
+      char * wslsubdir = cwd + strlen(rootfs);
+      char * wsldir = asform("//wsl$/%s%s", dist, wslsubdir);
+      chdir(wsldir);
+    }
+  }
 
   // Create the child process and pseudo terminal.
   pid = forkpty(&(pterm->child.pty_fd   ), 0, 0, winp);
@@ -1285,6 +1325,9 @@ do_child_fork(STerm* pterm,SessDef*sd, int moni, bool launch, bool config_size, 
     const char ** new_argv = newn(const char *, na+2);
     new_argv[0]=(char*)main_sd.cmd;
     for(na=0;argv[na];na++)new_argv[na+1]=argv[na];
+    vt_printf("%s ",main_sd.cmd);
+    for(na=0;new_argv[na];na++)vt_printf("%s ",new_argv[na]);
+    vt_printf("\n");
     execvp(main_sd.cmd, (char**)new_argv);
     exit(mexit);
   }

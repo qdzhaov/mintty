@@ -5,8 +5,9 @@
 // Enums for various options.
 
 typedef enum { MDK_SHIFT = 1, MDK_ALT = 2, MDK_CTRL = 4, 
-               MDK_WIN = 8, MDK_SUPER = 16, MDK_HYPER = 32 } mod_keys;
-
+               MDK_WIN = 8, MDK_SUPER = 16, MDK_HYPER = 32, 
+               MDK_CAPSLOCK = 64  // for Compose key
+             } mod_keys;
 typedef enum { SMDK_SHIFT = 0, SMDK_ALT   = 1, SMDK_CTRL  = 2, 
                SMDK_WIN   = 3, SMDK_SUPER = 4, SMDK_HYPER = 5 } smod_keys;
 
@@ -101,6 +102,7 @@ typedef struct {
   //ZZ Added
   bool win_shortcuts;
   bool hkwinkeyall;
+  bool hook_keyboard;
   // Keys
   bool backspace_sends_bs;
   bool delete_sends_del;
@@ -171,7 +173,7 @@ typedef struct {
   bool allocconsole;
   // Terminal
   string Term;
-  wstring answerback;
+  string answerback;
   int wrap_tab;
   bool old_wrapmodes;
   bool enable_deccolm_init;
@@ -187,6 +189,7 @@ typedef struct {
   int play_tone;
   wstring printer;
   bool confirm_exit;
+  bool confirm_reset;
   // Command line
   wstring class;
   char hold;
@@ -256,6 +259,7 @@ typedef struct {
   bool bold_as_special;
   bool hover_title;
   char progress_bar;
+  int progress_scan;
   int baud;
   int bloom;
   wstring options_font;

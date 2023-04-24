@@ -26,33 +26,33 @@ int SEARCHBAR_HEIGHT = 26;
 static int
 current_delta(bool adjust)
 {
-  if (cterm->results.current.len == 0) {
+  if (term.results.current.len == 0) {
     return 0;
   }
 
-  int y = cterm->results.current.idx / cterm->cols - cterm->sblines;
+  int y = term.results.current.idx / term.cols - term.sblines;
   int delta = 0;
-  if (y < cterm->disptop) {
-    delta = y - cterm->disptop;
+  if (y < term.disptop) {
+    delta = y - term.disptop;
   }
-  else if (y >= cterm->disptop + cterm->rows) {
-    delta = y - (cterm->disptop + cterm->rows - 1);
+  else if (y >= term.disptop + term.rows) {
+    delta = y - (term.disptop + term.rows - 1);
   }
 
   if (adjust) {
-    //printf("search scroll to %d (top %d) by %d\n", y, cterm->disptop, delta);
+    //printf("search scroll to %d (top %d) by %d\n", y, term.disptop, delta);
     int dist = abs(cfg.search_context);
-    if (dist > cterm->rows / 2)
-      dist = cterm->rows / 2;
+    if (dist > term.rows / 2)
+      dist = term.rows / 2;
     if (delta > 0)
       delta += dist;
     else if (delta < 0)
       delta -= dist;
     else if (cfg.search_context < 0) {
-      if (y - cterm->disptop < dist)
-        delta = y - cterm->disptop - dist;
-      else if (cterm->disptop + cterm->rows - 1 - y < dist)
-        delta = dist - (cterm->disptop + cterm->rows - 1 - y);
+      if (y - term.disptop < dist)
+        delta = y - term.disptop - dist;
+      else if (term.disptop + term.rows - 1 - y < dist)
+        delta = dist - (term.disptop + term.rows - 1 - y);
       //printf("                 -> %d\n", delta);
     }
   }
@@ -68,8 +68,8 @@ scroll_to_result(result res)
   }
 
   if (current_delta(false) == 0) {
-    // Update cterm->results.current iff the current result is in screen.
-    cterm->results.current = res;
+    // Update term.results.current iff the current result is in screen.
+    term.results.current = res;
   }
 
   // Scroll if we must!
@@ -343,8 +343,8 @@ win_toggle_search(bool show, bool focus)
 
     default_edit_proc = (WNDPROC)SetWindowLongPtrW(search_edit_wnd, GWLP_WNDPROC, (long)edit_proc);
 
-    if (cterm->results.query)
-      SetWindowTextW(search_edit_wnd, cterm->results.query);
+    if (term.results.query)
+      SetWindowTextW(search_edit_wnd, term.results.query);
 
     search_initialised = true;
     prev_height = height;

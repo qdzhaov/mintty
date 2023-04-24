@@ -543,14 +543,14 @@ tek_send_address_0(int strap)
     x = out_x;
   }
 
-  child_printf(cterm,"%c%c%c%c",
+  child_printf(&term,"%c%c%c%c",
                0x20 | (x >> 7), 0x60 | ((x >> 2) & 0x1F),
                0x20 | (y >> 7), 0x40 | ((y >> 2) & 0x1F));
   if (strap) {
     if (strap > 1)
-      child_write(cterm,"\r\003", 2);
+      child_write(&term,"\r\003", 2);
     else
-      child_write(cterm,"\r", 1);
+      child_write(&term,"\r", 1);
   }
 }
 
@@ -584,7 +584,7 @@ tek_enq(void)
     status |= 0x08;
   if (margin)
     status |= 0x02;
-  child_write(cterm,&status, 1);
+  child_write(&term,&status, 1);
   tek_send_address_0(cfg.tek_strap);
   // 3-17, GIN MODE 41., 42.: stay in current mode
 }
@@ -756,7 +756,7 @@ tek_paint(void)
   if (cc == (colour)-1)
     cc = win_get_colour(CURSOR_COLOUR_I);
   // optionally use current text colour?
-  //cattr attr = apply_attr_colour(cterm->curs.attr, ACM_SIMPLE); .truefg/bg
+  //cattr attr = apply_attr_colour(term.curs.attr, ACM_SIMPLE); .truefg/bg
 
   // adjust colours
   // use full colour for glow or bold (defocused)
@@ -1032,7 +1032,7 @@ tek_paint(void)
   // text cursor
   if ((tek_mode == TEKMODE_ALPHA ||
        (tek_mode == TEKMODE_GIN && tek_mode_pre_gin == TEKMODE_ALPHA)
-      ) && !copyfn && lastfont < 4 && cterm->cblinker
+      ) && !copyfn && lastfont < 4 && term.cblinker
      )
   {
     if (cc != fg)

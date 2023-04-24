@@ -55,6 +55,7 @@ typedef struct {
   bool support_wsl ;
   wchar * wslname ;
   wstring wsl_basepath ;
+  bool report_config;
   string report_geom ;
   bool report_moni ;
   bool report_winpid ;

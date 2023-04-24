@@ -113,8 +113,8 @@ static void update_window_state() {
   win_adapt_term_size(0,0);
 }
 void win_tab_push(STab *tab){
-  if(cterm){
-    stabs[stabs_i++]=cterm->tab;
+  if(&term){
+    stabs[stabs_i++]=term.tab;
   }
   win_tab_v(tab);
 }
@@ -123,7 +123,7 @@ void win_tab_go(int index) {
   active_tab = index;
   STab* active = tabs[active_tab];
   for (STab**tab=tabs;*tab ; tab++) {
-    cterm=(*tab)->terminal;
+    win_tab_v(*tab);
     term_set_focus(*tab == active,1);
   }
   win_tab_actv();
@@ -187,7 +187,7 @@ static void newtab(SessDef*sd,struct winsize *wsz, const char* cwd ){
     tab->sd.argv[i]=strdup(sd->argv[i]);
   }
   tab->sd.argv[sd->argc]=0;
-  cterm->usepartline=cfg.usepartline!=0; 
+  term.usepartline=cfg.usepartline!=0; 
   term_reset(1);
   term_resize(wsz->ws_row, wsz->ws_col);
   tab->terminal->child.cmd = sd->cmd;
@@ -336,9 +336,9 @@ void win_tab_paint(HDC dc) {
 
   if (tab_bar_visible||cfg.indicator){
     State[0]=' ';
-    State[1]=cterm->selection_pending?'S':' ';
+    State[1]=term.selection_pending?'S':' ';
     State[2]=wv.tabctrling>2?'C':' ';
-    State[3]=cfg.partline&&cterm->usepartline?'P':' ';
+    State[3]=cfg.partline&&term.usepartline?'P':' ';
     State[4]=0 ;
     Statel=4;
   }else{

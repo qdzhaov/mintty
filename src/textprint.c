@@ -88,6 +88,10 @@ printer_finish_job(void)
     close(pd);
     pd=-1;
 
+    // get rid of \ in case tmpdir was derived from %LOCALAPPDATA%
+    for (char * fi = pf; *fi; fi++)
+      if (*fi == '\\')
+        *fi = '/';
     char * wf = path_posix_to_win_a(pf);
 
     char * pn = cs__wcstoutf(printer);
@@ -113,6 +117,7 @@ printer_finish_job(void)
     write(cmdfile, cmd, strlen(cmd));
     close(cmdfile);
 
+    //printf("system (%s)\n", pf);
     system(pf);
 
     free(wf);

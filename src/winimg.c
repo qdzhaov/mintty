@@ -265,7 +265,7 @@ winimg_new(imglist **ppimg, const char * id, unsigned char * pixels, uint len,
   img->hdc = NULL;
   img->hbmp = NULL;
   img->left = left;
-  img->top = cterm->virtuallines + scrtop;
+  img->top = term.virtuallines + scrtop;
   img->width = width;
   img->height = height;
   img->pixelwidth = pixelwidth;
@@ -506,31 +506,31 @@ void
 winimgs_clear(void)
 {
   // clear parser state
-  sixel_parser_deinit(cterm->imgs.parser_state);
-  //printf("winimgs_clear free state %p\n", cterm->imgs.parser_state);
-  delete(cterm->imgs.parser_state);
-  cterm->imgs.parser_state = NULL;
+  sixel_parser_deinit(term.imgs.parser_state);
+  //printf("winimgs_clear free state %p\n", term.imgs.parser_state);
+  delete(term.imgs.parser_state);
+  term.imgs.parser_state = NULL;
 
   imglist *img, *prev;
 
   // clear images in current screen
-  for (img = cterm->imgs.first; img; ) {
+  for (img = term.imgs.first; img; ) {
     prev = img;
     img = img->next;
     winimg_destroy(prev);
   }
 
   // clear images in alternate screen
-  for (img = cterm->imgs.altfirst; img; ) {
+  for (img = term.imgs.altfirst; img; ) {
     prev = img;
     img = img->next;
     winimg_destroy(prev);
   }
 
-  cterm->imgs.first = NULL;
-  cterm->imgs.last = NULL;
-  cterm->imgs.altfirst = NULL;
-  cterm->imgs.altlast = NULL;
+  term.imgs.first = NULL;
+  term.imgs.last = NULL;
+  term.imgs.altfirst = NULL;
+  term.imgs.altlast = NULL;
 }
 
 static void
@@ -553,7 +553,7 @@ draw_img(HDC dc, imglist * img)
 
     // position
     int left = img->left * wv.cell_width;
-    int top = (img->top - cterm->virtuallines - cterm->disptop) * wv.cell_height;
+    int top = (img->top - term.virtuallines - term.disptop) * wv.cell_height;
     int width = img->pixelwidth;
     int height = img->pixelheight;
     left += PADDING;
@@ -587,7 +587,7 @@ draw_img(HDC dc, imglist * img)
     // that'll be tricky since we've transformed coordinates here,
     // so better do the padding before, in the GDI domain (FillRect below)
     GpSolidFill * br;
-    colour bg = wv.colours[cterm->rvideo ? FG_COLOUR_I : BG_COLOUR_I];
+    colour bg = wv.colours[term.rvideo ? FG_COLOUR_I : BG_COLOUR_I];
     //bg = RGB(90, 150, 222);  // test background filling
     s = GdipCreateSolidFill(0xFF000000 | red(bg) << 16 | green(bg) << 8 | blue(bg), &br);
     gpcheck("brush create", s);
@@ -643,10 +643,10 @@ winimgs_paint(void)
   imglist * img;
 
   /* free disk space if number of tempfile exceeds TEMPFILE_MAX_NUM */
-  while (tempfile_num > TEMPFILE_MAX_NUM && cterm->imgs.first) {
-    img = cterm->imgs.first;
-    cterm->imgs.first = cterm->imgs.first->next;
-    cterm->imgs.first->prev = NULL;
+  while (tempfile_num > TEMPFILE_MAX_NUM && term.imgs.first) {
+    img = term.imgs.first;
+    term.imgs.first = term.imgs.first->next;
+    term.imgs.first->prev = NULL;
     winimg_destroy(img);
   }
 
@@ -656,16 +656,16 @@ winimgs_paint(void)
   RECT rc;
   GetClientRect(wv.wnd, &rc);
   IntersectClipRect(dc, rc.left + PADDING, rc.top + OFFSET + PADDING,
-                    rc.left + PADDING + cterm->cols * wv.cell_width,
-                    rc.top + OFFSET + PADDING + cterm->rows * wv.cell_height);
+                    rc.left + PADDING + term.cols * wv.cell_width,
+                    rc.top + OFFSET + PADDING + term.rows * wv.cell_height);
 
   // prepare detection of overwritten images for garbage collection
-  bool drawn[cterm->rows * cterm->cols];
+  bool drawn[term.rows * term.cols];
   memset(drawn, 0, sizeof drawn);
 
   // tame the flickering by backward traversal together with global clipping
   bool backward_img_traversal = true;
-  img = backward_img_traversal ? cterm->imgs.last : cterm->imgs.first;
+  img = backward_img_traversal ? term.imgs.last : term.imgs.first;
   imglist * next;
 #ifdef debug_img_over
   printf("--------------- imglist loop\n");
@@ -674,32 +674,32 @@ winimgs_paint(void)
     next = backward_img_traversal ? img->prev : img->next;
 
     // blink attribute
-    if (cterm->blink_is_real && cterm->has_focus) {
+    if (term.blink_is_real && term.has_focus) {
       if (img->attr & ATTR_BLINK2) {
-        if (cterm->tblinker2)
+        if (term.tblinker2)
           continue;
       }
       else if (img->attr & ATTR_BLINK) {
-        if (cterm->tblinker)
+        if (term.tblinker)
           continue;
       }
     }
 
     imglist * destrimg = 0;
 
-    if (img->top + img->height - cterm->virtuallines < - cterm->sblines) {
+    if (img->top + img->height - term.virtuallines < - term.sblines) {
       // if the image is out of scrollback, collect it
       destrimg = img;
 #ifdef debug_img_list
-      printf("paint: destroy @%d h %d virt %lld sb %d\n", img->top, img->height, cterm->virtuallines, cterm->sblines);
+      printf("paint: destroy @%d h %d virt %lld sb %d\n", img->top, img->height, term.virtuallines, term.sblines);
 #endif
 #ifdef debug_img_over
-      printf("@%d:%d destroy out [%d]\n", img->top - cterm->virtuallines - cterm->disptop, img->left, img->imgi);
+      printf("@%d:%d destroy out [%d]\n", img->top - term.virtuallines - term.disptop, img->left, img->imgi);
 #endif
     } else {
       int left = img->left;
-      int top = img->top - cterm->virtuallines - cterm->disptop;
-      if (top + img->height < 0 || top > cterm->rows) {
+      int top = img->top - term.virtuallines - term.disptop;
+      if (top + img->height < 0 || top > term.rows) {
         // if the image is scrolled out, serialize it into a temp file
 #ifdef debug_img_list
         if (img->hdc)
@@ -720,22 +720,22 @@ winimgs_paint(void)
         // overwritten cells are excluded from display,
         // if all cells are overwritten, flag for deletion
         bool disp_flag = false;
-        for (int y = max(0, top); y < min(top + img->height, cterm->rows); ++y) {
+        for (int y = max(0, top); y < min(top + img->height, term.rows); ++y) {
           int wide_factor =
-            (cterm->displines[y]->lattr & LATTR_MODE) == LATTR_NORM ? 1 : 2;
-          for (int x = left; x < min(left + img->width, cterm->cols); ++x) {
-            termchar *dchar = &cterm->displines[y]->chars[x];
+            (term.displines[y]->lattr & LATTR_MODE) == LATTR_NORM ? 1 : 2;
+          for (int x = left; x < min(left + img->width, term.cols); ++x) {
+            termchar *dchar = &term.displines[y]->chars[x];
 
             // if sixel image is overwritten by characters,
             // exclude the area from the clipping rect.
             bool clip_flag = false;
             if (dchar->chr != SIXELCH) {
               clip_flag = true;
-              drawn[y * cterm->cols + x] = true;
+              drawn[y * term.cols + x] = true;
             }
-            else if (!drawn[y * cterm->cols + x]) {
+            else if (!drawn[y * term.cols + x]) {
               disp_flag = true;
-              drawn[y * cterm->cols + x] = true;
+              drawn[y * term.cols + x] = true;
 #ifdef debug_img_disp
               printf("paint: dirty (%d) %d:%d %d >= %d\n", disp_flag, y, x, img->imgi, dchar->attr.imgi);
 #endif
@@ -743,11 +743,11 @@ winimgs_paint(void)
             // if cell is overlaid by selection or cursor, exclude it.
             if (dchar->attr.attr & (TATTR_RESULT | TATTR_CURRESULT | TATTR_MARKED | TATTR_CURMARKED))
               clip_flag = true;
-            if (cterm->selected && !clip_flag) {
-              pos scrpos = {y + cterm->disptop, x, 0, 0, false};
-              clip_flag = cterm->sel_rect
-                  ? posPle(cterm->sel_start, scrpos) && posPlt(scrpos, cterm->sel_end)
-                  : posle(cterm->sel_start, scrpos) && poslt(scrpos, cterm->sel_end);
+            if (term.selected && !clip_flag) {
+              pos scrpos = {y + term.disptop, x, 0, 0, false};
+              clip_flag = term.sel_rect
+                  ? posPle(term.sel_start, scrpos) && posPlt(scrpos, term.sel_end)
+                  : posle(term.sel_start, scrpos) && poslt(scrpos, term.sel_end);
             }
             if (clip_flag)
               ExcludeClipRect(dc,
@@ -775,9 +775,9 @@ winimgs_paint(void)
         // fill image area background (in case it's smaller or transparent)
         // calculate area for padding
         int ytop = max(0, top) * wv.cell_height + OFFSET + PADDING;
-        int ybot = min(top + img->height, cterm->rows) * wv.cell_height + OFFSET + PADDING;
+        int ybot = min(top + img->height, term.rows) * wv.cell_height + OFFSET + PADDING;
         int xlft = left * wv.cell_width + PADDING;
-        int xrgt = min(left + img->width, cterm->cols) * wv.cell_width + PADDING;
+        int xrgt = min(left + img->width, term.cols) * wv.cell_width + PADDING;
         if (img->len) {
           // better background handling implemented below; this version 
           // would expose artefacts if a transparent image is scrolled
@@ -806,7 +806,7 @@ winimgs_paint(void)
             fill_background(dc, &(RECT){xlft, ibot, xrgt, ybot});
           }
           else {
-            colour bg = wv.colours[cterm->rvideo ? FG_COLOUR_I : BG_COLOUR_I];
+            colour bg = wv.colours[term.rvideo ? FG_COLOUR_I : BG_COLOUR_I];
             //bg = RGB(90, 150, 222);  // test background filling
             HBRUSH br = CreateSolidBrush(bg);
             FillRect(dc, &(RECT){xlft + iwidth, ytop, xrgt, ibot}, br);
@@ -835,7 +835,7 @@ winimgs_paint(void)
             if (*cfg.background)
               fill_background(hdc, &(RECT){0, 0, xrgt, ybot});
             else {
-              colour bg = wv.colours[cterm->rvideo ? FG_COLOUR_I : BG_COLOUR_I];
+              colour bg = wv.colours[term.rvideo ? FG_COLOUR_I : BG_COLOUR_I];
               //bg = RGB(90, 150, 222);  // test background filling
               HBRUSH br = CreateSolidBrush(bg);
               FillRect(hdc, &(RECT){0, 0, xrgt, ybot}, br);
@@ -866,7 +866,7 @@ winimgs_paint(void)
             dc = GetDC(wv.wnd);
           }
         }
-        else if (top < 0 || top + img->height > cterm->rows) {
+        else if (top < 0 || top + img->height > term.rows) {
           // we did not check the scrolled-out image part, 
           // so keep the image for later display (when scrolled-in again)
         }
@@ -874,7 +874,7 @@ winimgs_paint(void)
           //destroy and remove
           destrimg = img;
 #ifdef debug_img_list
-          printf("paint: destroy @%d h %d virt %lld sb %d\n", img->top, img->height, cterm->virtuallines, cterm->sblines);
+          printf("paint: destroy @%d h %d virt %lld sb %d\n", img->top, img->height, term.virtuallines, term.sblines);
 #endif
 #ifdef debug_img_over
           printf("@%d:%d destroy over [%d]\n", top, left, img->imgi);
@@ -888,11 +888,11 @@ winimgs_paint(void)
       if (img->next)
         img->next->prev = img->prev;
       else
-        cterm->imgs.last = img->prev;
+        term.imgs.last = img->prev;
       if (img->prev)
         img->prev->next = img->next;
       else
-        cterm->imgs.first = img->next;
+        term.imgs.first = img->next;
 
       winimg_destroy(destrimg);
     }

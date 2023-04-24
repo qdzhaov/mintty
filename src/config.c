@@ -168,10 +168,11 @@ const config default_cfg = {
   .zoom_font_with_window = true,
   .alt_fn_shortcuts = true,
   .win_shortcuts = true,
+  .hkwinkeyall=0,
+  .hook_keyboard=1,
   .ctrl_shift_shortcuts = false,
   .ctrl_exchange_shift = false,
   .ctrl_controls = true,
-  .hkwinkeyall=0,
   .compose_key = 0,
   .key_prtscreen = "",	// VK_SNAPSHOT
   .key_pause = "",	// VK_PAUSE
@@ -222,7 +223,7 @@ const config default_cfg = {
   .search_context = 0,
   // Terminal
   .Term = "xterm",
-  .answerback = W(""),
+  .answerback = (""),
   .wrap_tab = 0,
   .old_wrapmodes = false,
   .enable_deccolm_init = false,
@@ -238,6 +239,7 @@ const config default_cfg = {
   .play_tone = 2,
   .printer = W(""),
   .confirm_exit = true,
+  .confirm_reset = false,
   // Command line
   .class = W(""),
   .hold = HOLD_START,
@@ -309,6 +311,7 @@ const config default_cfg = {
   .bold_as_special = false,
   .hover_title = true,
   .progress_bar = 0,
+  .progress_scan = 1,
   .dim_margins = false,
   .status_line = false,
   .baud = 0,
@@ -482,11 +485,12 @@ static cfg_option options[]= {
   {"ZoomFontWithWindow", OPT_BOOL, offcfg(zoom_font_with_window),__("ZoomFontWithWindow")},
   {"AltFnShortcuts", OPT_BOOL, offcfg(alt_fn_shortcuts),__("AltFnShortcuts")},
   {"WinShortcuts", OPT_BOOL, offcfg(win_shortcuts),__("WinShortcuts")},
+  {"hkwinkeyall", OPT_BOOL, offcfg(hkwinkeyall),__("hkwinkeyall")},
+  {"hook_keyboard", OPT_BOOL, offcfg(hook_keyboard),__("hook_keyboard")},
   {"CtrlShiftShortcuts", OPT_BOOL, offcfg(ctrl_shift_shortcuts),__("CtrlShiftShortcuts")},
   {"CtrlExchangeShift", OPT_BOOL, offcfg(ctrl_exchange_shift),__("CtrlExchangeShift")},
   {"CtrlControls", OPT_BOOL, offcfg(ctrl_controls),__("CtrlControls")},
   {"ComposeKey", OPT_COMPOSE_KEY, offcfg(compose_key),__("ComposeKey")},
-  {"hkwinkeyall", OPT_BOOL, offcfg(hkwinkeyall),__("hkwinkeyall")},
   {"Key_PrintScreen", OPT_STRING, offcfg(key_prtscreen),__("Key_PrintScreen")},
   {"Key_Pause", OPT_STRING, offcfg(key_pause),__("Key_Pause")},
   {"Key_Break", OPT_STRING, offcfg(key_break),__("Key_Break")},
@@ -548,7 +552,7 @@ static cfg_option options[]= {
   // Terminal
   {"Terminal",OPT_COMMENT,0,0},
   {"Term", OPT_STRING, offcfg(Term),__("Term")},
-  {"Answerback", OPT_WSTRING, offcfg(answerback),__("Answerback")},
+  {"Answerback", OPT_STRING, offcfg(answerback),__("Answerback")},
   {"OldWrapModes", OPT_BOOL, offcfg(old_wrapmodes),__("OldWrapModes")},
   {"Enable132ColumnSwitching", OPT_BOOL, offcfg(enable_deccolm_init),__("Enable132ColumnSwitching")},
   {"BellType", OPT_INT, offcfg(bell_type),__("BellType")},
@@ -569,6 +573,7 @@ static cfg_option options[]= {
   {"PlayTone", OPT_INT, offcfg(play_tone),__("PlayTone")},
   {"Printer", OPT_WSTRING, offcfg(printer),__("Printer")},
   {"ConfirmExit", OPT_BOOL, offcfg(confirm_exit),__("ConfirmExit")},
+  {"ConfirmReset", OPT_BOOL, offcfg(confirm_reset),__("ConfirmReset")},
 
   // Command line
   {"Command line",OPT_COMMENT,0,0},
@@ -651,6 +656,7 @@ static cfg_option options[]= {
   {"BoldAsRainbowSparkles", OPT_BOOL, offcfg(bold_as_special),__("BoldAsRainbowSparkles")},
   {"HoverTitle", OPT_BOOL, offcfg(hover_title),__("HoverTitle")},
   {"ProgressBar", OPT_BOOL, offcfg(progress_bar),__("ProgressBar")},
+  {"ProgressScan", OPT_INT, offcfg(progress_scan),__("ProgressScan")},
   {"Baud", OPT_INT, offcfg(baud),__("Baud")},
   {"Bloom", OPT_INT, offcfg(bloom),__("Bloom")},
   {"DimMargins", OPT_BOOL, offcfg(dim_margins),__("DimMargins")},
@@ -732,6 +738,7 @@ static opt_val * const opt_vals[] = {
     {("win"), MDK_WIN},
     {("super"), MDK_SUPER},
     {("hyper"), MDK_HYPER},
+    {("capslock"), MDK_CAPSLOCK},
     {0, 0}
   },
   [OPT_COMPOSE_KEY] = (opt_val[]) {
@@ -895,9 +902,11 @@ static int
 find_option(bool from_file, string name){
   if(initedhopts==0)inithopt();
   s_co_hashtab *pt=&hopts[HASHS(name)];
-  for (uint i = 0; pt->n; i++) {
-    if (!strcasecmp(name, options[pt->t[i]].name))
-      return pt->t[i];
+  if(pt){
+    for (uint i = 0; pt->n; i++) {
+      if (!strcasecmp(name, options[pt->t[i]].name))
+        return pt->t[i];
+    }
   }
   //__ %s: unknown option name
   opterror(_("Ignoring unknown option '%s'"), from_file, name, 0);
@@ -1502,10 +1511,6 @@ load_messages_file(const char * textdbf)
   }
 #ifdef debug_messages
   printf("read %d messages\n", nmsgs);
-#if debug_messages > 2
-  printf("msg bl√∂ -> <%s> <%ls>\n", loctext("bl√∂"), wloctext("bl√∂"));
-  printf("msg bl√∂ -> <%s> <%ls>\n", loctext("bl√∂"), wloctext("bl√∂"));
-#endif
 #endif
 }
 
@@ -1685,6 +1690,8 @@ load_config(string filename, int to_save)
   if (rok && access(filename, W_OK) < 0)
     to_save = false;
 
+  if (wv.report_config)
+    printf("loading config <%s>\n", filename);
 
   if (to_save) {
     if (rok|| (!rc_filename && to_save == 2) || to_save == 3) {
@@ -1692,6 +1699,8 @@ load_config(string filename, int to_save)
 
       delete(rc_filename);
       rc_filename = path_posix_to_win_w(filename);
+      if (wv.report_config)
+        printf("save to config <%ls>\n", rc_filename);
     }
   }
 
@@ -1770,8 +1779,8 @@ finish_config(void)
     (void)load_messages_lang("messages",0);
 #endif
 #ifdef debug_opterror
-  opterror("T√§st L %s %s", false, "bˆh", "b¸hÄ");
-  opterror("T√§st U %s %s", true, "b√∂h", "b√ºh‚Ç¨");
+  opterror("Tast L %s %s", false, "bh", "bh");
+  opterror("Tast U %s %s", true, "bh", "bh");
 #endif
 
   fix_config();
@@ -2368,8 +2377,8 @@ static void
 current_size_handler(control *unused(ctrl), int event)
 {
   if (event == EVENT_ACTION) {
-    new_cfg.cols = cterm->cols;
-    new_cfg.rows = cterm->rows;
+    new_cfg.cols = term.cols;
+    new_cfg.rows = term.rows;
     dlg_refresh(cols_box);
     dlg_refresh(rows_box);
   }
@@ -2378,9 +2387,9 @@ current_size_handler(control *unused(ctrl), int event)
 static void
 printer_handler(control *ctrl, int event)
 {
-  const wstring NONE = _W("ø None (printing disabled) ø");  // øø
+  const wstring NONE = _W("‚óá None (printing disabled) ‚óá");  // ‚ô¢‚óá
   const wstring CFG_NONE = W("");
-  const wstring DEFAULT = _W("ø Default printer ø");  // øø
+  const wstring DEFAULT = _W("‚óÜ Default printer ‚óÜ");  // ‚ô¶‚óÜ
   const wstring CFG_DEFAULT = W("*");
   wstring printer = new_cfg.printer;
   if (event == EVENT_REFRESH) {
@@ -2648,7 +2657,7 @@ bell_handler(control *ctrl, int event)
 static void
 bellfile_handler(control *ctrl, int event)
 {
-  const wstring NONE = _W("ø None (system sound) ø");  // øø
+  const wstring NONE = _W("‚óá None (system sound) ‚óá");  // ‚ô¢‚óá
   const wstring CFG_NONE = W("");
   wstring bell_file = new_cfg.bell_file[6];
   if (event == EVENT_REFRESH) {
@@ -3024,7 +3033,7 @@ static void
 theme_handler(control *ctrl, int event)
 {
   //__ terminal theme / colour scheme
-  const wstring NONE = _W("ø None ø");  // øø
+  const wstring NONE = _W("‚óá None ‚óá");  // ‚ô¢‚óá
   const wstring CFG_NONE = W("");
   //__ indicator of unsaved downloaded colour scheme
   const wstring DOWNLOADED = _W("downloaded / give me a name!");
@@ -3627,7 +3636,7 @@ static void
 emojis_handler(control *ctrl, int event)
 {
   //__ emojis style
-  const string NONE = _("ø None ø");  // øø
+  const string NONE = _("? None ?");  // ??
   string emojis = NONE;
   for (opt_val * o = opt_vals[OPT_EMOJIS]; o->name; o++) {
     if (new_cfg.emojis == o->val) {
@@ -3932,23 +3941,17 @@ setup_config_box(controlbox * b)
   );
 #ifdef support_blurred
   ctrl_columns(s, 2, with_glass ? 80 : 75, with_glass ? 20 : 25);
-  ctrl_checkbox( s,0, _W("Opa&que when focused"),0,
-    dlg_stdcheckbox_handler, &new_cfg.opaque_when_focused
-  );
-  ctrl_checkbox( s,1, _W("Blu&r"),0,
-    dlg_stdcheckbox_handler, &new_cfg.blurred
-  );
+  ctrl_checkbox( s,0, _W("Opa&que when focused"),0, dlg_stdcheckbox_handler, &new_cfg.opaque_when_focused);
+  ctrl_checkbox( s,1, _W("Blu&r"),0, dlg_stdcheckbox_handler, &new_cfg.blurred);
 #else
 #ifdef no_transparency_pseudo_slider
-  ctrl_checkbox( s,-1, _W("Opa&que when focused"),0,
-    dlg_stdcheckbox_handler, &new_cfg.opaque_when_focused
-  );
+  ctrl_checkbox( s,-1, _W("Opa&que when focused"),0, dlg_stdcheckbox_handler, &new_cfg.opaque_when_focused);
 #else
   ctrl_columns(s, 4, 64, 10, 16, 10);
   ctrl_checkbox( s,0, _W("Opa&que when focused"),0, dlg_stdcheckbox_handler, &new_cfg.opaque_when_focused);
   transparency_valbox = ctrl_editbox( s,2, 0,0, 100, transparency_valhandler, &new_cfg.transparency);
-  ctrl_pushbutton( s,1, _W("ø"),0, transparency_slider, "-");
-  ctrl_pushbutton( s,3, _W("ø"),0, transparency_slider, "+");
+  ctrl_pushbutton( s,1, _W("‚óÑ"),0, transparency_slider, "-");
+  ctrl_pushbutton( s,3, _W("‚ñ∫"),0, transparency_slider, "+");
 #endif
 #endif
 
@@ -3980,26 +3983,16 @@ setup_config_box(controlbox * b)
     if (strstr(cfg.old_options, "bold")) {
       s = ctrl_new_set(b, _W("Text"), null, null);
       ctrl_columns(s, 2, 50, 50);
-      ctrl_checkbox( s,0, _W("Sho&w bold as font"),0,
-        dlg_stdcheckbox_handler, &new_cfg.bold_as_font
-      );
-      ctrl_checkbox( s,1, _W("Show &bold as colour"),0,
-        dlg_stdcheckbox_handler, &new_cfg.bold_as_colour
-      );
+      ctrl_checkbox( s,0, _W("Sho&w bold as font"),0, dlg_stdcheckbox_handler, &new_cfg.bold_as_font);
+      ctrl_checkbox( s,1, _W("Show &bold as colour"),0, dlg_stdcheckbox_handler, &new_cfg.bold_as_colour);
     }
     else {
      if (0 != strstr(cfg.old_options, "blinking")) {
       s = ctrl_new_set(b, _W("Text"), null, _W("Show bold"));
       ctrl_columns(s, 3, 35, 35, 30);
-      ctrl_checkbox( s,0, _W("as font"),0,
-        bold_handler, &new_cfg.bold_as_font
-      );
-      ctrl_checkbox( s,1, _W("as colour"),0,
-        bold_handler, &new_cfg.bold_as_colour
-      );
-      ctrl_checkbox( s,2, _W("xterm"),0,
-        bold_handler, &bold_like_xterm
-      );
+      ctrl_checkbox( s,0, _W("as font"),0, bold_handler, &new_cfg.bold_as_font);
+      ctrl_checkbox( s,1, _W("as colour"),0, bold_handler, &new_cfg.bold_as_colour);
+      ctrl_checkbox( s,2, _W("xterm"),0, bold_handler, &bold_like_xterm);
      }
      else {
       ctrl_combobox( s,-1, _W("Show bold"),0,
@@ -4010,9 +4003,7 @@ setup_config_box(controlbox * b)
     }
   }
   else {
-    ctrl_fontsel(
-      s,-1, null,0, dlg_stdfontsel_handler, &new_cfg.font
-    );
+    ctrl_fontsel( s,-1, null,0, dlg_stdfontsel_handler, &new_cfg.font);
 
     // emoji style here, right after font?
 
@@ -4028,15 +4019,9 @@ setup_config_box(controlbox * b)
         null
       );
 
-      ctrl_checkbox( s,0, _W("Sho&w bold as font"),0,
-        dlg_stdcheckbox_handler, &new_cfg.bold_as_font
-      );
-      ctrl_checkbox( s,0, _W("Show &bold as colour"),0,
-        dlg_stdcheckbox_handler, &new_cfg.bold_as_colour
-      );
-      ctrl_checkbox( s,0, _W("&Allow blinking"),0,
-        dlg_stdcheckbox_handler, &new_cfg.allow_blinking
-      );
+      ctrl_checkbox( s,0, _W("Sho&w bold as font"),0, dlg_stdcheckbox_handler, &new_cfg.bold_as_font);
+      ctrl_checkbox( s,0, _W("Show &bold as colour"),0, dlg_stdcheckbox_handler, &new_cfg.bold_as_colour);
+      ctrl_checkbox( s,0, _W("&Allow blinking"),0, dlg_stdcheckbox_handler, &new_cfg.allow_blinking);
     }
     else {
      if (0 != strstr(cfg.old_options, "blinking")) {
@@ -4092,41 +4077,19 @@ setup_config_box(controlbox * b)
   */
   s = ctrl_new_set(b, _W("Keys"), _W("Keyboard features"), null);
   ctrl_columns(s, 2, 50, 50);
-  ctrl_checkbox( s,0, _W("&Backarrow sends ^H"),0,
-    dlg_stdcheckbox_handler, &new_cfg.backspace_sends_bs
-  );
-  ctrl_checkbox( s,1, _W("&Delete sends DEL"),0,
-    dlg_stdcheckbox_handler, &new_cfg.delete_sends_del
-  );
-  ctrl_checkbox( s,-1, _W("Ctrl+LeftAlt is Alt&Gr"),0,
-    dlg_stdcheckbox_handler, &new_cfg.ctrl_alt_is_altgr
-  );
-  ctrl_checkbox( s,-1, _W("AltGr is also Alt"),0,
-    dlg_stdcheckbox_handler, &new_cfg.altgr_is_alt
-  );
+  ctrl_checkbox( s,0, _W("&Backarrow sends ^H"),0, dlg_stdcheckbox_handler, &new_cfg.backspace_sends_bs);
+  ctrl_checkbox( s,1, _W("&Delete sends DEL"),0, dlg_stdcheckbox_handler, &new_cfg.delete_sends_del);
+  ctrl_checkbox( s,-1, _W("Ctrl+LeftAlt is Alt&Gr"),0, dlg_stdcheckbox_handler, &new_cfg.ctrl_alt_is_altgr);
+  ctrl_checkbox( s,-1, _W("AltGr is also Alt"),0, dlg_stdcheckbox_handler, &new_cfg.altgr_is_alt);
 
   s = ctrl_new_set(b, _W("Keys"), null, _W("Shortcuts"));
-  ctrl_checkbox( s,-1, _W("Cop&y and Paste (Ctrl/Shift+Ins)"),0,
-    dlg_stdcheckbox_handler, &new_cfg.clip_shortcuts
-  );
-  ctrl_checkbox( s,-1, _W("&Menu and Full Screen (Alt+Space/Enter)"),0,
-    dlg_stdcheckbox_handler, &new_cfg.window_shortcuts
-  );
-  ctrl_checkbox( s,-1, _W("&Switch window (Ctrl+[Shift+]Tab)"),0,
-    dlg_stdcheckbox_handler, &new_cfg.switch_shortcuts
-  );
-  ctrl_checkbox( s,-1, _W("&Zoom (Ctrl+plus/minus/zero)"),0,
-    dlg_stdcheckbox_handler, &new_cfg.zoom_shortcuts
-  );
-  ctrl_checkbox( s,-1, _W("&Alt+Fn shortcuts"),0,
-    dlg_stdcheckbox_handler, &new_cfg.alt_fn_shortcuts
-  );
-  ctrl_checkbox( s,-1, _W("&Win+x shortcuts"),0,
-    dlg_stdcheckbox_handler, &new_cfg.win_shortcuts
-  );
-  ctrl_checkbox( s,-1, _W("&Ctrl+Shift+letter shortcuts"),0,
-    dlg_stdcheckbox_handler, &new_cfg.ctrl_shift_shortcuts
-  );
+  ctrl_checkbox( s,-1, _W("Cop&y and Paste (Ctrl/Shift+Ins)"),0, dlg_stdcheckbox_handler, &new_cfg.clip_shortcuts);
+  ctrl_checkbox( s,-1, _W("&Menu and Full Screen (Alt+Space/Enter)"),0, dlg_stdcheckbox_handler, &new_cfg.window_shortcuts);
+  ctrl_checkbox( s,-1, _W("&Switch window (Ctrl+[Shift+]Tab)"),0, dlg_stdcheckbox_handler, &new_cfg.switch_shortcuts);
+  ctrl_checkbox( s,-1, _W("&Zoom (Ctrl+plus/minus/zero)"),0, dlg_stdcheckbox_handler, &new_cfg.zoom_shortcuts);
+  ctrl_checkbox( s,-1, _W("&Alt+Fn shortcuts"),0, dlg_stdcheckbox_handler, &new_cfg.alt_fn_shortcuts);
+  ctrl_checkbox( s,-1, _W("&Win+x shortcuts"),0, dlg_stdcheckbox_handler, &new_cfg.win_shortcuts);
+  ctrl_checkbox( s,-1, _W("&Ctrl+Shift+letter shortcuts"),0, dlg_stdcheckbox_handler, &new_cfg.ctrl_shift_shortcuts);
 
   if (strstr(cfg.old_options, "composekey")) {
     s = ctrl_new_set(b, _W("Keys"), null, _W("Compose key"));
@@ -4154,19 +4117,11 @@ setup_config_box(controlbox * b)
 //#define copy_as_html_checkbox
 //#define copy_as_html_right
 #ifdef copy_as_html_checkbox
-    ctrl_checkbox( s,0, _W("Cop&y on select"),0,
-      dlg_stdcheckbox_handler, &new_cfg.copy_on_select
-    );
-    ctrl_checkbox( s,0, _W("Copy with TABs"),0,
-      dlg_stdcheckbox_handler, &new_cfg.copy_tabs
-    );
-    ctrl_checkbox( s,1, _W("Copy as &rich text"),0,
-      dlg_stdcheckbox_handler, &new_cfg.copy_as_rtf
-    );
+    ctrl_checkbox( s,0, _W("Cop&y on select"),0, dlg_stdcheckbox_handler, &new_cfg.copy_on_select);
+    ctrl_checkbox( s,0, _W("Copy with TABs"),0, dlg_stdcheckbox_handler, &new_cfg.copy_tabs);
+    ctrl_checkbox( s,1, _W("Copy as &rich text"),0, dlg_stdcheckbox_handler, &new_cfg.copy_as_rtf);
     ctrl_columns(s, 2, 50, 50);
-    ctrl_checkbox( s,1, _W("Copy as &HTML"),0,
-      dlg_stdcheckbox_handler, &new_cfg.copy_as_html
-    );
+    ctrl_checkbox( s,1, _W("Copy as &HTML"),0, dlg_stdcheckbox_handler, &new_cfg.copy_as_html);
 #else
 #ifdef copy_as_html_right
     ctrl_radiobuttons( s,1, _W("Copy as &HTML"),0, 2,
@@ -4177,23 +4132,13 @@ setup_config_box(controlbox * b)
       _W("&Full"), 3,
       null
     );
-    ctrl_checkbox( s,0, _W("Cop&y on select"),0,
-      dlg_stdcheckbox_handler, &new_cfg.copy_on_select
-    );
-    ctrl_checkbox( s,0, _W("Copy with TABs"),0,
-      dlg_stdcheckbox_handler, &new_cfg.copy_tabs
-    );
-    ctrl_checkbox( s,0, _W("Copy as &rich text"),0,
-      dlg_stdcheckbox_handler, &new_cfg.copy_as_rtf
-    );
+    ctrl_checkbox( s,0, _W("Cop&y on select"),0, dlg_stdcheckbox_handler, &new_cfg.copy_on_select);
+    ctrl_checkbox( s,0, _W("Copy with TABs"),0, dlg_stdcheckbox_handler, &new_cfg.copy_tabs);
+    ctrl_checkbox( s,0, _W("Copy as &rich text"),0, dlg_stdcheckbox_handler, &new_cfg.copy_as_rtf);
 #else
-    ctrl_checkbox( s,0, _W("Cop&y on select"),0,
-      dlg_stdcheckbox_handler, &new_cfg.copy_on_select
-    );
+    ctrl_checkbox( s,0, _W("Cop&y on select"),0, dlg_stdcheckbox_handler, &new_cfg.copy_on_select);
     // no space for "Copy with TABs"
-    ctrl_checkbox( s,1, _W("Copy as &rich text"),0,
-      dlg_stdcheckbox_handler, &new_cfg.copy_as_rtf
-    );
+    ctrl_checkbox( s,1, _W("Copy as &rich text"),0, dlg_stdcheckbox_handler, &new_cfg.copy_as_rtf);
     ctrl_columns(s, 2, 100, 0);
     ctrl_radiobuttons( s,-1, _W("Copy as &HTML"),0, 4,
       dlg_stdradiobutton_handler, &new_cfg.copy_as_html,
@@ -4206,9 +4151,9 @@ setup_config_box(controlbox * b)
 #endif
 #endif
   }
-  ctrl_checkbox( s,-1, _W("Clic&ks place command line cursor"),0,
-    dlg_stdcheckbox_handler, &new_cfg.clicks_place_cursor
-  );
+  ctrl_checkbox( s,-1, _W("Clic&ks place command line cursor"),0, dlg_stdcheckbox_handler, &new_cfg.clicks_place_cursor);
+  ctrl_editbox( s,-1, _W("Delimiters:"), 0,70, dlg_stdstringbox_handler, &new_cfg.word_chars_excl );
+  ctrl_editbox( s,-1, _W("Word Characters:"), 0,70, dlg_stdstringbox_handler, &new_cfg.word_chars);
 
   s = ctrl_new_set(b, _W("Mouse"), null, _W("Click actions"));
   ctrl_radiobuttons( s,-1, _W("Right mouse button"),0, 4,
@@ -4265,20 +4210,14 @@ setup_config_box(controlbox * b)
     */
     s = ctrl_new_set(b, _W("Selection"), _W("Selection and clipboard"), null);
     ctrl_columns(s, 2, 100, 0);
-    ctrl_checkbox( s,-1, _W("Clear selection on input"),0,
-      dlg_stdcheckbox_handler, &new_cfg.input_clears_selection
-    );
+    ctrl_checkbox( s,-1, _W("Clear selection on input"),0, dlg_stdcheckbox_handler, &new_cfg.input_clears_selection);
 
 #define copy_as_html_single_line
 
     s = ctrl_new_set(b, _W("Selection"), null, _W("Clipboard"));
     ctrl_columns(s, 2, 50, 50);
-    ctrl_checkbox( s,0, _W("Cop&y on select"),0,
-      dlg_stdcheckbox_handler, &new_cfg.copy_on_select
-    );
-    ctrl_checkbox( s,0, _W("Copy with TABs"),0,
-      dlg_stdcheckbox_handler, &new_cfg.copy_tabs
-    );
+    ctrl_checkbox( s,0, _W("Cop&y on select"),0, dlg_stdcheckbox_handler, &new_cfg.copy_on_select);
+    ctrl_checkbox( s,0, _W("Copy with TABs"),0, dlg_stdcheckbox_handler, &new_cfg.copy_tabs);
     ctrl_columns(s, 2, 50, 50);
     ctrl_checkbox( s,0, _W("Copy as &rich text"),0,
       dlg_stdcheckbox_handler, &new_cfg.copy_as_rtf
@@ -4305,25 +4244,17 @@ setup_config_box(controlbox * b)
 #endif
 
     ctrl_columns(s, 2, 50, 50);
-    ctrl_checkbox( s,-1, _W("Trim space from selection"),0,
-      dlg_stdcheckbox_handler, &new_cfg.trim_selection
-    );
-    ctrl_checkbox( s,-1, _W("Allow setting selection"),0,
-      dlg_stdcheckbox_handler, &new_cfg.allow_set_selection
-    );
+    ctrl_checkbox( s,-1, _W("Trim space from selection"),0, dlg_stdcheckbox_handler, &new_cfg.trim_selection);
+    ctrl_checkbox( s,-1, _W("Allow setting selection"),0, dlg_stdcheckbox_handler, &new_cfg.allow_set_selection);
 
     s = ctrl_new_set(b, _W("Selection"), null, _W("Window"));
     ctrl_columns(s, 2, 100, 0);
     // window-related
     //__ Options - Selection: clock position of info popup for text size
-    ctrl_editbox( s,-1, _W("Show size while selecting (0..12)"), 0,15,
-      dlg_stdintbox_handler, &new_cfg.selection_show_size
-    );
+    ctrl_editbox( s,-1, _W("Show size while selecting (0..12)"), 0,15, dlg_stdintbox_handler, &new_cfg.selection_show_size);
 #define dont_config_suspbuf
 #ifdef config_suspbuf
-    ctrl_editbox( s,-1, _W("Suspend output while selecting"),0, 24,
-      dlg_stdintbox_handler, &new_cfg.suspbuf_max
-    );
+    ctrl_editbox( s,-1, _W("Suspend output while selecting"),0, 24, dlg_stdintbox_handler, &new_cfg.suspbuf_max);
 #endif
   }
 
@@ -4344,9 +4275,7 @@ setup_config_box(controlbox * b)
   );
   s = ctrl_new_set(b, _W("Window"), null, null);
   ctrl_columns(s, 2, 80, 20);
-  ctrl_editbox( s,0, _W("Scroll&back lines"),0, 50,
-    dlg_stdintbox_handler, &new_cfg.scrollback_lines
-  );
+  ctrl_editbox( s,0, _W("Scroll&back lines"),0, 50, dlg_stdintbox_handler, &new_cfg.scrollback_lines);
   ctrl_radiobuttons( s,-1, _W("Scrollbar"),0, 4,
     dlg_stdradiobutton_handler, &new_cfg.scrollbar,
     _W("&Left"), -1,
@@ -4375,12 +4304,8 @@ setup_config_box(controlbox * b)
   ctrl_checkbox( s,4, _W("&Sup"),0, modifier_handler, &new_cfg.scroll_mod);
   ctrl_checkbox( s,5, _W("&Hyp"),0, modifier_handler, &new_cfg.scroll_mod);
 #endif
-  ctrl_checkbox( s,-1, _W("&PgUp and PgDn scroll without modifier"),0,
-    dlg_stdcheckbox_handler, &new_cfg.pgupdn_scroll
-  );
-  ctrl_checkbox( s,-1, _W("&AllocConsole ,Some console programs need it."),0,
-    dlg_stdcheckbox_handler, &new_cfg.allocconsole
-  );
+  ctrl_checkbox( s,-1, _W("&PgUp and PgDn scroll without modifier"),0, dlg_stdcheckbox_handler, &new_cfg.pgupdn_scroll);
+  ctrl_checkbox( s,-1, _W("&AllocConsole ,Some console programs need it."),0, dlg_stdcheckbox_handler, &new_cfg.allocconsole);
 
   s = ctrl_new_set(b, _W("Window"), null, _W("UI language"));
   ctrl_columns(s, 2, 60, 40);
@@ -4398,7 +4323,7 @@ setup_config_box(controlbox * b)
   s = ctrl_new_set(b, _W("Terminal"), null, _W("Bell"));
   ctrl_columns(s, 2, 73, 27);
   ctrl_combobox( s,0, null,0, 100, bell_handler, 0);
-  ctrl_pushbutton( s,1, _W("ø &Play"),0, bell_tester, 0);
+  ctrl_pushbutton( s,1, _W("‚ñ∫ &Play"),0, bell_tester, 0);
   ctrl_columns(s, 1, 100);  // reset column stuff so we can rearrange them
   ctrl_columns(s, 2, 100, 0);
   ctrl_combobox( s,0, _W("&Wave"),0, 83, bellfile_handler, &new_cfg.bell_file[6]);
@@ -4443,11 +4368,7 @@ setup_config_box(controlbox * b)
 #endif
   s = ctrl_new_set(b, _W("Terminal"), null, null);
     //__ Options - Terminal:
-  ctrl_checkbox( s,-1, _W("Prompt about running processes on &close"),0,
-    dlg_stdcheckbox_handler, &new_cfg.confirm_exit
-  );
+  ctrl_checkbox( s,-1, _W("Prompt about running processes on &close"),0, dlg_stdcheckbox_handler, &new_cfg.confirm_exit);
     //__ Options - Terminal:
-  ctrl_checkbox( s,-1, _W("Status Line"),0,
-    dlg_stdcheckbox_handler, &new_cfg.status_line
-  );
+  ctrl_checkbox( s,-1, _W("Status Line"),0, dlg_stdcheckbox_handler, &new_cfg.status_line);
 }

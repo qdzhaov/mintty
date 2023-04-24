@@ -53,7 +53,7 @@ static void
 cycle_pointer_style()
 {
   cfg.cursor_type = (cfg.cursor_type + 1) % 3;
-  cterm->cursor_invalid = true;
+  term.cursor_invalid = true;
   term_schedule_cblink();
   win_update(false);
 }
@@ -120,25 +120,25 @@ kb_select(uint key, mod_keys mods)
   // note kb_select_key for re-anchor handling?
   //kb_select_key = key;
   // start and anchor keyboard selection
-  cterm->sel_pos = (pos){.y = cterm->curs.y, .x = cterm->curs.x, .r = 0};
-  cterm->sel_anchor = cterm->sel_pos;
-  cterm->sel_start = cterm->sel_pos;
-  cterm->sel_end = cterm->sel_pos;
-  cterm->sel_rect = mods & MDK_ALT;
-  cterm->selection_pending = true;
+  term.sel_pos = (pos){.y = term.curs.y, .x = term.curs.x, .r = 0};
+  term.sel_anchor = term.sel_pos;
+  term.sel_start = term.sel_pos;
+  term.sel_end = term.sel_pos;
+  term.sel_rect = mods & MDK_ALT;
+  term.selection_pending = true;
   return 1;
 }
-static uint mflags_defsize() { return (IsZoomed(wv.wnd) || cterm->cols != cfg.cols || cterm->rows != cfg.rows) ? MF_ENABLED : MF_GRAYED; }
+static uint mflags_defsize() { return (IsZoomed(wv.wnd) || term.cols != cfg.cols || term.rows != cfg.rows) ? MF_ENABLED : MF_GRAYED; }
 #ifdef allow_disabling_scrollbar
-static uint mflags_scrollbar_outer() { return cterm->show_scrollbar ? MF_CHECKED : MF_UNCHECKED | cfg.scrollbar ? 0 : MF_GRAYED ; }
+static uint mflags_scrollbar_outer() { return term.show_scrollbar ? MF_CHECKED : MF_UNCHECKED | cfg.scrollbar ? 0 : MF_GRAYED ; }
 #else
-static uint mflags_scrollbar_outer() { return cterm->show_scrollbar ? MF_CHECKED : MF_UNCHECKED ; }
+static uint mflags_scrollbar_outer() { return term.show_scrollbar ? MF_CHECKED : MF_UNCHECKED ; }
 #endif
-static uint mflags_scrollbar_inner() { return cfg.scrollbar?(  cterm->show_scrollbar ? MF_CHECKED : MF_UNCHECKED): MF_GRAYED; }
+static uint mflags_scrollbar_inner() { return cfg.scrollbar?(  term.show_scrollbar ? MF_CHECKED : MF_UNCHECKED): MF_GRAYED; }
 static uint mflags_logging() { return (wv.logging ? MF_CHECKED : MF_UNCHECKED) ; }
-static uint mflags_bidi() { return (cfg.bidi == 0 || (cfg.bidi == 1 && (cterm->on_alt_screen ^ cterm->show_other_screen))) ? MF_GRAYED : cterm->disable_bidi ? MF_UNCHECKED : MF_CHECKED; }
-static uint mflags_dim_margins() { return cterm->dim_margins ? MF_CHECKED : MF_UNCHECKED; }
-static uint mflags_status_line() { return cterm->st_type == 1 ? MF_CHECKED : MF_UNCHECKED; }
+static uint mflags_bidi() { return (cfg.bidi == 0 || (cfg.bidi == 1 && (term.on_alt_screen ^ term.show_other_screen))) ? MF_GRAYED : term.disable_bidi ? MF_UNCHECKED : MF_CHECKED; }
+static uint mflags_dim_margins() { return term.dim_margins ? MF_CHECKED : MF_UNCHECKED; }
+static uint mflags_status_line() { return term.st_type == 1 ? MF_CHECKED : MF_UNCHECKED; }
 static void zoom_font_out   (){ win_zoom_font(-1, 0);}
 static void zoom_font_in    (){ win_zoom_font( 1, 0);}
 static void zoom_font_reset (){ win_zoom_font( 0, 0);}
@@ -160,7 +160,7 @@ static void lock_title() { cfg.title_settable = false; }
 static void clear_title() { win_set_title(W("")); }
 static void refresh() { win_invalidate_all(false); }
 //static void scroll_key(int key) { SendMessage(wv.wnd, WM_VSCROLL, key, 0); }
-static int  vtabclose    (){if(!child_is_alive(cterm)) {win_tab_clean();return 1;}return 0;}
+static int  vtabclose    (){if(!child_is_alive(&term)) {win_tab_clean();return 1;}return 0;}
 static void scroll_top	 (){SendMessage(wv.wnd, WM_VSCROLL,SB_TOP      ,0);}      
 static void scroll_end	 (){SendMessage(wv.wnd, WM_VSCROLL,SB_BOTTOM   ,0);}   
 static void scroll_pgup	 (){SendMessage(wv.wnd, WM_VSCROLL,SB_PAGEUP   ,0);}   
@@ -169,12 +169,12 @@ static void scroll_lnup	 (){SendMessage(wv.wnd, WM_VSCROLL,SB_LINEUP   ,0);}
 static void scroll_lndn	 (){SendMessage(wv.wnd, WM_VSCROLL,SB_LINEDOWN ,0);} 
 static void scroll_prev	 (){SendMessage(wv.wnd, WM_VSCROLL,SB_PRIOR    ,0);}    
 static void scroll_next	 (){SendMessage(wv.wnd, WM_VSCROLL,SB_NEXT     ,0);}     
-void toggle_vt220() { cterm->vt220_keys = !cterm->vt220_keys; }
-void toggle_auto_repeat() { cterm->auto_repeat = !cterm->auto_repeat; }
-void toggle_bidi() { cterm->disable_bidi = !cterm->disable_bidi; }
-void toggle_dim_margins() { cterm->dim_margins = !cterm->dim_margins; }
+void toggle_vt220() { term.vt220_keys = !term.vt220_keys; }
+void toggle_auto_repeat() { term.auto_repeat = !term.auto_repeat; }
+void toggle_bidi() { term.disable_bidi = !term.disable_bidi; }
+void toggle_dim_margins() { term.dim_margins = !term.dim_margins; }
 void toggle_status_line() {
-  if (cterm->st_type == 1) term_set_status_type(0, 0);
+  if (term.st_type == 1) term_set_status_type(0, 0);
   else term_set_status_type(1, 0);
 }
 void tab_prev	    (){win_tab_change(-1);}
@@ -201,8 +201,8 @@ static void win_ctrlmode(){
   wv.last_tabk_time=GetMessageTime();
 }
 static uint mflags_lock_title() { return cfg.title_settable ? MF_ENABLED : MF_GRAYED; }
-static uint mflags_copy() { return cterm->selected ? MF_ENABLED : MF_GRAYED; }
-static uint mflags_kb_select() { return cterm->selection_pending; }
+static uint mflags_copy() { return term.selected ? MF_ENABLED : MF_GRAYED; }
+static uint mflags_kb_select() { return term.selection_pending; }
 
 static void
 refresh_scroll_title()
@@ -210,25 +210,25 @@ refresh_scroll_title()
   win_unprefix_title(_W("[NO SCROLL] "));
   win_unprefix_title(_W("[SCROLL MODE] "));
   win_unprefix_title(_W("[NO SCROLL] "));
-  if (cterm->no_scroll)
+  if (term.no_scroll)
     win_prefix_title(_W("[NO SCROLL] "));
-  if (cterm->scroll_mode)
+  if (term.scroll_mode)
     win_prefix_title(_W("[SCROLL MODE] "));
 }
 
 static void
 clear_scroll_lock()
 {
-  bool scrlock0 = cterm->no_scroll || cterm->scroll_mode;
-  if (cterm->no_scroll < 0) {
-    cterm->no_scroll = 0;
+  bool scrlock0 = term.no_scroll || term.scroll_mode;
+  if (term.no_scroll < 0) {
+    term.no_scroll = 0;
   }
-  if (cterm->scroll_mode < 0) {
-    cterm->scroll_mode = 0;
+  if (term.scroll_mode < 0) {
+    term.scroll_mode = 0;
   }
-  bool scrlock = cterm->no_scroll || cterm->scroll_mode;
+  bool scrlock = term.no_scroll || term.scroll_mode;
   if (scrlock != scrlock0) {
-    sync_scroll_lock(cterm->no_scroll || cterm->scroll_mode);
+    sync_scroll_lock(term.no_scroll || term.scroll_mode);
     refresh_scroll_title();
   }
 }
@@ -238,8 +238,8 @@ static void win_toggle_screen_on() { win_keep_screen_on(!wv.keep_screen_on); }
 static int no_scroll(uint key, mod_keys mods) {
   (void)mods;
   (void)key;
-  if (!cterm->no_scroll) {
-    cterm->no_scroll = -1;
+  if (!term.no_scroll) {
+    term.no_scroll = -1;
     sync_scroll_lock(true);
     win_prefix_title(_W("[NO SCROLL] "));
     term_flush();
@@ -249,8 +249,8 @@ static int no_scroll(uint key, mod_keys mods) {
 static int scroll_mode(uint key, mod_keys mods) {
   (void)mods;
   (void)key;
-  if (!cterm->scroll_mode) {
-    cterm->scroll_mode = -1;
+  if (!term.scroll_mode) {
+    term.scroll_mode = -1;
     sync_scroll_lock(true);
     win_prefix_title(_W("[SCROLL MODE] "));
     term_flush();
@@ -260,9 +260,9 @@ static int scroll_mode(uint key, mod_keys mods) {
 static int toggle_no_scroll(uint key, mod_keys mods) {
   (void)mods;
   (void)key;
-  cterm->no_scroll = !cterm->no_scroll;
-  sync_scroll_lock(cterm->no_scroll || cterm->scroll_mode);
-  if (!cterm->no_scroll) {
+  term.no_scroll = !term.no_scroll;
+  sync_scroll_lock(term.no_scroll || term.scroll_mode);
+  if (!term.no_scroll) {
     refresh_scroll_title();
     term_flush();
   }
@@ -273,9 +273,9 @@ static int toggle_no_scroll(uint key, mod_keys mods) {
 static int toggle_scroll_mode(uint key, mod_keys mods) {
   (void)mods;
   (void)key;
-  cterm->scroll_mode = !cterm->scroll_mode;
-  sync_scroll_lock(cterm->no_scroll || cterm->scroll_mode);
-  if (!cterm->scroll_mode) {
+  term.scroll_mode = !term.scroll_mode;
+  sync_scroll_lock(term.no_scroll || term.scroll_mode);
+  if (!term.scroll_mode) {
     refresh_scroll_title();
     term_flush();
   }
@@ -283,18 +283,18 @@ static int toggle_scroll_mode(uint key, mod_keys mods) {
     win_prefix_title(_W("[SCROLL MODE] "));
   return 0;
 }
-static uint mflags_no_scroll() { return cterm->no_scroll ? MF_CHECKED : MF_UNCHECKED; }
-static uint mflags_scroll_mode() { return cterm->scroll_mode ? MF_CHECKED : MF_UNCHECKED; }
+static uint mflags_no_scroll() { return term.no_scroll ? MF_CHECKED : MF_UNCHECKED; }
+static uint mflags_scroll_mode() { return term.scroll_mode ? MF_CHECKED : MF_UNCHECKED; }
 static uint mflags_always_top() { return wv.win_is_always_on_top ? MF_CHECKED: MF_UNCHECKED; }
 static uint mflags_screen_on() { return wv.keep_screen_on ? MF_CHECKED: MF_UNCHECKED; } 
 #endif
 static uint mflags_fullscreen() { return wv.win_is_fullscreen ? MF_CHECKED : MF_UNCHECKED; }
 static uint mflags_zoomed() { return IsZoomed(wv.wnd) ? MF_CHECKED: MF_UNCHECKED; }
-static uint mflags_flipscreen() { return cterm->show_other_screen ? MF_CHECKED : MF_UNCHECKED; }
-static uint mflags_open() { return cterm->selected ? MF_ENABLED : MF_GRAYED; }
+static uint mflags_flipscreen() { return term.show_other_screen ? MF_CHECKED : MF_UNCHECKED; }
+static uint mflags_open() { return term.selected ? MF_ENABLED : MF_GRAYED; }
 static uint mflags_char_info() { return show_charinfo ? MF_CHECKED : MF_UNCHECKED; }
-static uint mflags_vt220() { return cterm->vt220_keys ? MF_CHECKED : MF_UNCHECKED; }
-static uint mflags_auto_repeat() { return cterm->auto_repeat ? MF_CHECKED : MF_UNCHECKED; }
+static uint mflags_vt220() { return term.vt220_keys ? MF_CHECKED : MF_UNCHECKED; }
+static uint mflags_auto_repeat() { return term.auto_repeat ? MF_CHECKED : MF_UNCHECKED; }
 static uint mflags_options() { return wv.config_wnd ? MF_GRAYED : MF_ENABLED; }
 static uint mflags_tek_mode() { return tek_mode ? MF_ENABLED : MF_GRAYED; }
 
@@ -304,12 +304,12 @@ static void hor_out_1() { horsizing(1, false); }
 static void hor_in_1() { horsizing(-1, false); }
 static void hor_narrow_1() { horsizing(-1, true); }
 static void hor_wide_1() { horsizing(1, true); }
-static void hor_left_mult() { horscroll(-cterm->cols / 10); }
-static void hor_right_mult() { horscroll(cterm->cols / 10); }
-static void hor_out_mult() { horsizing(cterm->cols / 10, false); }
-static void hor_in_mult() { horsizing(-cterm->cols / 10, false); }
-static void hor_narrow_mult() { horsizing(-cterm->cols / 10, true); }
-static void hor_wide_mult() { horsizing(cterm->cols / 10, true); }
+static void hor_left_mult() { horscroll(-term.cols / 10); }
+static void hor_right_mult() { horscroll(term.cols / 10); }
+static void hor_out_mult() { horsizing(term.cols / 10, false); }
+static void hor_in_mult() { horsizing(-term.cols / 10, false); }
+static void hor_narrow_mult() { horsizing(-term.cols / 10, true); }
+static void hor_wide_mult() { horsizing(term.cols / 10, true); }
 
 void win_close();
 typedef struct pstr{ short len; char s[1]; }pstr;
@@ -331,12 +331,12 @@ pstr *psdup(const char*s){
 
 static void wpwstr(pwstr*s){//FT_RAWS
   provide_input(s->s[0]);
-  child_sendw(cterm,s->s, s->len );
+  child_sendw(&term,s->s, s->len );
 }
 static void wpesccode(int code,int mods){//FT_ESCC
   char buf[33];
   int len = sprintf(buf, mods ? "\e[%i;%u~" : "\e[%i~", code, mods + 1);
-  child_send(cterm,buf, len);
+  child_send(&term,buf, len);
 }
 static void shellcmd(const char*cmd){//FT_SHEL
   term_cmd(cmd);
