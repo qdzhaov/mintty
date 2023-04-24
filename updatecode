@@ -1,0 +1,7 @@
+ update from origin:
+ vd(){vimdiff mintty/$1 mintty_org/$1 minttyo/$1}
+ pd(){ \cp mintty_org/$1 mintty/$1 ;\cp mintty_org/$1 minttyo/$1 }
+ diff -r mintty_org minttyo>diffs
+ grep diff diffs|sed "s/minttyo.*//g;s/diff.*_org\///g">f
+ cat f
+

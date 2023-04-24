@@ -516,7 +516,7 @@ win_open(wchar*wpath, bool adjust_dir)
     shell_exec(wpath); // frees wpath
   }
   else {
-    wstring conv_wpath = child_conv_path(cterm,wpath, adjust_dir);
+    wstring conv_wpath = child_conv_path(&term,wpath, adjust_dir);
 #ifdef debug_wslpath
     printf("win_open <%ls> <%ls>\n", wpath, conv_wpath);
 #endif
@@ -1157,7 +1157,7 @@ paste_hdrop(HDROP drop)
 
   if (!wv.support_wsl && *cfg.drop_commands) {
     // try to determine foreground program
-    char * fg_prog = foreground_prog(cterm);
+    char * fg_prog = foreground_prog(&term);
     if (fg_prog) {
       // match program base name
       char * drops = cs__wcstombs(cfg.drop_commands);
@@ -1174,11 +1174,11 @@ paste_hdrop(HDROP drop)
           *format = 's';
           char * pastebuf = newn(char, strlen(paste) + strlen(buf) + 1);
           sprintf(pastebuf, paste, buf);
-          child_send(cterm,pastebuf, strlen(pastebuf));
+          child_send(&term,pastebuf, strlen(pastebuf));
           VFREE(pastebuf);
         }
         else
-          child_send(cterm,paste, strlen(paste));
+          child_send(&term,paste, strlen(paste));
         VFREE(drops);  // also frees paste which points into drops
         VFREE(fg_prog);
         VFREE(buf);
@@ -1191,12 +1191,12 @@ paste_hdrop(HDROP drop)
 
   bufpaths(true, true);
 
-  if (cterm->bracketed_paste)
-    child_write(cterm,"\e[200~", 6);
-  child_send(cterm,buf, buf_pos);
+  if (term.bracketed_paste)
+    child_write(&term,"\e[200~", 6);
+  child_send(&term,buf, buf_pos);
   VFREE(buf);
-  if (cterm->bracketed_paste)
-    child_write(cterm,"\e[201~", 6);
+  if (term.bracketed_paste)
+    child_write(&term,"\e[201~", 6);
 }
 
 static void
@@ -1207,12 +1207,12 @@ paste_path(HANDLE data)
   buf_path(s, true, true);
   GlobalUnlock(data);
 
-  if (cterm->bracketed_paste)
-    child_write(cterm,"\e[200~", 6);
-  child_send(cterm,buf, buf_pos);
+  if (term.bracketed_paste)
+    child_write(&term,"\e[200~", 6);
+  child_send(&term,buf, buf_pos);
   VFREE(buf);
-  if (cterm->bracketed_paste)
-    child_write(cterm,"\e[201~", 6);
+  if (term.bracketed_paste)
+    child_write(&term,"\e[201~", 6);
 }
 
 static void
@@ -1243,7 +1243,7 @@ do_win_paste(bool do_path)
     return;
 
   if (cfg.input_clears_selection)
-    cterm->selected = false;
+    term.selected = false;
 
   HGLOBAL data;
   if ((data = GetClipboardData(CF_HDROP))) {

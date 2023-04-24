@@ -60,18 +60,18 @@ static char scheme = 0;
       else if (c == '/') {
         scheme = '/';
       }
-      else if (scheme)
+      else if (scheme == 's')  // #1209 / #1208
         break;
       else
         scheme = 0;
     }
 
     if (iswalnum(c)) ret_p = p;
-    else if (cterm->mouse_state != MS_OPENING && *cfg.word_chars_excl){
+    else if (term.mouse_state != MS_OPENING && *cfg.word_chars_excl){
       if (strchr(cfg.word_chars_excl, c))
         break;
     }
-    else if (cterm->mouse_state != MS_OPENING && *cfg.word_chars) {
+    else if (term.mouse_state != MS_OPENING && *cfg.word_chars) {
       if (!strchr(cfg.word_chars, c))
         break;
       ret_p = p;
@@ -84,13 +84,13 @@ static char scheme = 0;
     }
     // support URLs with parentheses (#1196)
     // distinguish opening and closing parentheses to match proper nesting
-    else if (!cterm->mouse_state && strchr("([{", c)) {
+    else if (!term.mouse_state && strchr("([{", c)) {
       level ++;
       //printf("%d: %c forward %d level %d\n", p.x, c, forward, level);
       if (forward)
         ret_p = p;
     }
-    else if (!cterm->mouse_state && strchr(")]}", c)) {
+    else if (!term.mouse_state && strchr(")]}", c)) {
       level --;
       //printf("%d: %c forward %d level %d\n", p.x, c, forward, level);
       if (forward && level < 0)
@@ -110,7 +110,7 @@ static char scheme = 0;
 
     if (forward) {
       p.x++;
-      if (p.x >= cterm->cols - ((line->lattr & LATTR_WRAPPED2) != 0)) {
+      if (p.x >= term.cols - ((line->lattr & LATTR_WRAPPED2) != 0)) {
         if (!(line->lattr & LATTR_WRAPPED))
           break;
         p.x = 0;
@@ -126,13 +126,12 @@ static char scheme = 0;
         line = fetch_line(--p.y);
         if (!(line->lattr & LATTR_WRAPPED))
           break;
-        p.x = cterm->cols - ((line->lattr & LATTR_WRAPPED2) != 0);
+        p.x = term.cols - ((line->lattr & LATTR_WRAPPED2) != 0);
       }
       p.x--;
     }
   }
 
-  //printf("%d: return\n", ret_p.x);
   release_line(line);
   return ret_p;
 }
@@ -143,7 +142,7 @@ static char scheme = 0;
 static pos
 sel_spread_half(pos p, bool forward)
 {
-  switch (cterm->mouse_state) {
+  switch (term.mouse_state) {
     when MS_SEL_CHAR: {
      /*
       * In this mode, every character is a separate unit, except
@@ -151,13 +150,13 @@ sel_spread_half(pos p, bool forward)
       */
       termline *line = fetch_line(p.y);
       if (!(line->lattr & LATTR_WRAPPED)) {
-        termchar *q = line->chars + cterm->cols;
+        termchar *q = line->chars + term.cols;
         while (q > line->chars && q[-1].chr == ' ' && !q[-1].cc_next)
           q--;
-        if (q == line->chars + cterm->cols)
+        if (q == line->chars + term.cols)
           q--;
         if (p.x >= q - line->chars)
-          p.x = forward ? cterm->cols - 1 : q - line->chars;
+          p.x = forward ? term.cols - 1 : q - line->chars;
       }
       release_line(line);
     }
@@ -172,7 +171,7 @@ sel_spread_half(pos p, bool forward)
           p.x = 0;
         }
         int x = p.x;
-        p.x = cterm->cols - 1;
+        p.x = term.cols - 1;
         do {
           if (get_char(line, x) != ' ')
             p.x = x;
@@ -200,54 +199,54 @@ sel_spread_half(pos p, bool forward)
 static void
 sel_spread(void)
 {
-  cterm->sel_start = sel_spread_half(cterm->sel_start, false);
-  cterm->sel_end = sel_spread_half(cterm->sel_end, true);
-  incpos(cterm->sel_end);
+  term.sel_start = sel_spread_half(term.sel_start, false);
+  term.sel_end = sel_spread_half(term.sel_end, true);
+  incpos(term.sel_end);
 }
 
 static bool
 hover_spread_empty(void)
 {
   //printf("hover_spread_empty\n");
-  cterm->hover_start = sel_spread_word(cterm->hover_start, false);
-  cterm->hover_end = sel_spread_word(cterm->hover_end, true);
-  //printf("hover_spread_empty %d..%d\n", cterm->hover_start.x, cterm->hover_end.x);
-  bool eq = cterm->hover_start.y == cterm->hover_end.y && cterm->hover_start.x == cterm->hover_end.x;
-  incpos(cterm->hover_end);
+  term.hover_start = sel_spread_word(term.hover_start, false);
+  term.hover_end = sel_spread_word(term.hover_end, true);
+  //printf("hover_spread_empty %d..%d\n", term.hover_start.x, term.hover_end.x);
+  bool eq = term.hover_start.y == term.hover_end.y && term.hover_start.x == term.hover_end.x;
+  incpos(term.hover_end);
   return eq;
 }
 
 static void
 sel_drag(pos selpoint)
 {
-  //printf("sel_drag %d+%d/2 (anchor %d+%d/2)\n", selpoint.x, selpoint.r, cterm->sel_anchor.x, cterm->sel_anchor.r);
-  cterm->selected = true;
-  if (!cterm->sel_rect) {
+  //printf("sel_drag %d+%d/2 (anchor %d+%d/2)\n", selpoint.x, selpoint.r, term.sel_anchor.x, term.sel_anchor.r);
+  term.selected = true;
+  if (!term.sel_rect) {
    /*
     * For normal selection, we set (sel_start,sel_end) to
     * (selpoint,sel_anchor) in some order.
     */
-    if (poslt(selpoint, cterm->sel_anchor)) {
-      cterm->sel_start = selpoint;
-      cterm->sel_end = cterm->sel_anchor;
-      if (cfg.elastic_mouse && !cterm->mouse_mode) {
+    if (poslt(selpoint, term.sel_anchor)) {
+      term.sel_start = selpoint;
+      term.sel_end = term.sel_anchor;
+      if (cfg.elastic_mouse && !term.mouse_mode) {
         if (selpoint.r) {
-          incpos(cterm->sel_start);
+          incpos(term.sel_start);
         }
-        if (!cterm->sel_anchor.r) {
-          decpos(cterm->sel_end);
+        if (!term.sel_anchor.r) {
+          decpos(term.sel_end);
         }
       }
     }
     else {
-      cterm->sel_start = cterm->sel_anchor;
-      cterm->sel_end = selpoint;
-      if (cfg.elastic_mouse && !cterm->mouse_mode) {
-        if (cterm->sel_anchor.r) {
-          incpos(cterm->sel_start);
+      term.sel_start = term.sel_anchor;
+      term.sel_end = selpoint;
+      if (cfg.elastic_mouse && !term.mouse_mode) {
+        if (term.sel_anchor.r) {
+          incpos(term.sel_start);
         }
         if (!selpoint.r) {
-          decpos(cterm->sel_end);
+          decpos(term.sel_end);
         }
       }
     }
@@ -259,31 +258,31 @@ sel_drag(pos selpoint)
     * interchange x and y coordinates (if the user has
     * dragged in the -x and +y directions, or vice versa).
     */
-    cterm->sel_start.x = min(cterm->sel_anchor.x, selpoint.x);
-    cterm->sel_end.x = 1 + max(cterm->sel_anchor.x, selpoint.x);
-    cterm->sel_start.y = min(cterm->sel_anchor.y, selpoint.y);
-    cterm->sel_end.y = max(cterm->sel_anchor.y, selpoint.y);
+    term.sel_start.x = min(term.sel_anchor.x, selpoint.x);
+    term.sel_end.x = 1 + max(term.sel_anchor.x, selpoint.x);
+    term.sel_start.y = min(term.sel_anchor.y, selpoint.y);
+    term.sel_end.y = max(term.sel_anchor.y, selpoint.y);
   }
 }
 
 static void
 sel_extend(pos selpoint)
 {
-  //printf("sel_extend %d+%d/2 (anchor %d+%d/2)\n", selpoint.x, selpoint.r, cterm->sel_anchor.x, cterm->sel_anchor.r);
-  if (cterm->selected) {
-    if (!cterm->sel_rect) {
+  //printf("sel_extend %d+%d/2 (anchor %d+%d/2)\n", selpoint.x, selpoint.r, term.sel_anchor.x, term.sel_anchor.r);
+  if (term.selected) {
+    if (!term.sel_rect) {
      /*
       * For normal selection, we extend by moving
       * whichever end of the current selection is closer
       * to the mouse.
       */
-      if (posdiff(selpoint, cterm->sel_start) <
-          posdiff(cterm->sel_end, cterm->sel_start) / 2) {
-        cterm->sel_anchor = cterm->sel_end;
-        decpos(cterm->sel_anchor);
+      if (posdiff(selpoint, term.sel_start) <
+          posdiff(term.sel_end, term.sel_start) / 2) {
+        term.sel_anchor = term.sel_end;
+        decpos(term.sel_anchor);
       }
       else
-        cterm->sel_anchor = cterm->sel_start;
+        term.sel_anchor = term.sel_start;
     }
     else {
      /*
@@ -291,18 +290,18 @@ sel_extend(pos selpoint)
       * _four_ places to put sel_anchor and selpoint: the
       * four corners of the selection.
       */
-      cterm->sel_anchor.x =
-        selpoint.x * 2 < cterm->sel_start.x + cterm->sel_end.x
-        ? cterm->sel_end.x - 1
-        : cterm->sel_start.x;
-      cterm->sel_anchor.y =
-        selpoint.y * 2 < cterm->sel_start.y + cterm->sel_end.y
-        ? cterm->sel_end.y
-        : cterm->sel_start.y;
+      term.sel_anchor.x =
+        selpoint.x * 2 < term.sel_start.x + term.sel_end.x
+        ? term.sel_end.x - 1
+        : term.sel_start.x;
+      term.sel_anchor.y =
+        selpoint.y * 2 < term.sel_start.y + term.sel_end.y
+        ? term.sel_end.y
+        : term.sel_start.y;
     }
   }
   else
-    cterm->sel_anchor = selpoint;
+    term.sel_anchor = selpoint;
   sel_drag(selpoint);
 }
 
@@ -316,10 +315,10 @@ typedef enum {
 static void
 send_mouse_event(mouse_action a, mouse_button b, mod_keys mods, pos p)
 {
-  if (cterm->mouse_mode == MM_LOCATOR) {
+  if (term.mouse_mode == MM_LOCATOR) {
     // handle DECSLE: select locator events
-    if ((a == MA_CLICK && cterm->locator_report_up)
-     || (a == MA_RELEASE && cterm->locator_report_dn)) {
+    if ((a == MA_CLICK && term.locator_report_up)
+     || (a == MA_RELEASE && term.locator_report_dn)) {
       int pe = 0;
       switch (b) {
         when MBT_LEFT:
@@ -334,23 +333,23 @@ send_mouse_event(mouse_action a, mouse_button b, mod_keys mods, pos p)
       }
       if (pe) {
         int x, y, buttons;
-        win_get_locator_info(&x, &y, &buttons, cterm->locator_by_pixels);
-        child_printf(cterm,"\e[%d;%d;%d;%d;0&w", pe, buttons, y, x);
-        cterm->locator_rectangle = false;
+        win_get_locator_info(&x, &y, &buttons, term.locator_by_pixels);
+        child_printf(&term,"\e[%d;%d;%d;%d;0&w", pe, buttons, y, x);
+        term.locator_rectangle = false;
       }
     }
     // handle DECEFR: enable filter rectangle
-    else if (a == MA_MOVE && cterm->locator_rectangle) {
+    else if (a == MA_MOVE && term.locator_rectangle) {
       /* Anytime the locator is detected outside of the filter
          rectangle, an outside rectangle event is generated and the
          rectangle is disabled.
       */
       int x, y, buttons;
-      win_get_locator_info(&x, &y, &buttons, cterm->locator_by_pixels);
-      if (x < cterm->locator_left || x > cterm->locator_right
-          || y < cterm->locator_top || y > cterm->locator_bottom) {
-        child_printf(cterm,"\e[10;%d;%d;%d;0&w", buttons, y, x);
-        cterm->locator_rectangle = false;
+      win_get_locator_info(&x, &y, &buttons, term.locator_by_pixels);
+      if (x < term.locator_left || x > term.locator_right
+          || y < term.locator_top || y > term.locator_bottom) {
+        child_printf(&term,"\e[10;%d;%d;%d;0&w", buttons, y, x);
+        term.locator_rectangle = false;
       }
     }
     return;
@@ -381,17 +380,17 @@ send_mouse_event(mouse_action a, mouse_button b, mod_keys mods, pos p)
 
   if (a != MA_RELEASE)
     code |= a * 0x20;
-  else if (cterm->mouse_enc != ME_XTERM_CSI && cterm->mouse_enc != ME_PIXEL_CSI)
+  else if (term.mouse_enc != ME_XTERM_CSI && term.mouse_enc != ME_PIXEL_CSI)
     code = 0x3;
 
   code |= (mods & ~cfg.click_target_mod) * 0x4;
 
-  if (cterm->mouse_enc == ME_XTERM_CSI)
-    child_printf(cterm,"\e[<%u;%u;%u%c", code, x, y, (a == MA_RELEASE ? 'm' : 'M'));
-  else if (cterm->mouse_enc == ME_PIXEL_CSI)
-    child_printf(cterm,"\e[<%u;%u;%u%c", code, p.pix + 1, p.piy + 1, (a == MA_RELEASE ? 'm' : 'M'));
-  else if (cterm->mouse_enc == ME_URXVT_CSI)
-    child_printf(cterm,"\e[%u;%u;%uM", code + 0x20, x, y);
+  if (term.mouse_enc == ME_XTERM_CSI)
+    child_printf(&term,"\e[<%u;%u;%u%c", code, x, y, (a == MA_RELEASE ? 'm' : 'M'));
+  else if (term.mouse_enc == ME_PIXEL_CSI)
+    child_printf(&term,"\e[<%u;%u;%u%c", code, p.pix + 1, p.piy + 1, (a == MA_RELEASE ? 'm' : 'M'));
+  else if (term.mouse_enc == ME_URXVT_CSI)
+    child_printf(&term,"\e[%u;%u;%uM", code + 0x20, x, y);
   else {
     // Xterm's hacky but traditional character offset approach.
     char buf[8] = "\e[M";
@@ -399,7 +398,7 @@ send_mouse_event(mouse_action a, mouse_button b, mod_keys mods, pos p)
 
     void encode_coord(uint c) {
       c += 0x20;
-      if (cterm->mouse_enc != ME_UTF8)
+      if (term.mouse_enc != ME_UTF8)
         buf[len++] = c < 0x100 ? c : 0;
       else if (c < 0x80)
         buf[len++] = c;
@@ -419,15 +418,15 @@ send_mouse_event(mouse_action a, mouse_button b, mod_keys mods, pos p)
     encode_coord(x);
     encode_coord(y);
 
-    child_write(cterm,buf, len);
+    child_write(&term,buf, len);
   }
 }
 
 static pos
 box_pos(pos p)
 {
-  p.y = min(max(0, p.y), cterm->rows - 1);
-  p.x = min(max(0, p.x), cterm->cols - 1);
+  p.y = min(max(0, p.y), term.rows - 1);
+  p.x = min(max(0, p.x), term.cols - 1);
   // p.piy and p.pix already clipped in translate_pos()
   return p;
 }
@@ -435,12 +434,12 @@ box_pos(pos p)
 static pos
 get_selpoint(const pos p)
 {
-  pos sp = { .y = p.y + cterm->disptop, .x = p.x, .r = p.r };
+  pos sp = { .y = p.y + term.disptop, .x = p.x, .r = p.r };
   termline *line = fetch_line(sp.y);
 
   // Adjust to presentational direction.
   if (line->lattr & LATTR_PRESRTL) {
-    sp.x = cterm->cols - 1 - sp.x;
+    sp.x = term.cols - 1 - sp.x;
     sp.r = !sp.r;
   }
 
@@ -454,9 +453,9 @@ get_selpoint(const pos p)
   */
   if (term_bidi_line(line, p.y) != null) {
 #ifdef debug_bidi_cache
-    printf("mouse @ log %d -> vis %d\n", sp.x, cterm->post_bidi_cache[p.y].backward[sp.x]);
+    printf("mouse @ log %d -> vis %d\n", sp.x, term.post_bidi_cache[p.y].backward[sp.x]);
 #endif
-    sp.x = cterm->post_bidi_cache[p.y].backward[sp.x];
+    sp.x = term.post_bidi_cache[p.y].backward[sp.x];
   }
 
   // Back to previous cell if current one is second half of a wide char
@@ -475,16 +474,16 @@ send_keys(const char *code, uint len, uint count)
     char buf[size];
     char *p = buf;
     while (count--) { memcpy(p, code, len); p += len; }
-    child_write(cterm,buf, size);
+    child_write(&term,buf, size);
   }
 }
 static bool
 check_app_mouse(mod_keys *mods_p)
 {
-  if (cterm->locator_1_enabled)
+  if (term.locator_1_enabled)
     return true;
-  if(cterm->selection_pending==2)return 0;
-  if (!cterm->mouse_mode || cterm->show_other_screen)
+  if(term.selection_pending==2)return 0;
+  if (!term.mouse_mode || term.show_other_screen)
     return false;
   bool override = *mods_p & cfg.click_target_mod;
   *mods_p &= ~cfg.click_target_mod;
@@ -500,10 +499,10 @@ term_mouse_click(mouse_button b, mod_keys mods, pos p, int count)
      triggered via state MS_OPENING but rather overrides state MS_SEL_CHAR,
      in order to support its configuration to be applied without modifier
   */
-  bool was_hovering = cterm->hovering;
+  bool was_hovering = term.hovering;
 
-  if (cterm->hovering) {
-    cterm->hovering = false;
+  if (term.hovering) {
+    term.hovering = false;
     win_update(true);
   }
 
@@ -520,14 +519,14 @@ term_mouse_click(mouse_button b, mod_keys mods, pos p, int count)
     if (mods & MDK_SHIFT)
       c ^= ' ';
     c |= 0x80;
-    child_send(cterm,&c, 1);
+    child_send(&term,&c, 1);
     tek_send_address();
   }
   else if (check_app_mouse(&mods)) {
-    if (cterm->mouse_mode == MM_X10)
+    if (term.mouse_mode == MM_X10)
       mods = 0;
     send_mouse_event(MA_CLICK, b, mods, box_pos(p));
-    cterm->mouse_state = (int)b;
+    term.mouse_state = (int)b;
   }
   else {
     // generic transformation M4/M5 -> Alt+left/right;
@@ -545,7 +544,7 @@ term_mouse_click(mouse_button b, mod_keys mods, pos p, int count)
     bool shift_or_ctrl = mods & (MDK_SHIFT | MDK_CTRL);
     int mca = cfg.middle_click_action;
     int rca = cfg.right_click_action;
-    cterm->mouse_state = 0;
+    term.mouse_state = 0;
     if (b == MBT_RIGHT && (rca == RC_MENU || shift_or_ctrl)) {
       // disable Alt+mouse menu opening;
       // the menu would often be closed soon by auto-repeat Alt, sending
@@ -566,16 +565,16 @@ term_mouse_click(mouse_button b, mod_keys mods, pos p, int count)
              (b == MBT_MIDDLE && mca == MC_PASTE))
     {
       if (!alt)
-        cterm->mouse_state = shift_or_ctrl ? MS_COPYING : MS_PASTING;
+        term.mouse_state = shift_or_ctrl ? MS_COPYING : MS_PASTING;
       else
         res = false;
     }
     else if ((b == MBT_RIGHT && rca == RC_ENTER) ||
              (b == MBT_MIDDLE && mca == MC_ENTER)) {
-      child_send(cterm,"\r", 1);
+      child_send(&term,"\r", 1);
     }
     else if (b == MBT_LEFT && mods == MDK_SHIFT && rca == RC_EXTEND) {
-      cterm->mouse_state = MS_PASTING;
+      term.mouse_state = MS_PASTING;
     }
     else if (b == MBT_LEFT &&
              ((char)(mods & ~cfg.click_target_mod) == cfg.opening_mod || was_hovering)
@@ -584,10 +583,10 @@ term_mouse_click(mouse_button b, mod_keys mods, pos p, int count)
       if (count == cfg.opening_clicks) {
         // Open word under cursor
         p = get_selpoint(box_pos(p));
-        cterm->mouse_state = MS_OPENING;
-        cterm->selected = true;
-        cterm->sel_rect = false;
-        cterm->sel_start = cterm->sel_end = cterm->sel_anchor = p;
+        term.mouse_state = MS_OPENING;
+        term.selected = true;
+        term.sel_rect = false;
+        term.sel_start = term.sel_end = term.sel_anchor = p;
         sel_spread();
         win_update(true);
       }
@@ -603,19 +602,19 @@ term_mouse_click(mouse_button b, mod_keys mods, pos p, int count)
       //MS_SEL_CHAR = -1, 
       //MS_SEL_WORD = -2, 
       //MS_SEL_LINE = -3,
-      cterm->mouse_state = -count;
-      cterm->sel_rect = alt;
+      term.mouse_state = -count;
+      term.sel_rect = alt;
       if (b != MBT_LEFT || shift_or_ctrl)
         sel_extend(p);
       else if (count == 1) {
-        cterm->selected = false;
-        cterm->sel_anchor = p;
+        term.selected = false;
+        term.sel_anchor = p;
       }
       else {
         // Double or triple-click: select whole word or line
-        cterm->selected = true;
-        cterm->sel_rect = false;
-        cterm->sel_start = cterm->sel_end = cterm->sel_anchor = p;
+        term.selected = true;
+        term.sel_rect = false;
+        term.sel_start = term.sel_end = term.sel_anchor = p;
         sel_spread();
       }
       win_capture_mouse();
@@ -632,7 +631,7 @@ term_mouse_click(mouse_button b, mod_keys mods, pos p, int count)
 static void
 mouse_open(pos p)
 {
-  termline *line = fetch_line(p.y + cterm->disptop);
+  termline *line = fetch_line(p.y + term.disptop);
   int urli = line->chars[p.x].attr.link;
   release_line(line);
   char * url = geturl(urli);
@@ -640,8 +639,8 @@ mouse_open(pos p)
     win_open(cs__utftowcs(url), true);  // win_open frees its argument
   else
     term_open();
-  cterm->selected = false;
-  cterm->hovering = false;
+  term.selected = false;
+  term.hovering = false;
   win_update(true);
 }
 
@@ -650,7 +649,7 @@ term_mouse_release(mouse_button b, mod_keys mods, pos p)
 {
   compose_clear();
 
-  int state = cterm->mouse_state;
+  int state = term.mouse_state;
   //printf("term_mouse_release state %d button %d\n", state, b);
 
   // "Clicks place cursor" implementation.
@@ -660,18 +659,18 @@ term_mouse_release(mouse_button b, mod_keys mods, pos p)
     if (mode == 2002)
       dest = get_selpoint(box_pos(p));
     else
-      dest = cterm->selected ? cterm->sel_end : get_selpoint(box_pos(p));
-    //printf("place_cursor p %d x %d sel %d..%d\n", p.x, cterm->curs.x, cterm->sel_start.x, cterm->sel_end.x);
+      dest = term.selected ? term.sel_end : get_selpoint(box_pos(p));
+    //printf("place_cursor p %d x %d sel %d..%d\n", p.x, term.curs.x, term.sel_start.x, term.sel_end.x);
 
     static bool moved_previously = false;
     static pos last_dest;
 
     pos orig;
     if (mode == 2003)
-      orig = cterm->sel_start;
+      orig = term.sel_start;
     else
     if (state == MS_SEL_CHAR)
-      orig = (pos){.y = cterm->curs.y, .x = cterm->curs.x};
+      orig = (pos){.y = term.curs.y, .x = term.curs.x};
     else if (moved_previously)
       orig = last_dest;
     else
@@ -690,7 +689,7 @@ term_mouse_release(mouse_button b, mod_keys mods, pos p)
         moved_previously = false;
         return;
       }
-      int cols = cterm->cols - ((line->lattr & LATTR_WRAPPED2) != 0);
+      int cols = term.cols - ((line->lattr & LATTR_WRAPPED2) != 0);
       for (int x = p.x; x < cols; x++) {
         if (line->chars[x].chr != UCSWIDE)
           count++;
@@ -716,7 +715,7 @@ term_mouse_release(mouse_button b, mod_keys mods, pos p)
     }
     else {
       char code[3] =
-        {'\e', cterm->app_cursor_keys ? 'O' : '[', forward ? 'C' : 'D'};
+        {'\e', term.app_cursor_keys ? 'O' : '[', forward ? 'C' : 'D'};
       send_keys(code, 3, count);
     }
 
@@ -724,20 +723,20 @@ term_mouse_release(mouse_button b, mod_keys mods, pos p)
     last_dest = dest;
   }
 
-  cterm->mouse_state = 0;
+  term.mouse_state = 0;
   switch (state) {
     when MS_COPYING: term_copy();
     when MS_OPENING: mouse_open(p);
     when MS_PASTING: {
       // Finish selection.
-      if (cterm->selected && cfg.copy_on_select)
+      if (term.selected && cfg.copy_on_select)
         term_copy();
 
       // Flush any output held back during selection.
       term_flush();
 
       // Readline mouse mode: place cursor to mouse position before pasting
-      if (cterm->readline_mouse_2)
+      if (term.readline_mouse_2)
         place_cursor(2002);
 
       // Now the pasting.
@@ -745,43 +744,43 @@ term_mouse_release(mouse_button b, mod_keys mods, pos p)
     }
     when MS_SEL_CHAR or MS_SEL_WORD or MS_SEL_LINE: {
       // Open hovered link, accepting configurable modifiers
-      if (state == MS_SEL_CHAR && !cterm->selected
+      if (state == MS_SEL_CHAR && !term.selected
           && ((char)(mods & ~cfg.click_target_mod) == cfg.opening_mod)
          )
       {
         // support the case of hovering and link opening without modifiers 
         // if so configured (#1169)
         mouse_open(p);
-        cterm->mouse_state = 0;
+        term.mouse_state = 0;
         return;
       }
 
       // Finish selection.
-      if (cterm->selected && cfg.copy_on_select)
+      if (term.selected && cfg.copy_on_select)
         term_copy();
 
       // Flush any output held back during selection.
       term_flush();
 
       // Guard "Clicks place cursor" implementation.
-      if (cterm->on_alt_screen || cterm->app_cursor_keys)
+      if (term.on_alt_screen || term.app_cursor_keys)
         return;
 
       // Readline mouse mode: place cursor to mouse position
       // Should cfg.clicks_place_cursor override DECSET mode?
       bool extenda = (b == MBT_RIGHT && cfg.right_click_action == RC_EXTEND)
                  || (b == MBT_MIDDLE && cfg.middle_click_action == MC_EXTEND);
-      if (cterm->readline_mouse_1 && b == MBT_LEFT)
+      if (term.readline_mouse_1 && b == MBT_LEFT)
         place_cursor(2001);
-      else if (cterm->readline_mouse_3 && extenda && state == MS_SEL_WORD) {
+      else if (term.readline_mouse_3 && extenda && state == MS_SEL_WORD) {
         place_cursor(2001);
         place_cursor(2003);
-        cterm->selected = false;
+        term.selected = false;
       }
     }
     otherwise:
       if (check_app_mouse(&mods)) {
-        if (cterm->mouse_mode >= MM_VT200)
+        if (term.mouse_mode >= MM_VT200)
           send_mouse_event(MA_RELEASE, b, mods, box_pos(p));
       }
   }
@@ -790,9 +789,9 @@ term_mouse_release(mouse_button b, mod_keys mods, pos p)
 static void
 sel_scroll_cb(void)
 {
-  if (term_selecting() && cterm->sel_scroll) {
-    term_scroll(0, cterm->sel_scroll);
-    sel_drag(get_selpoint(cterm->sel_pos));
+  if (term_selecting() && term.sel_scroll) {
+    term_scroll(0, term.sel_scroll);
+    sel_drag(get_selpoint(term.sel_pos));
     win_update(true);
     win_set_timer(sel_scroll_cb, 125);
   }
@@ -808,25 +807,25 @@ term_mouse_move(mod_keys mods, pos p)
 
   if (term_selecting()) {
     //printf("term_mouse_move selecting\n");
-    if (p.y < 0 || p.y >= cterm->rows) {
-      if (!cterm->sel_scroll)
+    if (p.y < 0 || p.y >= term.rows) {
+      if (!term.sel_scroll)
         win_set_timer(sel_scroll_cb, 200);
-      cterm->sel_scroll = p.y < 0 ? p.y : p.y - cterm->rows + 1;
-      cterm->sel_pos = bp;
+      term.sel_scroll = p.y < 0 ? p.y : p.y - term.rows + 1;
+      term.sel_pos = bp;
     }
     else {
-      cterm->sel_scroll = 0;
-      if (p.x < 0 && p.y + cterm->disptop > cterm->sel_anchor.y)
-        bp = (pos){.y = p.y - 1, .x = cterm->cols - 1, .r = p.r};
+      term.sel_scroll = 0;
+      if (p.x < 0 && p.y + term.disptop > term.sel_anchor.y)
+        bp = (pos){.y = p.y - 1, .x = term.cols - 1, .r = p.r};
     }
 
     bool alt = mods & MDK_ALT;
-    cterm->sel_rect = alt;
+    term.sel_rect = alt;
     sel_drag(get_selpoint(bp));
 
     win_update(true);
   }
-  else if (cterm->mouse_state == MS_OPENING && 0 == cfg.opening_mod) {
+  else if (term.mouse_state == MS_OPENING && 0 == cfg.opening_mod) {
     //printf("term_mouse_move opening mods %X\n", mods);
     // assumption: don't need to check mouse button state in this workflow
 
@@ -837,57 +836,57 @@ term_mouse_move(mod_keys mods, pos p)
     // catches this case to NOT switch to selection, in order to 
     // support hover action even after tiny mouse shaking (#1039)
 
-    cterm->mouse_state = MS_SEL_CHAR;
+    term.mouse_state = MS_SEL_CHAR;
     // here we could already establish selection mode properly, 
     // as it is done above in term_mouse_click, case 
     // "Only clicks for selecting and extending should get here." -
     // we save that effort as it will be achieved anyway by the 
     // next tiny movement...
   }
-  else if (cterm->mouse_state == MS_OPENING) {
+  else if (term.mouse_state == MS_OPENING) {
     //printf("term_mouse_move opening mods %X\n", mods);
     // let's not clear link opening state when just moving the mouse (#1039)
     // but only after hovering out of the link area (below)
 #ifdef link_opening_only_if_unmoved
-    cterm->mouse_state = 0;
-    cterm->selected = false;
+    term.mouse_state = 0;
+    term.selected = false;
     win_update(true);
 #endif
   }
-  else if (cterm->mouse_state > 0) {
+  else if (term.mouse_state > 0) {
     //printf("term_mouse_move >0\n");
-    if (cterm->mouse_mode >= MM_BTN_EVENT)
-      send_mouse_event(MA_MOVE, (mouse_button)cterm->mouse_state, mods, bp);
+    if (term.mouse_mode >= MM_BTN_EVENT)
+      send_mouse_event(MA_MOVE, (mouse_button)term.mouse_state, mods, bp);
   }
   else {
     //printf("term_mouse_move any\n");
-    if (cterm->mouse_mode == MM_ANY_EVENT)
+    if (term.mouse_mode == MM_ANY_EVENT)
       send_mouse_event(MA_MOVE, 0, mods, bp);
   }
 
   // hover indication
-  if (!check_app_mouse(&mods) && cterm->has_focus &&
+  if (!check_app_mouse(&mods) && term.has_focus &&
       ((char)(mods & ~cfg.click_target_mod) == cfg.opening_mod)
      )
   {
     //printf("term_mouse_move link\n");
     p = get_selpoint(box_pos(p));
-    cterm->hover_start = cterm->hover_end = p;
+    term.hover_start = term.hover_end = p;
     if (!hover_spread_empty()) {
-      cterm->hovering = true;
+      term.hovering = true;
       termline *line = fetch_line(p.y);
-      cterm->hoverlink = line->chars[p.x].attr.link;
+      term.hoverlink = line->chars[p.x].attr.link;
       release_line(line);
       win_update(true);
     }
-    else if (cterm->hovering) {
-      cterm->hovering = false;
+    else if (term.hovering) {
+      term.hovering = false;
       win_update(true);
     }
-    //printf("->hovering %d (opening %d)\n", cterm->hovering, cterm->mouse_state == MS_OPENING);
+    //printf("->hovering %d (opening %d)\n", term.hovering, term.mouse_state == MS_OPENING);
     // clear link opening state after hovering out of link area
-    if (!cterm->hovering && cterm->mouse_state == MS_OPENING)
-      cterm->mouse_state = 0;
+    if (!term.hovering && term.mouse_state == MS_OPENING)
+      term.mouse_state = 0;
   }
 }
 
@@ -896,8 +895,8 @@ term_mouse_wheel(bool horizontal, int delta, int lines_per_notch, mod_keys mods,
 {
   compose_clear();
 
-  if (cterm->hovering) {
-    cterm->hovering = false;
+  if (term.hovering) {
+    term.hovering = false;
     win_update(true);
   }
 
@@ -946,41 +945,41 @@ term_mouse_wheel(bool horizontal, int delta, int lines_per_notch, mod_keys mods,
     if (mods & MDK_CTRL)
       lines_per_notch = 1;
     else if (cfg.lines_per_notch > 0)
-      lines_per_notch = min(cfg.lines_per_notch, cterm->rows - 1);
+      lines_per_notch = min(cfg.lines_per_notch, term.rows - 1);
 
     // Scroll, taking the lines_per_notch setting into account.
     // Scroll by a page per notch if setting is -1 or Shift is pressed.
-    int lines_per_page = max(1, cterm->rows);
+    int lines_per_page = max(1, term.rows);
     if (lines_per_notch == -1 || mods & MDK_SHIFT)
       lines_per_notch = lines_per_page;
     int lines = lines_per_notch * accu / NOTCH_DELTA;
     //printf("mouse lines %d per notch %d accu %d\n", lines, lines_per_notch, accu);
     if (lines) {
       accu -= lines * NOTCH_DELTA / lines_per_notch;
-      if ((!cterm->on_alt_screen || cterm->show_other_screen) && !(mods & MDK_ALT)) {
+      if ((!term.on_alt_screen || term.show_other_screen) && !(mods & MDK_ALT)) {
         if (strstr(cfg.suppress_wheel, "scrollwin"))
           return;
         term_scroll(0, -lines);
       }
-      else if (cterm->wheel_reporting || cterm->wheel_reporting_xterm) {
-        if (strstr(cfg.suppress_wheel, "scrollapp") && !cterm->wheel_reporting_xterm)
+      else if (term.wheel_reporting || term.wheel_reporting_xterm) {
+        if (strstr(cfg.suppress_wheel, "scrollapp") && !term.wheel_reporting_xterm)
           return;
         // Send scroll distance as CSI a/b events
         bool up = lines > 0;
         lines = abs(lines);
         int pages = lines / lines_per_page;
         lines -= pages * lines_per_page;
-        if (cterm->app_wheel && !cterm->wheel_reporting_xterm) {
+        if (term.app_wheel && !term.wheel_reporting_xterm) {
           send_keys(up ? "\e[1;2a" : "\e[1;2b", 6, pages);
           send_keys(up ? "\eOa" : "\eOb", 3, lines);
         }
-        else if (cterm->vt52_mode) {
+        else if (term.vt52_mode) {
           send_keys(up ? "\eA" : "\eB", 2, lines);
         }
         else {
           send_keys(up ? "\e[5~" : "\e[6~", 4, pages);
           char code[3] =
-            {'\e', cterm->app_cursor_keys ? 'O' : '[', up ? 'A' : 'B'};
+            {'\e', term.app_cursor_keys ? 'O' : '[', up ? 'A' : 'B'};
           send_keys(code, 3, lines);
         }
       }

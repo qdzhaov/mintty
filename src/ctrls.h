@@ -328,6 +328,7 @@ extern control * ctrl_checkbox(controlset *, int col, const wchar * label,const 
 
 extern void dlg_stdcheckbox_handler(control *, int event);
 extern void dlg_stdstringbox_handler(control *, int event);
+extern void dlg_stwdstringbox_handler(control *, int event);
 extern void dlg_stdintbox_handler(control *, int event);
 extern void dlg_stdradiobutton_handler(control *, int event);
 extern void dlg_stdfontsel_handler(control *, int event);

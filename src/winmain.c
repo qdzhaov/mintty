@@ -432,10 +432,10 @@ static int scroll_dif = 0;
 void
 win_set_scrollview(int pos, int len, int height)
 {
-  bool prev = cterm->app_scrollbar;
-  cterm->app_scrollbar = pos;
+  bool prev = term.app_scrollbar;
+  term.app_scrollbar = pos;
 
-  if (cterm->app_scrollbar != prev)
+  if (term.app_scrollbar != prev)
     win_update_scrollbar(false);
 
   if (pos) {
@@ -444,7 +444,7 @@ win_set_scrollview(int pos, int len, int height)
     else
       len = scroll_len;
     if (height >= 0)
-      scroll_dif = cterm->rows - height;
+      scroll_dif = term.rows - height;
     else if (!prev)
       scroll_dif = 0;
     SetScrollInfo(
@@ -454,7 +454,7 @@ win_set_scrollview(int pos, int len, int height)
         .fMask = SIF_ALL | SIF_DISABLENOSCROLL,
         .nMin = 1,
         .nMax = len,
-        .nPage = cterm->rows - scroll_dif,
+        .nPage = term.rows - scroll_dif,
         .nPos = pos,
       },
       true  // redraw
@@ -590,7 +590,7 @@ win_launch(int n)
   HMONITOR mon = MonitorFromWindow(wv.wnd, MONITOR_DEFAULTTONEAREST);
   int x, y;
   int moni = search_monitors(&x, &y, mon, true, 0);
-  child_launch(cterm,n, &main_sd, moni);
+  child_launch(&term,n, &main_sd, moni);
 }
 
 
@@ -822,7 +822,7 @@ search_monitors(int * minx, int * miny, HMONITOR lookup_mon, int get_primary, MO
 	     |	...	|	view
 	_horclip(5)		view shifted, clipping left terminal screen
 	_horcols(11)		view columns less than terminal columns
-	0 <= _horclip <= _horcols <= cterm->cols - _horclip
+	0 <= _horclip <= _horcols <= term.cols - _horclip
  */
 static int horbar = false;
 static int _horclip = 0;
@@ -833,7 +833,7 @@ static int _horcols = 0;
 int
 horclip(void)
 {
-  if (cterm->on_alt_screen)
+  if (term.on_alt_screen)
     return 0;
   else
     return _horclip * wv.cell_width;
@@ -848,7 +848,7 @@ horsqueeze(void)
 
 #ifdef disable_horscrollbar_on_alt_screen
 #warning adapting alt screen size to view size (and back) is not implemented
-  if (cterm->on_alt_screen)
+  if (term.on_alt_screen)
     return 0;
 #endif
 
@@ -875,19 +875,19 @@ static void
 do_horflush(void)
 {
   // could limit this to newly visible columns
-  term_invalidate(0, 0, cterm->cols - 1, cterm->rows - 1);
+  term_invalidate(0, 0, term.cols - 1, term.rows - 1);
   win_schedule_update();
 
   SCROLLINFO si = {
     .cbSize = sizeof si,
     .fMask = SIF_ALL | SIF_DISABLENOSCROLL,
     .nMin = 0,
-    .nMax = cterm->cols - 1,
+    .nMax = term.cols - 1,
 #ifdef resize_view_via_horizontal_scrollbar
-    .nPage = cterm->cols - max(_horcols, 1),
+    .nPage = term.cols - max(_horcols, 1),
     .nPos = max(_horclip, 1)
 #else
-    .nPage = cterm->cols - _horcols,
+    .nPage = term.cols - _horcols,
     .nPos = _horclip
 #endif
   };
@@ -910,19 +910,19 @@ static void
 horflush(void)
 {
   // could limit this to newly visible columns
-  term_invalidate(0, 0, cterm->cols - 1, cterm->rows - 1);
+  term_invalidate(0, 0, term.cols - 1, term.rows - 1);
   win_schedule_update();
 
   SCROLLINFO si = {
     .cbSize = sizeof si,
     .fMask = SIF_ALL | SIF_DISABLENOSCROLL,
     .nMin = 0,
-    .nMax = cterm->cols - 1,
+    .nMax = term.cols - 1,
 #ifdef resize_view_via_horizontal_scrollbar
-    .nPage = cterm->cols - max(_horcols, 1),
+    .nPage = term.cols - max(_horcols, 1),
     .nPos = max(_horclip, 1)
 #else
-    .nPage = cterm->cols - _horcols,
+    .nPage = term.cols - _horcols,
     .nPos = _horclip
 #endif
   };
@@ -974,13 +974,13 @@ horsizing(int cells, bool from_right)
 
   int prev_horcols = _horcols;
   //printf("horsizing %d %c (clip %d cols %d)\n", cells, from_right ? 'r' : 'l', _horclip, _horcols);
-  // 0 <= _horclip <= _horcols <= cterm->cols - _horclip
+  // 0 <= _horclip <= _horcols <= term.cols - _horclip
   if (from_right) {
-    _horcols = min(max(_horcols - cells, 0), cterm->cols - 10);
+    _horcols = min(max(_horcols - cells, 0), term.cols - 10);
     _horclip = min(_horclip, _horcols);
   }
   else {
-    _horcols = min(max(_horcols - cells, 0), cterm->cols - 10);
+    _horcols = min(max(_horcols - cells, 0), term.cols - 10);
     _horclip = min(max(_horclip - cells, 0), _horcols);
   }
   //printf("horsizing    -> clip %d cols %d\n", _horclip, _horcols);
@@ -1008,7 +1008,7 @@ horsizing(int cells, bool from_right)
                  r.right - r.left - narrow, r.bottom - r.top,
                  SWP_DEFERERASE | SWP_NOSENDCHANGING | SWP_NOREDRAW |
                  SWP_NOACTIVATE | SWP_NOCOPYBITS | SWP_NOZORDER);
-    //printf("  -> term %d x %d\n", cterm->rows, cterm->cols);
+    //printf("  -> term %d x %d\n", term.rows, term.cols);
   }
   horflush();
   win_fix_position(false);
@@ -1175,7 +1175,7 @@ win_get_screen_chars(int *rows_p, int *cols_p)
   MONITORINFO mi;
   get_my_monitor_info(&mi);
   RECT fr = mi.rcMonitor;
-  *rows_p = (fr.bottom - fr.top - 2 * PADDING - OFFSET) / wv.cell_height- cterm->st_rows;
+  *rows_p = (fr.bottom - fr.top - 2 * PADDING - OFFSET) / wv.cell_height- term.st_rows;
   *cols_p = (fr.right - fr.left - 2 * PADDING) / wv.cell_width;
 }
 
@@ -1258,7 +1258,7 @@ win_update_blur(bool opaque)
   if (pDwmEnableBlurBehindWindow) {
     bool blur =
       cfg.transparency && cfg.blurred && !wv.win_is_fullscreen &&
-      !(opaque && cterm->has_focus);
+      !(opaque && term.has_focus);
 #define dont_use_dwmapi_h
 #ifdef use_dwmapi_h
 #warning dwmapi_include_shown_for_documentation
@@ -1285,7 +1285,7 @@ win_update_blur(bool opaque)
 static void
 win_update_glass(bool opaque)
 {
-  bool glass = !(opaque && cterm->has_focus)
+  bool glass = !(opaque && term.has_focus)
                //&& !wv.win_is_fullscreen
                && cfg.transparency == TR_GLASS
                //&& cfg.glass // decouple glass mode from transparency setting
@@ -1471,8 +1471,8 @@ win_set_chars_zoom(int rows, int cols)
 
   // prevent resizing to same logical size
   // which would remove bottom padding and spoil some Windows magic (#629)
-  if (rows != cterm->rows || cols != cterm->cols) {
-    win_set_pixels((rows + cterm->st_rows) * wv.cell_height, cols * wv.cell_width);
+  if (rows != term.rows || cols != term.cols) {
+    win_set_pixels((rows + term.st_rows) * wv.cell_height, cols * wv.cell_width);
 #ifdef win_set_pixels_does_not_win_fix_position
     if (wv.is_init)  // don't spoil negative position (#1123)
       win_fix_position(false);
@@ -1508,7 +1508,7 @@ taskbar_progress(int i)
 static int last_i = 0;
   if (i == last_i)
     return;
-  //printf("taskbar_progress %d detect %d\n", i, cterm->detect_progress);
+  //printf("taskbar_progress %d detect %d\n", i, term.detect_progress);
 
   ITaskbarList3 * tbl;
   HRESULT hres = CoCreateInstance(&CLSID_TaskbarList, NULL,
@@ -1858,7 +1858,7 @@ static FILE * bf = 0;
 static void
 do_win_bell(config * conf, bool margin_bell)
 {
-  term_bell * bellstate = margin_bell ? &cterm->marginbell : &cterm->bell;
+  term_bell * bellstate = margin_bell ? &term.marginbell : &term.bell;
   unsigned long now = mtime();
 
   if (conf->bell_type &&
@@ -1956,9 +1956,9 @@ do_win_bell(config * conf, bool margin_bell)
 
   if (cfg.bell_flash_style & FLASH_FRAME)
     flash_border();
-  if (cterm->bell_taskbar && (!cterm->has_focus || win_is_iconic()))
+  if (term.bell_taskbar && (!term.has_focus || win_is_iconic()))
     flash_taskbar(true);
-  if (cterm->bell_popup)
+  if (term.bell_popup)
     win_set_zorder(true);
 }
 
@@ -2042,7 +2042,7 @@ win_adjust_borders(int t_width, int t_height)
   printf("win_adjust_borders w/h %d %d\n", wv.width, wv.height);
 #endif
 
-  if ((cterm&&cterm->app_scrollbar) || cfg.scrollbar)
+  if ((&term&&term.app_scrollbar) || cfg.scrollbar)
     wv.width += GetSystemMetrics(SM_CXVSCROLL);
 
   wv.extra_width = wv.width - (cr.right - cr.left);
@@ -2083,8 +2083,8 @@ win_adapt_term_size(bool sync_size_with_font, bool scale_font_with_size)
 #endif
 
   if (sync_size_with_font && !wv.win_is_fullscreen) {
-    // enforced win_set_chars(cterm->rows, cterm->cols):
-    win_set_pixels(term_allrows * wv.cell_height, cterm->cols * wv.cell_width);
+    // enforced win_set_chars(term.rows, term.cols):
+    win_set_pixels(term_allrows * wv.cell_height, term.cols * wv.cell_width);
 #ifdef win_set_pixels_does_not_win_fix_position
     if (wv.is_init)  // don't spoil negative position (#1123)
       win_fix_position(false);
@@ -2109,7 +2109,7 @@ win_adapt_term_size(bool sync_size_with_font, bool scale_font_with_size)
   }
   int term_width = client_width - 2 * PADDING;
   int term_height = client_height - 2 * PADDING;
-  if(cterm->usepartline)term_height +=wv.cell_height*cfg.partline/8;
+  if(term.usepartline)term_height +=wv.cell_height*cfg.partline/8;
   if (!sync_size_with_font ) {
     // apparently insignificant if sync_size_with_font && wv.win_is_fullscreen
     term_height -= OFFSET;
@@ -2118,33 +2118,33 @@ win_adapt_term_size(bool sync_size_with_font, bool scale_font_with_size)
     term_height -= SEARCHBAR_HEIGHT;
   }
 
-  if (scale_font_with_size && cterm->cols != 0 && cterm->rows != 0) {
+  if (scale_font_with_size && term.cols != 0 && term.rows != 0) {
     // calc preliminary size (without font scaling), as below
     // should use term_height rather than rows; calc and store in term_resize
     // adjust by horsqueeze() but not by horex() here
     int cols0 = max(1, (term_width + horsqueeze()) / wv.cell_width);
-    int rows0 = max(1, term_height / wv.cell_height - cterm->st_rows);
+    int rows0 = max(1, term_height / wv.cell_height - term.st_rows);
 
-    // rows0/cterm->rows gives a rough scaling factor for wv.cell_height
-    // cols0/cterm->cols gives a rough scaling factor for wv.cell_width
+    // rows0/term.rows gives a rough scaling factor for wv.cell_height
+    // cols0/term.cols gives a rough scaling factor for wv.cell_width
     // wv.cell_height, wv.cell_width give a rough scaling indication for font_size
     // height or width could be considered more according to preference
-    bool bigger = rows0 * cols0 > cterm->rows * cterm->cols;
+    bool bigger = rows0 * cols0 > term.rows * term.cols;
     int font_size1 =
       // heuristic best approach taken...
       // bigger
-      //   ? max(font_size * rows0 / cterm->rows, font_size * cols0 / cterm->cols)
-      //   : min(font_size * rows0 / cterm->rows, font_size * cols0 / cterm->cols);
+      //   ? max(font_size * rows0 / term.rows, font_size * cols0 / term.cols)
+      //   : min(font_size * rows0 / term.rows, font_size * cols0 / term.cols);
       // bigger
-      //   ? font_size * rows0 / cterm->rows + 2
-      //   : font_size * rows0 / cterm->rows;
+      //   ? font_size * rows0 / term.rows + 2
+      //   : font_size * rows0 / term.rows;
       bigger
-        ? (font_size * rows0 / cterm->rows + font_size * cols0 / cterm->cols) / 2 + 1
-        : (font_size * rows0 / cterm->rows + font_size * cols0 / cterm->cols) / 2;
+        ? (font_size * rows0 / term.rows + font_size * cols0 / term.cols) / 2 + 1
+        : (font_size * rows0 / term.rows + font_size * cols0 / term.cols) / 2;
       // bigger
-      //   ? font_size * rows0 * cols0 / (cterm->rows * cterm->cols)
-      //   : font_size * rows0 * cols0 / (cterm->rows * cterm->cols);
-      trace_resize(("term size %d %d -> %d %d\n", cterm->rows, cterm->cols, rows0, cols0));
+      //   ? font_size * rows0 * cols0 / (term.rows * term.cols)
+      //   : font_size * rows0 * cols0 / (term.rows * term.cols);
+      trace_resize(("term size %d %d -> %d %d\n", term.rows, term.cols, rows0, cols0));
       trace_resize(("font size %d -> %d\n", font_size, font_size1));
 
     // heuristic attempt to stabilize font size roundtrips, esp. after fullscreen
@@ -2156,23 +2156,23 @@ win_adapt_term_size(bool sync_size_with_font, bool scale_font_with_size)
 
   // adjust by horsqueeze() but not by horex() here
   int cols = max(1, (term_width + horsqueeze()) / wv.cell_width);
-  int rows = max(1, term_height / wv.cell_height - cterm->st_rows);
-  int save_st_rows = cterm->st_rows;
-  if (rows != cterm->rows || cols != cterm->cols) {
+  int rows = max(1, term_height / wv.cell_height - term.st_rows);
+  int save_st_rows = term.st_rows;
+  if (rows != term.rows || cols != term.cols) {
     term_resize(rows, cols);
     if (save_st_rows) {
       // handle potentially resized status area;
       // better, rows would be calculated already considering 
       // possible shrink of status area, to allow resizing smaller than it
-      rows = max(1, term_height / wv.cell_height - cterm->st_rows);
-      //cterm->marg_bot is getting fixed in term_resize
+      rows = max(1, term_height / wv.cell_height - term.st_rows);
+      //term.marg_bot is getting fixed in term_resize
     }
     struct winsize ws = {rows, cols, cols * wv.cell_width, rows * wv.cell_height};
-    child_resize(cterm,&ws);
+    child_resize(&term,&ws);
   }
   else {  // also notify font size changes; filter identical updates later
     struct winsize ws = {rows, cols, cols * wv.cell_width, rows * wv.cell_height};
-    child_resize(cterm,&ws);
+    child_resize(&term,&ws);
   }
 
   win_invalidate_all(false);
@@ -2263,7 +2263,7 @@ win_update_transparency(int trans, bool opaque)
   style = trans ? style | WS_EX_LAYERED : style & ~WS_EX_LAYERED;
   SetWindowLong(wv.wnd, GWL_EXSTYLE, style);
   if (trans) {
-    if (opaque && cterm->has_focus)
+    if (opaque && term.has_focus)
       trans = 0;
     if (wv.force_opaque)
       trans = 0;
@@ -2278,11 +2278,11 @@ void
 win_update_scrollbar(bool inner)
 {
   // enforce outer scrollbar if switched on
-  int scrollbar = cterm->show_scrollbar ? (cfg.scrollbar ?: !inner) : 0;
+  int scrollbar = term.show_scrollbar ? (cfg.scrollbar ?: !inner) : 0;
   // keep config consistent with enforced scrollbar
   if (scrollbar && !cfg.scrollbar)
     cfg.scrollbar = 1;
-  if (cterm->app_scrollbar && !scrollbar) {
+  if (term.app_scrollbar && !scrollbar) {
     //printf("enforce application scrollbar %d->%d->%d\n", scrollbar, cfg.scrollbar, cfg.scrollbar ?: 1);
     scrollbar = cfg.scrollbar ?: 1;
   }
@@ -2331,26 +2331,26 @@ win_font_cs_reconfig(bool font_changed)
 {
   bool old_ambig_wide = cs_ambig_wide;
   cs_reconfig();
-  if (cterm->report_font_changed && font_changed)
-    if (cterm->report_ambig_width)
-      child_write(cterm,cs_ambig_wide ? "\e[2W" : "\e[1W", 4);
+  if (term.report_font_changed && font_changed)
+    if (term.report_ambig_width)
+      child_write(&term,cs_ambig_wide ? "\e[2W" : "\e[1W", 4);
     else
-      child_write(cterm,"\e[0W", 4);
-  else if (cterm->report_ambig_width && old_ambig_wide != cs_ambig_wide)
-    child_write(cterm,cs_ambig_wide ? "\e[2W" : "\e[1W", 4);
+      child_write(&term,"\e[0W", 4);
+  else if (term.report_ambig_width && old_ambig_wide != cs_ambig_wide)
+    child_write(&term,cs_ambig_wide ? "\e[2W" : "\e[1W", 4);
 }
 
 static void
 font_cs_reconfig(bool font_changed)
 {
   //printf("font_cs_reconfig font_changed %d\n", font_changed);
-  if(!cterm)return;
+  if(!&term)return;
   if (font_changed) {
     win_init_fonts(cfg.font.size, true);
     if (tek_mode)
       tek_init(false, cfg.tek_glow);
     trace_resize((" (font_cs_reconfig -> win_adapt_term_size)\n"));
-    if(cterm)win_adapt_term_size(true, false);
+    if(&term)win_adapt_term_size(true, false);
   }
   win_update_scrollbar(true); // assume "inner", shouldn't change anyway
   win_update_transparency(cfg.transparency, cfg.opaque_when_focused);
@@ -2406,7 +2406,7 @@ confirm_exit(void)
   //char * pscmd = "LC_ALL=C.UTF-8 /bin/procps -o pid,ruser=USER -o comm -t %s 2> /dev/null || LC_ALL=C.UTF-8 /bin/ps -ef";
   //char * pscmd = "LC_ALL=C.UTF-8 /bin/ps -ef";
   char * pscmd = "LC_ALL=C.UTF-8 /bin/ps -es | /bin/sed -e 's,  *,	&,g' | /bin/cut -f 2,3,5-99 | /bin/tr -d '	'";
-  char * tty = child_tty(cterm);
+  char * tty = child_tty(&term);
   if (strrchr(tty, '/'))
     tty = strrchr(tty, '/') + 1;
   char cmd[strlen(pscmd) + strlen(tty) + 1];
@@ -2466,7 +2466,7 @@ confirm_exit(void)
       cpos ++;
   }
 #else
-  wchar * proclist = grandchild_process_list(cterm);
+  wchar * proclist = grandchild_process_list(&term);
   if (!proclist)
     return true;
 #endif
@@ -2507,7 +2507,7 @@ confirm_reset(void)
 
 void win_close() { 
   if (!cfg.confirm_exit || confirm_exit())
-    child_terminate(cterm); 
+    child_terminate(&term); 
 }
 
 void
@@ -2515,13 +2515,13 @@ app_close()
 {
   if (!wv.support_wsl && *cfg.exit_commands) {
     // try to determine foreground program
-    char * fg_prog = foreground_prog(cterm);
+    char * fg_prog = foreground_prog(&term);
     if (fg_prog) {
       // match program base name
       char * exits = cs__wcstombs(cfg.exit_commands);
       char * paste = matchconf(exits, fg_prog);
       if (paste) {
-        child_send(cterm,paste, strlen(paste));
+        child_send(&term,paste, strlen(paste));
         free(exits);  // also frees paste which points into exits
         free(fg_prog);
         return;  // don't close terminal
@@ -2764,12 +2764,12 @@ in_client_area(HWND wnd, LPARAM lp)
   return wpos.y >= 0 && wpos.y < height && wpos.x >= 0 && wpos.x < width;
 }
 void win_tog_partline(){
-  cterm->usepartline=!cterm->usepartline; 
-  if(cterm->usepartline&&cfg.partline==0)cfg.partline=4;
+  term.usepartline=!term.usepartline; 
+  if(term.usepartline&&cfg.partline==0)cfg.partline=4;
   win_adapt_term_size(0,0);
 }
 void win_tog_scrollbar(){
-  cterm->show_scrollbar = !cterm->show_scrollbar;
+  term.show_scrollbar = !term.show_scrollbar;
   win_update_scrollbar(true);
 }
 void win_tog_border(){
@@ -2957,10 +2957,10 @@ static struct {
       else if ((wp & ~0xF) >= IDM_SESSIONCOMMAND)
         win_launch(wp - IDM_SESSIONCOMMAND);
       else if ((wp & ~0xF) >= IDM_USERCOMMAND)
-        user_command(cterm,cfg.user_commands, wp - IDM_USERCOMMAND);
+        user_command(&term,cfg.user_commands, wp - IDM_USERCOMMAND);
       else
       switch (wp & ~0xF) {  /* low 4 bits reserved to Windows */
-        when IDM_BREAK: child_break(cterm);
+        when IDM_BREAK: child_break(&term);
         when IDM_OPEN: term_open();
         when IDM_COPY: term_copy();
         when IDM_COPY_TEXT: term_copy_as('t');
@@ -2971,7 +2971,7 @@ static struct {
         when IDM_COPY_HFMT: term_copy_as('f');
         when IDM_COPY_HTML: term_copy_as('H');
         when IDM_COPASTE: term_copy(); win_paste();
-        when IDM_CLRSCRLBCK: term_clear_scrollback(cterm); cterm->disptop = 0;
+        when IDM_CLRSCRLBCK: term_clear_scrollback(&term); term.disptop = 0;
         when IDM_TOGLOG: toggle_logging();
         when IDM_HTML: term_export_html(GetKeyState(VK_SHIFT) & 0x80);
         when IDM_TOGCHARINFO: toggle_charinfo();
@@ -2979,7 +2979,7 @@ static struct {
         when IDM_PASTE: win_paste();
         when IDM_SELALL: term_select_all(); win_update(false);
         when IDM_RESET or IDM_RESET_NOASK:
-          if ((wp & ~0xF) == IDM_RESET_NOASK || confirm_reset()) {
+          if ((wp & ~0xF) == IDM_RESET_NOASK || !cfg.confirm_reset || confirm_reset()) {
             winimgs_clear();
             term_reset(true);
             win_update(false);
@@ -3024,34 +3024,34 @@ static struct {
           win_update_search();
           // support tabbar
         }
-        when IDM_SCROLLBAR: win_tog_scrollbar();
-        when IDM_BORDERS  : win_tog_border();
-        when IDM_TABBAR: win_tab_show();
-        when IDM_PARTLINE: win_tog_partline();
-        when IDM_INDICATOR: win_tab_indicator();
-        when IDM_SEARCH: win_open_search();
+        when IDM_SCROLLBAR:  win_tog_scrollbar();
+        when IDM_BORDERS  :  win_tog_border();
+        when IDM_TABBAR:     win_tab_show();
+        when IDM_PARTLINE:   win_tog_partline();
+        when IDM_INDICATOR:  win_tab_indicator();
+        when IDM_SEARCH:     win_open_search();
         when IDM_FLIPSCREEN: term_flip_screen();
         when IDM_STATUSLINE: toggle_status_line();
-        when IDM_OPTIONS: win_open_config();
-        when IDM_NEW: new_win_def();
-        when IDM_NEW_MONI: new_win(IDSS_DEF,lp);
-        when IDM_COPYTITLE: win_copy_title();
-        when IDM_NEWWSLT: new_tab_wsl();
-        when IDM_NEWCYGT: new_tab_cyg();
-        when IDM_NEWCMDT: new_tab_cmd();
-        when IDM_NEWPSHT: new_tab_psh();
-        when IDM_NEWUSRT: new_tab_usr();
-        when IDM_NEWWSLW: new_win_wsl();
-        when IDM_NEWCYGW: new_win_cyg();
-        when IDM_NEWCMDW: new_win_cmd();
-        when IDM_NEWPSHW: new_win_psh();
-        when IDM_NEWUSRW: new_win_usr();
-        when IDM_NEWTAB : new_tab_def();
-        when IDM_KILLTAB: win_close();
-        when IDM_PREVTAB  : tab_prev	   ();
-        when IDM_NEXTTAB  : tab_next	   ();
-        when IDM_MOVELEFT : tab_move_prev();
-        when IDM_MOVERIGHT: tab_move_next();
+        when IDM_OPTIONS:    win_open_config();
+        when IDM_NEW:        new_win_def();
+        when IDM_NEW_MONI:   new_win(IDSS_DEF,lp);
+        when IDM_COPYTITLE:  win_copy_title();
+        when IDM_NEWWSLT:    new_tab_wsl();
+        when IDM_NEWCYGT:    new_tab_cyg();
+        when IDM_NEWCMDT:    new_tab_cmd();
+        when IDM_NEWPSHT:    new_tab_psh();
+        when IDM_NEWUSRT:    new_tab_usr();
+        when IDM_NEWWSLW:    new_win_wsl();
+        when IDM_NEWCYGW:    new_win_cyg();
+        when IDM_NEWCMDW:    new_win_cmd();
+        when IDM_NEWPSHW:    new_win_psh();
+        when IDM_NEWUSRW:    new_win_usr();
+        when IDM_NEWTAB :    new_tab_def();
+        when IDM_KILLTAB:    win_close  ();
+        when IDM_PREVTAB  :  tab_prev	   ();
+        when IDM_NEXTTAB  :  tab_next	   ();
+        when IDM_MOVELEFT :  tab_move_prev();
+        when IDM_MOVERIGHT:  tab_move_next();
         when IDM_KEY_DOWN_UP: {
           bool on = lp & 0x10000;
           int vk = lp & 0xFFFF;
@@ -3066,12 +3066,12 @@ static struct {
 
     when WM_VSCROLL:
       //printf("WM_VSCROLL %d\n", LOWORD(wp));
-      if (!cterm->app_scrollbar)
+      if (!term.app_scrollbar)
         switch (LOWORD(wp)) {
           when SB_LINEUP:   term_scroll(0, -1);
           when SB_LINEDOWN: term_scroll(0, +1);
-          when SB_PAGEUP:   term_scroll(0, -max(1, cterm->rows - 1));
-          when SB_PAGEDOWN: term_scroll(0, +max(1, cterm->rows - 1));
+          when SB_PAGEUP:   term_scroll(0, -max(1, term.rows - 1));
+          when SB_PAGEDOWN: term_scroll(0, +max(1, term.rows - 1));
           when SB_THUMBPOSITION or SB_THUMBTRACK: {
             //term_scroll(1, HIWORD(wp));
             SCROLLINFO info;
@@ -3102,15 +3102,15 @@ static struct {
             //win_key_down(VK_NEXT, 1);
             win_csi_seq("6", "#e");
           when SB_TOP:
-            child_printf(cterm,"\e[0#d");
+            child_printf(&term,"\e[0#d");
           when SB_BOTTOM:
-            child_printf(cterm,"\e[%u#d", scroll_len);
+            child_printf(&term,"\e[%u#d", scroll_len);
           when SB_THUMBPOSITION or SB_THUMBTRACK: {
             SCROLLINFO info;
             info.cbSize = sizeof(SCROLLINFO);
             info.fMask = SIF_TRACKPOS;
             GetScrollInfo(wnd, SB_VERT, &info);
-            child_printf(cterm,"\e[%u#d", info.nTrackPos);
+            child_printf(&term,"\e[%u#d", info.nTrackPos);
           }
         }
         // while holding the mouse button on the scrollbar (e.g. dragging), 
@@ -3160,21 +3160,21 @@ static struct {
         when SB_PAGELEFT:
 #ifdef resize_view_via_horizontal_scrollbar
           if (mods & (MDK_SHIFT | MDK_ALT))
-            horsizing(cterm->cols / 10, true);
+            horsizing(term.cols / 10, true);
           else if (mods & MDK_CTRL)
-            horsizing(-cterm->cols / 10, true);
+            horsizing(-term.cols / 10, true);
           else
 #endif
-            horscroll(-cterm->cols / 10);
+            horscroll(-term.cols / 10);
         when SB_PAGERIGHT:
 #ifdef resize_view_via_horizontal_scrollbar
           if (mods & (MDK_SHIFT | MDK_ALT))
-            horsizing(cterm->cols / 10, false);
+            horsizing(term.cols / 10, false);
           else if (mods & MDK_CTRL)
-            horsizing(-cterm->cols / 10, false);
+            horsizing(-term.cols / 10, false);
           else
 #endif
-            horscroll(cterm->cols / 10);
+            horscroll(term.cols / 10);
         when SB_THUMBPOSITION or SB_THUMBTRACK: {
           //SCROLLINFO info;
           //info.cbSize = sizeof(SCROLLINFO);
@@ -3210,7 +3210,7 @@ static struct {
           win_mouse_wheel(wpos, horizontal, delta);
         else if (!horizontal) {
           int hsb = win_has_scrollbar();
-          if (hsb && cterm->app_scrollbar) {
+          if (hsb && term.app_scrollbar) {
             int wsb = GetSystemMetrics(SM_CXVSCROLL);
             if ((hsb > 0 && wpos.x >= width && wpos.x < width + wsb)
              || (hsb < 0 && wpos.x < 0 && wpos.x >= - wsb)
@@ -3319,7 +3319,7 @@ static struct {
 
     when WM_CHAR or WM_SYSCHAR:
       provide_input(wp);
-      child_sendw(cterm,&(wchar){wp}, 1);
+      child_sendw(&term,&(wchar){wp}, 1);
       return 0;
 
     when WM_UNICHAR:
@@ -3327,12 +3327,12 @@ static struct {
         return true;
       else if (wp > 0xFFFF) {
         provide_input(0xFFFF);
-        child_sendw(cterm,(wchar[]){high_surrogate(wp), low_surrogate(wp)}, 2);
+        child_sendw(&term,(wchar[]){high_surrogate(wp), low_surrogate(wp)}, 2);
         return false;
       }
       else {
         provide_input(wp);
-        child_sendw(cterm,&(wchar){wp}, 1);
+        child_sendw(&term,&(wchar){wp}, 1);
         return false;
       }
 
@@ -3340,7 +3340,7 @@ static struct {
       // this is sent after leaving the system menu with ESC 
       // and typing a key; insert the key and prevent the beep
       provide_input(wp);
-      child_sendw(cterm,&(wchar){wp}, 1);
+      child_sendw(&term,&(wchar){wp}, 1);
       return MNC_CLOSE << 16;
 
 #ifndef WM_CLIPBOARDUPDATE
@@ -3351,7 +3351,7 @@ static struct {
       if (wv.clipboard_token)
         wv.clipboard_token = false;
       else {
-        cterm->selected = false;
+        term.selected = false;
         win_update(false);
       }
       return 0;
@@ -3386,7 +3386,7 @@ static struct {
           wchar buf[(len + 1) / 2];
           ImmGetCompositionStringW(wv.imc, GCS_RESULTSTR, buf, len);
           provide_input(*buf);
-          child_sendw(cterm,buf, len / 2);
+          child_sendw(&term,buf, len / 2);
         }
         return 1;
       }
@@ -3399,7 +3399,7 @@ static struct {
       //     -> Windows sends WM_THEMECHANGED and WM_SYSCOLORCHANGE
       // and in both case a couple of WM_WININICHANGE
 
-      win_adjust_borders(wv.cell_width * cfg.cols, wv.cell_height * (cfg.rows + cterm->st_rows));
+      win_adjust_borders(wv.cell_width * cfg.cols, wv.cell_height * (cfg.rows + term.st_rows));
       RedrawWindow(wnd, null, null, 
                    RDW_FRAME | RDW_INVALIDATE |
                    RDW_UPDATENOW | RDW_ALLCHILDREN);
@@ -3511,10 +3511,10 @@ static int olddelta;
       int width = r->right - r->left - wv.extra_width - 2 * PADDING;
       int height = r->bottom - r->top - wv.extra_height - 2 * PADDING - OFFSET;
       int cols = max(1, (float)width / wv.cell_width + 0.5);
-      int rows = max(1, (float)height / wv.cell_height - cterm->st_rows + 0.5);
+      int rows = max(1, (float)height / wv.cell_height - term.st_rows + 0.5);
 
       int ew = width - cols * wv.cell_width;
-      int eh = height - (rows + cterm->st_rows) * wv.cell_height;
+      int eh = height - (rows + term.st_rows) * wv.cell_height;
 
       if (wp >= WMSZ_BOTTOM) {
         wp -= WMSZ_BOTTOM;
@@ -3590,11 +3590,11 @@ static int olddelta;
                        && !ctrl
                        ;
         //printf("WM_SIZE scale_font %d wv.zoom_token %d\n", scale_font, wv.zoom_token);
-        int rows0 = cterm->rows0, cols0 = cterm->cols0;
+        int rows0 = term.rows0, cols0 = term.cols0;
         win_adapt_term_size(false, scale_font);
         if (wp == SIZE_MAXIMIZED) {
-          cterm->rows0 = rows0;
-          cterm->cols0 = cols0;
+          term.rows0 = rows0;
+          term.cols0 = cols0;
         }
         if (wv.zoom_token > 0)
           wv.zoom_token = wv.zoom_token >> 1;
@@ -3740,7 +3740,7 @@ static int olddelta;
 #endif
         dpi = new_dpi;
 
-        int y = cterm->rows, x = cterm->cols;
+        int y = term.rows, x = term.cols;
         // set window size
         SetWindowPos(wnd, 0, 
                      r->left, r->top, 
@@ -3751,9 +3751,9 @@ static int olddelta;
         font_cs_reconfig(true);
 
         // reestablish terminal size
-        if (cterm->rows != y || cterm->cols != x) {
+        if (term.rows != y || term.cols != x) {
 #ifdef debug_dpi
-          printf("term w/h %d/%d -> %d/%d, fixing\n", x, y, cterm->cols, cterm->rows);
+          printf("term w/h %d/%d -> %d/%d, fixing\n", x, y, term.cols, term.rows);
 #endif
           // win_fix_position also clips the window to desktop size
           win_set_chars(y, x);
@@ -3797,11 +3797,11 @@ static int olddelta;
                        r->left, r->top, 
                        width - horsqueeze(), height + horex('e'),
                        SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_NOACTIVATE);
-          int y = cterm->rows, x = cterm->cols;
+          int y = term.rows, x = term.cols;
           win_adapt_term_size(false, true);
           //?win_init_fonts(cfg.font.size, true);
           // try to stabilize terminal size roundtrip
-          if (cterm->rows != y || cterm->cols != x) {
+          if (term.rows != y || term.cols != x) {
             // win_fix_position also clips the window to desktop size
             win_set_chars(y, x);
           }
@@ -3921,7 +3921,7 @@ hookprockbll(int nCode, WPARAM wParam, LPARAM lParam)
         return 1;
       }
     }
-    if (nCode != HC_ACTION ||cterm->shortcut_override ||(kbdll->flags&0x10)){
+    if (nCode != HC_ACTION ||term.shortcut_override ||(kbdll->flags&0x10)){
       return CallNextHookEx(kb_hook, nCode, wParam, lParam);
     }
     //keybd_event('Z', 0, 0, 0)　;//　表示模拟按下Z键
@@ -3988,12 +3988,12 @@ hook_windows(int id, HOOKPROC hookproc, bool global)
 static void
 win_global_keyboard_hook(bool on,bool autooff)
 {
-  int global=1;
+  int global=0;
   (void)hook_windows;
   //spid=getpid(); stid=GetCurrentThreadId();
-  if(autooff){
-    if(!hotkey)on=0;
-  }
+  if(!cfg.hook_keyboard)on=0;
+  if(!cfg.win_shortcuts)on=0;
+  if(autooff)if(!hotkey)on=0;
   if (on){
     if(!kb_hook)
       kb_hook = SetWindowsHookExW(WH_KEYBOARD_LL, hookprockbll,0, global ? 0 : GetCurrentThreadId());
@@ -4028,10 +4028,10 @@ report_pos(void)
     GetWindowPlacement(wv.wnd, &placement);
     x = placement.rcNormalPosition.left;
     y = placement.rcNormalPosition.top;
-    int cols = cterm->cols;
-    int rows = cterm->rows;
+    int cols = term.cols;
+    int rows = term.rows;
     cols = (placement.rcNormalPosition.right - placement.rcNormalPosition.left - wv.norm_extra_width - 2 * PADDING) / wv.cell_width;
-    rows = (placement.rcNormalPosition.bottom - placement.rcNormalPosition.top - wv.norm_extra_height - 2 * PADDING - OFFSET) / wv.cell_height - cterm->st_rows;
+    rows = (placement.rcNormalPosition.bottom - placement.rcNormalPosition.top - wv.norm_extra_height - 2 * PADDING - OFFSET) / wv.cell_height - term.st_rows;
 
     printf("%s", main_sd.argv[0]);
     printf(*wv.report_geom == 'o' ? " -o Columns=%d -o Rows=%d" : " -s %d,%d", cols, rows);
@@ -5403,6 +5403,8 @@ main(int argc, const char *argv[])
   main_sd.cmd=strdup(pt?:argv[0]);
   for(int i=3;i<FD_SETSIZE;i++)close(i);	
   mintty_debug = getenv("MINTTY_DEBUG") ?: "";
+  if (strchr(mintty_debug, 'C'))
+    wv.report_config = true;
 #ifdef debuglog
   mtlog = fopen("/tmp/mtlog", "a");
   {
@@ -5910,7 +5912,7 @@ main(int argc, const char *argv[])
   cs_reconfig();
 
   // Determine window sizes.
-  win_adjust_borders(wv.cell_width * term_cols, wv.cell_height * (term_rows + cterm->st_rows));
+  win_adjust_borders(wv.cell_width * term_cols, wv.cell_height * (term_rows + term.st_rows));
 
 
   // Having x == CW_USEDEFAULT but not y still triggers default positioning,
@@ -5949,7 +5951,7 @@ main(int argc, const char *argv[])
     window_style |= WS_HSCROLL;
 
   // Create initial window.
-  //cterm->show_scrollbar = cfg.scrollbar;  // hotfix #597
+  //term.show_scrollbar = cfg.scrollbar;  // hotfix #597
   window_style=up_borderstyle(window_style);
   wv.wnd = CreateWindowExW(cfg.scrollbar < 0 ? WS_EX_LEFTSCROLLBAR : 0,
                         wclass, wtitle,
@@ -6205,7 +6207,7 @@ main(int argc, const char *argv[])
   }
 
   // Initialise the terminal.
-  cterm->show_scrollbar = !!cfg.scrollbar;
+  term.show_scrollbar = !!cfg.scrollbar;
 
   // Initialise the scroll bar.
   SetScrollInfo(
@@ -6272,7 +6274,7 @@ main(int argc, const char *argv[])
 
   // Create child process.
   //struct winsize ws={term_rows, term_cols, term_width, term_height};
-  //child_create( cterm, argv, &ws    ,NULL);
+  //child_create( &term, argv, &ws    ,NULL);
 
   // Set up clipboard notifications.
   HRESULT (WINAPI * pAddClipboardFormatListener)(HWND) =
@@ -6316,8 +6318,8 @@ main(int argc, const char *argv[])
   win_init_drop_target();
 
   // Save the non-maximised window size
-  cterm->rows0 = term_rows;
-  cterm->cols0 = term_cols;
+  term.rows0 = term_rows;
+  term.cols0 = term_cols;
 
   win_update_shortcuts();
   win_global_keyboard_hook(true,0);
@@ -6364,5 +6366,5 @@ void new_win(int idss,int moni){
   }
   int shift=get_mods() & MDK_SHIFT;
   if(idss<IDSS_USR)
-    child_fork(cterm,&sessdefs[idss], 0, shift,0); 
+    child_fork(&term,&sessdefs[idss], moni, shift,0); 
 }

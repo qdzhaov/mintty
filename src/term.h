@@ -341,18 +341,18 @@ typedef enum {
 /* Searching */
 typedef struct {
   // Index of a virtual array of scrollback + screen.
-  // y = idx / cterm->cols
-  // x = idx % cterm->rows
+  // y = idx / term.cols
+  // x = idx % term.rows
   // y starts from the top most line (y = 0, the first line of scrollback or screen).
   int idx;
-  // The length of a match, maybe larger than cterm->results.xquery_length because of UCSWIDE.
+  // The length of a match, maybe larger than term.results.xquery_length because of UCSWIDE.
   int len;
 } result;
 
 typedef struct {
   // The current active result, for prev/next button.
   result current;
-  // An idx can be matched against cterm->results.results iff idx in [range_begin, range_end).
+  // An idx can be matched against term.results.results iff idx in [range_begin, range_end).
   int range_begin, range_end;
   result * results;
   const wchar * query;
@@ -397,7 +397,7 @@ typedef struct imglist {
   // image ref for disposal management and for rebasing after reflow
   int imgi;
   // position within scrollback
-  long long int top;  // includes offset cterm->virtuallines
+  long long int top;  // includes offset term.virtuallines
   int left;
 
   // image area (cell units)
@@ -532,7 +532,7 @@ typedef struct STerm {
   int  rows0, cols0;
   struct winsize cwinsize;
   int  st_rows;           /* status line(s) */
-#define term_allrows (cterm->rows + cterm->st_rows)
+#define term_allrows (term.rows + term.st_rows)
   char st_type;           /* status line type (DECSSDT) */
   bool st_active;         /* status line display active (DECSASD 1)*/
   term_cursor st_other_curs;  /* switched with active status display */
@@ -616,6 +616,7 @@ typedef struct STerm {
                           // as protected (xterm-like simplification)
 
   int detect_progress;
+  int progress_scan;
 
   enum {
     NORMAL, ESCAPE, CSI_ARGS,
@@ -704,8 +705,12 @@ typedef struct STerm {
 
   termimgs imgs;
 }STerm ;
-
+/*
+ * cterm is current term
+ * term is (*cterm),for same as origin code 
+ * */
 extern STerm *cterm;
+#define term (*cterm)
 
 extern void scroll_rect(int topline, int botline, int lines);
 

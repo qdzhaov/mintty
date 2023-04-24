@@ -401,7 +401,7 @@ dlg_stdfontsel_handler(control *ctrl, int event)
 }
 
 void
-dlg_stdstringbox_handler(control *ctrl, int event)
+dlg_stdwstringbox_handler(control *ctrl, int event)
 {
   wstring *sp = ctrl->context;
   if (event == EVENT_VALCHANGE)
@@ -410,6 +410,15 @@ dlg_stdstringbox_handler(control *ctrl, int event)
     dlg_editbox_set_w(ctrl, *sp);
 }
 
+void
+dlg_stdstringbox_handler(control *ctrl, int event)
+{
+  string *sp = ctrl->context;
+  if (event == EVENT_VALCHANGE)
+    dlg_editbox_get(ctrl, sp);
+  else if (event == EVENT_REFRESH)
+    dlg_editbox_set(ctrl, *sp);
+}
 void
 dlg_stdintbox_handler(control *ctrl, int event)
 {

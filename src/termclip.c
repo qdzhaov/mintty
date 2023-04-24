@@ -101,7 +101,7 @@ get_selection(bool attrs, pos start, pos end, bool rect, bool allinline, bool wi
 
   // estimate buffer size needed, to give memory allocation increments a hint
   int lines = end.y - start.y;
-  long hint = (long)lines * cterm->cols / 8;
+  long hint = (long)lines * term.cols / 8;
   //printf("get_selection %d...%d (%d)\n", start.y, end.y, lines);
   // check overflow
   if (lines < 0 || hint < 0) {
@@ -119,16 +119,16 @@ get_selection(bool attrs, pos start, pos end, bool rect, bool allinline, bool wi
       // this tweak (commit 975403 "export HTML: consider cursor", 2.9.1)
       // causes cursor artefacts in connection with ClicksPlaceCursor=yes
       // now guarded to cases of HTML copy/export
-      if (start.y == cterm->curs.y) {
-        line->chars[cterm->curs.x].attr.attr |= TATTR_ACTCURS;
+      if (start.y == term.curs.y) {
+        line->chars[term.curs.x].attr.attr |= TATTR_ACTCURS;
       }
     }
     if (allinline) {
       // this tweak (commit 975403 "export HTML: consider cursor", 2.9.1)
       // causes cursor artefacts in connection with ClicksPlaceCursor=yes
       // now guarded to cases of HTML copy/export
-      if (start.y == cterm->curs.y) {
-        line->chars[cterm->curs.x].attr.attr |= TATTR_ACTCURS;
+      if (start.y == term.curs.y) {
+        line->chars[term.curs.x].attr.attr |= TATTR_ACTCURS;
       }
     }
 
@@ -140,7 +140,7 @@ get_selection(bool attrs, pos start, pos end, bool rect, bool allinline, bool wi
     * should copy up to. So we start it at the end of the line...
     */
     nlpos.y = start.y;
-    nlpos.x = cterm->cols;
+    nlpos.x = term.cols;
     nlpos.r = false;
 
    /*
@@ -247,7 +247,7 @@ get_sel_str(pos start, pos end, bool rect, bool allinline, bool with_tabs)
 void
 term_copy_as(char what)
 {
-  if (!cterm->selected)
+  if (!term.selected)
     return;
 
   bool with_tabs = what == 'T' || ((!what || what == 't') && cfg.copy_tabs);
@@ -255,7 +255,7 @@ term_copy_as(char what)
     what = 't';
   // for CopyAsHTML, get_selection will be called another time
   // but with different parameters
-  clip_workbuf *buf = get_selection(true, cterm->sel_start, cterm->sel_end, cterm->sel_rect,
+  clip_workbuf *buf = get_selection(true, term.sel_start, term.sel_end, term.sel_rect,
                                     false, with_tabs);
   win_copy_as(buf->text, buf->cattrs, buf->len, what);
   destroy_clip_workbuf(buf);
@@ -270,10 +270,10 @@ term_copy(void)
 void
 term_open(void)
 {
-  if (!cterm->selected)
+  if (!term.selected)
     return;
 
-  wchar * selstr = get_sel_str(cterm->sel_start, cterm->sel_end, cterm->sel_rect, false, false);
+  wchar * selstr = get_sel_str(term.sel_start, term.sel_end, term.sel_rect, false, false);
 
   // Don't bother opening if it's all whitespace.
   wchar * p = selstr;
@@ -320,19 +320,19 @@ term_paste(const wchar *data, uint len, bool all)
   term_cancel_paste();
 
   uint size = len;
-  cterm->paste_buffer = newn(wchar, len);
-  cterm->paste_len = cterm->paste_pos = 0;
+  term.paste_buffer = newn(wchar, len);
+  term.paste_len = term.paste_pos = 0;
 
-  bool bracketed_paste_split_by_line = cterm->bracketed_paste 
+  bool bracketed_paste_split_by_line = term.bracketed_paste 
        && cfg.bracketed_paste_split
-       && (cfg.bracketed_paste_split > 1 || !cterm->on_alt_screen);
+       && (cfg.bracketed_paste_split > 1 || !term.on_alt_screen);
 
   // Copy data to the paste buffer, converting both Windows-style \r\n and
   // Unix-style \n line endings to \r, because that's what the Enter key sends.
   for (uint i = 0; i < len; i++) {
     // swallow closing paste bracket if included in clipboard contents,
     // in order to prevent (malicious) premature end of bracketing
-    if (cterm->bracketed_paste) {
+    if (term.bracketed_paste) {
       if (i + 6 <= len && wcsncmp(W("\e[201~"), &data[i], 6) == 0) {
         i += 6 - 1;
         continue;
@@ -346,9 +346,9 @@ term_paste(const wchar *data, uint len, bool all)
       wc = ' ';
 
     if (data[i] != '\n')
-      cterm->paste_buffer[cterm->paste_len++] = wc;
+      term.paste_buffer[term.paste_len++] = wc;
     else if (i == 0 || data[i - 1] != '\r')
-      cterm->paste_buffer[cterm->paste_len++] = wc;
+      term.paste_buffer[term.paste_len++] = wc;
     else
       continue;
 
@@ -358,47 +358,47 @@ term_paste(const wchar *data, uint len, bool all)
        )
     {
       size += 12;
-      cterm->paste_buffer = renewn(cterm->paste_buffer, size);
-      wcsncpy(&cterm->paste_buffer[cterm->paste_len], W("\e[201~\e[200~"), 12);
-      cterm->paste_len += 12;
+      term.paste_buffer = renewn(term.paste_buffer, size);
+      wcsncpy(&term.paste_buffer[term.paste_len], W("\e[201~\e[200~"), 12);
+      term.paste_len += 12;
     }
   }
 
-  if (cterm->bracketed_paste)
-    child_write(cterm,"\e[200~", 6);
+  if (term.bracketed_paste)
+    child_write(&term,"\e[200~", 6);
   term_send_paste();
 }
 
 void
 term_cancel_paste(void)
 {
-  if (cterm->paste_buffer) {
-    free(cterm->paste_buffer);
-    cterm->paste_buffer = 0;
-    if (cterm->bracketed_paste)
-      child_write(cterm,"\e[201~", 6);
+  if (term.paste_buffer) {
+    free(term.paste_buffer);
+    term.paste_buffer = 0;
+    if (term.bracketed_paste)
+      child_write(&term,"\e[201~", 6);
   }
 }
 
 void
 term_send_paste(void)
 {
-  int i = cterm->paste_pos;
+  int i = term.paste_pos;
   /* We must not feed more than MAXPASTEMAX bytes into the pty in one chunk 
      or it will block on the receiving side (write() does not return).
    */
 #define MAXPASTEMAX 7819
 #define PASTEMAX 2222
-  while (i < cterm->paste_len && i - cterm->paste_pos < PASTEMAX
-         && cterm->paste_buffer[i++] != '\r'
+  while (i < term.paste_len && i - term.paste_pos < PASTEMAX
+         && term.paste_buffer[i++] != '\r'
         )
     ;
-  if (i < cterm->paste_len && is_high_surrogate(cterm->paste_buffer[i]))
+  if (i < term.paste_len && is_high_surrogate(term.paste_buffer[i]))
     i++;
-  //printf("term_send_paste pos %d @ %d (len %d)\n", cterm->paste_pos, i, cterm->paste_len);
-  child_sendw(cterm,cterm->paste_buffer + cterm->paste_pos, i - cterm->paste_pos);
-  if (i < cterm->paste_len) {
-    cterm->paste_pos = i;
+  //printf("term_send_paste pos %d @ %d (len %d)\n", term.paste_pos, i, term.paste_len);
+  child_sendw(&term,term.paste_buffer + term.paste_pos, i - term.paste_pos);
+  if (i < term.paste_len) {
+    term.paste_pos = i;
     // if only part of the paste buffer has been written to the child,
     // the current strategy is to leave the rest pending for on-demand 
     // invocation of term_send_paste from child_proc within the main loop,
@@ -415,9 +415,9 @@ term_send_paste(void)
 void
 term_select_all(void)
 {
-  cterm->sel_start = (pos){-sblines(), 0, 0, 0, false};
-  cterm->sel_end = (pos){term_last_nonempty_line(), cterm->cols, 0, 0, true};
-  cterm->selected = true;
+  term.sel_start = (pos){-sblines(), 0, 0, 0, false};
+  term.sel_end = (pos){term_last_nonempty_line(), term.cols, 0, 0, true};
+  term.selected = true;
   if (cfg.copy_on_select)
     term_copy();
 }
@@ -443,10 +443,10 @@ term_get_text(bool all, bool screen, bool command)
     else {
       termline * line = fetch_line(y);
       if (line->lattr & LATTR_MARKED) {
-        //printf("incr %d (sbtop %d/%d rows %d)\n", y, sbtop, cterm->sblines, cterm->rows);
+        //printf("incr %d (sbtop %d/%d rows %d)\n", y, sbtop, term.sblines, term.rows);
         if (y > sbtop) {
           y--;
-          end = (pos){y, cterm->cols, 0, 0, false};
+          end = (pos){y, term.cols, 0, 0, false};
           release_line(line);
           line = fetch_line(y);
           if (line->lattr & LATTR_MARKED) {
@@ -461,7 +461,7 @@ term_get_text(bool all, bool screen, bool command)
       }
       else {
         skipprompt = line->lattr & LATTR_UNMARKED;
-        end = (pos){y, cterm->cols, 0, 0, false};
+        end = (pos){y, term.cols, 0, 0, false};
       }
 
       if (line->lattr & LATTR_UNMARKED)
@@ -492,20 +492,20 @@ term_get_text(bool all, bool screen, bool command)
 #endif
   }
   else if (screen) {
-    start = (pos){cterm->disptop, 0, 0, 0, false};
-    end = (pos){term_last_nonempty_line(), cterm->cols, 0, 0, false};
+    start = (pos){term.disptop, 0, 0, 0, false};
+    end = (pos){term_last_nonempty_line(), term.cols, 0, 0, false};
   }
   else if (all) {
     start = (pos){-sblines(), 0, 0, 0, false};
-    end = (pos){term_last_nonempty_line(), cterm->cols, 0, 0, false};
+    end = (pos){term_last_nonempty_line(), term.cols, 0, 0, false};
   }
-  else if (!cterm->selected) {
+  else if (!term.selected) {
     return wcsdup(W(""));
   }
   else {
-    start = cterm->sel_start;
-    end = cterm->sel_end;
-    rect = cterm->sel_rect;
+    start = term.sel_start;
+    end = term.sel_end;
+    rect = term.sel_rect;
   }
 
   return get_sel_str(start, end, rect, false, cfg.copy_tabs);
@@ -563,15 +563,15 @@ term_cmd(const char * cmd)
   unsetenv("MINTTY_SELECT");
   unsetenv("MINTTY_BUFFER");
   if (cmdf) {
-    if (cterm->bracketed_paste)
-      child_write(cterm,"\e[200~", 6);
+    if (term.bracketed_paste)
+      child_write(&term,"\e[200~", 6);
     char line[222];
     while (fgets(line, sizeof line, cmdf)) {
-      child_send(cterm,line, strlen(line));
+      child_send(&term,line, strlen(line));
     }
     pclose(cmdf);
-    if (cterm->bracketed_paste)
-      child_write(cterm,"\e[201~", 6);
+    if (term.bracketed_paste)
+      child_write(&term,"\e[201~", 6);
   }
   if (path0)
     setenv("PATH", path0, true);
@@ -611,12 +611,12 @@ term_create_html(FILE * hf, int level)
     free(buf);
   }
 
-  pos start = cterm->sel_start;
-  pos end = cterm->sel_end;
-  bool rect = cterm->sel_rect;
-  if (!cterm->selected) {
-    start = (pos){cterm->disptop, 0, 0, 0, false};
-    end = (pos){cterm->disptop + cterm->rows - 1, cterm->cols, 0, 0, false};
+  pos start = term.sel_start;
+  pos end = term.sel_end;
+  bool rect = term.sel_rect;
+  if (!term.selected) {
+    start = (pos){term.disptop, 0, 0, 0, false};
+    end = (pos){term.disptop + term.rows - 1, term.cols, 0, 0, false};
     rect = false;
   }
 
@@ -667,7 +667,7 @@ term_create_html(FILE * hf, int level)
   }
 
   if (level >= 3) {
-    if (*cfg.background && !cterm->selected) {
+    if (*cfg.background && !term.selected) {
       wstring wbg = cfg.background;
       bool tiled = *wbg == '*';
       if (*wbg == '*' || *wbg == '_')
@@ -817,11 +817,11 @@ term_create_html(FILE * hf, int level)
       // separate ANSI values subject to BoldAsColour
       int fga = fgi >= ANSI0 ? fgi & 0xFF : 999;
       int bga = bgi >= ANSI0 ? bgi & 0xFF : 999;
-      if ((ca->attr & ATTR_BOLD) && fga < 8 && cterm->enable_bold_colour && !rev) {
+      if ((ca->attr & ATTR_BOLD) && fga < 8 && term.enable_bold_colour && !rev) {
         if (bold_colour != (colour)-1)
           fg = bold_colour;
       }
-      else if ((ca->attr & (ATTR_BLINK | ATTR_BLINK2)) && cterm->enable_blink_colour) {
+      else if ((ca->attr & (ATTR_BLINK | ATTR_BLINK2)) && term.enable_blink_colour) {
         if (blink_colour != (colour)-1)
           fg = blink_colour;
       }
@@ -906,7 +906,7 @@ term_create_html(FILE * hf, int level)
 
       // catch and verify predefined colours and apply their colour classes
       if (fgi == FG_COLOUR_I) {
-        if ((ca->attr & ATTR_BOLD) && cterm->enable_bold_colour) {
+        if ((ca->attr & ATTR_BOLD) && term.enable_bold_colour) {
           if (fg == bold_colour) {
             if (enhtml) {
               add_style("color: ");
@@ -918,7 +918,7 @@ term_create_html(FILE * hf, int level)
             fg = (colour)-1;
           }
         }
-        else if (ca->attr & (ATTR_BLINK | ATTR_BLINK2) && cterm->enable_blink_colour) {
+        else if (ca->attr & (ATTR_BLINK | ATTR_BLINK2) && term.enable_blink_colour) {
           if (fg == blink_colour) {
             if (enhtml) {
               add_style("color: ");
@@ -1145,8 +1145,8 @@ print_screen(void)
   else
     return;
 
-  pos start = (pos){cterm->disptop, 0, 0, 0, false};
-  pos end = (pos){cterm->disptop + cterm->rows - 1, cterm->cols, 0, 0, false};
+  pos start = (pos){term.disptop, 0, 0, 0, false};
+  pos end = (pos){term.disptop + term.rows - 1, term.cols, 0, 0, false};
   bool rect = false;
   clip_workbuf * buf = get_selection(false, start, end, rect, false, false);
   printer_wwrite(buf->text, buf->len);

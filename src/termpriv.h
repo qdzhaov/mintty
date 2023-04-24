@@ -7,13 +7,13 @@
 
 #include "term.h"
 
-#define incpos(p) ((p).x == cterm->cols ? ((p).x = 0, (p).y++, 1) : ((p).x++, 0))
-#define decpos(p) ((p).x == 0 ? ((p).x = cterm->cols, (p).y--, 1) : ((p).x--, 0))
+#define incpos(p) ((p).x == term.cols ? ((p).x = 0, (p).y++, 1) : ((p).x++, 0))
+#define decpos(p) ((p).x == 0 ? ((p).x = term.cols, (p).y--, 1) : ((p).x--, 0))
 
 #define poslt(p1,p2) ((p1).y < (p2).y || ((p1).y == (p2).y && (p1).x < (p2).x))
 #define posle(p1,p2) ((p1).y < (p2).y || ((p1).y == (p2).y && (p1).x <= (p2).x))
 #define poseq(p1,p2) ((p1).y == (p2).y && (p1).x == (p2).x)
-#define posdiff(p1,p2) (((p1).y - (p2).y) * (cterm->cols + 1) + (p1).x - (p2).x)
+#define posdiff(p1,p2) (((p1).y - (p2).y) * (term.cols + 1) + (p1).x - (p2).x)
 
 /* Product-order comparisons for rectangular block selection. */
 #define posPlt(p1,p2) ((p1).y <= (p2).y && (p1).x < (p2).x)
@@ -41,7 +41,7 @@ extern wchar * wcsline(termline * line);  // for debug output
 
 static inline bool
 term_selecting(void)
-{ return cterm->mouse_state < 0 && cterm->mouse_state >= MS_SEL_LINE; }
+{ return term.mouse_state < 0 && term.mouse_state >= MS_SEL_LINE; }
 
 extern void term_update_cs(void);
 extern uchar scriptfont(ucschar ch);

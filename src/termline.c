@@ -18,7 +18,7 @@ newline(int cols, int bce)
   newn_1(line->chars, termchar, cols);
   //! Note: line->chars is based @ index -1
   for (int j = -1; j < cols; j++)
-    line->chars[j] = (bce ? cterm->erase_char : basic_erase_char);
+    line->chars[j] = (bce ? term.erase_char : basic_erase_char);
   line->cols = line->size = cols;
   line->lattr = LATTR_NORM;
   line->temporary = false;
@@ -742,7 +742,7 @@ clearline(termline *line)
   line->lattr = LATTR_NORM;
   //! Note: line->chars is based @ index -1
   for (int j = -1; j < line->cols; j++)
-    line->chars[j] = cterm->erase_char;
+    line->chars[j] = term.erase_char;
   if (line->size > line->cols) {
     line->size = line->cols;
     renewn_1(line->chars, line->size);
@@ -802,7 +802,7 @@ resizeline(termline *line, int cols)
 int
 sblines(void)
 {
-  return cterm->on_alt_screen ^ cterm->show_other_screen ? 0 : cterm->sblines;
+  return term.on_alt_screen ^ term.show_other_screen ? 0 : term.sblines;
 }
 
 /*
@@ -812,7 +812,7 @@ sblines(void)
 termline *
 fetch_line(int y)
 {
-  termlines *lines = cterm->show_other_screen ? cterm->other_lines : cterm->lines;
+  termlines *lines = term.show_other_screen ? term.other_lines : term.lines;
 
   termline *line;
   if (y >= 0) {
@@ -820,13 +820,13 @@ fetch_line(int y)
     line = lines[y];
   }
   else {
-    assert(-y <= cterm->sblines);
-    y += cterm->sbpos;
+    assert(-y <= term.sblines);
+    y += term.sbpos;
     if (y < 0)
-      y += cterm->sbsize; // Scrollback has wrapped round
-    uchar *cline = cterm->scrollback[y];
+      y += term.sbsize; // Scrollback has wrapped round
+    uchar *cline = term.scrollback[y];
     line = decompressline(cline, null);
-    resizeline(line, cterm->cols);
+    resizeline(line, term.cols);
   }
 
   assert(line);
@@ -853,23 +853,23 @@ term_bidi_cache_hit(int line, termchar *lbefore, ushort lattr, int width)
 {
   int i;
 
-  if (!cterm->pre_bidi_cache)
+  if (!term.pre_bidi_cache)
     return false;       /* cache doesn't even exist yet! */
 
-  if (line >= cterm->bidi_cache_size)
+  if (line >= term.bidi_cache_size)
     return false;       /* cache doesn't have this many lines */
 
-  if (!cterm->pre_bidi_cache[line].chars)
+  if (!term.pre_bidi_cache[line].chars)
     return false;       /* cache doesn't contain _this_ line */
 
-  if (cterm->pre_bidi_cache[line].lattr != (lattr & LATTR_BIDIMASK))
+  if (term.pre_bidi_cache[line].lattr != (lattr & LATTR_BIDIMASK))
     return false;       /* bidi attributes may be different */
 
-  if (cterm->pre_bidi_cache[line].width != width)
+  if (term.pre_bidi_cache[line].width != width)
     return false;       /* line is wrong width */
 
   for (i = 0; i < width; i++)
-    if (!termchars_equal(cterm->pre_bidi_cache[line].chars + i, lbefore + i))
+    if (!termchars_equal(term.pre_bidi_cache[line].chars + i, lbefore + i))
       return false;     /* line doesn't match cache */
 
   return true;  /* all termchars matched */
@@ -886,38 +886,38 @@ term_bidi_cache_store(int line,
 
   int i;
 
-  if (!cterm->pre_bidi_cache || cterm->bidi_cache_size <= line) {
-    int j = cterm->bidi_cache_size;
-    cterm->bidi_cache_size = line + 1;
-    cterm->pre_bidi_cache = renewn(cterm->pre_bidi_cache, cterm->bidi_cache_size);
-    cterm->post_bidi_cache = renewn(cterm->post_bidi_cache, cterm->bidi_cache_size);
-    while (j < cterm->bidi_cache_size) {
-      cterm->pre_bidi_cache[j].chars = cterm->post_bidi_cache[j].chars = null;
-      cterm->pre_bidi_cache[j].lattr = -1;
-      cterm->pre_bidi_cache[j].width = cterm->post_bidi_cache[j].width = -1;
-      cterm->pre_bidi_cache[j].forward = cterm->post_bidi_cache[j].forward = null;
-      cterm->pre_bidi_cache[j].backward = cterm->post_bidi_cache[j].backward = null;
+  if (!term.pre_bidi_cache || term.bidi_cache_size <= line) {
+    int j = term.bidi_cache_size;
+    term.bidi_cache_size = line + 1;
+    term.pre_bidi_cache = renewn(term.pre_bidi_cache, term.bidi_cache_size);
+    term.post_bidi_cache = renewn(term.post_bidi_cache, term.bidi_cache_size);
+    while (j < term.bidi_cache_size) {
+      term.pre_bidi_cache[j].chars = term.post_bidi_cache[j].chars = null;
+      term.pre_bidi_cache[j].lattr = -1;
+      term.pre_bidi_cache[j].width = term.post_bidi_cache[j].width = -1;
+      term.pre_bidi_cache[j].forward = term.post_bidi_cache[j].forward = null;
+      term.pre_bidi_cache[j].backward = term.post_bidi_cache[j].backward = null;
       j++;
     }
   }
 
-  free(cterm->pre_bidi_cache[line].chars);
-  free(cterm->post_bidi_cache[line].chars);
-  free(cterm->post_bidi_cache[line].forward);
-  free(cterm->post_bidi_cache[line].backward);
+  free(term.pre_bidi_cache[line].chars);
+  free(term.post_bidi_cache[line].chars);
+  free(term.post_bidi_cache[line].forward);
+  free(term.post_bidi_cache[line].backward);
 
-  cterm->pre_bidi_cache[line].lattr = lattr & LATTR_BIDIMASK;
-  cterm->pre_bidi_cache[line].width = width;
-  cterm->pre_bidi_cache[line].chars = newn(termchar, size);
-  cterm->post_bidi_cache[line].width = width;
-  cterm->post_bidi_cache[line].chars = newn(termchar, size);
-  cterm->post_bidi_cache[line].forward = newn(int, width);
-  cterm->post_bidi_cache[line].backward = newn(int, width);
+  term.pre_bidi_cache[line].lattr = lattr & LATTR_BIDIMASK;
+  term.pre_bidi_cache[line].width = width;
+  term.pre_bidi_cache[line].chars = newn(termchar, size);
+  term.post_bidi_cache[line].width = width;
+  term.post_bidi_cache[line].chars = newn(termchar, size);
+  term.post_bidi_cache[line].forward = newn(int, width);
+  term.post_bidi_cache[line].backward = newn(int, width);
 
-  memcpy(cterm->pre_bidi_cache[line].chars, lbefore, size * sizeof(termchar));
-  memcpy(cterm->post_bidi_cache[line].chars, lafter, size * sizeof(termchar));
-  memset(cterm->post_bidi_cache[line].forward, 0, width * sizeof(int));
-  memset(cterm->post_bidi_cache[line].backward, 0, width * sizeof(int));
+  memcpy(term.pre_bidi_cache[line].chars, lbefore, size * sizeof(termchar));
+  memcpy(term.post_bidi_cache[line].chars, lafter, size * sizeof(termchar));
+  memset(term.post_bidi_cache[line].forward, 0, width * sizeof(int));
+  memset(term.post_bidi_cache[line].backward, 0, width * sizeof(int));
 
   int ib = 0;
   for (i = 0; i < width; i++) {
@@ -928,30 +928,30 @@ term_bidi_cache_store(int line,
 
     assert(0 <= p && p < width);
 
-    cterm->post_bidi_cache[line].backward[i] = p;
-    cterm->post_bidi_cache[line].forward[p] = i;
+    term.post_bidi_cache[line].backward[i] = p;
+    term.post_bidi_cache[line].forward[p] = i;
 
     if (wcTo[ib].wide && i + 1 < width) {
       // compensate for skipped wide character right half
       i++;
       p++;
-      cterm->post_bidi_cache[line].backward[i] = p;
-      cterm->post_bidi_cache[line].forward[p] = i;
+      term.post_bidi_cache[line].backward[i] = p;
+      term.post_bidi_cache[line].forward[p] = i;
 #ifdef support_triple_width
 # ifdef support_quadruple_width
       int wide = wcTo[ib].wide;
       while (wide > 1 && i + 1 < width) {
         i++;
         p++;
-        cterm->post_bidi_cache[line].backward[i] = p;
-        cterm->post_bidi_cache[line].forward[p] = i;
+        term.post_bidi_cache[line].backward[i] = p;
+        term.post_bidi_cache[line].forward[p] = i;
       }
 # else
       if (wcTo[ib].wide > 1 && i + 1 < width) {
         i++;
         p++;
-        cterm->post_bidi_cache[line].backward[i] = p;
-        cterm->post_bidi_cache[line].forward[p] = i;
+        term.post_bidi_cache[line].backward[i] = p;
+        term.post_bidi_cache[line].forward[p] = i;
       }
 # endif
 #endif
@@ -982,10 +982,10 @@ wchar *
 wcsline(termline * line)
 {
   static wchar * wcs = 0;
-  wcs = renewn(wcs, cterm->cols + 1);
-  for (int i = 0; i < cterm->cols; i++)
+  wcs = renewn(wcs, term.cols + 1);
+  for (int i = 0; i < term.cols; i++)
     wcs[i] = line->chars[i].chr;
-  wcs[cterm->cols] = 0;
+  wcs[term.cols] = 0;
   return wcs;
 }
 
@@ -1037,7 +1037,7 @@ getparabidi(termline * line)
  * all took place (because bidi is disabled). If return was
  * non-null, auxiliary information such as the forward and reverse
  * mappings of permutation position are available in
- * cterm->post_bidi_cache[scr_y].*.
+ * term.post_bidi_cache[scr_y].*.
  */
 termchar *
 term_bidi_line(termline *line, int scr_y)
@@ -1065,9 +1065,9 @@ term_bidi_line(termline *line, int scr_y)
     ushort parabidi = (ushort)-1;
     bool brk = false;
     do {
-      if (cterm->disptop + y < -sblines())
+      if (term.disptop + y < -sblines())
         break;  // skip attempt to look back beyond scrollback buffer
-      termline *prevline = fetch_line(cterm->disptop + y);
+      termline *prevline = fetch_line(term.disptop + y);
       //printf("back @%d %04X %.22ls auto %d lvl %d\n", y, prevline->lattr, wcsline(prevline), autodir, level);
       if (prevline->lattr & LATTR_WRAPPED) {
         paray = y;
@@ -1092,7 +1092,7 @@ term_bidi_line(termline *line, int scr_y)
 #ifdef propagate_to_intermediate_apparently_useless
       // also propagate it to intermediate lines
       while (paray <= scr_y) {
-        termline *prevline = fetch_line(cterm->disptop + paray);
+        termline *prevline = fetch_line(term.disptop + paray);
         prevline->lattr = (prevline->lattr & ~LATTR_BIDIMASK) | parabidi;
         //printf("prop @%d %04X %.22ls auto %d lvl %d\n", paray, prevline->lattr, wcsline(prevline), autodir, level);
         release_line(prevline);
@@ -1107,8 +1107,8 @@ term_bidi_line(termline *line, int scr_y)
     }
     //printf("line @%d %04X %.22ls auto %d lvl %d\n", scr_y, line->lattr, wcsline(line), autodir, level);
   }
-  //printf("pluq @%d/%d %04X %.22ls auto %d prevsel %d\n", scr_y, cterm->disptop, line->lattr, wcsline(line), autodir, prevseldir);
-  if (autodir && !prevseldir && (line->lattr & LATTR_WRAPPED) && cterm->disptop + scr_y < 0) {
+  //printf("pluq @%d/%d %04X %.22ls auto %d prevsel %d\n", scr_y, term.disptop, line->lattr, wcsline(line), autodir, prevseldir);
+  if (autodir && !prevseldir && (line->lattr & LATTR_WRAPPED) && term.disptop + scr_y < 0) {
     // if we are yet unsure about the direction, 
     // and if we are displaying from scrollback buffer, 
     // we may need to inspect the remainder of the paragraph
@@ -1119,10 +1119,10 @@ term_bidi_line(termline *line, int scr_y)
     int y = scr_y;
     while (autodir) {
       y++;
-      if (y >= cterm->rows)
+      if (y >= term.rows)
         break;
 
-      succline = fetch_line(cterm->disptop + y);
+      succline = fetch_line(term.disptop + y);
       ushort lattr = succline->lattr;
       parabidi = getparabidi(succline);
       //printf("plus @%d %04X/%04X %.22ls auto %d lvl %d\n", y, lattr, parabidi, wcsline(succline), autodir, level);
@@ -1148,32 +1148,32 @@ term_bidi_line(termline *line, int scr_y)
 
   // if no bidi handling is required for this line, skip the rest
   if (((line->lattr & LATTR_NOBIDI) && !explicitRTL)
-      || cterm->disable_bidi
+      || term.disable_bidi
       || cfg.bidi == 0
-      || (cfg.bidi == 1 && (cterm->on_alt_screen ^ cterm->show_other_screen))
+      || (cfg.bidi == 1 && (term.on_alt_screen ^ term.show_other_screen))
      )
     return null;
 
  /* Do Arabic shaping and bidi. */
 
-  if (term_bidi_cache_hit(scr_y, line->chars, line->lattr, cterm->cols))
-    return cterm->post_bidi_cache[scr_y].chars;
+  if (term_bidi_cache_hit(scr_y, line->chars, line->lattr, term.cols))
+    return term.post_bidi_cache[scr_y].chars;
   else {
-    if (cterm->wcFromTo_size < cterm->cols) {
-      cterm->wcFromTo_size = cterm->cols;
-      cterm->wcFrom = renewn(cterm->wcFrom, cterm->wcFromTo_size);
-      cterm->wcTo = renewn(cterm->wcTo, cterm->wcFromTo_size);
+    if (term.wcFromTo_size < term.cols) {
+      term.wcFromTo_size = term.cols;
+      term.wcFrom = renewn(term.wcFrom, term.wcFromTo_size);
+      term.wcTo = renewn(term.wcTo, term.wcFromTo_size);
     }
 
     // UTF-16 string (including surrogates) for Windows bidi calculation
-    //wchar wcs[2 * cterm->cols];  /// size handling to be tweaked
+    //wchar wcs[2 * term.cols];  /// size handling to be tweaked
     //int wcsi = 0;
 
     int ib = 0;
 #ifdef apply_HL3
     uint emojirest = 0;
 #endif
-    for (int it = 0; it < cterm->cols; it++) {
+    for (int it = 0; it < term.cols; it++) {
       ucschar c = line->chars[it].chr;
       //wcs[wcsi++] = c;
 
@@ -1202,13 +1202,13 @@ term_bidi_line(termline *line, int scr_y)
               || (bp->chr >= 0x2066 && bp->chr <= 0x2069)
              )
           {
-            cterm->wcFromTo_size++;
-            cterm->wcFrom = renewn(cterm->wcFrom, cterm->wcFromTo_size);
-            cterm->wcTo = renewn(cterm->wcTo, cterm->wcFromTo_size);
-            cterm->wcFrom[ib].origwc = cterm->wcFrom[ib].wc = bp->chr;
-            cterm->wcFrom[ib].index = -1;
-            cterm->wcFrom[ib].wide = false;
-            cterm->wcFrom[ib].emojilen = 0;
+            term.wcFromTo_size++;
+            term.wcFrom = renewn(term.wcFrom, term.wcFromTo_size);
+            term.wcTo = renewn(term.wcTo, term.wcFromTo_size);
+            term.wcFrom[ib].origwc = term.wcFrom[ib].wc = bp->chr;
+            term.wcFrom[ib].index = -1;
+            term.wcFrom[ib].wide = false;
+            term.wcFrom[ib].emojilen = 0;
             ib++;
             //wcs[wcsi++] = bp->chr;
           }
@@ -1222,12 +1222,12 @@ term_bidi_line(termline *line, int scr_y)
           uint emojilen = line->chars[it].attr.attr & ATTR_FGMASK;
           if (emojilen > 1) {
             if (!emojirest) {
-              cterm->wcFromTo_size++;
-              cterm->wcFrom = renewn(cterm->wcFrom, cterm->wcFromTo_size);
-              cterm->wcTo = renewn(cterm->wcTo, cterm->wcFromTo_size);
-              cterm->wcFrom[ib].origwc = cterm->wcFrom[ib].wc = 0x202D; // LRO
-              cterm->wcFrom[ib].index = -1;
-              cterm->wcFrom[ib].wide = false;
+              term.wcFromTo_size++;
+              term.wcFrom = renewn(term.wcFrom, term.wcFromTo_size);
+              term.wcTo = renewn(term.wcTo, term.wcFromTo_size);
+              term.wcFrom[ib].origwc = term.wcFrom[ib].wc = 0x202D; // LRO
+              term.wcFrom[ib].index = -1;
+              term.wcFrom[ib].wide = false;
               ib++;
             }
             emojirest = emojilen;
@@ -1235,10 +1235,10 @@ term_bidi_line(termline *line, int scr_y)
         }
 #endif
 
-        cterm->wcFrom[ib].origwc = cterm->wcFrom[ib].wc = c;
-        cterm->wcFrom[ib].index = it;
-        cterm->wcFrom[ib].wide = false;
-        cterm->wcFrom[ib].emojilen = 
+        term.wcFrom[ib].origwc = term.wcFrom[ib].wc = c;
+        term.wcFrom[ib].index = it;
+        term.wcFrom[ib].wide = false;
+        term.wcFrom[ib].emojilen = 
           line->chars[it].attr.attr & TATTR_EMOJI
           ? (line->chars[it].attr.attr & ATTR_FGMASK ?: 1)
           : 0;
@@ -1248,19 +1248,19 @@ term_bidi_line(termline *line, int scr_y)
         // skip wide character virtual right half, flag it
 #ifdef support_triple_width
 # ifdef support_quadruple_width
-        if (it + 1 < cterm->cols && line->chars[it + 1].chr == UCSWIDE) {
-          cterm->wcFrom[ib - 1].wide = 1;
-          for (int i = it + 1; i < cterm->cols && line->chars[i].chr == UCSWIDE; i++)
-          cterm->wcFrom[ib - 1].wide ++;
+        if (it + 1 < term.cols && line->chars[it + 1].chr == UCSWIDE) {
+          term.wcFrom[ib - 1].wide = 1;
+          for (int i = it + 1; i < term.cols && line->chars[i].chr == UCSWIDE; i++)
+          term.wcFrom[ib - 1].wide ++;
         }
 # else
-        if (it + 1 < cterm->cols && line->chars[it + 1].chr == UCSWIDE)
-          cterm->wcFrom[ib - 1].wide = 2;
+        if (it + 1 < term.cols && line->chars[it + 1].chr == UCSWIDE)
+          term.wcFrom[ib - 1].wide = 2;
 # endif
-        else if (!cterm->wcFrom[ib - 1].wide)
-          cterm->wcFrom[ib - 1].wide = true;
+        else if (!term.wcFrom[ib - 1].wide)
+          term.wcFrom[ib - 1].wide = true;
 #else
-        cterm->wcFrom[ib - 1].wide = true;
+        term.wcFrom[ib - 1].wide = true;
 #endif
       }
 
@@ -1269,12 +1269,12 @@ term_bidi_line(termline *line, int scr_y)
       if (emojirest) {
         emojirest--;
         if (!emojirest) {
-          cterm->wcFromTo_size++;
-          cterm->wcFrom = renewn(cterm->wcFrom, cterm->wcFromTo_size);
-          cterm->wcTo = renewn(cterm->wcTo, cterm->wcFromTo_size);
-          cterm->wcFrom[ib].origwc = cterm->wcFrom[ib].wc = 0x202C; // PDF
-          cterm->wcFrom[ib].index = -1;
-          cterm->wcFrom[ib].wide = false;
+          term.wcFromTo_size++;
+          term.wcFrom = renewn(term.wcFrom, term.wcFromTo_size);
+          term.wcTo = renewn(term.wcTo, term.wcFromTo_size);
+          term.wcFrom[ib].origwc = term.wcFrom[ib].wc = 0x202C; // PDF
+          term.wcFrom[ib].index = -1;
+          term.wcFrom[ib].wide = false;
           ib++;
         }
       }
@@ -1292,24 +1292,24 @@ term_bidi_line(termline *line, int scr_y)
             || (bp->chr >= 0x2066 && bp->chr <= 0x2069)
            )
         {
-          cterm->wcFromTo_size++;
-          cterm->wcFrom = renewn(cterm->wcFrom, cterm->wcFromTo_size);
-          cterm->wcTo = renewn(cterm->wcTo, cterm->wcFromTo_size);
-          cterm->wcFrom[ib].origwc = cterm->wcFrom[ib].wc = bp->chr;
-          cterm->wcFrom[ib].index = -1;
-          cterm->wcFrom[ib].wide = false;
-          cterm->wcFrom[ib].emojilen = 0;
+          term.wcFromTo_size++;
+          term.wcFrom = renewn(term.wcFrom, term.wcFromTo_size);
+          term.wcTo = renewn(term.wcTo, term.wcFromTo_size);
+          term.wcFrom[ib].origwc = term.wcFrom[ib].wc = bp->chr;
+          term.wcFrom[ib].index = -1;
+          term.wcFrom[ib].wide = false;
+          term.wcFrom[ib].emojilen = 0;
           ib++;
           //wcs[wcsi++] = bp->chr;
         }
       }
     }
 
-    trace_bidi("=", cterm->wcFrom, ib);
+    trace_bidi("=", term.wcFrom, ib);
     int rtl = do_bidi(autodir, level, explicitRTL,
                       line->lattr & LATTR_BOXMIRROR,
-                      cterm->wcFrom, ib);
-    trace_bidi(":", cterm->wcFrom, ib);
+                      term.wcFrom, ib);
+    trace_bidi(":", term.wcFrom, ib);
 
 #ifdef support_multiline_bidi
     if (autodir && rtl >= 0) {
@@ -1331,7 +1331,7 @@ term_bidi_line(termline *line, int scr_y)
             //printf("post @%d %04X %.22ls auto %d lvl %d\n", paray, paraline->lattr, wcsline(paraline), autodir, level);
 #ifdef use_invalidate_useless
             if (paray >= 0)
-              term_invalidate(0, paray, cterm->cols, paray);
+              term_invalidate(0, paray, term.cols, paray);
 #endif
           }
           else
@@ -1348,10 +1348,10 @@ term_bidi_line(termline *line, int scr_y)
 
 #ifdef refresh_parabidi_after_bidi
 //? if at all, this is only useful after modification of wrapped lines
-    if (line->lattr & LATTR_WRAPPED && scr_y + 1 < cterm->rows) {
+    if (line->lattr & LATTR_WRAPPED && scr_y + 1 < term.rows) {
       int conty = scr_y + 1;
       do {
-        termline *contline = cterm->lines[conty];
+        termline *contline = term.lines[conty];
         if (!(contline->lattr & LATTR_WRAPCONTD))
           break;
         if (rtl)
@@ -1366,75 +1366,75 @@ term_bidi_line(termline *line, int scr_y)
         if (!(contline->lattr & LATTR_WRAPPED))
           break;
         conty++;
-      } while (conty < cterm->rows);
+      } while (conty < term.rows);
     }
 #endif
 
-    do_shape(cterm->wcFrom, cterm->wcTo, ib);
-    trace_bidi("~", cterm->wcTo, ib);
+    do_shape(term.wcFrom, term.wcTo, ib);
+    trace_bidi("~", term.wcTo, ib);
 
-    if (cterm->ltemp_size < line->size) {
-      cterm->ltemp_size = line->size;
-      cterm->ltemp = renewn(cterm->ltemp, cterm->ltemp_size);
+    if (term.ltemp_size < line->size) {
+      term.ltemp_size = line->size;
+      term.ltemp = renewn(term.ltemp, term.ltemp_size);
     }
 
     // copy line->chars to ltemp initially, esp. to preserve all combinings
-    memcpy(cterm->ltemp, line->chars, line->size * sizeof(termchar));
+    memcpy(term.ltemp, line->chars, line->size * sizeof(termchar));
 
     // equip ltemp with reorder line->chars as determined in wcTo
     ib = 0;
-    for (int it = 0; it < cterm->cols; it++) {
-      while (cterm->wcTo[ib].index == -1)
+    for (int it = 0; it < term.cols; it++) {
+      while (term.wcTo[ib].index == -1)
         ib++;
 
       // copy character and combining reference from source as reordered
-      //printf("reorder %2d <- [%2d]%2d: %5X %d\n", it, ib, cterm->wcTo[ib].index, cterm->wcTo[ib].wc, cterm->wcTo[ib].wide);
-      cterm->ltemp[it] = line->chars[cterm->wcTo[ib].index];
-      if (cterm->ltemp[it].cc_next)
-        cterm->ltemp[it].cc_next -= it - cterm->wcTo[ib].index;
+      //printf("reorder %2d <- [%2d]%2d: %5X %d\n", it, ib, term.wcTo[ib].index, term.wcTo[ib].wc, term.wcTo[ib].wide);
+      term.ltemp[it] = line->chars[term.wcTo[ib].index];
+      if (term.ltemp[it].cc_next)
+        term.ltemp[it].cc_next -= it - term.wcTo[ib].index;
 
       // update reshaped glyphs
-      if (cterm->wcTo[ib].origwc != cterm->wcTo[ib].wc)
-        cterm->ltemp[it].chr = cterm->wcTo[ib].wc;
+      if (term.wcTo[ib].origwc != term.wcTo[ib].wc)
+        term.ltemp[it].chr = term.wcTo[ib].wc;
 
       // expand wide characters to their double-half representation
-      if (cterm->wcTo[ib].wide && it + 1 < cterm->cols && cterm->wcTo[ib].index + 1 < cterm->cols) {
-        cterm->ltemp[++it] = line->chars[cterm->wcTo[ib].index + 1];
+      if (term.wcTo[ib].wide && it + 1 < term.cols && term.wcTo[ib].index + 1 < term.cols) {
+        term.ltemp[++it] = line->chars[term.wcTo[ib].index + 1];
 #ifdef support_triple_width
 # ifdef support_quadruple_width
-        if (cterm->wcTo[ib].wide > 1 && it + 1 < cterm->cols) {
-          int wide = cterm->wcTo[ib].wide;
-          while (wide > 1 && it + 1 < cterm->cols) {
-            cterm->ltemp[++it] = line->chars[cterm->wcTo[ib].index + 1];
+        if (term.wcTo[ib].wide > 1 && it + 1 < term.cols) {
+          int wide = term.wcTo[ib].wide;
+          while (wide > 1 && it + 1 < term.cols) {
+            term.ltemp[++it] = line->chars[term.wcTo[ib].index + 1];
             wide --;
           }
         }
 # else
-        if (cterm->wcTo[ib].wide > 1 && it + 1 < cterm->cols)
-          cterm->ltemp[++it] = line->chars[cterm->wcTo[ib].index + 1];
+        if (term.wcTo[ib].wide > 1 && it + 1 < term.cols)
+          term.ltemp[++it] = line->chars[term.wcTo[ib].index + 1];
 # endif
 #endif
       }
 
       ib++;
     }
-    term_bidi_cache_store(scr_y, line->chars, cterm->ltemp, cterm->wcTo,
-                          line->lattr, cterm->cols, line->size, ib);
+    term_bidi_cache_store(scr_y, line->chars, term.ltemp, term.wcTo,
+                          line->lattr, term.cols, line->size, ib);
 #ifdef debug_bidi_cache
-    for (int i = 0; i < cterm->cols; i++)
-      printf(" %04X", cterm->ltemp[i].chr);
+    for (int i = 0; i < term.cols; i++)
+      printf(" %04X", term.ltemp[i].chr);
     printf("\n");
     for (int i = 0; i < ib; i++)
-      printf(" %04X[%d]", cterm->wcTo[i].wc, cterm->wcTo[i].index);
+      printf(" %04X[%d]", term.wcTo[i].wc, term.wcTo[i].index);
     printf("\n");
-    for (int i = 0; i < cterm->cols; i++)
-      printf(" %d", cterm->post_bidi_cache[scr_y].forward[i]);
+    for (int i = 0; i < term.cols; i++)
+      printf(" %d", term.post_bidi_cache[scr_y].forward[i]);
     printf("\n");
-    for (int i = 0; i < cterm->cols; i++)
-      printf(" %d", cterm->post_bidi_cache[scr_y].backward[i]);
+    for (int i = 0; i < term.cols; i++)
+      printf(" %d", term.post_bidi_cache[scr_y].backward[i]);
     printf("\n");
 #endif
 
-    return cterm->ltemp;
+    return term.ltemp;
   }
 }
