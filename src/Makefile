@@ -354,6 +354,7 @@ pot:
 po:
 	cd ../lang; for po in *.po; do [ "$$po" = en.po ] || msgmerge -U "$$po" messages.pot; done
 checkloc:
+	echo checkloc
 	#cd ../lang; ! grep "^#, fuzzy" *.po
 
 #############################################################################
@@ -388,8 +389,8 @@ $(pdf): ../docs/$(NAME).1
 
 html := ../docs/$(NAME).1.html
 html: $(html)
-$(html): ../docs/$(NAME).1 htmlroff.sed htmlhtml.sed
-	sed -f htmlroff.sed $< | groff -t -man -mwww -Thtml | sed -f htmlhtml.sed > $@
+$(html): ../docs/$(NAME).1 htmlroff.sed html.sed
+	sed -f htmlroff.sed $< | groff -t -man -mwww -Thtml | sed -f html.sed > $@
 
 clean:
 	#rm -rf *.d *.o $(NAME)*
@@ -401,6 +402,7 @@ check:	checksrc checkresource checkloc
 stripsupp=sed -e "/supportedOS/ s,>.*,>," -e t -e d
 defsupp=/usr/lib/default-manifest.o
 checkresource:
+	echo checkresource
 	$(stripsupp) res.mft > .osmin
 	cat "$(defsupp)" /dev/null | strings | $(stripsupp) > .osdef
 	if [ -f "$(defsupp)" ]; then diff .osdef .osmin; else true; fi
@@ -415,6 +417,7 @@ SRCDEBUG+= -e "\((true|1) *\|"
 SRCDEBUG+= -e "\(0 &"
 SRCDEBUG+= -e "^///"
 checksrc:
+	echo checksrc
 	if egrep -an $(SRCDEBUG) *.[hc]; then false; fi
 	if sed -e "s,.*IDM_.*0x\([0-9A-F]*\) *,\1," -e t -e d winids.h | sort | uniq -d | grep .; then false; fi
 

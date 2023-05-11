@@ -26,7 +26,8 @@ static uint hyper_key = 0;
 static uint compose_key = 0;
 static uint last_key_down = 0;
 static uint last_key_up = 0;
-
+static uint key_special=0;
+enum Key_Special{KS_NEWWIN=1,KS_TRANP=2,KS_TERMSEL=4};
 static uint newwin_key = 0;
 static bool newwin_pending = false;
 static bool newwin_shifted = false;
@@ -416,17 +417,11 @@ win_update_menus(bool callback)
 #endif
   MFCM( IDM_SCROLLBAR, mflags       , _W("Scrollbar(&S)"), null);
 
-  if(wv.win_is_fullscreen){
-    mflags=MF_GRAYED;
-  }else{
-    mflags=MF_CHECKED;
-  }
+  mflags=MF_CHECKED;
   switch(wv.border_style){    
     when 1:cap=_W("&Border[T]");
     when 2:cap=_W("&Border[N]");
-    otherwise:
-    cap=_W("&Border");
-    mflags=MF_UNCHECKED;
+    otherwise: cap=_W("&Border"); mflags=MF_UNCHECKED;
   }
   MFCM( IDM_BORDERS  , mflags, cap, null);
   MFCM( IDM_PARTLINE , CKED(term.usepartline), _W("PartLine(&K)"),  null);
@@ -2037,24 +2032,17 @@ win_key_down(WPARAM wp, LPARAM lp)
   mods |= super * MDK_SUPER | hyper * MDK_HYPER;
 
   update_mouse(mods);
-
-  // Workaround for Windows clipboard history pasting simply injecting Ctrl+V
-  // (mintty/wsltty#139)
-  if (key == 'V' && mods == MDK_CTRL && !scancode) {
-    win_paste(); 
-    return true;
-  }
-
   if (key == VK_MENU) {
     if (!repeat && mods == MDK_ALT && alt_state == ALT_NONE)
       alt_state = ALT_ALONE;
     return true;
   }
-
   old_alt_state = alt_state;
   if (alt_state > ALT_NONE)
     alt_state = ALT_CANCELLED;
 
+  // Workaround for Windows clipboard history pasting simply injecting Ctrl+V
+  // (mintty/wsltty#139)
   switch(wv.tabctrling){
       when 0:
         if(key==VK_CONTROL){
@@ -2148,176 +2136,187 @@ win_key_down(WPARAM wp, LPARAM lp)
           if(res>0)return 1;
         }else wv.tabctrling=0;
   }
-  // Handling special shifted key functions
-  if (newwin_pending) {
-    if (!extended) {  // only accept numeric keypad
+  if(!scancode){
+    if (key == 'V' && mods == MDK_CTRL ) {
+      win_paste(); 
+      return true;
+    }
+  }
+  if(key_special|(tek_mode -TEKMODE_GIN)){
+    if (tek_mode == TEKMODE_GIN) {
+      int step = (mods & MDK_SHIFT) ? 40 : (mods & MDK_CTRL) ? 1 : 4;
       switch (key) {
-        when VK_HOME : newwin_monix--; newwin_moniy--;
-        when VK_UP   : newwin_moniy--;
-        when VK_PRIOR: newwin_monix++; newwin_moniy--;
-        when VK_LEFT : newwin_monix--;
-        when VK_CLEAR: newwin_monix = 0; newwin_moniy = 0; newwin_home = true;
-        when VK_RIGHT: newwin_monix++;
-        when VK_END  : newwin_monix--; newwin_moniy++;
-        when VK_DOWN : newwin_moniy++;
-        when VK_NEXT : newwin_monix++; newwin_moniy++;
-        when VK_INSERT or VK_DELETE:
-                       newwin_monix = 0; newwin_moniy = 0; newwin_home = false;
+        when VK_HOME : tek_move_by(step, -step);
+        when VK_UP   : tek_move_by(step, 0);
+        when VK_PRIOR: tek_move_by(step, step);
+        when VK_LEFT : tek_move_by(0, -step);
+        when VK_CLEAR: tek_move_by(0, 0);
+        when VK_RIGHT: tek_move_by(0, step);
+        when VK_END  : tek_move_by(-step, -step);
+        when VK_DOWN : tek_move_by(-step, 0);
+        when VK_NEXT : tek_move_by(-step, step);
+        otherwise: step = 0;
       }
+      if (step)
+        return true;
     }
-    return true;
-  }
-  if (transparency_pending) {
-    transparency_pending = 2;
-    switch (key) {
-      when VK_HOME  : set_transparency(previous_transparency);
-      when VK_CLEAR : if (win_is_glass_available()) {
-                        cfg.transparency = TR_GLASS;
-                        win_update_transparency(TR_GLASS, false);
-                      }
-      when VK_DELETE: set_transparency(0);
-      when VK_INSERT: set_transparency(127);
-      when VK_END   : set_transparency(TR_HIGH);
-      when VK_UP    : set_transparency(cfg.transparency + 1);
-      when VK_PRIOR : set_transparency(cfg.transparency + 16);
-      when VK_LEFT  : set_transparency(cfg.transparency - 1);
-      when VK_RIGHT : set_transparency(cfg.transparency + 1);
-      when VK_DOWN  : set_transparency(cfg.transparency - 1);
-      when VK_NEXT  : set_transparency(cfg.transparency - 16);
-      otherwise: transparency_pending = 0;
+    // Handling special shifted key functions
+    if (newwin_pending) {
+      if (!extended) {  // only accept numeric keypad
+        switch (key) {
+          when VK_HOME : newwin_monix--; newwin_moniy--;
+          when VK_UP   : newwin_moniy--;
+          when VK_PRIOR: newwin_monix++; newwin_moniy--;
+          when VK_LEFT : newwin_monix--;
+          when VK_CLEAR: newwin_monix = 0; newwin_moniy = 0; newwin_home = true;
+          when VK_RIGHT: newwin_monix++;
+          when VK_END  : newwin_monix--; newwin_moniy++;
+          when VK_DOWN : newwin_moniy++;
+          when VK_NEXT : newwin_monix++; newwin_moniy++;
+          when VK_INSERT or VK_DELETE:
+                         newwin_monix = 0; newwin_moniy = 0; newwin_home = false;
+        }
+      }
+      return true;
     }
-#ifdef debug_transparency
-    printf("==%d\n", transparency_pending);
-#endif
     if (transparency_pending) {
-      transparency_tuned = true;
-      return true;
+      transparency_pending = 2;
+      switch (key) {
+        when VK_HOME  : set_transparency(previous_transparency);
+        when VK_CLEAR : if (win_is_glass_available()) {
+                          cfg.transparency = TR_GLASS;
+                          win_update_transparency(TR_GLASS, false);
+                        }
+        when VK_DELETE: set_transparency(0);
+        when VK_INSERT: set_transparency(127);
+        when VK_END   : set_transparency(TR_HIGH);
+        when VK_UP    : set_transparency(cfg.transparency + 1);
+        when VK_PRIOR : set_transparency(cfg.transparency + 16);
+        when VK_LEFT  : set_transparency(cfg.transparency - 1);
+        when VK_RIGHT : set_transparency(cfg.transparency + 1);
+        when VK_DOWN  : set_transparency(cfg.transparency - 1);
+        when VK_NEXT  : set_transparency(cfg.transparency - 16);
+        otherwise: transparency_pending = 0;key_special&=~KS_TRANP;
+      }
+#ifdef debug_transparency
+      printf("==%d\n", transparency_pending);
+#endif
+      if (transparency_pending) {
+        transparency_tuned = true;
+        return true;
+      }
     }
-  }
-  if (term.selection_pending) {
-    bool sel_adjust = false;
-    //WPARAM scroll = 0;
-    int sbtop = -sblines();
-    int sbbot = term_last_nonempty_line();
-    int oldisptop = term.disptop;
-    //printf("y %d disptop %d sb %d..%d\n", term.sel_pos.y, term.disptop, sbtop, sbbot);
-    switch (key) {
-      when VK_CLEAR:
-        // re-anchor keyboard selection
-        term.sel_anchor = term.sel_pos;
-        term.sel_start = term.sel_pos;
-        term.sel_end = term.sel_pos;
-        term.sel_rect = mods & MDK_ALT;
-        sel_adjust = true;
-      when VK_LEFT:
-        if (term.sel_pos.x > 0)
-          term.sel_pos.x--;
-        sel_adjust = true;
-      when VK_RIGHT:
-        if (term.sel_pos.x < term.cols)
-          term.sel_pos.x++;
-        sel_adjust = true;
-      when VK_UP:
-        if (term.sel_pos.y > sbtop) {
-          if (term.sel_pos.y <= term.disptop)
-            term_scroll(0, -1);
-          term.sel_pos.y--;
+    if (term.selection_pending) {
+      bool sel_adjust = false;
+      //WPARAM scroll = 0;
+      int sbtop = -sblines();
+      int sbbot = term_last_nonempty_line();
+      int oldisptop = term.disptop;
+      //printf("y %d disptop %d sb %d..%d\n", term.sel_pos.y, term.disptop, sbtop, sbbot);
+      switch (key) {
+        when VK_CLEAR:
+          // re-anchor keyboard selection
+          term.sel_anchor = term.sel_pos;
+          term.sel_start = term.sel_pos;
+          term.sel_end = term.sel_pos;
+          term.sel_rect = mods & MDK_ALT;
           sel_adjust = true;
-        }
-      when VK_DOWN:
-        if (term.sel_pos.y < sbbot) {
-          if (term.sel_pos.y + 1 >= term.disptop + term.rows)
-            term_scroll(0, +1);
-          term.sel_pos.y++;
+        when VK_LEFT:
+          if (term.sel_pos.x > 0)
+            term.sel_pos.x--;
           sel_adjust = true;
+        when VK_RIGHT:
+          if (term.sel_pos.x < term.cols)
+            term.sel_pos.x++;
+          sel_adjust = true;
+        when VK_UP:
+          if (term.sel_pos.y > sbtop) {
+            if (term.sel_pos.y <= term.disptop)
+              term_scroll(0, -1);
+            term.sel_pos.y--;
+            sel_adjust = true;
+          }
+        when VK_DOWN:
+          if (term.sel_pos.y < sbbot) {
+            if (term.sel_pos.y + 1 >= term.disptop + term.rows)
+              term_scroll(0, +1);
+            term.sel_pos.y++;
+            sel_adjust = true;
+          }
+        when VK_PRIOR:
+          //scroll = SB_PAGEUP;
+          term_scroll(0, -max(1, term.rows - 1));
+          term.sel_pos.y += term.disptop - oldisptop;
+          sel_adjust = true;
+        when VK_NEXT:
+          //scroll = SB_PAGEDOWN;
+          term_scroll(0, +max(1, term.rows - 1));
+          term.sel_pos.y += term.disptop - oldisptop;
+          sel_adjust = true;
+        when VK_HOME:
+          //scroll = SB_TOP;
+          term_scroll(+1, 0);
+          term.sel_pos.y += term.disptop - oldisptop;
+          term.sel_pos.y = sbtop;
+          term.sel_pos.x = 0;
+          sel_adjust = true;
+        when VK_END:
+          //scroll = SB_BOTTOM;
+          term_scroll(-1, 0);
+          term.sel_pos.y += term.disptop - oldisptop;
+          term.sel_pos.y = sbbot;
+          if (sbbot < term.rows) {
+            termline *line = term.lines[sbbot];
+            if (line)
+              for (int j = line->cols - 1; j > 0; j--) {
+                term.sel_pos.x = j + 1;
+                if (!termchars_equal(&line->chars[j], &term.erase_char))
+                  break;
+              }
+          }
+          sel_adjust = true;
+        when VK_INSERT or VK_RETURN:  // copy
+          term_copy();
+          term.selection_pending = false;
+          key_special &= ~KS_TERMSEL;
+        when VK_DELETE or VK_ESCAPE:  // abort
+          term.selection_pending = false;
+          key_special &= ~KS_TERMSEL;
+        otherwise:
+          //term.selection_pending = false;
+          //key_special &= ~KS_TERMSEL;
+          win_bell(&cfg);
+      }
+      //if (scroll) {
+      //  if (!term.app_scrollbar)
+      //    SendMessage(wv.wnd, WM_VSCROLL, scroll, 0);
+      //  sel_adjust = true;
+      //}
+      if (sel_adjust) {
+        if (term.sel_rect) {
+          term.sel_start.y = min(term.sel_anchor.y, term.sel_pos.y);
+          term.sel_start.x = min(term.sel_anchor.x, term.sel_pos.x);
+          term.sel_end.y = max(term.sel_anchor.y, term.sel_pos.y);
+          term.sel_end.x = max(term.sel_anchor.x, term.sel_pos.x);
         }
-      when VK_PRIOR:
-        //scroll = SB_PAGEUP;
-        term_scroll(0, -max(1, term.rows - 1));
-        term.sel_pos.y += term.disptop - oldisptop;
-        sel_adjust = true;
-      when VK_NEXT:
-        //scroll = SB_PAGEDOWN;
-        term_scroll(0, +max(1, term.rows - 1));
-        term.sel_pos.y += term.disptop - oldisptop;
-        sel_adjust = true;
-      when VK_HOME:
-        //scroll = SB_TOP;
-        term_scroll(+1, 0);
-        term.sel_pos.y += term.disptop - oldisptop;
-        term.sel_pos.y = sbtop;
-        term.sel_pos.x = 0;
-        sel_adjust = true;
-      when VK_END:
-        //scroll = SB_BOTTOM;
-        term_scroll(-1, 0);
-        term.sel_pos.y += term.disptop - oldisptop;
-        term.sel_pos.y = sbbot;
-        if (sbbot < term.rows) {
-          termline *line = term.lines[sbbot];
-          if (line)
-            for (int j = line->cols - 1; j > 0; j--) {
-              term.sel_pos.x = j + 1;
-              if (!termchars_equal(&line->chars[j], &term.erase_char))
-                break;
-            }
+        else if (posle(term.sel_anchor, term.sel_pos)) {
+          term.sel_start = term.sel_anchor;
+          term.sel_end = term.sel_pos;
         }
-        sel_adjust = true;
-      when VK_INSERT or VK_RETURN:  // copy
-        term_copy();
-        term.selection_pending = false;
-      when VK_DELETE or VK_ESCAPE:  // abort
-        term.selection_pending = false;
-      otherwise:
-        //term.selection_pending = false;
-        win_bell(&cfg);
-    }
-    //if (scroll) {
-    //  if (!term.app_scrollbar)
-    //    SendMessage(wv.wnd, WM_VSCROLL, scroll, 0);
-    //  sel_adjust = true;
-    //}
-    if (sel_adjust) {
-      if (term.sel_rect) {
-        term.sel_start.y = min(term.sel_anchor.y, term.sel_pos.y);
-        term.sel_start.x = min(term.sel_anchor.x, term.sel_pos.x);
-        term.sel_end.y = max(term.sel_anchor.y, term.sel_pos.y);
-        term.sel_end.x = max(term.sel_anchor.x, term.sel_pos.x);
+        else {
+          term.sel_start = term.sel_pos;
+          term.sel_end = term.sel_anchor;
+        }
+        //printf("->sel %d:%d .. %d:%d\n", term.sel_start.y, term.sel_start.x, term.sel_end.y, term.sel_end.x);
+        term.selected = true;
+        win_update(true);
       }
-      else if (posle(term.sel_anchor, term.sel_pos)) {
-        term.sel_start = term.sel_anchor;
-        term.sel_end = term.sel_pos;
-      }
-      else {
-        term.sel_start = term.sel_pos;
-        term.sel_end = term.sel_anchor;
-      }
-      //printf("->sel %d:%d .. %d:%d\n", term.sel_start.y, term.sel_start.x, term.sel_end.y, term.sel_end.x);
-      term.selected = true;
-      win_update(true);
-    }
-    if (term.selection_pending)
+      if (term.selection_pending)
+        return true;
+      else
+        term.selected = false;
       return true;
-    else
-      term.selected = false;
-    return true;
-  }
-  if (tek_mode == TEKMODE_GIN) {
-    int step = (mods & MDK_SHIFT) ? 40 : (mods & MDK_CTRL) ? 1 : 4;
-    switch (key) {
-      when VK_HOME : tek_move_by(step, -step);
-      when VK_UP   : tek_move_by(step, 0);
-      when VK_PRIOR: tek_move_by(step, step);
-      when VK_LEFT : tek_move_by(0, -step);
-      when VK_CLEAR: tek_move_by(0, 0);
-      when VK_RIGHT: tek_move_by(0, step);
-      when VK_END  : tek_move_by(-step, -step);
-      when VK_DOWN : tek_move_by(-step, 0);
-      when VK_NEXT : tek_move_by(-step, step);
-      otherwise: step = 0;
     }
-    if (step)
-      return true;
   }
   bool allow_shortcut = true;
   if (!term.shortcut_override && old_alt_state <= ALT_ALONE) {
@@ -3079,6 +3078,7 @@ win_key_up(WPARAM wp, LPARAM lp)
 #endif
 
       newwin_pending = false;
+      key_special&= ~KS_NEWWIN;
 
       // Calculate heuristic approximation of selected monitor position
       int x, y;
@@ -3113,13 +3113,16 @@ win_key_up(WPARAM wp, LPARAM lp)
   }
   if (transparency_pending) {
     transparency_pending--;
+
 #ifdef debug_transparency
     printf("--%d\n", transparency_pending);
 #endif
     if (!transparency_tuned)
       cycle_transparency();
-    if (!transparency_pending && cfg.opaque_when_focused)
+    if (!transparency_pending && cfg.opaque_when_focused){
       win_update_transparency(cfg.transparency, false);
+      key_special&=~KS_TRANP;
+    }
   }
 
 #if 0
@@ -3190,7 +3193,6 @@ win_whotkey(WPARAM wp, LPARAM lp){
   return 0;
 }
 
-//#include "sckdef.h"
 
 #define dont_debug_transparency
 enum funct_type{
@@ -3268,6 +3270,7 @@ transparency_level()
   if (!transparency_pending) {
     previous_transparency = cfg.transparency;
     transparency_pending = 1;
+    key_special |= KS_TRANP;
     transparency_tuned = false;
   }
   if (cfg.opaque_when_focused)
@@ -3287,6 +3290,7 @@ newwin(uint key, mod_keys mods)
 	// defer send_syscommand(IDM_NEW) until key released
 	// monitor cursor keys to collect parameters meanwhile
   newwin_pending = true;
+  key_special|=KS_NEWWIN;
   newwin_home = false; newwin_monix = 0; newwin_moniy = 0;
 
   newwin_key = key;
@@ -3324,6 +3328,7 @@ kb_select(uint key, mod_keys mods)
   term.sel_end = term.sel_pos;
   term.sel_rect = mods & MDK_ALT;
   term.selection_pending = true;
+  key_special |= KS_TERMSEL;
   return 1;
 }
 static uint mflags_defsize() { return (IsZoomed(wv.wnd) || term.cols != cfg.cols || term.rows != cfg.rows) ? MF_ENABLED : MF_GRAYED; }
@@ -3359,7 +3364,7 @@ static void lock_title() { cfg.title_settable = false; }
 static void clear_title() { win_set_title(W("")); }
 static void refresh() { win_invalidate_all(false); }
 //static void scroll_key(int key) { SendMessage(wv.wnd, WM_VSCROLL, key, 0); }
-static int  vtabclose    (){if(!child_is_alive(&term)) {win_tab_clean();return 1;}return 0;}
+//static int  vtabclose    (){if(!child_is_alive(&term)) {win_tab_clean();return 1;}return 0;}
 static void scroll_top	 (){SendMessage(wv.wnd, WM_VSCROLL,SB_TOP      ,0);}      
 static void scroll_end	 (){SendMessage(wv.wnd, WM_VSCROLL,SB_BOTTOM   ,0);}   
 static void scroll_pgup	 (){SendMessage(wv.wnd, WM_VSCROLL,SB_PAGEUP   ,0);}   
@@ -4115,8 +4120,8 @@ void win_update_shortcuts(){
 #define SETSCK(m,k,t,f) setsck(m,k,t,(void*)f)
   SETSCK(AS,VK_RETURN    ,FT_CMD ,IDM_FULLSCREEN_ZOOM);
   SETSCK(A,VK_RETURN     ,FT_CMD ,IDM_FULLSCREEN );
-  SETSCK(0,VK_RETURN     ,FT_NORV,vtabclose);
-  SETSCK(0,VK_ESCAPE     ,FT_NORV,vtabclose);
+//SETSCK(0,VK_RETURN     ,FT_NORV,vtabclose);
+//SETSCK(0,VK_ESCAPE     ,FT_NORV,vtabclose);
   SETSCK(S,VK_APPS       ,FT_CMD ,SC_KEYMENU);
   SETSCK(C,VK_APPS       ,FT_KEYV,win_key_menu);
   SETSCK(0,VK_APPS       ,FT_KEYV,win_key_menu);
@@ -4129,8 +4134,8 @@ void win_update_shortcuts(){
     SETSCK(C ,VK_TAB    ,FT_NORM,tab_next	    );
   }
   if(cfg.win_shortcuts ){
-    SETSCK(W ,'Q'        ,FT_NORM,app_close    );
     SETSCK(W ,'T'        ,FT_CMD ,IDM_NEWTAB   );
+    SETSCK(W ,'Q'        ,FT_NORM,app_close    );
     SETSCK(W ,'W'        ,FT_NORM,win_close    );
     SETSCK(W ,'X'        ,FT_NORM,win_ctrlmode );
     SETSCK(W ,'Z'        ,FT_NORM,win_hide     );
@@ -4147,7 +4152,7 @@ void win_update_shortcuts(){
   }
   if(cfg.alt_fn_shortcuts){
     SETSCK(A,VK_F2   ,FT_NORM,newwin);
-    SETSCK(A,VK_F3   ,FT_NORM,IDM_SEARCH);
+    SETSCK(A,VK_F3   ,FT_CMD ,IDM_SEARCH);
     SETSCK(A,VK_F4   ,FT_CMD ,SC_CLOSE);
     SETSCK(A,VK_F8   ,FT_CMD ,IDM_RESET);
     SETSCK(A,VK_F10  ,FT_CMD ,IDM_DEFSIZE_ZOOM);
@@ -4162,7 +4167,7 @@ void win_update_shortcuts(){
     SETSCK(CS,'N'     ,FT_NORM,new_tab_def);
     SETSCK(CS,'R'     ,FT_CMD ,IDM_RESET_NOASK);
     SETSCK(CS,'D'     ,FT_CMD ,IDM_DEFSIZE);
-    SETSCK(CS,'F'     ,FT_NORM,IDM_FULLSCREEN_ZOOM );
+    SETSCK(CS,'F'     ,FT_CMD ,IDM_FULLSCREEN_ZOOM );
     SETSCK(CS,'S'     ,FT_CMD ,IDM_FLIPSCREEN);
     SETSCK(CS,'H'     ,FT_CMD ,IDM_SEARCH);
     SETSCK(CS,'T'     ,FT_NORM,transparency_level); 

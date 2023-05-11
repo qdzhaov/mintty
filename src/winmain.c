@@ -127,6 +127,14 @@ mtime(void)
 #endif
 }
 
+void ErrMsg(uint err,char *tag){
+  if(err){
+    int wmlen = 1024;  // size of heap-allocated array
+    char winmsg[wmlen];  // constant and < 1273 or 1705 => issue #530
+    FormatMessage( FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_MAX_WIDTH_MASK, 0, err, 0, winmsg, wmlen, 0);
+    printf("%s %s\n", tag, winmsg);
+  }
+}
 
 #define dont_debug_dir
 
@@ -1367,11 +1375,9 @@ win_dark_mode(HWND w)
 static LONG up_borderstyle(LONG style){
   style &= ~(WS_CAPTION | WS_BORDER | WS_THICKFRAME);
   switch(wv.border_style){
-    when 0:
-      style |= (WS_CAPTION | WS_BORDER | WS_THICKFRAME);
+    when 0: style |= (WS_CAPTION | WS_BORDER | WS_THICKFRAME);
+    when 1: style |= WS_THICKFRAME;
     when 2:
-    otherwise:
-      style |= WS_THICKFRAME;
   }
   return style;
 }
@@ -2842,13 +2848,10 @@ static struct {
         wv.resizing = false;
         (void)res;
 #ifdef debug_dpi
-        uint err = GetLastError();
+        uint err=GetLastError();
         int wmlen = 1024;  // size of heap-allocated array
-        wchar winmsg[wmlen];  // constant and < 1273 or 1705 => issue #530
-        FormatMessageW(
-              FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_MAX_WIDTH_MASK,
-              0, err, 0, winmsg, wmlen, 0
-        );
+        char winmsg[wmlen];  // constant and < 1273 or 1705 => issue #530
+        FormatMessageW( FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_MAX_WIDTH_MASK, 0, err, 0, winmsg, wmlen, 0);
         printf("NC:EnableNonClientDpiScaling: %d %ls\n", !!res, winmsg);
 #endif
         return 1;
@@ -3988,18 +3991,24 @@ hook_windows(int id, HOOKPROC hookproc, bool global)
 static void
 win_global_keyboard_hook(bool on,bool autooff)
 {
-  int global=0;
-  (void)hook_windows;
+  int global=1;
+  (void)hook_windows;(void)autooff;
   //spid=getpid(); stid=GetCurrentThreadId();
-  if(!cfg.hook_keyboard)on=0;
-  if(!cfg.win_shortcuts)on=0;
-  if(autooff)if(!hotkey)on=0;
+  if(on){
+    if(!cfg.hook_keyboard)return;
+    if(!cfg.win_shortcuts)return;
+    //if(autooff)if(!hotkey)on=0;
+  }
   if (on){
-    if(!kb_hook)
+    if(!kb_hook){
       kb_hook = SetWindowsHookExW(WH_KEYBOARD_LL, hookprockbll,0, global ? 0 : GetCurrentThreadId());
+      //ErrMsg(GetLastError(),"HookKeyBoard:");
+    }
+
   }else if (kb_hook){
     UnhookWindowsHookEx(kb_hook);
     kb_hook=NULL;
+    //ErrMsg(GetLastError(),"unHookKeyBoard:");
   }
 }
 

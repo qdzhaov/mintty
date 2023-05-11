@@ -52,15 +52,15 @@ src_install() {
   doins themes/*
   insinto /usr/share/mintty/sounds
   doins sounds/*.wav sounds/*.WAV sounds/*.md
-  insinto /usr/share/mintty/icon
-  doins icon/wsl.ico
+  #insinto /usr/share/mintty/icon
+  #doins icon/wsl.ico
   exeinto /usr/share/mintty/emojis
   doexe tools/getemojis tools/getflags
 
-  for i in 16 24 32 48 64 256
-  do
-    insinto /usr/share/icons/hicolor/${i}x${i}/apps
-    newins icon/hi${i}-apps-mintty.png mintty.png
-  done
-  make_desktop_entry mintty "Cygwin Terminal" mintty "System;TerminalEmulator" "" "OnlyShowIn=X-Cygwin;"
+  #for i in 16 24 32 48 64 256
+  #do
+  #  insinto /usr/share/icons/hicolor/${i}x${i}/apps
+  #  newins icon/hi${i}-apps-mintty.png mintty.png
+  #done
+  #make_desktop_entry mintty "Cygwin Terminal" mintty "System;TerminalEmulator" "" "OnlyShowIn=X-Cygwin;"
 }

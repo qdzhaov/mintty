@@ -1,0 +1,4 @@
+#!/bin/bash
+for d in ~/.mintty /usr/share/mintty /d/zcyg/etc/skel/.mintty /d/zcyg/home/zhw/.mintty /d/zcyg/usr/share/mintty  /d/pmintty/usr/share/mintty;do
+  \cp -fv zh_CN.po $d/lang
+done

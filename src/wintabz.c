@@ -188,8 +188,8 @@ static void newtab(SessDef*sd,struct winsize *wsz, const char* cwd ){
   }
   tab->sd.argv[sd->argc]=0;
   term.usepartline=cfg.usepartline!=0; 
-  term_reset(1);
   term_resize(wsz->ws_row, wsz->ws_col);
+  term_reset(1);
   tab->terminal->child.cmd = sd->cmd;
   tab->terminal->child.home = g_home;
   const wchar * ws=NULL;
