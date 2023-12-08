@@ -269,7 +269,7 @@ ctrl_listbox(controlset *s, int col, const wchar * label,const wchar * tip, int 
  */
 control *
 ctrl_radiobuttons(controlset *s, int col, const wchar * label,const wchar * tip, int ncolumns,
-                  handler_fn handler,char *context, ...)
+                  handler_fn handler,int*context, ...)
 {
   va_list ap;
   int i;

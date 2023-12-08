@@ -24,16 +24,16 @@
 #endif
 
 
-#define dont_support_blurred
 
 
 string config_dir = 0;
 static wstring rc_filename = 0;
 
-#define CLRCPY(d,s) memcpy(d,s,16*sizeof(colour))
-static colour def_colours[16];
-static colour cfg_colours[16];
-static colour theme_colours[16];
+#define CLRFGSCPY(d,s) memcpy(d,s,16*sizeof(colourfg))
+#define CLRFGSCMP(d,s) memcmp(d,s,16*sizeof(colourfg))
+static colourfg def_colours[16]={0};
+static colourfg cfg_colours[16]={0};
+static colourfg theme_colours[16]={0};
 static wchar theme_file[128]={0};
 
 #define HASHTS 31
@@ -41,297 +41,19 @@ static inline int HASHS(const void*s){
   return (*(char*)s?((*(unsigned short*)s)|0x2020)%(HASHTS):0);
 }
 // all entries need initialisation in options[] or crash...
+#define CFGDEFT  DEFVAL
 const config default_cfg = {
-  // Looks
-  .fg_colour = 0xBFBFBF,
-  .bold_colour = (colour)-1,
-  .blink_colour = (colour)-1,
-  .bg_colour = 0x000000,
-  .cursor_colour = 0xBFBFBF,
-  .tek_fg_colour = (colour)-1,
-  .tek_bg_colour = (colour)-1,
-  .tek_cursor_colour = (colour)-1,
-  .tek_write_thru_colour = (colour)-1,
-  .tek_defocused_colour = (colour)-1,
-  .tek_glow = 1,
-  .tek_strap = 0,
-  .underl_colour = (colour)-1,
-  .hover_colour = (colour)-1,
-  .ansi_colours = {
-    [BLACK_I]        = { RGB(  0,   0,   0), RGB(  0,   0,   0) },
-    [RED_I]          = { RGB(212,  44,  58), RGB(162,  30,  41) },
-    [GREEN_I]        = { RGB( 28, 168,   0), RGB( 28, 168,   0) },
-    [YELLOW_I]       = { RGB(192, 160,   0), RGB(192, 160,   0) },
-    [BLUE_I]         = { RGB(  0,  93, 255), RGB(  0,  32, 192) },
-    [MAGENTA_I]      = { RGB(177,  72, 198), RGB(134,  54, 150) },
-    [CYAN_I]         = { RGB(  0, 168, 154), RGB(  0, 168, 154) },
-    [WHITE_I]        = { RGB(191, 191, 191), RGB(191, 191, 191) },
-    [BOLD_BLACK_I]   = { RGB( 96,  96,  96), RGB( 72,  72,  72) },
-    [BOLD_RED_I]     = { RGB(255, 118, 118), RGB(255, 118, 118) },
-    [BOLD_GREEN_I]   = { RGB(  0, 242,   0), RGB(  0, 242,   0) },
-    [BOLD_YELLOW_I]  = { RGB(242, 242,   0), RGB(242, 242,   0) },
-    [BOLD_BLUE_I]    = { RGB(125, 151, 255), RGB(125, 151, 255) },
-    [BOLD_MAGENTA_I] = { RGB(255, 112, 255), RGB(255, 112, 255) },
-    [BOLD_CYAN_I]    = { RGB(  0, 240, 240), RGB(  0, 240, 240) },
-    [BOLD_WHITE_I]   = { RGB(255, 255, 255), RGB(255, 255, 255) }
-    //[BLACK_I]        = RGB(0x00, 0x00, 0x00),
-    //[RED_I]          = RGB(0xBF, 0x00, 0x00),
-    //[GREEN_I]        = RGB(0x00, 0xBF, 0x00),
-    //[YELLOW_I]       = RGB(0xBF, 0xBF, 0x00),
-    //[BLUE_I]         = RGB(0x00, 0x00, 0xBF),
-    //[MAGENTA_I]      = RGB(0xBF, 0x00, 0xBF),
-    //[CYAN_I]         = RGB(0x00, 0xBF, 0xBF),
-    //[WHITE_I]        = RGB(0xBF, 0xBF, 0xBF),
-    //[BOLD_BLACK_I]   = RGB(0x40, 0x40, 0x40),
-    //[BOLD_RED_I]     = RGB(0xFF, 0x40, 0x40),
-    //[BOLD_GREEN_I]   = RGB(0x40, 0xFF, 0x40),
-    //[BOLD_YELLOW_I]  = RGB(0xFF, 0xFF, 0x40),
-    //[BOLD_BLUE_I]    = RGB(0x60, 0x60, 0xFF),
-    //[BOLD_MAGENTA_I] = RGB(0xFF, 0x40, 0xFF),
-    //[BOLD_CYAN_I]    = RGB(0x40, 0xFF, 0xFF),
-    //[BOLD_WHITE_I]   = RGB(0xFF, 0xFF, 0xFF)
-  },
-  .disp_space = 0,
-  .disp_clear = 0,
-  .disp_tab = 0,
-  .underl_manual = false,
-  .sel_fg_colour = (colour)-1,
-  .sel_bg_colour = (colour)-1,
-  .search_fg_colour = 0x000000,
-  .search_bg_colour = 0x00DDDD,
-  .search_current_colour = 0x0099DD,
-  .theme_file = W(""),
-  .background = W(""),
-  .colour_scheme = "",
-  .transparency = 0,
-  .blurred = false,
-  .opaque_when_focused = false,
-  .cursor_type = CUR_LINE,
-  .cursor_blinks = true,
-  //need add 
-  .tab_fg_colour = 0x00FF00,
-  .tab_bg_colour = 0x000000,
-  .tab_active_bg_colour = 0x323232,
-  .tab_attention_bg_colour = 0x003200,
-  .tab_bar_show = 1,
-  .indicator = 1,
-  .indicatorx = 30,
-  .indicatory = 30,
-  .tab_font_size= 16 ,
-  .gui_font_size= 12 ,
-  .scale_options_width =100,
-  .padding = 1,
-  .partline= 4,
-  .usepartline= 0,
-  // Text
-  .font = {.name = W("Lucida Console"), .size = 16, .weight = 400, .isbold = false},
-  .fontfams[1] = {.name = W(""), .weight = 400, .isbold = false},
-  .fontfams[2] = {.name = W(""), .weight = 400, .isbold = false},
-  .fontfams[3] = {.name = W(""), .weight = 400, .isbold = false},
-  .fontfams[4] = {.name = W(""), .weight = 400, .isbold = false},
-  .fontfams[5] = {.name = W(""), .weight = 400, .isbold = false},
-  .fontfams[6] = {.name = W(""), .weight = 400, .isbold = false},
-  .fontfams[7] = {.name = W(""), .weight = 400, .isbold = false},
-  .fontfams[8] = {.name = W(""), .weight = 400, .isbold = false},
-  .fontfams[9] = {.name = W(""), .weight = 400, .isbold = false},
-  .fontfams[10] = {.name = W(""), .weight = 400, .isbold = false},
-  .fontfams[11] = {.name = W("Courier New"), .weight = 400, .isbold = false},
-  .font_choice = W(""),
-  .font_sample = W(""),
-  .show_hidden_fonts = false,
-  .font_smoothing = FS_DEFAULT,
-  .font_render = FR_UNISCRIBE,
-  .bold_as_font = false,
-  .bold_as_colour = true,
-  .allow_blinking = false,
-  .locale = "",
-  .charset = "",
-  .charwidth = 0,
-  .old_locale = false,
-  .fontmenu = -1,
-  .tek_font = W(""),
-  // Keys
-  .backspace_sends_bs = CERASE == '\b',
-  .delete_sends_del = false,
-  .ctrl_alt_is_altgr = false,
-  .altgr_is_alt = false,
-  .ctrl_alt_delay_altgr = 0,
-  .old_altgr_detection = false,
-  .old_modify_keys = 0,
-  .format_other_keys = 1,
-  .auto_repeat = true,
-  .external_hotkeys = 2,
-  .clip_shortcuts = true,
-  .window_shortcuts = true,
-  .switch_shortcuts = true,
-  .zoom_shortcuts = true,
-  .zoom_font_with_window = true,
-  .alt_fn_shortcuts = true,
-  .win_shortcuts = true,
-  .hkwinkeyall=0,
-  .hook_keyboard=1,
-  .ctrl_shift_shortcuts = false,
-  .ctrl_exchange_shift = false,
-  .ctrl_controls = true,
-  .compose_key = 0,
-  .key_prtscreen = "",	// VK_SNAPSHOT
-  .key_pause = "",	// VK_PAUSE
-  .key_break = "",	// VK_CANCEL
-  .key_menu = "",	// VK_APPS
-  .key_scrlock = "",	// VK_SCROLL
-  .key_commands = W(""),
-  .manage_leds = 7,
-  .enable_remap_ctrls = false,
-  .old_keyfuncs_keypad = false,
-  // Mouse
-  .clicks_place_cursor = false,
-  .middle_click_action = MC_PASTE,
-  .right_click_action = RC_MENU,
-  .opening_clicks = 1,
-  .opening_mod = MDK_CTRL,
-  .zoom_mouse = true,
-  .clicks_target_app = true,
-  .click_target_mod = MDK_SHIFT,
-  .hide_mouse = true,
-  .elastic_mouse = false,
-  .lines_per_notch = 0,
-  .mouse_pointer = W("ibeam"),
-  .appmouse_pointer = W("arrow"),
-  // Selection
-  .input_clears_selection = true,
-  .copy_on_select = true,
-  .copy_tabs = false,
-  .copy_as_rtf = true,
-  .copy_as_html = 0,
-  .copy_as_rtf_font = W(""),
-  .copy_as_rtf_font_size = 0,
-  .trim_selection = true,
-  .allow_set_selection = false,
-  .selection_show_size = false,
-  // Window
-  .cols = 80,
-  .rows = 24,
-  .rewrap_on_resize = false,
-  .scrollbar = 1,
-  .scrollback_lines = 10000,
-  .max_scrollback_lines = 250000,
-  .scroll_mod = MDK_SHIFT,
-  .pgupdn_scroll = false,
-  .allocconsole=false,
-  .lang = W(""),
-  .search_bar = W(""),
-  .search_context = 0,
-  // Terminal
-  .Term = "xterm",
-  .answerback = (""),
-  .wrap_tab = 0,
-  .old_wrapmodes = false,
-  .enable_deccolm_init = false,
-  .bell_type = 1,
-  .bell_file = {W(""), W(""), W(""), W(""), W(""), W(""), W("")},
-  .bell_freq = 0,
-  .bell_len = 400,
-  .bell_flash = false,  // xterm: visualBell
-  .bell_flash_style = FLASH_FULL,
-  .bell_taskbar = true, // xterm: bellIsUrgent
-  .bell_popup = false,  // xterm: popOnBell
-  .bell_interval = 100,
-  .play_tone = 2,
-  .printer = W(""),
-  .confirm_exit = true,
-  .confirm_reset = false,
-  // Command line
-  .class = W(""),
-  .hold = HOLD_START,
-  .exit_write = false,
-  .exit_title = W(""),
-  .icon = W(""),
-  .log = W(""),
-  .logging = 0,
-  .create_utmp = false,
-  .title = W(""),
-  .title_settable = true,
-  .window=0,
-  .x=0, 
-  .y=0,
-  .daemonize = true,
-  .daemonize_always = false,
-  // "Hidden"
-  .bidi = 2,
-  .disable_alternate_screen = false,
-  .erase_to_scrollback = true,
-  .display_speedup = 6,
-  .suppress_sgr = "",
-  .suppress_dec = "",
-  .suppress_win = "",
-  .suppress_osc = "",
-  .suppress_nrc = "",  // unused
-  .suppress_wheel = "",
-  .filter_paste = "",
-  .bracketed_paste_split = 0,
-  .suspbuf_max = 8080,
-  .printable_controls = 0,
-  .char_narrowing = 75,
-  .emojis = 0,
-  .emoji_placement = EMPL_STRETCH,
-  .save_filename = W("mintty.%Y-%m-%d_%H-%M-%S"),
-  .app_id = W(""),
-  .app_name = W(""),
-  .app_launch_cmd = W(""),
-  .drop_commands = W(""),
-  .exit_commands = W(""),
-  .user_commands = W(""),
-  .ctx_user_commands = W(""),
-  .sys_user_commands = W(""),
-  .user_commands_path = W("/bin:%s"),
-  .session_commands = W(""),
-  .task_commands = W(""),
-  .conpty_support = -1,
-  .login_from_shortcut = true,
-  .menu_mouse = "b",
-  .menu_ctrlmouse = "e|ls",
-  .menu_altmouse = "ls",
-  .menu_menu = "bs",
-  .menu_ctrlmenu = "e|ls",
-  .menu_title_ctrl_l = "Ws",
-  .menu_title_ctrl_r = "Ws",
-  .geom_sync = 0,
-  .col_spacing = 0,
-  .row_spacing = 0,
-  .auto_leading = 2,
-  .ligatures = 1,
-  .ligatures_support = 0,
-  .handle_dpichanged = 2,
-  .check_version_update = 0,
-  .word_chars = "",
-  .word_chars_excl = "",
-  .ime_cursor_colour = DEFAULT_COLOUR,
-  .sixel_clip_char = W(" "),
-  .short_long_opts = false,
-  .bold_as_special = false,
-  .hover_title = true,
-  .progress_bar = 0,
-  .progress_scan = 1,
-  .dim_margins = false,
-  .status_line = false,
-  .baud = 0,
-  .bloom = 0,
-  .options_font = W(""),
-  .options_fontsize = 0,
-  .old_options = "",
-  .old_xbuttons = false,
-  // Legacy
-  .use_system_colours = false,
-  .old_bold = false
+#include "configdef.h"
 };
+  // Text
+//  .font = {.name = W("Lucida Console"), .size = 16, .weight = 400, .isbold = false},
 config cfg, new_cfg, file_cfg;
 
 typedef enum {
-  OPT_COMMENT,OPT_BOOL, OPT_MOD, OPT_TRANS, OPT_CURSOR, OPT_FONTSMOOTH, OPT_FONTRENDER,
+  OPT_BOOL=0, OPT_MOD, OPT_TRANS, OPT_CURSOR, OPT_FONTSMT, OPT_FONTRENDER,
   OPT_MIDDLECLICK, OPT_RIGHTCLICK, OPT_SCROLLBAR, OPT_WINDOW, OPT_HOLD,
-  OPT_INT, OPT_COLOUR, OPT_COLOUR_PAIR, OPT_STRING, OPT_WSTRING,
-  OPT_CHARWIDTH, OPT_EMOJIS, OPT_EMOJI_PLACEMENT,
-  OPT_COMPOSE_KEY,
+  OPT_CHARWIDTH, OPT_EMOJIS, OPT_EMOJI_PLACEMENT, OPT_COMPOSE_KEY,
+  OPT_COMMENT, OPT_INT, OPT_CLR, OPT_CLRFG, OPT_STR, OPT_WSTR,OPT_FONT,
   OPT_TYPE_MASK = 0x1F,
   OPT_LEGACY = 0x20,
   OPT_KEEPCR = 0x40,
@@ -347,336 +69,15 @@ typedef const struct {
   ushort offset;
   string comment;
 }cfg_option;
-
+#define CFGDEFT  DEFCFG
 static cfg_option options[]= {
-  // Colour base options;
-  // check_legacy_options() assumes these are the first three here:
-  // Looks
-  {"Looks",OPT_COMMENT,0,0},
-  {"ForegroundColour"   , OPT_COLOUR, offcfg(fg_colour),__("ForegroundColour")},
-  {"BackgroundColour"   , OPT_COLOUR, offcfg(bg_colour),__("BackgroundColour")},
-  {"UseSystemColours"   , OPT_BOOL | OPT_LEGACY, offcfg(use_system_colours),__("UseSystemColours")},
-  {"BoldColour"         , OPT_COLOUR, offcfg(bold_colour),__("BoldColour")},
-  {"BlinkColour"        , OPT_COLOUR, offcfg(blink_colour),__("BlinkColour")},
-  {"CursorColour"       , OPT_COLOUR, offcfg(cursor_colour),__("CursorColour")},
-  {"TekForegroundColour", OPT_COLOUR, offcfg(tek_fg_colour),__("TekForegroundColour")},
-  {"TekBackgroundColour", OPT_COLOUR, offcfg(tek_bg_colour),__("TekBackgroundColour")},
-  {"TekCursorColour"    , OPT_COLOUR, offcfg(tek_cursor_colour),__("TekCursorColour")},
-  {"TekWriteThruColour" , OPT_COLOUR, offcfg(tek_write_thru_colour),__("TekWriteThruColour")},
-  {"TekDefocusedColour" , OPT_COLOUR, offcfg(tek_defocused_colour),__("TekDefocusedColour")},
-  {"TekGlow"            , OPT_INT   , offcfg(tek_glow),__("TekGlow")},
-  {"TekStrap"           , OPT_INT   , offcfg(tek_strap),__("TekStrap")},
-  {"UnderlineColour"    , OPT_COLOUR, offcfg(underl_colour),__("UnderlineColour")},
-  // ANSI colours
-  {"Black"              , OPT_THEME|OPT_COLOUR_PAIR, offcfg(ansi_colours[BLACK_I]),__("Black")},
-  {"Red"                , OPT_THEME|OPT_COLOUR_PAIR, offcfg(ansi_colours[RED_I]),__("Red")},
-  {"Green"              , OPT_THEME|OPT_COLOUR_PAIR, offcfg(ansi_colours[GREEN_I]),__("Green")},
-  {"Yellow"             , OPT_THEME|OPT_COLOUR_PAIR, offcfg(ansi_colours[YELLOW_I]),__("Yellow")},
-  {"Blue"               , OPT_THEME|OPT_COLOUR_PAIR, offcfg(ansi_colours[BLUE_I]),__("Blue")},
-  {"Magenta"            , OPT_THEME|OPT_COLOUR_PAIR, offcfg(ansi_colours[MAGENTA_I]),__("Magenta")},
-  {"Cyan"               , OPT_THEME|OPT_COLOUR_PAIR, offcfg(ansi_colours[CYAN_I]),__("Cyan")},
-  {"White"              , OPT_THEME|OPT_COLOUR_PAIR, offcfg(ansi_colours[WHITE_I]),__("White")},
-  {"BoldBlack"          , OPT_THEME|OPT_COLOUR_PAIR, offcfg(ansi_colours[BOLD_BLACK_I]),__("BoldBlack")},
-  {"BoldRed"            , OPT_THEME|OPT_COLOUR_PAIR, offcfg(ansi_colours[BOLD_RED_I]),__("BoldRed")},
-  {"BoldGreen"          , OPT_THEME|OPT_COLOUR_PAIR, offcfg(ansi_colours[BOLD_GREEN_I]),__("BoldGreen")},
-  {"BoldYellow"         , OPT_THEME|OPT_COLOUR_PAIR, offcfg(ansi_colours[BOLD_YELLOW_I]),__("BoldYellow")},
-  {"BoldBlue"           , OPT_THEME|OPT_COLOUR_PAIR, offcfg(ansi_colours[BOLD_BLUE_I]),__("BoldBlue")},
-  {"BoldMagenta"        , OPT_THEME|OPT_COLOUR_PAIR, offcfg(ansi_colours[BOLD_MAGENTA_I]),__("BoldMagenta")},
-  {"BoldCyan"           , OPT_THEME|OPT_COLOUR_PAIR, offcfg(ansi_colours[BOLD_CYAN_I]),__("BoldCyan")},
-  {"BoldWhite"          , OPT_THEME|OPT_COLOUR_PAIR, offcfg(ansi_colours[BOLD_WHITE_I]),__("BoldWhite")},
-
-  {"DispSpace"      , OPT_INT, offcfg(disp_space),__("DispSpace")},
-  {"DispClear"      , OPT_INT, offcfg(disp_clear),__("DispClear")},
-  {"DispTab"        , OPT_INT, offcfg(disp_tab),__("DispTab")},
-  {"HoverColour"    , OPT_COLOUR, offcfg(hover_colour),__("HoverColour")},
-  {"UnderlineManual", OPT_BOOL, offcfg(underl_manual),__("UnderlineManual")},
-  {"HighlightBackgroundColour", OPT_COLOUR, offcfg(sel_bg_colour),__("HighlightBackgroundColour")},
-  {"HighlightForegroundColour", OPT_COLOUR, offcfg(sel_fg_colour),__("HighlightForegroundColour")},
-  {"SearchForegroundColour", OPT_COLOUR, offcfg(search_fg_colour),__("SearchForegroundColour")},
-  {"SearchBackgroundColour", OPT_COLOUR, offcfg(search_bg_colour),__("SearchBackgroundColour")},
-  {"SearchCurrentColour", OPT_COLOUR, offcfg(search_current_colour),__("SearchCurrentColour")},
-  {"ThemeFile", OPT_WSTRING, offcfg(theme_file),__("ThemeFile")},
-  {"Background", OPT_WSTRING, offcfg(background),__("Background")},
-  {"ColourScheme", OPT_STRING, offcfg(colour_scheme),__("ColourScheme")},
-  {"Transparency", OPT_TRANS, offcfg(transparency),__("Transparency")},
-#ifdef support_blurred
-  {"Blur", OPT_BOOL, offcfg(blurred),__("Blur")},
-#endif
-  {"OpaqueWhenFocused", OPT_BOOL, offcfg(opaque_when_focused),__("OpaqueWhenFocused")},
-  {"CursorType", OPT_CURSOR, offcfg(cursor_type),__("CursorType")},
-  {"CursorBlinks", OPT_BOOL, offcfg(cursor_blinks),__("CursorBlinks")},
-  //need add 
-  {"TabForegroundColour", OPT_COLOUR, offcfg(tab_fg_colour),__("TabForegroundColour")},
-  {"TabBackgroundColour", OPT_COLOUR, offcfg(tab_bg_colour),__("TabBackgroundColour")},
-  {"TabAttentionColour", OPT_COLOUR, offcfg(tab_attention_bg_colour),__("TabAttentionColour")},
-  {"TabActiveColour", OPT_COLOUR, offcfg(tab_active_bg_colour),__("TabActiveColour")},
-  {"tab_bar_show", OPT_BOOL, offcfg(tab_bar_show),__("tab_bar_show")},
-  {"indicator", OPT_BOOL, offcfg(indicator),__("indicator")},
-  {"indicatorx", OPT_BOOL, offcfg(indicatorx),__("indicatorx")},
-  {"indicatory", OPT_BOOL, offcfg(indicatory),__("indicatory")},
-  {"tab_font_size", OPT_BOOL, offcfg(tab_font_size),__("tab_font_size")},
-  {"gui_font_size", OPT_INT, offcfg(gui_font_size),__("gui_font_size")},
-  {"scale_options_width",OPT_INT, offcfg(scale_options_width),__("scale_options_width")},
-  {"partline", OPT_INT, offcfg(partline),__("partline")},
-  {"usepartline", OPT_INT, offcfg(usepartline),__("usepartline")},
-
-  // Text
-  {"Text",OPT_COMMENT,0,0},
-  {"Font", OPT_WSTRING, offcfg(font.name),__("Font")},
-  {"FontSize", OPT_INT | OPT_LEGACY, offcfg(font.size),__("FontSize")},
-  {"FontHeight", OPT_INT, offcfg(font.size),__("FontHeight")},
-  {"FontWeight", OPT_INT, offcfg(font.weight),__("FontWeight")},
-  {"FontIsBold", OPT_BOOL, offcfg(font.isbold),__("FontIsBold")},
-
-  {"FontChoice", OPT_WSTRING, offcfg(font_choice),__("FontChoice")},
-  {"FontSample", OPT_WSTRING, offcfg(font_sample),__("FontSample")},
-  {"ShowHiddenFonts", OPT_BOOL, offcfg(show_hidden_fonts),__("ShowHiddenFonts")},
-  {"FontSmoothing", OPT_FONTSMOOTH, offcfg(font_smoothing),__("FontSmoothing")},
-  {"BoldAsFont", OPT_BOOL, offcfg(bold_as_font),__("BoldAsFont")},
-  {"BoldAsColour", OPT_BOOL, offcfg(bold_as_colour),__("BoldAsColour")},
-  {"AllowBlinking", OPT_BOOL, offcfg(allow_blinking),__("AllowBlinking")},
-  {"Locale", OPT_STRING, offcfg(locale),__("Locale")},
-  {"Charset", OPT_STRING, offcfg(charset),__("Charset")},
-  {"Charwidth", OPT_CHARWIDTH, offcfg(charwidth),__("Charwidth")},
-  {"OldLocale", OPT_BOOL, offcfg(old_locale),__("OldLocale")},
-  {"FontRender", OPT_FONTRENDER, offcfg(font_render),__("FontRender")},
-  {"FontMenu", OPT_INT, offcfg(fontmenu),__("FontMenu")},
-  {"OldFontMenu", OPT_INT | OPT_LEGACY, offcfg(fontmenu),__("OldFontMenu")},
-  {"Font1", OPT_WSTRING, offcfg(fontfams[1].name),__("Font1")},
-  {"Font1Weight", OPT_INT, offcfg(fontfams[1].weight),__("Font1Weight")},
-  {"Font2", OPT_WSTRING, offcfg(fontfams[2].name),__("Font2")},
-  {"Font2Weight", OPT_INT, offcfg(fontfams[2].weight),__("Font2Weight")},
-  {"Font3", OPT_WSTRING, offcfg(fontfams[3].name),__("Font3")},
-  {"Font3Weight", OPT_INT, offcfg(fontfams[3].weight),__("Font3Weight")},
-  {"Font4", OPT_WSTRING, offcfg(fontfams[4].name),__("Font4")},
-  {"Font4Weight", OPT_INT, offcfg(fontfams[4].weight),__("Font4Weight")},
-  {"Font5", OPT_WSTRING, offcfg(fontfams[5].name),__("Font5")},
-  {"Font5Weight", OPT_INT, offcfg(fontfams[5].weight),__("Font5Weight")},
-  {"Font6", OPT_WSTRING, offcfg(fontfams[6].name),__("Font6")},
-  {"Font6Weight", OPT_INT, offcfg(fontfams[6].weight),__("Font6Weight")},
-  {"Font7", OPT_WSTRING, offcfg(fontfams[7].name),__("Font7")},
-  {"Font7Weight", OPT_INT, offcfg(fontfams[7].weight),__("Font7Weight")},
-  {"Font8", OPT_WSTRING, offcfg(fontfams[8].name),__("Font8")},
-  {"Font8Weight", OPT_INT, offcfg(fontfams[8].weight),__("Font8Weight")},
-  {"Font9", OPT_WSTRING, offcfg(fontfams[9].name),__("Font9")},
-  {"Font9Weight", OPT_INT, offcfg(fontfams[9].weight),__("Font9Weight")},
-  {"Font10", OPT_WSTRING, offcfg(fontfams[10].name),__("Font10")},
-  {"Font10Weight", OPT_INT, offcfg(fontfams[10].weight),__("Font10Weight")},
-  {"FontRTL", OPT_WSTRING, offcfg(fontfams[11].name),__("FontRTL")},
-  {"FontRTLWeight", OPT_INT, offcfg(fontfams[11].weight),__("FontRTLWeight")},
-  {"TekFont", OPT_WSTRING, offcfg(tek_font),__("TekFont")},
-
-  // Keys
-  {"Keys",OPT_COMMENT,0,0},
-  {"BackspaceSendsBS", OPT_BOOL, offcfg(backspace_sends_bs),__("BackspaceSendsBS")},
-  {"DeleteSendsDEL", OPT_BOOL, offcfg(delete_sends_del),__("DeleteSendsDEL")},
-  {"CtrlAltIsAltGr", OPT_BOOL, offcfg(ctrl_alt_is_altgr),__("CtrlAltIsAltGr")},
-  {"AltGrIsAlsoAlt", OPT_BOOL, offcfg(altgr_is_alt),__("AltGrIsAlsoAlt")},
-  {"CtrlAltDelayAltGr", OPT_INT, offcfg(ctrl_alt_delay_altgr),__("CtrlAltDelayAltGr")},
-  {"OldAltGrDetection", OPT_BOOL, offcfg(old_altgr_detection),__("OldAltGrDetection")},
-  {"OldModifyKeys", OPT_INT, offcfg(old_modify_keys),__("OldModifyKeys")},
-  {"FormatOtherKeys", OPT_INT, offcfg(format_other_keys),__("FormatOtherKeys")},
-  {"AutoRepeat", OPT_BOOL, offcfg(auto_repeat),__("AutoRepeat")},
-  {"SupportExternalHotkeys", OPT_INT, offcfg(external_hotkeys),__("SupportExternalHotkeys")},
-  {"ClipShortcuts", OPT_BOOL, offcfg(clip_shortcuts),__("ClipShortcuts")},
-  {"WindowShortcuts", OPT_BOOL, offcfg(window_shortcuts),__("WindowShortcuts")},
-  {"SwitchShortcuts", OPT_BOOL, offcfg(switch_shortcuts),__("SwitchShortcuts")},
-  {"ZoomShortcuts", OPT_BOOL, offcfg(zoom_shortcuts),__("ZoomShortcuts")},
-  {"ZoomFontWithWindow", OPT_BOOL, offcfg(zoom_font_with_window),__("ZoomFontWithWindow")},
-  {"AltFnShortcuts", OPT_BOOL, offcfg(alt_fn_shortcuts),__("AltFnShortcuts")},
-  {"WinShortcuts", OPT_BOOL, offcfg(win_shortcuts),__("WinShortcuts")},
-  {"hkwinkeyall", OPT_BOOL, offcfg(hkwinkeyall),__("hkwinkeyall")},
-  {"hook_keyboard", OPT_BOOL, offcfg(hook_keyboard),__("hook_keyboard")},
-  {"CtrlShiftShortcuts", OPT_BOOL, offcfg(ctrl_shift_shortcuts),__("CtrlShiftShortcuts")},
-  {"CtrlExchangeShift", OPT_BOOL, offcfg(ctrl_exchange_shift),__("CtrlExchangeShift")},
-  {"CtrlControls", OPT_BOOL, offcfg(ctrl_controls),__("CtrlControls")},
-  {"ComposeKey", OPT_COMPOSE_KEY, offcfg(compose_key),__("ComposeKey")},
-  {"Key_PrintScreen", OPT_STRING, offcfg(key_prtscreen),__("Key_PrintScreen")},
-  {"Key_Pause", OPT_STRING, offcfg(key_pause),__("Key_Pause")},
-  {"Key_Break", OPT_STRING, offcfg(key_break),__("Key_Break")},
-  {"Key_Menu", OPT_STRING, offcfg(key_menu),__("Key_Menu")},
-  {"Key_ScrollLock", OPT_STRING, offcfg(key_scrlock),__("Key_ScrollLock")},
-  {"Break", OPT_STRING | OPT_LEGACY, offcfg(key_break),__("Break")},
-  {"Pause", OPT_STRING | OPT_LEGACY, offcfg(key_pause),__("Pause")},
-  {"KeyFunctions", OPT_WSTRING | OPT_KEEPCR, offcfg(key_commands),__("KeyFunctions")},
-  {"ManageLEDs", OPT_INT, offcfg(manage_leds),__("ManageLEDs")},
-  {"ShootFoot", OPT_BOOL, offcfg(enable_remap_ctrls),__("ShootFoot")},
-  {"OldKeyFunctionsKeypad", OPT_BOOL, offcfg(old_keyfuncs_keypad),__("OldKeyFunctionsKeypad")},
-
-  // Mouse
-  {"Mouse",OPT_COMMENT,0,0},
-  {"ClicksPlaceCursor", OPT_BOOL, offcfg(clicks_place_cursor),__("ClicksPlaceCursor")},
-  {"MiddleClickAction", OPT_MIDDLECLICK, offcfg(middle_click_action),__("MiddleClickAction")},
-  {"RightClickAction", OPT_RIGHTCLICK, offcfg(right_click_action),__("RightClickAction")},
-  {"OpeningClicks", OPT_INT, offcfg(opening_clicks),__("OpeningClicks")},
-  {"OpeningMod", OPT_MOD, offcfg(opening_mod),__("OpeningMod")},
-  {"WrapTab", OPT_INT, offcfg(wrap_tab),__("WrapTab")},
-  {"ZoomMouse", OPT_BOOL, offcfg(zoom_mouse),__("ZoomMouse")},
-  {"ClicksTargetApp", OPT_BOOL, offcfg(clicks_target_app),__("ClicksTargetApp")},
-  {"ClickTargetMod", OPT_MOD, offcfg(click_target_mod),__("ClickTargetMod")},
-  {"HideMouse", OPT_BOOL, offcfg(hide_mouse),__("HideMouse")},
-  {"ElasticMouse", OPT_BOOL, offcfg(elastic_mouse),__("ElasticMouse")},
-  {"LinesPerMouseWheelNotch", OPT_INT, offcfg(lines_per_notch),__("LinesPerMouseWheelNotch")},
-  {"MousePointer", OPT_WSTRING, offcfg(mouse_pointer),__("MousePointer")},
-  {"AppMousePointer", OPT_WSTRING, offcfg(appmouse_pointer),__("AppMousePointer")},
-
-  // Selection
-  {"Selection",OPT_COMMENT,0,0},
-  {"ClearSelectionOnInput", OPT_BOOL, offcfg(input_clears_selection),__("ClearSelectionOnInput")},
-  {"CopyOnSelect", OPT_BOOL, offcfg(copy_on_select),__("CopyOnSelect")},
-  {"CopyTab", OPT_BOOL, offcfg(copy_tabs),__("CopyTab")},
-  {"CopyAsRTF", OPT_BOOL, offcfg(copy_as_rtf),__("CopyAsRTF")},
-  {"CopyAsHTML", OPT_BOOL, offcfg(copy_as_html),__("CopyAsHTML")},
-  {"CopyAsRTFFont", OPT_WSTRING, offcfg(copy_as_rtf_font),__("CopyAsRTFFont")},
-  {"CopyAsRTFFontSize", OPT_INT | OPT_LEGACY, offcfg(copy_as_rtf_font_size),__("CopyAsRTFFontSize")},
-  {"CopyAsRTFFontHeight", OPT_INT, offcfg(copy_as_rtf_font_size),__("CopyAsRTFFontHeight")},
-  {"TrimSelection", OPT_BOOL, offcfg(trim_selection),__("TrimSelection")},
-  {"AllowSetSelection", OPT_BOOL, offcfg(allow_set_selection),__("AllowSetSelection")},
-  {"SelectionShowSize", OPT_INT, offcfg(selection_show_size),__("SelectionShowSize")},
-
-  // Window
-  {"Window",OPT_COMMENT,0,0},
-  {"Columns", OPT_INT, offcfg(cols),__("Columns")},
-  {"Rows", OPT_INT, offcfg(rows),__("Rows")},
-  {"RewrapOnResize", OPT_BOOL, offcfg(rewrap_on_resize),__("RewrapOnResize")},
-  {"ScrollbackLines", OPT_INT, offcfg(scrollback_lines),__("ScrollbackLines")},
-  {"MaxScrollbackLines", OPT_INT, offcfg(max_scrollback_lines),__("MaxScrollbackLines")},
-  {"Scrollbar", OPT_SCROLLBAR, offcfg(scrollbar),__("Scrollbar")},
-  {"ScrollMod", OPT_MOD, offcfg(scroll_mod),__("ScrollMod")},
-  {"PgUpDnScroll", OPT_BOOL, offcfg(pgupdn_scroll),__("PgUpDnScroll")},
-  {"allocconsole", OPT_BOOL, offcfg(allocconsole),__("allocconsole")},
-  {"Language", OPT_WSTRING, offcfg(lang),__("Language")},
-  {"SearchBar", OPT_WSTRING, offcfg(search_bar),__("SearchBar")},
-  {"SearchContext", OPT_INT, offcfg(search_context),__("SearchContext")},
-
-  // Terminal
-  {"Terminal",OPT_COMMENT,0,0},
-  {"Term", OPT_STRING, offcfg(Term),__("Term")},
-  {"Answerback", OPT_STRING, offcfg(answerback),__("Answerback")},
-  {"OldWrapModes", OPT_BOOL, offcfg(old_wrapmodes),__("OldWrapModes")},
-  {"Enable132ColumnSwitching", OPT_BOOL, offcfg(enable_deccolm_init),__("Enable132ColumnSwitching")},
-  {"BellType", OPT_INT, offcfg(bell_type),__("BellType")},
-  {"BellFile", OPT_WSTRING, offcfg(bell_file[6]),__("BellFile")},
-  {"BellFile2", OPT_WSTRING, offcfg(bell_file[0]),__("BellFile2")},
-  {"BellFile3", OPT_WSTRING, offcfg(bell_file[1]),__("BellFile3")},
-  {"BellFile4", OPT_WSTRING, offcfg(bell_file[2]),__("BellFile4")},
-  {"BellFile5", OPT_WSTRING, offcfg(bell_file[3]),__("BellFile5")},
-  {"BellFile6", OPT_WSTRING, offcfg(bell_file[4]),__("BellFile6")},
-  {"BellFile7", OPT_WSTRING, offcfg(bell_file[5]),__("BellFile7")},
-  {"BellFreq", OPT_INT, offcfg(bell_freq),__("BellFreq")},
-  {"BellLen", OPT_INT, offcfg(bell_len),__("BellLen")},
-  {"BellFlash", OPT_BOOL, offcfg(bell_flash),__("BellFlash")},
-  {"BellFlashStyle", OPT_INT, offcfg(bell_flash_style),__("BellFlashStyle")},
-  {"BellTaskbar", OPT_BOOL, offcfg(bell_taskbar),__("BellTaskbar")},
-  {"BellPopup", OPT_BOOL, offcfg(bell_popup),__("BellPopup")},
-  {"BellInterval", OPT_INT, offcfg(bell_interval),__("BellInterval")},
-  {"PlayTone", OPT_INT, offcfg(play_tone),__("PlayTone")},
-  {"Printer", OPT_WSTRING, offcfg(printer),__("Printer")},
-  {"ConfirmExit", OPT_BOOL, offcfg(confirm_exit),__("ConfirmExit")},
-  {"ConfirmReset", OPT_BOOL, offcfg(confirm_reset),__("ConfirmReset")},
-
-  // Command line
-  {"Command line",OPT_COMMENT,0,0},
-  {"Class", OPT_WSTRING, offcfg(class),__("Class")},
-  {"Hold", OPT_HOLD, offcfg(hold),__("Hold")},
-  {"Daemonize", OPT_BOOL, offcfg(daemonize),__("Daemonize")},
-  {"DaemonizeAlways", OPT_BOOL, offcfg(daemonize_always),__("DaemonizeAlways")},
-  {"ExitWrite", OPT_BOOL, offcfg(exit_write),__("ExitWrite")},
-  {"ExitTitle", OPT_WSTRING, offcfg(exit_title),__("ExitTitle")},
-  {"Icon", OPT_WSTRING, offcfg(icon),__("Icon")},
-  {"Log", OPT_WSTRING, offcfg(log),__("Log")},
-  {"Logging", OPT_INT, offcfg(logging),__("Logging")},
-  {"Title", OPT_WSTRING, offcfg(title),__("Title")},
-  {"title_settable", OPT_BOOL, offcfg(title_settable),__("title_settable")},
-  {"Utmp", OPT_BOOL, offcfg(create_utmp),__("Utmp")},
-  {"Window", OPT_WINDOW, offcfg(window),__("Window")},
-  {"X", OPT_INT, offcfg(x),__("X")},
-  {"Y", OPT_INT, offcfg(y),__("Y")},
-
-  // "Hidden"
-  {"Hidden",OPT_COMMENT,0,0},
-  {"Bidi", OPT_INT, offcfg(bidi),__("Bidi")},
-  {"NoAltScreen", OPT_BOOL, offcfg(disable_alternate_screen),__("NoAltScreen")},
-  {"EraseToScrollback", OPT_BOOL, offcfg(erase_to_scrollback),__("EraseToScrollback")},
-  {"DisplaySpeedup", OPT_INT, offcfg(display_speedup),__("DisplaySpeedup")},
-  {"SuppressSGR", OPT_STRING, offcfg(suppress_sgr),__("SuppressSGR")},
-  {"SuppressDEC", OPT_STRING, offcfg(suppress_dec),__("SuppressDEC")},
-  {"SuppressWIN", OPT_STRING, offcfg(suppress_win),__("SuppressWIN")},
-  {"SuppressOSC", OPT_STRING, offcfg(suppress_osc),__("SuppressOSC")},
-  {"SuppressNRC", OPT_STRING, offcfg(suppress_nrc),__("SuppressNRC")},  // unused
-  {"SuppressMouseWheel", OPT_STRING, offcfg(suppress_wheel),__("SuppressMouseWheel")},
-  {"FilterPasteControls", OPT_STRING, offcfg(filter_paste),__("FilterPasteControls")},
-  {"BracketedPasteByLine", OPT_INT, offcfg(bracketed_paste_split),__("BracketedPasteByLine")},
-  {"SuspendWhileSelecting", OPT_INT, offcfg(suspbuf_max),__("SuspendWhileSelecting")},
-  {"PrintableControls", OPT_INT, offcfg(printable_controls),__("PrintableControls")},
-  {"CharNarrowing", OPT_INT, offcfg(char_narrowing),__("CharNarrowing")},
-  {"Emojis", OPT_EMOJIS, offcfg(emojis),__("Emojis")},
-  {"EmojiPlacement", OPT_EMOJI_PLACEMENT, offcfg(emoji_placement),__("EmojiPlacement")},
-  {"SaveFilename", OPT_WSTRING, offcfg(save_filename),__("SaveFilename")},
-  {"AppID", OPT_WSTRING, offcfg(app_id),__("AppID")},
-  {"AppName", OPT_WSTRING, offcfg(app_name),__("AppName")},
-  {"AppLaunchCmd", OPT_WSTRING, offcfg(app_launch_cmd),__("AppLaunchCmd")},
-
-  {"DropCommands", OPT_WSTRING | OPT_KEEPCR, offcfg(drop_commands),__("DropCommands")},
-  {"ExitCommands", OPT_WSTRING | OPT_KEEPCR, offcfg(exit_commands),__("ExitCommands")},
-  {"ExitCommands", OPT_WSTRING | OPT_KEEPCR, offcfg(exit_commands),__("ExitCommands")},
-  {"UserCommands", OPT_WSTRING | OPT_KEEPCR, offcfg(user_commands),__("UserCommands")},
-  {"CtxMenuFunctions", OPT_WSTRING | OPT_KEEPCR, offcfg(ctx_user_commands),__("CtxMenuFunctions")},
-  {"SysMenuFunctions", OPT_WSTRING | OPT_KEEPCR, offcfg(sys_user_commands),__("SysMenuFunctions")},
-  {"UserCommandsPath", OPT_WSTRING, offcfg(user_commands_path),__("UserCommandsPath")},
-  {"SessionCommands", OPT_WSTRING | OPT_KEEPCR, offcfg(session_commands),__("SessionCommands")},
-  {"TaskCommands", OPT_WSTRING | OPT_KEEPCR, offcfg(task_commands),__("TaskCommands")},
-  {"ConPTY", OPT_BOOL, offcfg(conpty_support),__("ConPTY")},
-  {"LoginFromShortcut", OPT_BOOL, offcfg(login_from_shortcut),__("LoginFromShortcut")},
-  {"MenuMouse", OPT_STRING, offcfg(menu_mouse),__("MenuMouse")},
-  {"MenuCtrlMouse", OPT_STRING, offcfg(menu_ctrlmouse),__("MenuCtrlMouse")},
-  {"MenuMouse5", OPT_STRING, offcfg(menu_altmouse),__("MenuMouse5")},
-  {"MenuMenu", OPT_STRING, offcfg(menu_menu),__("MenuMenu")},
-  {"MenuCtrlMenu", OPT_STRING, offcfg(menu_ctrlmenu),__("MenuCtrlMenu")},
-  {"MenuTitleCtrlLeft", OPT_STRING, offcfg(menu_title_ctrl_l),__("MenuTitleCtrlLeft")},
-  {"MenuTitleCtrlRight", OPT_STRING, offcfg(menu_title_ctrl_r),__("MenuTitleCtrlRight")},
-
-  {"SessionGeomSync", OPT_INT, offcfg(geom_sync),__("SessionGeomSync")},
-
-
-  {"ColSpacing", OPT_INT, offcfg(col_spacing),__("ColSpacing")},
-  {"RowSpacing", OPT_INT, offcfg(row_spacing),__("RowSpacing")},
-  {"AutoLeading", OPT_INT, offcfg(auto_leading),__("AutoLeading")},
-  {"Padding", OPT_INT, offcfg(padding),__("Padding")},
-  {"Ligatures", OPT_INT, offcfg(ligatures),__("Ligatures")},
-  {"LigaturesSupport", OPT_INT, offcfg(ligatures_support),__("LigaturesSupport")},
-  {"HandleDPI", OPT_INT, offcfg(handle_dpichanged),__("HandleDPI")},
-  {"CheckVersionUpdate", OPT_INT, offcfg(check_version_update),__("CheckVersionUpdate")},
-  {"WordChars", OPT_STRING, offcfg(word_chars),__("WordChars")},
-  {"WordCharsExcl", OPT_STRING, offcfg(word_chars_excl),__("WordCharsExcl")},
-  {"IMECursorColour", OPT_COLOUR, offcfg(ime_cursor_colour),__("IMECursorColour")},
-  {"SixelClipChars", OPT_WSTRING, offcfg(sixel_clip_char),__("SixelClipChars")},
-  {"OldBold", OPT_BOOL, offcfg(old_bold),__("OldBold")},
-  {"ShortLongOpts", OPT_BOOL, offcfg(short_long_opts),__("ShortLongOpts")},
-  {"BoldAsRainbowSparkles", OPT_BOOL, offcfg(bold_as_special),__("BoldAsRainbowSparkles")},
-  {"HoverTitle", OPT_BOOL, offcfg(hover_title),__("HoverTitle")},
-  {"ProgressBar", OPT_BOOL, offcfg(progress_bar),__("ProgressBar")},
-  {"ProgressScan", OPT_INT, offcfg(progress_scan),__("ProgressScan")},
-  {"Baud", OPT_INT, offcfg(baud),__("Baud")},
-  {"Bloom", OPT_INT, offcfg(bloom),__("Bloom")},
-  {"DimMargins", OPT_BOOL, offcfg(dim_margins),__("DimMargins")},
-  {"StatusLine", OPT_BOOL, offcfg(status_line),__("StatusLine")},
-  {"OldXButtons", OPT_BOOL, offcfg(old_xbuttons),__("OldXButtons")},
-  {"OptionsFont", OPT_WSTRING, offcfg(options_font),__("OptionsFont")},
-  {"OptionsFontSize", OPT_INT | OPT_LEGACY, offcfg(options_fontsize),__("OptionsFontSize")},
-  {"OptionsFontHeight", OPT_INT, offcfg(options_fontsize),__("OptionsFontHeight")},
-  {"OldOptions", OPT_STRING, offcfg(old_options),__("OldOptions")},
-
-
-  // Legacy
-  {"BoldAsBright", OPT_BOOL | OPT_LEGACY, offcfg(bold_as_colour),__("BoldAsBright")},
-  {"FontQuality", OPT_FONTSMOOTH | OPT_LEGACY, offcfg(font_smoothing),__("FontQuality")},
+#include "configdef.h"
   {0}
 };
 
 typedef const struct {
   string name;
-  char val;
+  int val;
 } opt_val;
 
 static opt_val * const opt_vals[] = {
@@ -695,41 +96,6 @@ static opt_val * const opt_vals[] = {
     {__("on"), true},
     {0, 0}
   },
-  [OPT_CHARWIDTH] = (opt_val[]) {
-    {__("locale"), 0},
-    {__("unicode"), 1},
-    {__("ambig-wide"), 2},
-    {__("ambig-narrow"), 3},
-    {__("single"), 10},
-    {__("single-unicode"), 11},
-    {0, 0}
-  },
-  [OPT_EMOJIS] = (opt_val[]) {
-    {__("none"), EMOJIS_NONE},
-    {__("openmoji"), EMOJIS_OPENMOJI},
-    {__("noto"), EMOJIS_NOTO},
-    {__("joypixels"), EMOJIS_JOYPIXELS},
-    {__("emojione"), EMOJIS_ONE},
-    {__("apple"), EMOJIS_APPLE},
-    {__("google"), EMOJIS_GOOGLE},
-    {__("twitter"), EMOJIS_TWITTER},
-    {__("facebook"), EMOJIS_FB},
-    {__("samsung"), EMOJIS_SAMSUNG},
-    {__("windows"), EMOJIS_WINDOWS},
-    {__("zoom"), EMOJIS_ZOOM},
-    {0, 0}
-  },
-  [OPT_EMOJI_PLACEMENT] = (opt_val[]) {
-    //__ Options - Text - Emojis - Placement (localization optional)
-    {__("stretch"), EMPL_STRETCH},
-    //__ Options - Text - Emojis - Placement (localization optional)
-    {__("align"), EMPL_ALIGN},
-    //__ Options - Text - Emojis - Placement (localization optional)
-    {__("middle"), EMPL_MIDDLE},
-    //__ Options - Text - Emojis - Placement (localization optional)
-    {__("full"), EMPL_FULL},
-    {0, 0}
-  },
   [OPT_MOD] = (opt_val[]) {
     {("off"), 0},
     {("shift"), MDK_SHIFT},
@@ -739,15 +105,6 @@ static opt_val * const opt_vals[] = {
     {("super"), MDK_SUPER},
     {("hyper"), MDK_HYPER},
     {("capslock"), MDK_CAPSLOCK},
-    {0, 0}
-  },
-  [OPT_COMPOSE_KEY] = (opt_val[]) {
-    {("off"), 0},
-    {("shift"), MDK_SHIFT},
-    {("alt"), MDK_ALT},
-    {("ctrl"), MDK_CTRL},
-    {("super"), MDK_SUPER},
-    {("hyper"), MDK_HYPER},
     {0, 0}
   },
   [OPT_TRANS] = (opt_val[]) {
@@ -765,7 +122,7 @@ static opt_val * const opt_vals[] = {
     {__("underscore"), CUR_UNDERSCORE},
     {0, 0}
   },
-  [OPT_FONTSMOOTH] = (opt_val[]) {
+  [OPT_FONTSMT] = (opt_val[]) {
     {__("Default"), FS_DEFAULT},
     {__("None"), FS_NONE},
     {__("Partial"), FS_PARTIAL},
@@ -811,7 +168,51 @@ static opt_val * const opt_vals[] = {
     {__("error"), HOLD_ERROR},
     {__("always"), HOLD_ALWAYS},
     {0, 0}
-  }
+  },
+  [OPT_CHARWIDTH] = (opt_val[]) {
+    {__("locale"), 0},
+    {__("unicode"), 1},
+    {__("ambig-wide"), 2},
+    {__("ambig-narrow"), 3},
+    {__("single"), 10},
+    {__("single-unicode"), 11},
+    {0, 0}
+  },
+  [OPT_EMOJIS] = (opt_val[]) {
+    {__("none"), EMOJIS_NONE},
+    {__("openmoji"), EMOJIS_OPENMOJI},
+    {__("noto"), EMOJIS_NOTO},
+    {__("joypixels"), EMOJIS_JOYPIXELS},
+    {__("emojione"), EMOJIS_ONE},
+    {__("apple"), EMOJIS_APPLE},
+    {__("google"), EMOJIS_GOOGLE},
+    {__("twitter"), EMOJIS_TWITTER},
+    {__("facebook"), EMOJIS_FB},
+    {__("samsung"), EMOJIS_SAMSUNG},
+    {__("windows"), EMOJIS_WINDOWS},
+    {__("zoom"), EMOJIS_ZOOM},
+    {0, 0}
+  },
+  [OPT_EMOJI_PLACEMENT] = (opt_val[]) {
+    //__ Options - Text - Emojis - Placement (localization optional)
+    {__("stretch"), EMPL_STRETCH},
+    //__ Options - Text - Emojis - Placement (localization optional)
+    {__("align"), EMPL_ALIGN},
+    //__ Options - Text - Emojis - Placement (localization optional)
+    {__("middle"), EMPL_MIDDLE},
+    //__ Options - Text - Emojis - Placement (localization optional)
+    {__("full"), EMPL_FULL},
+    {0, 0}
+  },
+  [OPT_COMPOSE_KEY] = (opt_val[]) {
+    {("off"), 0},
+    {("shift"), MDK_SHIFT},
+    {("alt"), MDK_ALT},
+    {("ctrl"), MDK_CTRL},
+    {("super"), MDK_SUPER},
+    {("hyper"), MDK_HYPER},
+    {0, 0}
+  },
 };
 
 
@@ -1083,7 +484,22 @@ parse_colour(string s, colour *cp)
   *cp = make_colour(r, g, b);
   return true;
 }
-
+static int GetOptVal(int type,const char*val_str){
+  int len = strlen(val_str);
+  if (!len)return -1;
+  for (opt_val *o = opt_vals[type]; o->name; o++) {
+    if (!strncasecmp(val_str, o->name, len)) {
+      return o->val;
+    }
+  }
+  // Value not found: try interpreting it as a number.
+  char *val_end;
+  int val = strtol(val_str, &val_end, 0);
+  if (val_end != val_str) {
+    return val;
+  }
+  return -1;
+}
 static int
 set_option(config * p,string name, string val_str, bool from_file)
 {
@@ -1097,10 +513,10 @@ set_option(config * p,string name, string val_str, bool from_file)
   uint type = options[i].type & OPT_TYPE_MASK;
 
   switch (type) {
-    when OPT_STRING:
+    when OPT_STR:
       strset(val_p, val_str);
       return i;
-    when OPT_WSTRING: {
+    when OPT_WSTR: {
       wchar * ws;
       if (from_file)
         ws = cs__utforansitowcs(val_str);
@@ -1108,6 +524,19 @@ set_option(config * p,string name, string val_str, bool from_file)
         ws = cs__mbstowcs(val_str);
       wstrset(val_p, ws);
       delete(ws);
+      return i;
+    }
+    when OPT_FONT: {
+      wchar ws[64];
+      char bold[64];
+      font_spec *p=(font_spec*)val_p;
+      bold[0]=0;
+      sscanf(val_str,"%64l[^,],%d,%d,%64s",ws,&p->size,&p->weight,bold);
+      wstrset(&p->name, ws);
+      if(bold[0]){
+        int val=GetOptVal(OPT_BOOL,bold);
+        if(val>=0) p->isbold=(val>0);
+      }
       return i;
     }
     when OPT_COMMENT: 
@@ -1119,17 +548,17 @@ set_option(config * p,string name, string val_str, bool from_file)
         return i;
       }
     }
-    when OPT_COLOUR:
+    when OPT_CLR:
 #ifdef debug_theme
       printf("set_option <%s> <%s>\n", name, val_str);
 #endif
       if (parse_colour(val_str, val_p))
         return i;
-    when OPT_COLOUR_PAIR: {
+    when OPT_CLRFG: {
 #ifdef debug_theme
       printf("set_option <%s> <%s>\n", name, val_str);
 #endif
-      colour_pair *pair = val_p;
+      colourfg *pair = val_p;
       if (parse_colour(val_str, &pair->fg)) {
         const char *sep = strchr(val_str, ';');
         if (!sep) {
@@ -1141,21 +570,13 @@ set_option(config * p,string name, string val_str, bool from_file)
       }
     }
     otherwise: {
-      int len = strlen(val_str);
-      if (!len)
-        break;
-      for (opt_val *o = opt_vals[type]; o->name; o++) {
-        if (!strncasecmp(val_str, o->name, len)) {
-          *(char *)val_p = o->val;
-          return i;
-        }
+      if(type>OPT_COMMENT){
+        printf("Set Option Error Cfg type %d>%d\n",type,OPT_COMMENT);
       }
-      // Value not found: try interpreting it as a number.
-      char *val_end;
-      int val = strtol(val_str, &val_end, 0);
-      if (val_end != val_str) {
-        *(char *)val_p = val;
-        return i;
+      int val=GetOptVal(type,val_str);
+      if(val>=0){
+          *(int*)val_p = val;
+          return i;
       }
     }
   }
@@ -1705,7 +1126,7 @@ load_config(string filename, int to_save)
   }
 
   if(load_configr(&cfg,filename, to_save)){
-    CLRCPY(cfg_colours,cfg.ansi_colours);
+    CLRFGSCPY(cfg_colours,cfg.ansi_colours);
   }
   if (free_filename) delete(filename);
   check_legacy_options(remember_file_option);
@@ -1732,18 +1153,29 @@ copy_config(string tag, config * dst_p, const config * src_p)
       void *dst_val_p = (void *)dst_p + offset;
       void *src_val_p = (void *)src_p + offset;
       switch (type & OPT_TYPE_MASK) {
-        when OPT_STRING:
+        when OPT_STR:
           strset(dst_val_p, *(string *)src_val_p);
-        when OPT_WSTRING:
+        when OPT_WSTR:
           wstrset(dst_val_p, *(wstring *)src_val_p);
+        when OPT_FONT:{ 
+          font_spec *pd=(font_spec*)dst_val_p;
+          font_spec *ps=(font_spec*)src_val_p;
+          wstrset(&pd->name, ps->name);
+          pd->size=ps->size;
+          pd->weight=ps->weight;
+          pd->isbold=ps->isbold;
+        }
         when OPT_COMMENT: 
         when OPT_INT:
           *(int *)dst_val_p = *(int *)src_val_p;
-        when OPT_COLOUR:
+        when OPT_CLR:
           *(colour *)dst_val_p = *(colour *)src_val_p;
-        when OPT_COLOUR_PAIR:
-          *(colour_pair *)dst_val_p = *(colour_pair *)src_val_p;
+        when OPT_CLRFG:
+          *(colourfg *)dst_val_p = *(colourfg *)src_val_p;
         otherwise:
+          if(type>OPT_COMMENT){
+            printf("copy config Error Cfg type %d>%d\n",type,OPT_COMMENT);
+          }
           *(char *)dst_val_p = *(char *)src_val_p;
       }
     }
@@ -1754,7 +1186,7 @@ void
 init_config(void)
 {
   copy_config("init", &cfg, &default_cfg);
-  CLRCPY(def_colours,default_cfg.ansi_colours);
+  CLRFGSCPY(def_colours,default_cfg.ansi_colours);
 }
 
 static void
@@ -1809,27 +1241,33 @@ finish_config(void)
 }
 static void printOptVar(FILE*file,int type,const void*val_p){
   switch (type & OPT_TYPE_MASK) {
-    when OPT_STRING:
+    when OPT_STR:
         fprintf(file, "%s", *(string *)val_p);
-    when OPT_WSTRING: {
+    when OPT_WSTR: {
       char * s = cs__wcstoutf(*(wstring *)val_p);
       fprintf(file, "%s", s);
       delete(s);
     }
+    when OPT_FONT: 
+      font_spec *pd=(font_spec*)val_p;
+      fprintf(file,"%ls,%d,%d,%d",pd->name,pd->size,pd->weight,pd->isbold);
     when OPT_INT:
         fprintf(file, "%i", *(int *)val_p);
     when OPT_COMMENT: 
-    when OPT_COLOUR: {
+    when OPT_CLR: {
       colour c = *(colour *)val_p;
       fprintf(file, "%u,%u,%u", red(c), green(c), blue(c));
     }
-    when OPT_COLOUR_PAIR: {
-      colour_pair p = *(colour_pair *)val_p;
+    when OPT_CLRFG: {
+      colourfg p = *(colourfg *)val_p;
       fprintf(file, "%u,%u,%u", red(p.fg), green(p.fg), blue(p.fg));
       if (p.fg != p.bg)
         fprintf(file, ";%u,%u,%u", red(p.bg), green(p.bg), blue(p.bg));
     }
     otherwise: {
+      if(type>OPT_COMMENT){
+        printf("print optvar config Error Cfg type %d>%d\n",type,OPT_COMMENT);
+      }
       int val = *(char *)val_p;
       opt_val *o = opt_vals[type];
       for (; o->name; o++) {
@@ -1899,7 +1337,7 @@ load_themer(config *p,wstring theme)
   int r=load_configr(p,thf, false);
   delete(thf);
   if(!r)return 0;
-  CLRCPY(theme_colours,p->ansi_colours);
+  CLRFGSCPY(theme_colours,p->ansi_colours);
   wcsncpy(theme_file,theme,128);
   return 1;
 }
@@ -1958,17 +1396,28 @@ apply_config(bool save)
     if (!(type & OPT_LEGACY)) {
       bool changed;
       switch (type & OPT_TYPE_MASK) {
-        when OPT_STRING:
+        when OPT_STR:
           changed = strcmp(*(string *)val_p, *(string *)new_val_p);
-        when OPT_WSTRING:
+        when OPT_WSTR:
           changed = wcscmp(*(wstring *)val_p, *(wstring *)new_val_p);
+        when OPT_FONT:{ 
+          font_spec *pd=(font_spec*)val_p;
+          font_spec *ps=(font_spec*)new_val_p;
+          changed=pd->size!=ps->size|| 
+              pd->weight!=ps->weight||
+              pd->isbold!=ps->isbold||
+              wcscmp(pd->name, ps->name);
+        }
         when OPT_INT:
           changed = (*(int *)val_p != *(int *)new_val_p);
-        when OPT_COLOUR:
+        when OPT_CLR:
           changed = (*(colour *)val_p != *(colour *)new_val_p);
-        when OPT_COLOUR_PAIR:
-          changed = memcmp(val_p, new_val_p, sizeof(colour_pair));
+        when OPT_CLRFG:
+          changed = memcmp(val_p, new_val_p, sizeof(colourfg));
         otherwise:
+          if(type>OPT_COMMENT){
+            printf("apply_config Error Cfg type %d>%d\n",type,OPT_COMMENT);
+          }
           changed = (*(char *)val_p != *(char *)new_val_p);
       }
       if (changed)
@@ -1982,8 +1431,8 @@ apply_config(bool save)
      ){
     load_messages(&new_cfg);
   }
-  if(memcmp(theme_colours,file_cfg.ansi_colours,16*sizeof(colour))==0){
-    CLRCPY(file_cfg.ansi_colours,cfg_colours);
+  if(CLRFGSCMP(theme_colours,file_cfg.ansi_colours)==0){
+    CLRFGSCPY(file_cfg.ansi_colours,cfg_colours);
   }else{
     *(wchar*)file_cfg.theme_file=0;
   }
@@ -2013,7 +1462,7 @@ apply_config(bool save)
 
 // Registry handling (for retrieving localized sound labels)
 
-static HKEY
+HKEY
 regopen(HKEY key,const char * subkey)
 {
   HKEY hk = 0;
@@ -2084,9 +1533,10 @@ getregstr(HKEY key, wstring subkey, wstring attribute)
 #else
   // RegGetValueW is easier but not supported on Windows XP
   HKEY sk = 0;
-  RegOpenKeyW(key, subkey, &sk);
-  if (!sk)
-    return 0;
+  if(subkey){
+    RegOpenKeyW(key, subkey, &sk);
+    if (!sk) return 0;
+  }else sk=key;
   DWORD type;
   DWORD len;
   int res = RegQueryValueExW(sk, attribute, 0, &type, 0, &len);
@@ -2096,7 +1546,9 @@ getregstr(HKEY key, wstring subkey, wstring attribute)
     return 0;
   wchar * val = malloc (len);
   res = RegQueryValueExW(sk, attribute, 0, &type, (void *)val, &len);
-  RegCloseKey(sk);
+  if(subkey){
+    RegCloseKey(sk);
+  }
   if (res) {
     delete(val);
     return 0;
@@ -3024,7 +2476,7 @@ static int themechanged(){
   wstring theme_name = new_cfg.theme_file;
   if(!*theme_name)return 0;
   if(wcschr(theme_name, L'/') || wcschr(theme_name, L'\\'))return 0;
-  if(memcmp(theme_colours,new_cfg.ansi_colours,16*sizeof(colour)))return 1;
+  if(CLRFGSCMP(theme_colours,new_cfg.ansi_colours))return 1;
   if(wcscmp(theme_name,theme_file))return 1;
   return 0;
 }
@@ -3169,7 +2621,7 @@ theme_handler(control *ctrl, int event)
   }
   else if(!*theme_name) { 
     if(upd){
-      CLRCPY(new_cfg.ansi_colours,cfg_colours); 
+      CLRFGSCPY(new_cfg.ansi_colours,cfg_colours); 
       upd=1;
     }
   }
@@ -3671,7 +3123,7 @@ emojis_handler(control *ctrl, int event)
 }
 
 static void
-opt_handler(control *ctrl, int event,char * popt, opt_val * ovals)
+opt_handler(control *ctrl, int event,int* popt, opt_val * ovals)
 {
   switch (event) {
     when EVENT_REFRESH:
@@ -3708,7 +3160,7 @@ compose_key_handler(control *ctrl, int event)
 static void
 smoothing_handler(control *ctrl, int event)
 {
-  opt_handler(ctrl, event, &new_cfg.font_smoothing, opt_vals[OPT_FONTSMOOTH]);
+  opt_handler(ctrl, event, &new_cfg.font_smoothing, opt_vals[OPT_FONTSMT]);
 }
 
 static opt_val * const showbold_vals =
@@ -3720,7 +3172,7 @@ static opt_val * const showbold_vals =
     {0, 0}
 };
 
-static char showbold;
+static int showbold;
 
 static void
 showbold_handler(control *ctrl, int event)
@@ -3733,7 +3185,7 @@ showbold_handler(control *ctrl, int event)
   //printf("bold as font %d as colour %d\n", new_cfg.bold_as_font, new_cfg.bold_as_colour);
 }
 
-static bool bold_like_xterm;
+static int bold_like_xterm;
 
 static void
 checkbox_option_set(control *ctrl, bool checked)
@@ -3748,7 +3200,7 @@ checkbox_option_set(control *ctrl, bool checked)
 void
 bold_handler(control *ctrl, int event)
 {
-  bool *bp = ctrl->context;
+  int*bp = ctrl->context;
   static control * ctrl_bold_as_font = 0;
   static control * ctrl_bold_as_colour = 0;
   static control * ctrl_bold_like_xterm = 0;
@@ -3825,7 +3277,7 @@ transparency_selhandler(control *ctrl, int event)
     transparency_valhandler(transparency_valbox, EVENT_REFRESH);
   }
 }
-
+#if 0
 static void
 transparency_slider(control *ctrl, int event)
 {
@@ -3849,7 +3301,7 @@ transparency_slider(control *ctrl, int event)
     dlg_stdradiobutton_handler(transparency_selbox, EVENT_REFRESH);
   }
 }
-
+#endif
 static void
 ansicolour_handler(control *ctrl, int event)
 {
@@ -3871,7 +3323,7 @@ setup_config_box(controlbox * b)
   controlset *s;
   control *c;
   copy_config("dialog", &new_cfg, &file_cfg);
-  if(*theme_file)CLRCPY(new_cfg.ansi_colours,theme_colours );
+  if(*theme_file)CLRFGSCPY(new_cfg.ansi_colours,theme_colours );
  /*
   * The standard panel that appears at the bottom of all panels:
   * Open, Cancel, Apply etc.

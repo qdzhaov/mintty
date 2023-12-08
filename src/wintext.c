@@ -4679,10 +4679,10 @@ win_set_colour(colour_i i, colour c)
   if (c == (colour)-1) {
     // ... reset to default ...
     if (i < 16) {
-      colour_pair cp = cfg.ansi_colours[i];
-      cc(i, cp.fg);
-      cc(i + ANSI0, cp.fg);
-      cc(i + BG_ANSI0, cp.bg);
+      colourfg*cp = &cfg.ansi_colours[i];
+      cc(i, cp->fg);
+      cc(i + ANSI0, cp->fg);
+      cc(i + BG_ANSI0, cp->bg);
     }
     else if (i < 256)
       cc(i, wv.xterm_colours[i - 16]);

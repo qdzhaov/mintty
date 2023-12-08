@@ -399,11 +399,13 @@ child_create(struct STerm* pterm,SessDef*sd,
     win_versiON = ((win_version & 0xff) << 8) | ((win_version >> 8) & 0xff);
     if (win_version >= 0x0601)  // Windows 7 is NT 6.1.
 #endif
-      if (AllocConsole()) {
-        HMODULE kernel = GetModuleHandleA("kernel32");
-        HWND (WINAPI *pGetConsoleWindow)(void) =
-          (void *)GetProcAddress(kernel, "GetConsoleWindow");
-        ShowWindowAsync(pGetConsoleWindow(), SW_HIDE);
+      if(cfg.allocconsole){
+        if (AllocConsole()) {
+          HMODULE kernel = GetModuleHandleA("kernel32");
+          HWND (WINAPI *pGetConsoleWindow)(void) =
+              (void *)GetProcAddress(kernel, "GetConsoleWindow");
+          ShowWindowAsync(pGetConsoleWindow(), SW_HIDE);
+        }
       }
 #endif
     //close all fds 
@@ -468,13 +470,13 @@ child_create(struct STerm* pterm,SessDef*sd,
     // Invoke command
 
     if(strcasecmp(cmd,"wsl")==0){
-      bool ex1= access("/bin/wslbridge2.exe", R_OK);
-      bool ex2= access("/bin/wslbridge2-backend", R_OK);
-      if(ex1==0&&ex2==0){
-        cmd="/bin/wslbridge2.exe";
-      }
+      cmd=wv.wslcmd;
     }
-    //fprintf(stderr, "execvp cmd:%s\n",cmd);
+#if 0    
+    fprintf(stderr, "execvp cmd:%s",cmd);
+    for(const char**p=argv;*p;p++){ printf(" %s",*p); }
+    printf("\n");
+#endif
     execvp(cmd, (char**)argv);
     // If we get here, exec failed.
     fprintf(stderr, "\033]701;C.UTF-8\007");
@@ -484,12 +486,9 @@ child_create(struct STerm* pterm,SessDef*sd,
     fprintf(stderr, "\r\n");
     fflush(stderr);
 
-#if CYGWIN_VERSION_DLL_MAJOR < 1005
     // Before Cygwin 1.5, the message above doesn't appear if we exit
     // immediately. So have a little nap first.
     usleep(200000);
-#endif
-
     exit(mexit);
   }
   else { // Parent process.
@@ -542,7 +541,6 @@ child_create(struct STerm* pterm,SessDef*sd,
       }
     }
   }
-
   if(win_fd==-1) win_fd = open("/dev/windows", O_RDONLY);
 }
 
@@ -1231,8 +1229,7 @@ do_child_fork(STerm* pterm,SessDef*sd, int moni, bool launch, bool config_size, 
     if (((pterm->child.child_dir) && *(pterm->child.child_dir))||set_dir) {
       if (set_dir) {
         // use cwd of foreground process if requested via in_cwd
-      }
-      else if (wv.support_wsl) {
+      } else if (wv.support_wsl) {
         const wchar * wcd = cs__utftowcs((pterm->child.child_dir));
 #ifdef debug_wsl
         printf("fork wsl <%ls>\n", wcd);
@@ -1243,8 +1240,7 @@ do_child_fork(STerm* pterm,SessDef*sd, int moni, bool launch, bool config_size, 
 #endif
         set_dir = (string)cs__wcstombs(wcd);
         delete(wcd);
-      }
-      else
+      } else
         set_dir = strdup(pterm->child.child_dir);
 
       if (set_dir) {
@@ -1325,12 +1321,15 @@ do_child_fork(STerm* pterm,SessDef*sd, int moni, bool launch, bool config_size, 
     const char ** new_argv = newn(const char *, na+2);
     new_argv[0]=(char*)main_sd.cmd;
     for(na=0;argv[na];na++)new_argv[na+1]=argv[na];
+#if 0
     vt_printf("%s ",main_sd.cmd);
     for(na=0;new_argv[na];na++)vt_printf("%s ",new_argv[na]);
     vt_printf("\n");
+    printf("%s ",sd->cmd);
     printf("%s ",main_sd.cmd);
     for(na=0;new_argv[na];na++)printf("%s ",new_argv[na]);
     printf("\n");
+#endif
     execvp(main_sd.cmd, (char**)new_argv);
     exit(mexit);
   }
@@ -1384,7 +1383,7 @@ child_launch(STerm* pterm,int n, SessDef*sd, int moni)
           }
         }
         new_argv[argc] = 0;
-        SessDef nsd={argc,0,sd->cmd,new_argv};
+        SessDef nsd={argc,0,0,0,sd->cmd,new_argv};
         do_child_fork(pterm,&nsd, moni, true, true, false);
         delete(new_argv);
         break;

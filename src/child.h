@@ -8,6 +8,8 @@ typedef struct STerm STerm;
 #define TAB_LTITLE 128
 typedef struct SessDef{
   int argc;
+  int ID;
+  const wchar_t *menu;
   const char*title;
   const char*cmd;
   const char**argv;

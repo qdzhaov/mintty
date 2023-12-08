@@ -64,13 +64,13 @@ char *minttypath=NULL;
 static HFONT wguifont=0, guifnt = 0;
 ATOM class_atom;
 SessDef sessdefs[]={
-  {0,0,0,0},
-  {1,"Wsl"        ,"wsl"             ,(const char*[]){"wsl" ,0}},
-  {0,"CygWin"     ,0                 ,(const char*[]){0                 ,0}},
-  {1,"CMD"        ,"cmd"             ,(const char*[]){"cmd"             ,0}},
-  {1,"PowerShell" ,"powershell"      ,(const char*[]){"powershell"      ,0}},
-  {0,"view"       ,"/bin/vim"        ,(const char*[]){"/bin/vim",0}},
-  {0,0,0,0},
+  {0,IDSS_DEF,0,0,0,0},
+  {1,IDSS_WSL,L"Ws&l"       ,"Wsl"        ,"wsl"             ,(const char*[]){"wsl" ,0}},
+  {0,IDSS_CYG,L"&CygWin"    ,"CygWin"     ,0                 ,(const char*[]){0                 ,0}},
+  {1,IDSS_CMD,L"C&MD"       ,"CMD"        ,"cmd"             ,(const char*[]){"cmd"             ,0}},
+  {1,IDSS_PSH,L"&PowerShell","PowerShell" ,"powershell"      ,(const char*[]){"powershell"      ,0}},
+  {0,IDSS_USR,L"&Faststart" ,"view"       ,"/bin/vim"        ,(const char*[]){"/bin/vim",0}},
+  {0,0,0,0,0,0},
 }; 
 SessDef main_sd={0};
 SessDef cursd={0};
@@ -3039,17 +3039,13 @@ static struct {
         when IDM_NEW:        new_win_def();
         when IDM_NEW_MONI:   new_win(IDSS_DEF,lp);
         when IDM_COPYTITLE:  win_copy_title();
-        when IDM_NEWWSLT:    new_tab_wsl();
-        when IDM_NEWCYGT:    new_tab_cyg();
-        when IDM_NEWCMDT:    new_tab_cmd();
-        when IDM_NEWPSHT:    new_tab_psh();
-        when IDM_NEWUSRT:    new_tab_usr();
-        when IDM_NEWWSLW:    new_win_wsl();
-        when IDM_NEWCYGW:    new_win_cyg();
-        when IDM_NEWCMDW:    new_win_cmd();
-        when IDM_NEWPSHW:    new_win_psh();
-        when IDM_NEWUSRW:    new_win_usr();
+
+        when IDM_NEWTB ... IDM_NEWTE :
+            new_tab(wp-IDM_NEWTB);
+        when IDM_NEWWB ... IDM_NEWWE :
+            new_win(wp-IDM_NEWWB,0);
         when IDM_NEWTAB :    new_tab_def();
+
         when IDM_KILLTAB:    win_close  ();
         when IDM_PREVTAB  :  tab_prev	   ();
         when IDM_NEXTTAB  :  tab_next	   ();
@@ -4567,7 +4563,79 @@ waccess(wstring fn, int amode)
   delete(f);
   return ok;
 }
+static void setwslcmd(){
+  const char*wslcmd=NULL;
+  const char*chkfile(const char*fn){
+    if(access(fn, R_OK)==0)return fn;
+    return NULL;
+  }
+  const char*getbridge2(){
+    const char *p=chkfile("/bin/wslbridge2.exe");
+    if(chkfile("/bin/wslbridge2-backend.exe")){
+      return p;
+    }
+    return NULL;
+  }
+  const char*getbridge(){
+    const char *p=chkfile("/bin/wslbridge.exe");
+    if(chkfile("/bin/wslbridge-backend.exe")){
+      return p;
+    }
+    return NULL;
+  }
+  if(cfg.wslbridge==2) wslcmd=getbridge2();
+  else if(cfg.wslbridge==1) wslcmd=getbridge();
+  if(!wslcmd) wslcmd=chkfile("/bin/wsl.exe");
+  if(!wslcmd){
+    HKEY sk = 0;
+    RegOpenKeyA(HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Lxss\\MSI", &sk);
+    if (sk){
+      DWORD type;
+      DWORD len;
+      char *attribute="InstallLocation";
+      int res = RegQueryValueExA(sk, attribute, 0, &type, 0, &len);
+      if (res){
+        if ((type == REG_SZ || type == REG_EXPAND_SZ || type == REG_MULTI_SZ)){
+          char*wslp=NULL,*uwslp=NULL;
+          wslp = (char*)malloc (len+16);
+          res = RegQueryValueExA(sk, attribute, 0, &type, (void *)wslp, &len);
+          strcpy(wslp+len,"\\wsl.exe");
+          if(wslp){
+            uwslp=path_posix_to_win_a(wslp);
+            free(wslp);
+            if(!(wslcmd=chkfile(uwslp)))
+              free(uwslp);
+          }
+        }
+      }
+      RegCloseKey(sk);
+    }
+  }
+  if(!wslcmd){
+    char*uwslp=path_posix_to_win_a("c:/Program Files/WSL/wsl.exe");
+    if(!(wslcmd=chkfile(uwslp)))
+      free(uwslp);
+  }
 
+  if(!wslcmd) wslcmd=getbridge2();
+  if(!wslcmd) wslcmd=getbridge();
+  if(!wslcmd){
+    char*uwslp=path_posix_to_win_a("c:/windows/system32/wsl.exe");
+    if(!(wslcmd=chkfile(uwslp)))
+      free(uwslp);
+  }
+  if(!wslcmd){
+    wslcmd="wsl";
+  }
+  if(strstr(wslcmd,"wslbridge2.exe")){
+    wv.wslcmd0= "-wslbridge2";
+  }else if(strstr(wslcmd,"wslbridge.exe")){
+    wv.wslcmd0= "-wslbridge";
+  }else{
+    wv.wslcmd0="-wsl";
+  }
+  wv.wslcmd=(char*)wslcmd;
+}
 static int
 select_WSL(const char * wsl)
 {
@@ -4598,8 +4666,7 @@ select_WSL(const char * wsl)
       // setting an implicit AppID fixes mintty/wsltty#96 but causes #784
       // so an explicit config value derives AppID from wsl distro name
       set_arg_option("AppID", asform("%s.%s", APPNAME, wsl ?: "WSL"));
-  }
-  else {
+  } else {
     free(wv.wslname);
     wv.wslname = 0;
   }
@@ -4902,8 +4969,15 @@ static char help[] =
 // 12345678901234567890123456789012345678901234567890123456789012345678901234567890
   "  -b, --tab COMMAND     Spawn a new tab and execute the command\n"
   "  -c, --config FILE     Load specified config file (cf. -C or -o ThemeFile)\n"
+  "  -C, --loadconfig FILE Load specified config file (cf. -C or -o ThemeFile)\n"
+  "      --configdir DIR   Load specified config file (cf. -C or -o ThemeFile)\n"
   "  -e, --exec ...        Treat remaining arguments as the command to execute\n"
   "  -h, --hold never|start|error|always  Keep window open after command finishes\n"
+  "  -i, --icon FILE[,IX]  Load window icon from file, optionally with index\n"
+  "  -l, --log FILE|-      Log output to file or stdout\n"
+  "      --logfile FILE    Set Logfile \n"
+  "  -u, --utmp            create_utmp\n"
+  "  -o, --option OPT=VAL  Set/Override config file option with given value\n"
   "  -p, --position X,Y    Open window at specified coordinates\n"
   "  -p, --position center|left|right|top|bottom  Open window at special position\n"
   "  -p, --position @N     Open window on monitor N\n"
@@ -4911,17 +4985,47 @@ static char help[] =
   "  -s, --size maxwidth|maxheight  Set max screen size in given dimension\n"
   "  -t, --title TITLE     Set tab title (default: the invoked command)(cf. -T)\n"
   "                        Must be set before -b/--tab option\n"
+  "  -T, --Title TITLE     Like -t,but readonly\n"
+  "      --horbar          scrollbar\n"
+  "  -R  --Report s|o|m|f|W|p|P|t \n"
+  "           s:o:         Report window position (short/long) after exit\n"
+  "           m:           report monitor\n"
+  "           f:           list_fonts and exit\n"
+  "           W:           list_wsl and exit\n"
+  "           p:           report_child_pid \n"
+  "           P:           report_winpid\n"
+  "           t:           report_child_tty\n"
   "  -w, --window normal|min|max|full|hide  Set initial window state\n"
-  "  -i, --icon FILE[,IX]  Load window icon from file, optionally with index\n"
-  "  -l, --log FILE|-      Log output to file or stdout\n"
-  "      --nobidi|--nortl  Disable bidi (right-to-left support)\n"
-  "  -o, --option OPT=VAL  Set/Override config file option with given value\n"
-  "  -B, --Border frame|void  Use thin/no window border\n"
-  "  -R, --Report s|o      Report window position (short/long) after exit\n"
-  "      --nopin           Make this instance not pinnable to taskbar\n"
+  "      --class           Set Window class name\n"
+  "      --dir DIR         Set Start Dir\n"
+  "      --dir~            Set Start from home\n"
+  "      --wsl             Set support_wsl\n"
+  "      --WSL[=...]       start WSL [distrbution]\n"
+  "      --WSLmode[=...]   Select WSL [distrbution]\n"
+  "      --rootfs          Set wsl_basepath\n"
+  "  -P, -pcon TRUE|FALSE  conpty_support\n"
+  "      --nopin           prevent taskbar pinning\n"
+  "      --store-taskbar-properties store-taskbar-properties\n"
+  "      --trace FILE      trace in file\n"
+  "  -d, --nodaemon        not Start new instance with Windows shortcut key\n"
   "  -D, --daemon          Start new instance with Windows shortcut key\n"
+
+  "      --nobidi|--nortl  Disable bidi (right-to-left support)\n"
+  "  -B, --Border frame|void  Use thin/no window border\n"
+  "      --nopin           Make this instance not pinnable to taskbar\n"
   "  -H, --help            Display help and exit\n"
   "  -V, --version         Print version information and exit\n"
+  "      --fg COLOR        set ForegroundColour\n"
+  "      --bg COLOR        set BackgroundColour\n"
+  "      --cr COLOR        set CursorColour\n"
+  "      --selfg COLOR     set HighlightForegroundColour\n"
+  "      --selbg COLOR     set HighlightBackgroundColour\n"
+  "      --fn --font FONT  set Font\n"
+  "      --fs  fontsize    set FontSize\n"
+  "      --geometry [NXxNY[+|x+-y[@moni]] window size and position\n"
+  "      --en              set Charset\n"
+  "      --lf FILE         Logfile \n"
+  "      --sl NUM          set ScrollbackLines\n"
   "See manual page for further command line options and configuration.\n"
 );
 
@@ -4958,15 +5062,14 @@ opts[] = {
   {"size",       required_argument, 0, 's'},
   {"title",      required_argument, 0, 't'},
   {"Title",      required_argument, 0, 'T'},
-  {"tabbar",     optional_argument, 0, ''},
   {"horbar",     optional_argument, 0, ''},
-  {"newtabs",    no_argument,       0, ''},
   {"Border",     required_argument, 0, 'B'},
   {"Report",     required_argument, 0, 'R'},
   {"Reportpos",  required_argument, 0, 'R'},  // compatibility variant
   {"window",     required_argument, 0, 'w'},
   {"class",      required_argument, 0, ''},  // short option not enabled
   {"dir",        required_argument, 0, ''},  // short option not enabled
+  {"dir~",       no_argument,       0, '~'},
   {"nobidi",     no_argument,       0, ''},  // short option not enabled
   {"nortl",      no_argument,       0, ''},  // short option not enabled
   {"wsl",        no_argument,       0, ''},  // short option not enabled
@@ -4974,16 +5077,15 @@ opts[] = {
   {"WSL",        optional_argument, 0, ''},  // short option not enabled
   {"WSLmode",    optional_argument, 0, ''},  // short option not enabled
 #endif
-  {"pcon",       required_argument, 0, 'P'},
   {"rootfs",     required_argument, 0, ''},  // short option not enabled
-  {"dir~",       no_argument,       0, '~'},
-  {"help",       no_argument,       0, 'H'},
-  {"version",    no_argument,       0, 'V'},
-  {"nodaemon",   no_argument,       0, 'd'},
-  {"daemon",     no_argument,       0, 'D'},
+  {"pcon",       required_argument, 0, 'P'},
   {"nopin",      no_argument,       0, ''},  // short option not enabled
   {"store-taskbar-properties", no_argument, 0, ''},  // no short option
   {"trace",      required_argument, 0, ''},  // short option not enabled
+  {"nodaemon",   no_argument,       0, 'd'},
+  {"daemon",     no_argument,       0, 'D'},
+  {"help",       no_argument,       0, 'H'},
+  {"version",    no_argument,       0, 'V'},
   // further xterm-style convenience options, all without short option:
   {"fg",         required_argument, 0, OPT_FG},
   {"bg",         required_argument, 0, OPT_BG},
@@ -5095,7 +5197,11 @@ int LoadConfig(){
   }
   int argc=main_sd.argc;
   const char**argv=main_sd.argv;
-
+  if(cfg.wslname[0]){
+    int err = select_WSL(cfg.wslname);
+    if (err)
+      fprintf(stderr,"WSL distribution '%s' not found\n", cfg.wslname);
+  }
   for (;;) {
     int opt = cfg.short_long_opts
       ? getopt_long_only(argc, (char**)argv, short_opts, opts, 0)
@@ -5107,6 +5213,15 @@ int LoadConfig(){
     switch (opt) {
       when 'c': load_config(optarg, 3);
       when 'C': load_config(optarg, false);
+      when '':
+        if (config_dir)
+          option_error(__("Duplicate option '%s'"), "configdir", 0);
+        else {
+          config_dir = strdup(optarg);
+          string rc_file = asform("%s/config", config_dir);
+          load_config(rc_file, 2);
+          delete(rc_file);
+        }
       when '': wv.support_wsl = true;
       when '': wv.wsl_basepath = path_posix_to_win_w(optarg);
 #if CYGWIN_VERSION_API_MINOR >= 74
@@ -5149,15 +5264,6 @@ int LoadConfig(){
         if (res == 0)
           setenv("CHERE_INVOKING", "mintty", true);
       }
-      when '':
-        if (config_dir)
-          option_error(__("Duplicate option '%s'"), "configdir", 0);
-        else {
-          config_dir = strdup(optarg);
-          string rc_file = asform("%s/config", config_dir);
-          load_config(rc_file, 2);
-          delete(rc_file);
-        }
       when '?':
         option_error(__("Unknown option '%s'"), optopt ? shortopt : longopt, 0);
       when ':':
@@ -5504,6 +5610,7 @@ main(int argc, const char *argv[])
     lappdata = getlocalappdata();
 #endif
 
+  setwslcmd();
   LoadConfig();
 
   if(cfg.partline>6)cfg.partline=6;
@@ -5569,71 +5676,34 @@ main(int argc, const char *argv[])
 #ifdef debug_dpi
   printf("per_monitor_dpi_aware %d\n", per_monitor_dpi_aware);
 #endif
-
-#define dont_debug_wsl
-#define wslbridge2
-
   // Work out what to execute.
   argv += optind;
   const char *cmd;
   if (wv.wsl_guid && wv.wsl_launch) {
     argc -= optind;
-#ifdef wslbridge2
-# ifndef __x86_64__
-    argc += 2;  // -V 1/2
-# endif
-    cmd = "/bin/wslbridge2";
-    char * cmd0 = "-wslbridge2";
-#else
-    cmd = "/bin/wslbridge";
-    char * cmd0 = "-wslbridge";
-#endif
+    cmd=wv.wslcmd;
     bool login_dash = false;
     if (*argv && !strcmp(*argv, "-") && !argv[1]) {
       login_dash = true;
       argv++;
-      //argc--;
-      //argc++; // for "-l"
     }
-#ifdef wslbridge2
     argc += wv.start_home;
-#endif
     argc += 10;  // -e parameters
 
     const char ** new_argv = newn(const char *, argc + 8 + wv.start_home + (wv.wsltty_appx ? 2 : 0));
     const char ** pargv = new_argv;
     if (login_dash) {
-      *pargv++ = cmd0;
-#ifdef wslbridge_supports_l
-#warning redundant option wslbridge -l not needed
-      *pargv++ = "-l";
-#endif
+      *pargv++ = wv.wslcmd0;
     }
     else
       *pargv++ = cmd;
-#ifdef wslbridge2
-# ifndef __x86_64__
-    *pargv++ = "-V";
-    if (wv.wsl_ver > 1)
-      *pargv++ = "2";
-    else
-      *pargv++ = "1";
-# endif
-#endif
     if (*wv.wsl_guid) {
-#ifdef wslbridge2
       if (*wv.wslname) {
         *pargv++ = "-d";
         *pargv++ = cs__wcstombs(wv.wslname);
       }
-#else
-      *pargv++ = "--distro-guid";
-      *pargv++ = wv.wsl_guid;
-#endif
     }
-#ifdef wslbridge_t
-    *pargv++ = "-t";
-#endif
+#if 0
     *pargv++ = "-e";
     *pargv++ = "TERM";
     *pargv++ = "-e";
@@ -5647,14 +5717,12 @@ main(int argc, const char *argv[])
       *pargv++ = "LC_ALL";
     }
     if (wv.start_home) {
-#ifdef wslbridge2
       *pargv++ = "--wsldir";
       *pargv++ = "~";
-#else
-      *pargv++ = "-C~";
-#endif
     }
+#endif
 
+#if 0
 #if CYGWIN_VERSION_API_MINOR >= 74
     // provide wslbridge-backend in a reachable place for invocation
     bool copyfile(const char * fn,const  char * tn, bool overwrite)
@@ -5690,28 +5758,14 @@ main(int argc, const char *argv[])
       return ok;
 # endif
     }
-
-    if (wv.wsltty_appx && lappdata && *lappdata) {
-#ifdef wslbridge2
-      char * wslbridge_backend = asform("%s/wslbridge2-backend", lappdata);
-      char * bin_backend = "/bin/wslbridge2-backend";
-      bool ok = copyfile(bin_backend, wslbridge_backend, true);
-#else
-      char * wslbridge_backend = asform("%s/wslbridge-backend", lappdata);
-      bool ok = copyfile("/bin/wslbridge-backend", wslbridge_backend, true);
 #endif
-      (void)ok;
-
-      *pargv++ = "--backend";
-      *pargv++ = wslbridge_backend;
-      // don't free(wslbridge_backend);
-    }
 #endif
 
     while (*argv)
       *pargv++ = *argv++;
     *pargv = 0;
     argv = new_argv;
+//#define debug_wsl    
 #ifdef debug_wsl
     while (*new_argv)
       printf("<%s>\n", *new_argv++);
@@ -6274,8 +6328,12 @@ main(int argc, const char *argv[])
 #endif
 #endif
     if (env) {
+
       char * val = cfg.conpty_support ? "enable_pcon" : "disable_pcon";
-      val = asform("%s %s", getenv(env) ?: "", val);
+      char *p=getenv(env);
+      if(p){
+        val = asform("%s %s", p , val);
+      }
       //printf("%d %s=%s\n", cfg.conpty_support, env, val);
       setenv(env, val, true);
     }

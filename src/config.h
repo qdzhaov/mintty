@@ -1,6 +1,7 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+#define support_blurred
 
 // Enums for various options.
 
@@ -28,7 +29,7 @@ enum { EMPL_STRETCH = 0, EMPL_ALIGN = 1, EMPL_MIDDLE = 2, EMPL_FULL = 3 };
 // Colour values.
 
 typedef uint colour;
-typedef struct { colour fg, bg; } colour_pair;
+typedef struct { colour fg, bg; } colourfg;
 
 enum { DEFAULT_COLOUR = UINT_MAX };
 
@@ -53,226 +54,9 @@ typedef struct {
 
 
 // Configuration data.
-
+#define CFGDEFT  DEFVAR
 typedef struct {
-  // Looks
-  colour fg_colour, bold_colour, blink_colour, bg_colour, cursor_colour;
-  colour tek_fg_colour, tek_bg_colour, tek_cursor_colour;
-  colour tek_write_thru_colour, tek_defocused_colour;
-  colour tab_fg_colour, tab_bg_colour; //ZZ
-  int tek_glow;
-  int tek_strap;
-  colour underl_colour, hover_colour;
-  colour_pair ansi_colours[16];
-  int disp_space, disp_clear, disp_tab;
-  bool underl_manual;
-  colour sel_fg_colour, sel_bg_colour;
-  colour search_fg_colour, search_bg_colour, search_current_colour;
-  wstring theme_file;
-  wstring background;
-  string colour_scheme;
-  char transparency;
-  bool blurred;
-  bool opaque_when_focused;
-  char cursor_type;
-  bool cursor_blinks;
-  //ZZ Added
-  colour tab_attention_bg_colour, tab_active_bg_colour;
-  int tab_font_size,tab_bar_show,indicator,indicatory,indicatorx;
-  int gui_font_size; 
-  int scale_options_width ;
-  int padding,partline,usepartline;
-  // Text
-  font_spec font;
-  font_spec fontfams[12];
-  wstring font_choice;
-  wstring font_sample;
-  bool show_hidden_fonts;
-  char font_smoothing;
-  char font_render;
-  bool bold_as_font;
-  bool bold_as_colour;
-  bool allow_blinking;
-  string locale;
-  string charset;
-  char charwidth;
-  bool old_locale;
-  int fontmenu;
-  wstring tek_font;
-  //ZZ Added
-  bool win_shortcuts;
-  bool hkwinkeyall;
-  bool hook_keyboard;
-  // Keys
-  bool backspace_sends_bs;
-  bool delete_sends_del;
-  bool ctrl_alt_is_altgr;
-  bool altgr_is_alt;
-  int ctrl_alt_delay_altgr;
-  bool old_altgr_detection;
-  int old_modify_keys;
-  int format_other_keys;
-  bool auto_repeat;
-  int external_hotkeys;
-  bool clip_shortcuts;
-  bool window_shortcuts;
-  bool switch_shortcuts;
-  bool zoom_shortcuts;
-  bool zoom_font_with_window;
-  bool alt_fn_shortcuts;
-  bool ctrl_shift_shortcuts;
-  bool ctrl_exchange_shift;
-  bool ctrl_controls;
-  char compose_key;
-  string key_prtscreen;	// VK_SNAPSHOT
-  string key_pause;	// VK_PAUSE
-  string key_break;	// VK_CANCEL
-  string key_menu;	// VK_APPS
-  string key_scrlock;	// VK_SCROLL
-  wstring key_commands;
-  int manage_leds;
-  bool enable_remap_ctrls;
-  bool old_keyfuncs_keypad;
-  // Mouse
-  bool clicks_place_cursor;
-  char middle_click_action;
-  char right_click_action;
-  int opening_clicks;
-  char opening_mod;
-  bool zoom_mouse;
-  char clicks_target_app;
-  char click_target_mod;
-  bool hide_mouse;
-  bool elastic_mouse;
-  int lines_per_notch;
-  wstring mouse_pointer;
-  wstring appmouse_pointer;
-  // Selection
-  bool input_clears_selection;
-  bool copy_on_select;
-  bool copy_tabs;
-  bool copy_as_rtf;
-  char copy_as_html;
-  wstring copy_as_rtf_font;
-  int copy_as_rtf_font_size;
-  bool trim_selection;
-  bool allow_set_selection;
-  int selection_show_size;
-  // Window
-  int cols, rows;
-  bool rewrap_on_resize;
-  int scrollback_lines;
-  int max_scrollback_lines;
-  char scrollbar;
-  char scroll_mod;
-  bool pgupdn_scroll;
-  wstring lang;
-  wstring search_bar;
-  int search_context;
-  //ZZ Added
-  bool allocconsole;
-  // Terminal
-  string Term;
-  string answerback;
-  int wrap_tab;
-  bool old_wrapmodes;
-  bool enable_deccolm_init;
-  int bell_type;
-  wstring bell_file[7];
-  int bell_freq;
-  int bell_len;
-  bool bell_flash;   // xterm: visualBell
-  int bell_flash_style;
-  bool bell_taskbar; // xterm: bellIsUrgent
-  bool bell_popup;   // xterm: popOnBell
-  int bell_interval;
-  int play_tone;
-  wstring printer;
-  bool confirm_exit;
-  bool confirm_reset;
-  // Command line
-  wstring class;
-  char hold;
-  bool exit_write;
-  wstring exit_title;
-  wstring icon;
-  wstring log;
-  int logging;
-  wstring title;
-  bool create_utmp;
-  char window;
-  int x, y;
-  bool daemonize;
-  bool daemonize_always;
-  bool title_settable;
-  // "Hidden"
-  int bidi;
-  bool disable_alternate_screen;
-  bool erase_to_scrollback;
-  int display_speedup;
-  string suppress_sgr;
-  string suppress_dec;
-  string suppress_win;
-  string suppress_osc;
-  string suppress_nrc;
-  string suppress_wheel;
-  string filter_paste;
-  int bracketed_paste_split;
-  int suspbuf_max;
-  int printable_controls;
-  int char_narrowing;
-  char emojis;
-  char emoji_placement;
-  wstring save_filename;
-  wstring app_id;
-  wstring app_name;
-  wstring app_launch_cmd;
-  wstring drop_commands;
-  wstring exit_commands;
-  wstring user_commands;
-  wstring ctx_user_commands;
-  wstring sys_user_commands;
-  wstring user_commands_path;
-  wstring session_commands;
-  wstring task_commands;
-  int conpty_support;
-  bool login_from_shortcut;
-  string menu_mouse;
-  string menu_ctrlmouse;
-  string menu_altmouse;
-  string menu_menu;
-  string menu_ctrlmenu;
-  string menu_title_ctrl_l;
-  string menu_title_ctrl_r;
-  int geom_sync;
-  int col_spacing, row_spacing;
-  int auto_leading;
-  int ligatures;
-  int ligatures_support;
-  int handle_dpichanged;
-  int check_version_update;
-  string word_chars;
-  string word_chars_excl;
-  colour ime_cursor_colour;
-  wstring sixel_clip_char;
-  bool short_long_opts;
-  bool bold_as_special;
-  bool hover_title;
-  char progress_bar;
-  int progress_scan;
-  int baud;
-  int bloom;
-  wstring options_font;
-  int options_fontsize;
-  string old_options;
-  bool dim_margins;
-  bool status_line;
-  bool old_xbuttons;
-  //removed tabbar
-  //int new_tabs;
-  // Legacy
-  bool use_system_colours;
-  bool old_bold;
+#include "configdef.h"
 } config;
 
 

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: mintty\n"
 "Report-Msgid-Bugs-To: https://github.com/mintty/mintty/issues/700\n"
-"POT-Creation-Date: 2023-05-12 09:46+0800\n"
+"POT-Creation-Date: 2023-12-05 17:25+0800\n"
 "PO-Revision-Date: 2022-06-20 23:00+0800\n"
 "Last-Translator: GeekDuanLian <dl@pbstu.com>\n"
 "Language-Team: \n"
@@ -19,7 +19,7 @@ msgstr ""
 "X-Generator: Poedit 2.0.3\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
-#: charset.c:226 charset.c:237 winmain.c:5116 winmain.c:5123 winmain.c:5477
+#: charset.c:226 charset.c:237 winmain.c:5225 winmain.c:5232 winmain.c:5577
 msgid "(Default)"
 msgstr "(默认)"
 
@@ -49,1404 +49,1404 @@ msgstr ""
 "可能需要 DLL 地址重定位，运行此命令查看帮助 'rebaseall / rebase --help'"
 
 #. __ %1$s: client command (e.g. shell) to be run; %2$s: error message
-#: child.c:483
+#: child.c:479
 msgid "Failed to run '%s': %s"
 msgstr "运行 '%s' 失败：%s"
 
 #. __ %1$s: client command (e.g. shell) terminated, %2$i: exit code
-#: child.c:584
+#: child.c:580
 msgid "%s: Exit %i"
 msgstr "%s：退出 %i"
 
 #. __ default inline notification if ExitWrite=yes
-#: child.c:590
+#: child.c:586
 msgid "TERMINATED"
 msgstr "已终止"
 
-#: child.c:1199
+#: child.c:1195
 msgid "Error: Could not fork child daemon"
 msgstr "错误：无法创建子进程"
 
-#: config.c:356
+#: config.c:368
 msgid "ForegroundColour"
 msgstr "前景"
 
-#: config.c:357
+#: config.c:369
 msgid "BackgroundColour"
 msgstr "背景"
 
-#: config.c:358
+#: config.c:370
 msgid "UseSystemColours"
 msgstr "使用系统颜色"
 
-#: config.c:359
+#: config.c:371
 msgid "BoldColour"
 msgstr "粗体颜色"
 
-#: config.c:360
+#: config.c:372
 msgid "BlinkColour"
 msgstr "闪烁颜色"
 
-#: config.c:361
+#: config.c:373
 msgid "CursorColour"
 msgstr "光标颜色"
 
-#: config.c:362
+#: config.c:374
 msgid "TekForegroundColour"
 msgstr "tek前景"
 
-#: config.c:363
+#: config.c:375
 msgid "TekBackgroundColour"
 msgstr "tek 背景"
 
-#: config.c:364
+#: config.c:376
 msgid "TekCursorColour"
 msgstr "Tek光标颜色"
 
-#: config.c:365
+#: config.c:377
 msgid "TekWriteThruColour"
 msgstr ""
 
-#: config.c:366
+#: config.c:378
 msgid "TekDefocusedColour"
 msgstr ""
 
-#: config.c:367
+#: config.c:379
 msgid "TekGlow"
 msgstr ""
 
-#: config.c:368
+#: config.c:380
 msgid "TekStrap"
 msgstr ""
 
-#: config.c:369
+#: config.c:381
 msgid "UnderlineColour"
 msgstr "下划线颜色"
 
-#: config.c:371 config.c:3908
+#: config.c:383 config.c:3924
 msgid "Black"
 msgstr "黑色"
 
-#: config.c:372 config.c:3909
+#: config.c:384 config.c:3925
 msgid "Red"
 msgstr "红色"
 
-#: config.c:373 config.c:3910
+#: config.c:385 config.c:3926
 msgid "Green"
 msgstr "绿色"
 
-#: config.c:374 config.c:3911
+#: config.c:386 config.c:3927
 msgid "Yellow"
 msgstr "黄色"
 
-#: config.c:375 config.c:3912
+#: config.c:387 config.c:3928
 msgid "Blue"
 msgstr "蓝色"
 
-#: config.c:376 config.c:3913
+#: config.c:388 config.c:3929
 msgid "Magenta"
 msgstr "紫色"
 
-#: config.c:377 config.c:3914
+#: config.c:389 config.c:3930
 msgid "Cyan"
 msgstr "青色"
 
-#: config.c:378 config.c:3915
+#: config.c:390 config.c:3931
 msgid "White"
 msgstr "白色"
 
-#: config.c:379 config.c:3918
+#: config.c:391 config.c:3934
 msgid "BoldBlack"
 msgstr "粗黑"
 
-#: config.c:380 config.c:3919
+#: config.c:392 config.c:3935
 msgid "BoldRed"
 msgstr "粗红"
 
-#: config.c:381 config.c:3920
+#: config.c:393 config.c:3936
 msgid "BoldGreen"
 msgstr "粗绿"
 
-#: config.c:382 config.c:3921
+#: config.c:394 config.c:3937
 msgid "BoldYellow"
 msgstr "粗黄"
 
-#: config.c:383 config.c:3922
+#: config.c:395 config.c:3938
 msgid "BoldBlue"
 msgstr "粗蓝"
 
-#: config.c:384 config.c:3923
+#: config.c:396 config.c:3939
 msgid "BoldMagenta"
 msgstr "粗紫"
 
-#: config.c:385 config.c:3924
+#: config.c:397 config.c:3940
 msgid "BoldCyan"
 msgstr "粗青"
 
-#: config.c:386 config.c:3925
+#: config.c:398 config.c:3941
 msgid "BoldWhite"
 msgstr "粗白"
 
-#: config.c:388
+#: config.c:400
 msgid "DispSpace"
 msgstr ""
 
-#: config.c:389
+#: config.c:401
 msgid "DispClear"
 msgstr ""
 
-#: config.c:390
+#: config.c:402
 msgid "DispTab"
 msgstr ""
 
-#: config.c:391
+#: config.c:403
 msgid "HoverColour"
 msgstr ""
 
-#: config.c:392
+#: config.c:404
 msgid "UnderlineManual"
 msgstr ""
 
-#: config.c:393
+#: config.c:405
 msgid "HighlightBackgroundColour"
 msgstr ""
 
-#: config.c:394
+#: config.c:406
 msgid "HighlightForegroundColour"
 msgstr ""
 
-#: config.c:395
+#: config.c:407
 msgid "SearchForegroundColour"
 msgstr ""
 
-#: config.c:396
+#: config.c:408
 msgid "SearchBackgroundColour"
 msgstr ""
 
-#: config.c:397
+#: config.c:409
 msgid "SearchCurrentColour"
 msgstr ""
 
-#: config.c:398
+#: config.c:410
 msgid "ThemeFile"
 msgstr "主题"
 
-#: config.c:399
+#: config.c:411
 msgid "Background"
 msgstr "背景"
 
-#: config.c:400
+#: config.c:412
 msgid "ColourScheme"
 msgstr "颜色样式"
 
-#: config.c:401 config.c:3931
+#: config.c:413 config.c:3947
 msgid "Transparency"
 msgstr "透明度"
 
-#: config.c:403
+#: config.c:415
 msgid "Blur"
 msgstr ""
 
-#: config.c:405
+#: config.c:417
 msgid "OpaqueWhenFocused"
 msgstr "获得焦点后变为不透明"
 
-#: config.c:406
+#: config.c:418
 msgid "CursorType"
 msgstr "光标形状"
 
-#: config.c:407
+#: config.c:419
 msgid "CursorBlinks"
 msgstr "光标闪烁"
 
-#: config.c:409
+#: config.c:421
 msgid "TabForegroundColour"
 msgstr "标签前景颜色"
 
-#: config.c:410
+#: config.c:422
 msgid "TabBackgroundColour"
 msgstr "标签背景颜色"
 
-#: config.c:411
+#: config.c:423
 msgid "TabAttentionColour"
 msgstr "醒目标签颜色"
 
-#: config.c:412
+#: config.c:424
 msgid "TabActiveColour"
 msgstr "激活标签颜色"
 
-#: config.c:413
+#: config.c:425
 msgid "tab_bar_show"
 msgstr "显示标签栏"
 
-#: config.c:414
+#: config.c:426
 msgid "indicator"
 msgstr "窗口指示器"
 
-#: config.c:415
+#: config.c:427
 msgid "indicatorx"
 msgstr "窗口指示器x"
 
-#: config.c:416
+#: config.c:428
 msgid "indicatory"
 msgstr "窗口指示器y"
 
-#: config.c:417
+#: config.c:429
 msgid "tab_font_size"
 msgstr "标签栏字体大小"
 
-#: config.c:418
+#: config.c:430
 msgid "gui_font_size"
 msgstr "配置对话框字体大小"
 
-#: config.c:419
+#: config.c:431
 msgid "scale_options_width"
 msgstr "配置对话框缩放"
 
-#: config.c:420
+#: config.c:432
 msgid "partline"
 msgstr "半行"
 
-#: config.c:421
+#: config.c:433
 msgid "usepartline"
 msgstr "使用半行"
 
-#: config.c:425 config.c:3974
+#: config.c:437 config.c:3990
 msgid "Font"
 msgstr "字体"
 
-#: config.c:426
+#: config.c:438
 msgid "FontSize"
 msgstr "字体大小"
 
-#: config.c:427
+#: config.c:439
 msgid "FontHeight"
 msgstr "字体高度"
 
-#: config.c:428
+#: config.c:440
 msgid "FontWeight"
 msgstr "字体粗细"
 
-#: config.c:429
+#: config.c:441
 msgid "FontIsBold"
 msgstr "是否粗体"
 
-#: config.c:431
+#: config.c:443
 msgid "FontChoice"
 msgstr ""
 
-#: config.c:432
+#: config.c:444
 msgid "FontSample"
 msgstr "字体实例"
 
-#: config.c:433
+#: config.c:445
 msgid "ShowHiddenFonts"
 msgstr ""
 
-#: config.c:434
+#: config.c:446
 msgid "FontSmoothing"
 msgstr "字体平滑"
 
-#: config.c:435
+#: config.c:447
 msgid "BoldAsFont"
 msgstr ""
 
-#: config.c:436
+#: config.c:448
 msgid "BoldAsColour"
 msgstr "颜色"
 
-#: config.c:437
+#: config.c:449
 msgid "AllowBlinking"
 msgstr "允许闪烁"
 
-#: config.c:438
+#: config.c:450
 msgid "Locale"
 msgstr "本地"
 
-#: config.c:439
+#: config.c:451
 msgid "Charset"
 msgstr "字符集"
 
-#: config.c:440
+#: config.c:452
 msgid "Charwidth"
 msgstr ""
 
-#: config.c:441
+#: config.c:453
 msgid "OldLocale"
 msgstr "本地"
 
-#: config.c:442
+#: config.c:454
 msgid "FontRender"
 msgstr ""
 
-#: config.c:443
+#: config.c:455
 msgid "FontMenu"
 msgstr "字体"
 
-#: config.c:444
+#: config.c:456
 msgid "OldFontMenu"
 msgstr ""
 
-#: config.c:445
+#: config.c:457
 msgid "Font1"
 msgstr "字体"
 
-#: config.c:446
+#: config.c:458
 msgid "Font1Weight"
 msgstr ""
 
-#: config.c:447
+#: config.c:459
 msgid "Font2"
 msgstr "字体"
 
-#: config.c:448
+#: config.c:460
 msgid "Font2Weight"
 msgstr ""
 
-#: config.c:449
+#: config.c:461
 msgid "Font3"
 msgstr "字体"
 
-#: config.c:450
+#: config.c:462
 msgid "Font3Weight"
 msgstr ""
 
-#: config.c:451
+#: config.c:463
 msgid "Font4"
 msgstr "字体"
 
-#: config.c:452
+#: config.c:464
 msgid "Font4Weight"
 msgstr ""
 
-#: config.c:453
+#: config.c:465
 msgid "Font5"
 msgstr "字体"
 
-#: config.c:454
+#: config.c:466
 msgid "Font5Weight"
 msgstr ""
 
-#: config.c:455
+#: config.c:467
 msgid "Font6"
 msgstr "字体"
 
-#: config.c:456
+#: config.c:468
 msgid "Font6Weight"
 msgstr ""
 
-#: config.c:457
+#: config.c:469
 msgid "Font7"
 msgstr "字体"
 
-#: config.c:458
+#: config.c:470
 msgid "Font7Weight"
 msgstr ""
 
-#: config.c:459
+#: config.c:471
 msgid "Font8"
 msgstr "字体"
 
-#: config.c:460
+#: config.c:472
 msgid "Font8Weight"
 msgstr ""
 
-#: config.c:461
+#: config.c:473
 msgid "Font9"
 msgstr "字体"
 
-#: config.c:462
+#: config.c:474
 msgid "Font9Weight"
 msgstr ""
 
-#: config.c:463
+#: config.c:475
 msgid "Font10"
 msgstr "字体"
 
-#: config.c:464
+#: config.c:476
 msgid "Font10Weight"
 msgstr ""
 
-#: config.c:465
+#: config.c:477
 msgid "FontRTL"
 msgstr "RTL字体"
 
-#: config.c:466
+#: config.c:478
 msgid "FontRTLWeight"
 msgstr "RTL字体粗细"
 
-#: config.c:467
+#: config.c:479
 msgid "TekFont"
 msgstr "字体"
 
-#: config.c:471
+#: config.c:483
 msgid "BackspaceSendsBS"
 msgstr ""
 
-#: config.c:472
+#: config.c:484
 msgid "DeleteSendsDEL"
 msgstr "删除键发送 DEL"
 
-#: config.c:473
+#: config.c:485
 msgid "CtrlAltIsAltGr"
 msgstr "将 Ctrl+Alt 设置为 AltGr"
 
-#: config.c:474
+#: config.c:486
 msgid "AltGrIsAlsoAlt"
 msgstr "将 AltGr 也视为 Alt"
 
-#: config.c:475
+#: config.c:487
 msgid "CtrlAltDelayAltGr"
 msgstr "将 Ctrl+左Alt 设置为 AltGr"
 
-#: config.c:476
+#: config.c:488
 msgid "OldAltGrDetection"
 msgstr ""
 
-#: config.c:477
+#: config.c:489
 msgid "OldModifyKeys"
 msgstr ""
 
-#: config.c:478
+#: config.c:490
 msgid "FormatOtherKeys"
 msgstr ""
 
-#: config.c:479
+#: config.c:491
 msgid "AutoRepeat"
 msgstr ""
 
-#: config.c:480
+#: config.c:492
 msgid "SupportExternalHotkeys"
 msgstr ""
 
-#: config.c:481
+#: config.c:493
 msgid "ClipShortcuts"
 msgstr "clip快捷键"
 
-#: config.c:482
+#: config.c:494
 msgid "WindowShortcuts"
 msgstr "window快捷键"
 
-#: config.c:483
+#: config.c:495
 msgid "SwitchShortcuts"
 msgstr "切换快捷键"
 
-#: config.c:484
+#: config.c:496
 msgid "ZoomShortcuts"
 msgstr "缩放快捷键"
 
-#: config.c:485
+#: config.c:497
 msgid "ZoomFontWithWindow"
 msgstr ""
 
-#: config.c:486
+#: config.c:498
 msgid "AltFnShortcuts"
 msgstr "Alt+Fn 快捷键"
 
-#: config.c:487
+#: config.c:499
 msgid "WinShortcuts"
 msgstr "win快捷键"
 
-#: config.c:488
+#: config.c:500
 msgid "hkwinkeyall"
 msgstr "捕获所有windows键"
 
-#: config.c:489
+#: config.c:501
 msgid "hook_keyboard"
 msgstr ""
 
-#: config.c:490
+#: config.c:502
 msgid "CtrlShiftShortcuts"
 msgstr "Ctrl+Shift+快捷键"
 
-#: config.c:491
+#: config.c:503
 msgid "CtrlExchangeShift"
 msgstr ""
 
-#: config.c:492
+#: config.c:504
 msgid "CtrlControls"
 msgstr ""
 
-#: config.c:493
+#: config.c:505
 msgid "ComposeKey"
 msgstr "组合按键"
 
-#: config.c:494
+#: config.c:506
 msgid "Key_PrintScreen"
 msgstr ""
 
-#: config.c:495
+#: config.c:507
 msgid "Key_Pause"
 msgstr ""
 
-#: config.c:496
+#: config.c:508
 msgid "Key_Break"
 msgstr "发送 Break"
 
-#: config.c:497
+#: config.c:509
 msgid "Key_Menu"
 msgstr "菜单"
 
-#: config.c:498
+#: config.c:510
 msgid "Key_ScrollLock"
 msgstr "清除滚动历史"
 
-#: config.c:499
+#: config.c:511
 msgid "Break"
 msgstr "发送 Break"
 
-#: config.c:500
+#: config.c:512
 msgid "Pause"
 msgstr ""
 
-#: config.c:501
+#: config.c:513
 msgid "KeyFunctions"
 msgstr "鼠标功能"
 
-#: config.c:502
+#: config.c:514
 msgid "ManageLEDs"
 msgstr ""
 
-#: config.c:503
+#: config.c:515
 msgid "ShootFoot"
 msgstr ""
 
-#: config.c:504
+#: config.c:516
 msgid "OldKeyFunctionsKeypad"
 msgstr ""
 
-#: config.c:508
+#: config.c:520
 msgid "ClicksPlaceCursor"
 msgstr "使用鼠标点击来定位光标"
 
-#: config.c:509
+#: config.c:521
 msgid "MiddleClickAction"
 msgstr "单击动作"
 
-#: config.c:510
+#: config.c:522
 msgid "RightClickAction"
 msgstr "单击动作"
 
-#: config.c:511
+#: config.c:523
 msgid "OpeningClicks"
 msgstr ""
 
-#: config.c:512
+#: config.c:524
 msgid "OpeningMod"
 msgstr ""
 
-#: config.c:513
+#: config.c:525
 msgid "WrapTab"
 msgstr ""
 
-#: config.c:514
+#: config.c:526
 msgid "ZoomMouse"
 msgstr "鼠标缩放"
 
-#: config.c:515
+#: config.c:527
 msgid "ClicksTargetApp"
 msgstr ""
 
-#: config.c:516
+#: config.c:528
 msgid "ClickTargetMod"
 msgstr ""
 
-#: config.c:517
+#: config.c:529
 msgid "HideMouse"
 msgstr "隐藏鼠标"
 
-#: config.c:518
+#: config.c:530
 msgid "ElasticMouse"
 msgstr ""
 
-#: config.c:519
+#: config.c:531
 msgid "LinesPerMouseWheelNotch"
 msgstr ""
 
-#: config.c:520
+#: config.c:532
 msgid "MousePointer"
 msgstr "打印机"
 
-#: config.c:521
+#: config.c:533
 msgid "AppMousePointer"
 msgstr ""
 
-#: config.c:525
+#: config.c:537
 msgid "ClearSelectionOnInput"
 msgstr "输入后取消选中"
 
-#: config.c:526
+#: config.c:538
 msgid "CopyOnSelect"
 msgstr "选中后立即复制"
 
-#: config.c:527
+#: config.c:539
 msgid "CopyTab"
 msgstr ""
 
-#: config.c:528
+#: config.c:540
 msgid "CopyAsRTF"
 msgstr "以 RTF 复制"
 
-#: config.c:529
+#: config.c:541
 msgid "CopyAsHTML"
 msgstr "以 HTML 复制"
 
-#: config.c:530
+#: config.c:542
 msgid "CopyAsRTFFont"
 msgstr "以 RTF 复制"
 
-#: config.c:531
+#: config.c:543
 msgid "CopyAsRTFFontSize"
 msgstr ""
 
-#: config.c:532
+#: config.c:544
 msgid "CopyAsRTFFontHeight"
 msgstr ""
 
-#: config.c:533
+#: config.c:545
 msgid "TrimSelection"
 msgstr ""
 
-#: config.c:534
+#: config.c:546
 msgid "AllowSetSelection"
 msgstr ""
 
-#: config.c:535
+#: config.c:547
 msgid "SelectionShowSize"
 msgstr "选中"
 
-#: config.c:539
+#: config.c:551
 msgid "Columns"
 msgstr "列数"
 
-#: config.c:540
+#: config.c:552
 msgid "Rows"
 msgstr ""
 
-#: config.c:541
+#: config.c:553
 msgid "RewrapOnResize"
 msgstr "调整大小时重新折行"
 
-#: config.c:542
+#: config.c:554
 msgid "ScrollbackLines"
 msgstr "保存历史行数"
 
-#: config.c:543
+#: config.c:555
 msgid "MaxScrollbackLines"
 msgstr "最大保存历史行数"
 
-#: config.c:544 config.c:4279
+#: config.c:556 config.c:4295
 msgid "Scrollbar"
 msgstr "滚动条"
 
-#: config.c:545
+#: config.c:557
 msgid "ScrollMod"
 msgstr "滚动模式"
 
-#: config.c:546
+#: config.c:558
 msgid "PgUpDnScroll"
 msgstr ""
 
-#: config.c:547
+#: config.c:559
 msgid "allocconsole"
 msgstr ""
 
-#: config.c:548
+#: config.c:560
 msgid "Language"
 msgstr "界面语言"
 
-#: config.c:549
+#: config.c:561
 msgid "SearchBar"
 msgstr "搜索条"
 
-#: config.c:550
+#: config.c:562
 msgid "SearchContext"
 msgstr ""
 
-#: config.c:554
+#: config.c:566
 msgid "Term"
 msgstr "终端"
 
-#: config.c:555
+#: config.c:567
 msgid "Answerback"
 msgstr "应答"
 
-#: config.c:556
+#: config.c:568
 msgid "OldWrapModes"
 msgstr ""
 
-#: config.c:557
+#: config.c:569
 msgid "Enable132ColumnSwitching"
 msgstr ""
 
-#: config.c:558
+#: config.c:570
 msgid "BellType"
 msgstr "响铃类型"
 
-#: config.c:559
+#: config.c:571
 msgid "BellFile"
 msgstr "响铃文件"
 
-#: config.c:560
+#: config.c:572
 msgid "BellFile2"
 msgstr "响铃文件2"
 
-#: config.c:561
+#: config.c:573
 msgid "BellFile3"
 msgstr "响铃文件3"
 
-#: config.c:562
+#: config.c:574
 msgid "BellFile4"
 msgstr "响铃文件4"
 
-#: config.c:563
+#: config.c:575
 msgid "BellFile5"
 msgstr "响铃文件5"
 
-#: config.c:564
+#: config.c:576
 msgid "BellFile6"
 msgstr "响铃文件6"
 
-#: config.c:565
+#: config.c:577
 msgid "BellFile7"
 msgstr "响铃文件7"
 
-#: config.c:566
+#: config.c:578
 msgid "BellFreq"
 msgstr "响铃频率"
 
-#: config.c:567
+#: config.c:579
 msgid "BellLen"
 msgstr "响铃时长"
 
-#: config.c:568
+#: config.c:580
 msgid "BellFlash"
 msgstr "响铃闪屏"
 
-#: config.c:569
+#: config.c:581
 msgid "BellFlashStyle"
 msgstr "响铃闪屏类型"
 
-#: config.c:570
+#: config.c:582
 msgid "BellTaskbar"
 msgstr "响铃任务栏闪烁"
 
-#: config.c:571
+#: config.c:583
 msgid "BellPopup"
 msgstr "响铃弹出"
 
-#: config.c:572
+#: config.c:584
 msgid "BellInterval"
 msgstr "响铃间隔"
 
-#: config.c:573
+#: config.c:585
 msgid "PlayTone"
 msgstr ""
 
-#: config.c:574 config.c:4362
+#: config.c:586 config.c:4378
 msgid "Printer"
 msgstr "打印机"
 
-#: config.c:575
+#: config.c:587
 msgid "ConfirmExit"
 msgstr ""
 
-#: config.c:576
+#: config.c:588
 msgid "ConfirmReset"
 msgstr ""
 
-#: config.c:580
+#: config.c:592
 msgid "Class"
 msgstr "玻璃透明"
 
-#: config.c:581
+#: config.c:593
 msgid "Hold"
 msgstr ""
 
-#: config.c:582
+#: config.c:594
 msgid "Daemonize"
 msgstr ""
 
-#: config.c:583
+#: config.c:595
 msgid "DaemonizeAlways"
 msgstr ""
 
-#: config.c:584
+#: config.c:596
 msgid "ExitWrite"
 msgstr ""
 
-#: config.c:585
+#: config.c:597
 msgid "ExitTitle"
 msgstr ""
 
-#: config.c:586
+#: config.c:598
 msgid "Icon"
 msgstr ""
 
-#: config.c:587
+#: config.c:599
 msgid "Log"
 msgstr ""
 
-#: config.c:588
+#: config.c:600
 msgid "Logging"
 msgstr ""
 
-#: config.c:589
+#: config.c:601
 msgid "Title"
 msgstr "标题"
 
-#: config.c:590
+#: config.c:602
 msgid "title_settable"
 msgstr ""
 
-#: config.c:591
+#: config.c:603
 msgid "Utmp"
 msgstr ""
 
-#: config.c:592 config.c:4250 config.c:4264 config.c:4276 config.c:4310
+#: config.c:604 config.c:4266 config.c:4280 config.c:4292 config.c:4326
 msgid "Window"
 msgstr "窗口"
 
-#: config.c:593
+#: config.c:605
 msgid "X"
 msgstr ""
 
-#: config.c:594
+#: config.c:606
 msgid "Y"
 msgstr ""
 
-#: config.c:598
+#: config.c:610
 msgid "Bidi"
 msgstr ""
 
-#: config.c:599
+#: config.c:611
 msgid "NoAltScreen"
 msgstr ""
 
-#: config.c:600
+#: config.c:612
 msgid "EraseToScrollback"
 msgstr "清除滚动历史"
 
-#: config.c:601
+#: config.c:613
 msgid "DisplaySpeedup"
 msgstr ""
 
-#: config.c:602
+#: config.c:614
 msgid "SuppressSGR"
 msgstr ""
 
-#: config.c:603
+#: config.c:615
 msgid "SuppressDEC"
 msgstr ""
 
-#: config.c:604
+#: config.c:616
 msgid "SuppressWIN"
 msgstr ""
 
-#: config.c:605
+#: config.c:617
 msgid "SuppressOSC"
 msgstr ""
 
-#: config.c:606
+#: config.c:618
 msgid "SuppressNRC"
 msgstr ""
 
-#: config.c:607
+#: config.c:619
 msgid "SuppressMouseWheel"
 msgstr ""
 
-#: config.c:608
+#: config.c:620
 msgid "FilterPasteControls"
 msgstr ""
 
-#: config.c:609
+#: config.c:621
 msgid "BracketedPasteByLine"
 msgstr ""
 
-#: config.c:610
+#: config.c:622
 msgid "SuspendWhileSelecting"
 msgstr "选择时暂停屏幕输出"
 
-#: config.c:611
+#: config.c:623
 msgid "PrintableControls"
 msgstr ""
 
-#: config.c:612
+#: config.c:624
 msgid "CharNarrowing"
 msgstr ""
 
-#: config.c:613 config.c:4065 config.c:4068
+#: config.c:625 config.c:4081 config.c:4084
 msgid "Emojis"
 msgstr "Emoji"
 
-#: config.c:614
+#: config.c:626
 msgid "EmojiPlacement"
 msgstr ""
 
-#: config.c:615
+#: config.c:627
 msgid "SaveFilename"
 msgstr ""
 
-#: config.c:616
+#: config.c:628
 msgid "AppID"
 msgstr ""
 
-#: config.c:617
+#: config.c:629
 msgid "AppName"
 msgstr ""
 
-#: config.c:618
+#: config.c:630
 msgid "AppLaunchCmd"
 msgstr ""
 
-#: config.c:620
+#: config.c:632
 msgid "DropCommands"
 msgstr ""
 
-#: config.c:621 config.c:622
+#: config.c:633 config.c:634
 msgid "ExitCommands"
 msgstr ""
 
-#: config.c:623
+#: config.c:635
 msgid "UserCommands"
 msgstr "用户命令"
 
-#: config.c:624
+#: config.c:636
 msgid "CtxMenuFunctions"
 msgstr ""
 
-#: config.c:625
+#: config.c:637
 msgid "SysMenuFunctions"
 msgstr ""
 
-#: config.c:626
+#: config.c:638
 msgid "UserCommandsPath"
 msgstr ""
 
-#: config.c:627
+#: config.c:639
 msgid "SessionCommands"
 msgstr ""
 
-#: config.c:628
+#: config.c:640
 msgid "TaskCommands"
 msgstr ""
 
-#: config.c:629
+#: config.c:641
 msgid "ConPTY"
 msgstr ""
 
-#: config.c:630
+#: config.c:642
 msgid "LoginFromShortcut"
 msgstr ""
 
-#: config.c:631
+#: config.c:643
 msgid "MenuMouse"
 msgstr ""
 
-#: config.c:632
+#: config.c:644
 msgid "MenuCtrlMouse"
 msgstr ""
 
-#: config.c:633
+#: config.c:645
 msgid "MenuMouse5"
 msgstr ""
 
-#: config.c:634
+#: config.c:646
 msgid "MenuMenu"
 msgstr ""
 
-#: config.c:635
+#: config.c:647
 msgid "MenuCtrlMenu"
 msgstr ""
 
-#: config.c:636
+#: config.c:648
 msgid "MenuTitleCtrlLeft"
 msgstr ""
 
-#: config.c:637
+#: config.c:649
 msgid "MenuTitleCtrlRight"
 msgstr ""
 
-#: config.c:639
+#: config.c:651
 msgid "SessionGeomSync"
 msgstr ""
 
-#: config.c:642
+#: config.c:654
 msgid "ColSpacing"
 msgstr ""
 
-#: config.c:643
+#: config.c:655
 msgid "RowSpacing"
 msgstr ""
 
-#: config.c:644
+#: config.c:656
 msgid "AutoLeading"
 msgstr ""
 
-#: config.c:645
+#: config.c:657
 msgid "Padding"
 msgstr ""
 
-#: config.c:646
+#: config.c:658
 msgid "Ligatures"
 msgstr ""
 
-#: config.c:647
+#: config.c:659
 msgid "LigaturesSupport"
 msgstr ""
 
-#: config.c:648
+#: config.c:660
 msgid "HandleDPI"
 msgstr ""
 
-#: config.c:649
+#: config.c:661
 msgid "CheckVersionUpdate"
 msgstr ""
 
-#: config.c:650
+#: config.c:662
 msgid "WordChars"
 msgstr ""
 
-#: config.c:651
+#: config.c:663
 msgid "WordCharsExcl"
 msgstr ""
 
-#: config.c:652
+#: config.c:664
 msgid "IMECursorColour"
 msgstr ""
 
-#: config.c:653
+#: config.c:665
 msgid "SixelClipChars"
 msgstr ""
 
-#: config.c:654
+#: config.c:666
 msgid "OldBold"
 msgstr ""
 
-#: config.c:655
+#: config.c:667
 msgid "ShortLongOpts"
 msgstr ""
 
-#: config.c:656
+#: config.c:668
 msgid "BoldAsRainbowSparkles"
 msgstr ""
 
-#: config.c:657
+#: config.c:669
 msgid "HoverTitle"
 msgstr ""
 
-#: config.c:658
+#: config.c:670
 msgid "ProgressBar"
 msgstr ""
 
-#: config.c:659
+#: config.c:671
 msgid "ProgressScan"
 msgstr ""
 
-#: config.c:660
+#: config.c:672
 msgid "Baud"
 msgstr ""
 
-#: config.c:661
+#: config.c:673
 msgid "Bloom"
 msgstr ""
 
-#: config.c:662
+#: config.c:674
 msgid "DimMargins"
 msgstr ""
 
-#: config.c:663
+#: config.c:675
 msgid "StatusLine"
 msgstr ""
 
-#: config.c:664
+#: config.c:676
 msgid "OldXButtons"
 msgstr ""
 
-#: config.c:665
+#: config.c:677
 msgid "OptionsFont"
 msgstr "选项字体"
 
-#: config.c:666
+#: config.c:678
 msgid "OptionsFontSize"
 msgstr "选项字体大小"
 
-#: config.c:667
+#: config.c:679
 msgid "OptionsFontHeight"
 msgstr ""
 
-#: config.c:668
+#: config.c:680
 msgid "OldOptions"
 msgstr "旧选项"
 
-#: config.c:672
+#: config.c:684
 msgid "BoldAsBright"
 msgstr ""
 
-#: config.c:673
+#: config.c:685
 msgid "FontQuality"
 msgstr ""
 
 #. __ Setting false for Boolean options (localization optional)
-#: config.c:685
+#: config.c:698
 msgid "no"
 msgstr "无"
 
 #. __ Setting true for Boolean options (localization optional)
-#: config.c:687
+#: config.c:700
 msgid "yes"
 msgstr ""
 
 #. __ Setting false for Boolean options (localization optional)
-#: config.c:689
+#: config.c:702
 msgid "false"
 msgstr ""
 
 #. __ Setting true for Boolean options (localization optional)
-#: config.c:691
+#: config.c:704
 msgid "true"
 msgstr ""
 
 #. __ Setting false for Boolean options (localization optional)
-#: config.c:693 config.c:754
+#: config.c:706 config.c:767
 msgid "off"
 msgstr "关"
 
 #. __ Setting true for Boolean options (localization optional)
-#: config.c:695
+#: config.c:708
 msgid "on"
 msgstr "开"
 
-#: config.c:699
+#: config.c:712
 msgid "locale"
 msgstr "本地"
 
-#: config.c:700
+#: config.c:713
 msgid "unicode"
 msgstr "unicode"
 
-#: config.c:701
+#: config.c:714
 msgid "ambig-wide"
 msgstr "ambig-wide"
 
-#: config.c:702
+#: config.c:715
 msgid "ambig-narrow"
 msgstr "ambig-narrow"
 
-#: config.c:703
+#: config.c:716
 msgid "single"
 msgstr "single"
 
-#: config.c:704
+#: config.c:717
 msgid "single-unicode"
 msgstr "single-unicode"
 
-#: config.c:708 config.c:797
+#: config.c:721 config.c:810
 msgid "none"
 msgstr "无"
 
-#: config.c:709
+#: config.c:722
 msgid "openmoji"
 msgstr "开源表情"
 
-#: config.c:710
+#: config.c:723
 msgid "noto"
 msgstr "noto"
 
-#: config.c:711
+#: config.c:724
 msgid "joypixels"
 msgstr "joypixels"
 
-#: config.c:712
+#: config.c:725
 msgid "emojione"
 msgstr "emojione"
 
-#: config.c:713
+#: config.c:726
 msgid "apple"
 msgstr "苹果"
 
-#: config.c:714
+#: config.c:727
 msgid "google"
 msgstr "谷歌"
 
-#: config.c:715
+#: config.c:728
 msgid "twitter"
 msgstr "推特"
 
-#: config.c:716
+#: config.c:729
 msgid "facebook"
 msgstr "脸书"
 
-#: config.c:717
+#: config.c:730
 msgid "samsung"
 msgstr "三星"
 
-#: config.c:718
+#: config.c:731
 msgid "windows"
 msgstr "窗口"
 
-#: config.c:719
+#: config.c:732
 msgid "zoom"
 msgstr "缩放"
 
 #. __ Options - Text - Emojis - Placement (localization optional)
-#: config.c:724
+#: config.c:737
 msgid "stretch"
 msgstr "拉伸"
 
 #. __ Options - Text - Emojis - Placement (localization optional)
-#: config.c:726
+#: config.c:739
 msgid "align"
 msgstr "适应"
 
 #. __ Options - Text - Emojis - Placement (localization optional)
-#: config.c:728
+#: config.c:741
 msgid "middle"
 msgstr "居中"
 
 #. __ Options - Text - Emojis - Placement (localization optional)
-#: config.c:730
+#: config.c:743
 msgid "full"
 msgstr "填充"
 
-#: config.c:755
+#: config.c:768
 msgid "low"
 msgstr "低"
 
-#: config.c:756
+#: config.c:769
 msgid "medium"
 msgstr "中"
 
-#: config.c:757
+#: config.c:770
 msgid "high"
 msgstr "高"
 
-#: config.c:758
+#: config.c:771
 msgid "glass"
 msgstr "玻璃"
 
-#: config.c:762
+#: config.c:775
 msgid "line"
 msgstr "竖线"
 
-#: config.c:763
+#: config.c:776
 msgid "block"
 msgstr "方块"
 
-#: config.c:764
+#: config.c:777
 msgid "box"
 msgstr "盒子"
 
-#: config.c:765
+#: config.c:778
 msgid "underscore"
 msgstr "下划线"
 
-#: config.c:769
+#: config.c:782
 msgid "Default"
 msgstr "默认"
 
-#: config.c:770
+#: config.c:783
 msgid "None"
 msgstr "无"
 
-#: config.c:771
+#: config.c:784
 msgid "Partial"
 msgstr "部分"
 
-#: config.c:772
+#: config.c:785
 msgid "Full"
 msgstr "全部"
 
-#: config.c:776
+#: config.c:789
 msgid "textout"
 msgstr "textout"
 
-#: config.c:777
+#: config.c:790
 msgid "uniscribe"
 msgstr "uniscribe"
 
-#: config.c:781 config.c:788
+#: config.c:794 config.c:801
 msgid "enter"
 msgstr "回车"
 
-#: config.c:782 config.c:789
+#: config.c:795 config.c:802
 msgid "paste"
 msgstr "粘贴"
 
-#: config.c:783 config.c:790
+#: config.c:796 config.c:803
 msgid "extend"
 msgstr "扩展"
 
-#: config.c:784
+#: config.c:797
 msgid "void"
 msgstr "无"
 
-#: config.c:791
+#: config.c:804
 msgid "menu"
 msgstr "菜单"
 
-#: config.c:795
+#: config.c:808
 msgid "left"
 msgstr "左边"
 
-#: config.c:796
+#: config.c:809
 msgid "right"
 msgstr "右边"
 
-#: config.c:801
+#: config.c:814
 msgid "hide"
 msgstr "隐藏"
 
-#: config.c:802
+#: config.c:815
 msgid "normal"
 msgstr "正常"
 
-#: config.c:803
+#: config.c:816
 msgid "min"
 msgstr "最小化"
 
-#: config.c:804
+#: config.c:817
 msgid "max"
 msgstr "最大化"
 
-#: config.c:805
+#: config.c:818
 msgid "FULL"
 msgstr "全屏"
 
-#: config.c:809
+#: config.c:822
 msgid "never"
 msgstr "从不"
 
-#: config.c:810
+#: config.c:823
 msgid "start"
 msgstr "开始时"
 
-#: config.c:811
+#: config.c:824
 msgid "error"
 msgstr "出错时"
 
-#: config.c:812
+#: config.c:825
 msgid "always"
 msgstr "一直"
 
 #. __ %s: unknown option name
-#: config.c:912 config.c:924
+#: config.c:925 config.c:937
 msgid "Ignoring unknown option '%s'"
 msgstr "忽略未知选项 '%s'"
 
 #. __ %2$s: option name, %1$s: invalid value
 #. report errors only during initialisation
-#: config.c:1164
+#: config.c:1177
 msgid "Ignoring invalid value '%s' for option '%s'"
 msgstr "忽略 '%s' 无效值，属于该选项 '%s'"
 
 #. __ %s: option name
-#: config.c:1176
+#: config.c:1189
 msgid "Ignoring option '%s' with missing value"
 msgstr "忽略 '%s' 选项，因为缺少值"
 
 #. __ %1$s: config file name, %2$s: error message
-#: config.c:1863
+#: config.c:1876
 msgid ""
 "Could not save options to '%s':\n"
 "%s."
@@ -1454,612 +1454,612 @@ msgstr ""
 "无法将选项保存到 '%s'：\n"
 "%s。"
 
-#: config.c:2390
+#: config.c:2406
 msgid "◇ None (printing disabled) ◇"
 msgstr "◇ 无 (禁用打印) ◇"
 
-#: config.c:2392
+#: config.c:2408
 msgid "◆ Default printer ◆"
 msgstr "◆ 默认打印机 ◆"
 
 #. __ UI localization disabled
-#: config.c:2501
+#: config.c:2517
 msgid "- None -"
 msgstr "无"
 
 #. __ UI localization: use Windows desktop setting
-#: config.c:2503
+#: config.c:2519
 msgid "@ Windows language @"
 msgstr "@ Windows 语言 @"
 
 #. __ UI localization: use environment variable setting (LANGUAGE, LC_*)
-#: config.c:2505
+#: config.c:2521
 msgid "* Locale environm. *"
 msgstr "* Locale 环境变量 *"
 
 #. __ UI localization: use mintty configuration setting (Text - Locale)
-#: config.c:2507
+#: config.c:2523
 msgid "= cfg. Text Locale ="
 msgstr "= 已配置的 Locale ="
 
-#: config.c:2611
+#: config.c:2627
 msgid "simple beep"
 msgstr "简单的嘟声"
 
-#: config.c:2612
+#: config.c:2628
 msgid "no beep"
 msgstr "无提示音"
 
-#: config.c:2613
+#: config.c:2629
 msgid "Default Beep"
 msgstr "默认的嘟声"
 
-#: config.c:2614
+#: config.c:2630
 msgid "Critical Stop"
 msgstr "错误提示音"
 
-#: config.c:2615
+#: config.c:2631
 msgid "Question"
 msgstr "疑问提示音"
 
-#: config.c:2616
+#: config.c:2632
 msgid "Exclamation"
 msgstr "惊叹提示音"
 
-#: config.c:2617
+#: config.c:2633
 msgid "Asterisk"
 msgstr "星号提示音"
 
-#: config.c:2660
+#: config.c:2676
 msgid "◇ None (system sound) ◇"
 msgstr "◇ 无 (系统声音) ◇"
 
 #. __ terminal theme / colour scheme
-#: config.c:3036
+#: config.c:3052
 msgid "◇ None ◇"
 msgstr "◇ 无 ◇"
 
 #. __ indicator of unsaved downloaded colour scheme
-#: config.c:3039
+#: config.c:3055
 msgid "downloaded / give me a name!"
 msgstr "已下载 / 给我起名！"
 
-#: config.c:3152
+#: config.c:3168
 msgid "Could not load web theme"
 msgstr "无法加载网络主题"
 
-#: config.c:3195 config.c:3203 config.c:3259
+#: config.c:3211 config.c:3219 config.c:3275
 msgid "Cannot store theme file"
 msgstr "无法储存主题文件"
 
-#: config.c:3254
+#: config.c:3270
 msgid "Cannot write theme file"
 msgstr "无法写入主题文件"
 
 #. __ emojis style
-#: config.c:3639
+#: config.c:3655
 msgid "? None ?"
 msgstr "无"
 
-#: config.c:3716 config.c:3993 config.c:4039
+#: config.c:3732 config.c:4009 config.c:4055
 msgid "as font"
 msgstr "字形"
 
-#: config.c:3717 config.c:3994 config.c:4040
+#: config.c:3733 config.c:4010 config.c:4056
 msgid "as colour"
 msgstr "颜色"
 
-#: config.c:3718
+#: config.c:3734
 msgid "as font & as colour"
 msgstr "字形 & 颜色"
 
-#: config.c:3719 config.c:3995 config.c:4041
+#: config.c:3735 config.c:4011 config.c:4057
 msgid "xterm"
 msgstr "xterm"
 
-#: config.c:3881
+#: config.c:3897
 msgid "About..."
 msgstr "关于..."
 
-#: config.c:3882
+#: config.c:3898
 msgid "&Save"
 msgstr "保存"
 
-#: config.c:3884
+#: config.c:3900
 msgid "&Cancel"
 msgstr "取消"
 
 #. __ Font chooser: button
-#: config.c:3886 winctrls.c:1286
+#: config.c:3902 winctrls.c:1286
 msgid "&Apply"
 msgstr "应用(&A)"
 
-#: config.c:3895 config.c:3931 config.c:3958
+#: config.c:3911 config.c:3947 config.c:3974
 msgid "Looks"
 msgstr "外观"
 
-#: config.c:3895
+#: config.c:3911
 msgid "Looks in Terminal"
 msgstr "终端外观"
 
-#: config.c:3895
+#: config.c:3911
 msgid "Colours"
 msgstr "颜色"
 
-#: config.c:3897
+#: config.c:3913
 msgid "&Foreground..."
 msgstr "前景(&F)..."
 
-#: config.c:3898
+#: config.c:3914
 msgid "&Background..."
 msgstr "背景(&B)..."
 
-#: config.c:3899
+#: config.c:3915
 msgid "&Cursor..."
 msgstr "光标(&C)..."
 
-#: config.c:3902
+#: config.c:3918
 msgid "&Theme"
 msgstr "主题(&T)"
 
-#: config.c:3903
+#: config.c:3919
 msgid "T&heme Save"
 msgstr "保存主题"
 
-#: config.c:3907
+#: config.c:3923
 msgid "Ansi:"
 msgstr "Ansi:"
 
-#: config.c:3917
+#: config.c:3933
 msgid "BOLD:"
 msgstr "粗体"
 
-#: config.c:3935 config.c:4101 config.c:4191 config.c:4293
+#: config.c:3951 config.c:4117 config.c:4207 config.c:4309
 msgid "&Off"
 msgstr "关(&O)"
 
-#: config.c:3936
+#: config.c:3952
 msgid "&Low"
 msgstr "低(&L)"
 
-#: config.c:3937
+#: config.c:3953
 msgid "&Med."
 msgstr "中(&M)"
 
-#: config.c:3937
+#: config.c:3953
 msgid "&Medium"
 msgstr "中(&M)"
 
-#: config.c:3938
+#: config.c:3954
 msgid "&High"
 msgstr "高(&H)"
 
-#: config.c:3939
+#: config.c:3955
 msgid "Gla&ss"
 msgstr "玻璃"
 
-#: config.c:3944 config.c:3948 config.c:3951
+#: config.c:3960 config.c:3964 config.c:3967
 msgid "Opa&que when focused"
 msgstr "获得焦点后变为不透明(&Q)"
 
-#: config.c:3945
+#: config.c:3961
 msgid "Blu&r"
 msgstr "模糊(&R)"
 
-#: config.c:3953
+#: config.c:3969
 msgid "◄"
 msgstr "◄"
 
-#: config.c:3954
+#: config.c:3970
 msgid "►"
 msgstr "►"
 
-#: config.c:3958
+#: config.c:3974
 msgid "Cursor"
 msgstr "光标"
 
-#: config.c:3961
+#: config.c:3977
 msgid "Li&ne"
 msgstr "竖线"
 
-#: config.c:3962
+#: config.c:3978
 msgid "Bloc&k"
 msgstr "方块"
 
-#: config.c:3964
+#: config.c:3980
 msgid "Bo&x"
 msgstr "方块(&X)"
 
-#: config.c:3966
+#: config.c:3982
 msgid "&Underscore"
 msgstr "下划线"
 
-#: config.c:3969
+#: config.c:3985
 msgid "Blinkin&g"
 msgstr "闪烁(&G)"
 
-#: config.c:3974 config.c:3984 config.c:3991 config.c:4011 config.c:4037
-#: config.c:4045 config.c:4054 config.c:4063 config.c:4068
+#: config.c:3990 config.c:4000 config.c:4007 config.c:4027 config.c:4053
+#: config.c:4061 config.c:4070 config.c:4079 config.c:4084
 msgid "Text"
 msgstr "文本"
 
-#: config.c:3974
+#: config.c:3990
 msgid "Text and Font properties"
 msgstr "文本和字体属性"
 
 #. __ Font chooser:
-#: config.c:3978 winctrls.c:1290
+#: config.c:3994 winctrls.c:1290
 msgid "Font st&yle:"
 msgstr "字体样式(&Y)"
 
 #. __ Font chooser:
-#: config.c:3980 winctrls.c:1292
+#: config.c:3996 winctrls.c:1292
 msgid "&Size:"
 msgstr "大小(&S)"
 
-#: config.c:3986 config.c:4022
+#: config.c:4002 config.c:4038
 msgid "Sho&w bold as font"
 msgstr "显示粗体字形(&W)"
 
-#: config.c:3987 config.c:4023
+#: config.c:4003 config.c:4039
 msgid "Show &bold as colour"
 msgstr "显示粗体颜色(&B)"
 
-#: config.c:3991 config.c:3998 config.c:4037 config.c:4046
+#: config.c:4007 config.c:4014 config.c:4053 config.c:4062
 msgid "Show bold"
 msgstr "显示粗体的"
 
-#: config.c:4000 config.c:4024 config.c:4048
+#: config.c:4016 config.c:4040 config.c:4064
 msgid "&Allow blinking"
 msgstr "允许闪烁(&A)"
 
-#: config.c:4013 config.c:4028 config.c:4044
+#: config.c:4029 config.c:4044 config.c:4060
 msgid "Font smoothing"
 msgstr "字体平滑"
 
-#: config.c:4015 config.c:4030 config.c:4131 config.c:4147 config.c:4230
-#: config.c:4240
+#: config.c:4031 config.c:4046 config.c:4147 config.c:4163 config.c:4246
+#: config.c:4256
 msgid "&Default"
 msgstr "默认(&D)"
 
-#: config.c:4016 config.c:4031 config.c:4129 config.c:4145 config.c:4228
-#: config.c:4238 config.c:4282
+#: config.c:4032 config.c:4047 config.c:4145 config.c:4161 config.c:4244
+#: config.c:4254 config.c:4298
 msgid "&None"
 msgstr "无(&N)"
 
-#: config.c:4017 config.c:4032 config.c:4130 config.c:4146 config.c:4229
-#: config.c:4239
+#: config.c:4033 config.c:4048 config.c:4146 config.c:4162 config.c:4245
+#: config.c:4255
 msgid "&Partial"
 msgstr "部分(&P)"
 
-#: config.c:4018 config.c:4033 config.c:4132 config.c:4148 config.c:4231
-#: config.c:4241
+#: config.c:4034 config.c:4049 config.c:4148 config.c:4164 config.c:4247
+#: config.c:4257
 msgid "&Full"
 msgstr "全部(&F)"
 
-#: config.c:4056
+#: config.c:4072
 msgid "&Locale"
 msgstr "本地 &Locale"
 
-#: config.c:4057
+#: config.c:4073
 msgid "&Character set"
 msgstr "字符集(&C)"
 
-#: config.c:4070
+#: config.c:4086
 msgid "Style"
 msgstr "风格"
 
-#: config.c:4072
+#: config.c:4088
 msgid "Placement"
 msgstr "位置"
 
-#: config.c:4078 config.c:4085 config.c:4095 config.c:4106
+#: config.c:4094 config.c:4101 config.c:4111 config.c:4122
 msgid "Keys"
 msgstr "按键"
 
-#: config.c:4078
+#: config.c:4094
 msgid "Keyboard features"
 msgstr "键盘特性"
 
-#: config.c:4080
+#: config.c:4096
 msgid "&Backarrow sends ^H"
 msgstr "退格键发送 ^H (&B)"
 
-#: config.c:4081
+#: config.c:4097
 msgid "&Delete sends DEL"
 msgstr "删除键发送 DEL (&D)"
 
-#: config.c:4082
+#: config.c:4098
 msgid "Ctrl+LeftAlt is Alt&Gr"
 msgstr "将 Ctrl+左Alt 设置为 Alt&Gr"
 
-#: config.c:4083
+#: config.c:4099
 msgid "AltGr is also Alt"
 msgstr "将 AltGr 也视为 Alt"
 
-#: config.c:4085
+#: config.c:4101
 msgid "Shortcuts"
 msgstr "快捷键"
 
-#: config.c:4086
+#: config.c:4102
 msgid "Cop&y and Paste (Ctrl/Shift+Ins)"
 msgstr "复制和粘贴(&Y) (Ctrl/Shift+Ins)"
 
-#: config.c:4087
+#: config.c:4103
 msgid "&Menu and Full Screen (Alt+Space/Enter)"
 msgstr "显示菜单和全屏(&M) (Alt+Space/Enter)"
 
-#: config.c:4088
+#: config.c:4104
 msgid "&Switch window (Ctrl+[Shift+]Tab)"
 msgstr "切换窗口(&S) (Ctrl+[Shift+]Tab)"
 
-#: config.c:4089
+#: config.c:4105
 msgid "&Zoom (Ctrl+plus/minus/zero)"
 msgstr "缩放(&Z) (Ctrl + +/-/0)"
 
-#: config.c:4090
+#: config.c:4106
 msgid "&Alt+Fn shortcuts"
 msgstr "Alt+Fn 快捷键(&A)"
 
-#: config.c:4091
+#: config.c:4107
 msgid "&Win+x shortcuts"
 msgstr "Win+X 快捷键(&W)"
 
-#: config.c:4092
+#: config.c:4108
 msgid "&Ctrl+Shift+letter shortcuts"
 msgstr "Ctrl+Shift+字母快捷键(&C)"
 
-#: config.c:4095 config.c:4108
+#: config.c:4111 config.c:4124
 msgid "Compose key"
 msgstr "组合按键"
 
-#: config.c:4098 config.c:4187 config.c:4198 config.c:4289 config.c:4300
+#: config.c:4114 config.c:4203 config.c:4214 config.c:4305 config.c:4316
 msgid "&Shift"
 msgstr "&Shift"
 
-#: config.c:4099 config.c:4188 config.c:4200 config.c:4290 config.c:4302
+#: config.c:4115 config.c:4204 config.c:4216 config.c:4306 config.c:4318
 msgid "&Ctrl"
 msgstr "&Ctrl"
 
-#: config.c:4100 config.c:4189 config.c:4199 config.c:4291 config.c:4301
+#: config.c:4116 config.c:4205 config.c:4215 config.c:4307 config.c:4317
 msgid "&Alt"
 msgstr "&Alt"
 
-#: config.c:4114 config.c:4158 config.c:4176
+#: config.c:4130 config.c:4174 config.c:4192
 msgid "Mouse"
 msgstr "鼠标"
 
-#: config.c:4114
+#: config.c:4130
 msgid "Mouse functions"
 msgstr "鼠标功能"
 
-#: config.c:4120 config.c:4135 config.c:4139 config.c:4219
+#: config.c:4136 config.c:4151 config.c:4155 config.c:4235
 msgid "Cop&y on select"
 msgstr "选中后立即复制(&Y)"
 
-#: config.c:4121 config.c:4136 config.c:4220 wininput.c:542
+#: config.c:4137 config.c:4152 config.c:4236 wininput.c:542
 msgid "Copy with TABs"
 msgstr "以纯文本复制（包括 &Tab）"
 
-#: config.c:4122 config.c:4137 config.c:4141 config.c:4222
+#: config.c:4138 config.c:4153 config.c:4157 config.c:4238
 msgid "Copy as &rich text"
 msgstr "以富文本复制(&R)"
 
-#: config.c:4124 config.c:4127 config.c:4143 config.c:4226 config.c:4236
+#: config.c:4140 config.c:4143 config.c:4159 config.c:4242 config.c:4252
 msgid "Copy as &HTML"
 msgstr "以 HTML 复制"
 
-#: config.c:4154
+#: config.c:4170
 msgid "Clic&ks place command line cursor"
 msgstr "使用鼠标点击来定位光标(&K)"
 
-#: config.c:4155
+#: config.c:4171
 msgid "Delimiters:"
 msgstr "分隔符:"
 
-#: config.c:4156
+#: config.c:4172
 msgid "Word Characters:"
 msgstr "单词字符:"
 
-#: config.c:4158
+#: config.c:4174
 msgid "Click actions"
 msgstr "单击动作"
 
-#: config.c:4159
+#: config.c:4175
 msgid "Right mouse button"
 msgstr "鼠标右键"
 
-#: config.c:4161 config.c:4169
+#: config.c:4177 config.c:4185
 msgid "&Paste"
 msgstr "粘贴(&P)"
 
-#: config.c:4162 config.c:4170
+#: config.c:4178 config.c:4186
 msgid "E&xtend"
 msgstr "扩展(&E)"
 
-#: config.c:4163
+#: config.c:4179
 msgid "&Menu"
 msgstr "菜单(&M)"
 
-#: config.c:4164 config.c:4172
+#: config.c:4180 config.c:4188
 msgid "Ente&r"
 msgstr "回车(&E)"
 
-#: config.c:4167
+#: config.c:4183
 msgid "Middle mouse button"
 msgstr "鼠标中键"
 
-#: config.c:4171
+#: config.c:4187
 msgid "&Nothing"
 msgstr "无(&N)"
 
-#: config.c:4176
+#: config.c:4192
 msgid "Application mouse mode"
 msgstr "应用程序鼠标模式"
 
-#: config.c:4177
+#: config.c:4193
 msgid "Default click target"
 msgstr "默认点击目标"
 
-#: config.c:4179
+#: config.c:4195
 msgid "&Window"
 msgstr "窗口(&W)"
 
-#: config.c:4180
+#: config.c:4196
 msgid "&Application"
 msgstr "应用程序(&A)"
 
-#: config.c:4185 config.c:4196
+#: config.c:4201 config.c:4212
 msgid "Modifier for overriding default"
 msgstr "覆盖默认配置的修饰键"
 
-#: config.c:4190 config.c:4201 config.c:4292 config.c:4303
+#: config.c:4206 config.c:4217 config.c:4308 config.c:4319
 msgid "&Win"
 msgstr "&Win"
 
-#: config.c:4202 config.c:4304
+#: config.c:4218 config.c:4320
 msgid "&Sup"
 msgstr "&Sup"
 
-#: config.c:4203 config.c:4305
+#: config.c:4219 config.c:4321
 msgid "&Hyp"
 msgstr "&Hyp"
 
-#: config.c:4211 config.c:4217 config.c:4250
+#: config.c:4227 config.c:4233 config.c:4266
 msgid "Selection"
 msgstr "选中"
 
-#: config.c:4211
+#: config.c:4227
 msgid "Selection and clipboard"
 msgstr "选中字符和剪切板功能"
 
-#: config.c:4213
+#: config.c:4229
 msgid "Clear selection on input"
 msgstr "输入后取消选中"
 
-#: config.c:4217
+#: config.c:4233
 msgid "Clipboard"
 msgstr "剪切板"
 
-#: config.c:4247
+#: config.c:4263
 msgid "Trim space from selection"
 msgstr "移除不必要的空格"
 
-#: config.c:4248
+#: config.c:4264
 msgid "Allow setting selection"
 msgstr "允许使用 OSC 52 转义字符设置剪切板内容"
 
 #. __ Options - Selection: clock position of info popup for text size
-#: config.c:4254
+#: config.c:4270
 msgid "Show size while selecting (0..12)"
 msgstr "选择时显示尺寸 (0:关闭/1-12:方位)"
 
-#: config.c:4257
+#: config.c:4273
 msgid "Suspend output while selecting"
 msgstr "选择时暂停屏幕输出"
 
-#: config.c:4264
+#: config.c:4280
 msgid "Window properties"
 msgstr "窗口属性"
 
-#: config.c:4264
+#: config.c:4280
 msgid "Default size"
 msgstr "默认大小"
 
-#: config.c:4266
+#: config.c:4282
 msgid "Colu&mns"
 msgstr "列数"
 
-#: config.c:4267
+#: config.c:4283
 msgid "Ro&ws"
 msgstr "行数"
 
-#: config.c:4268
+#: config.c:4284
 msgid "C&urrent size"
 msgstr "当前大小(&U)"
 
 #. __ Options - Window:
-#: config.c:4273
+#: config.c:4289
 msgid "Re&wrap on resize"
 msgstr "调整大小时重新折行(&W)"
 
-#: config.c:4278
+#: config.c:4294
 msgid "Scroll&back lines"
 msgstr "保存历史行数"
 
-#: config.c:4281
+#: config.c:4297
 msgid "&Left"
 msgstr "左(&L)"
 
-#: config.c:4283
+#: config.c:4299
 msgid "&Right"
 msgstr "右(&R)"
 
-#: config.c:4287 config.c:4298
+#: config.c:4303 config.c:4314
 msgid "Modifier for scrolling"
 msgstr "用于滚动的修饰键"
 
-#: config.c:4307
+#: config.c:4323
 msgid "&PgUp and PgDn scroll without modifier"
 msgstr "即使不按修饰键，也用 PgUp 和 PgDn 滚动"
 
-#: config.c:4308
+#: config.c:4324
 msgid "&AllocConsole ,Some console programs need it."
 msgstr "&AllocConsole,部分console程序需要"
 
-#: config.c:4310
+#: config.c:4326
 msgid "UI language"
 msgstr "界面语言"
 
-#: config.c:4317 config.c:4323 config.c:4362 config.c:4369
+#: config.c:4333 config.c:4339 config.c:4378 config.c:4385
 msgid "Terminal"
 msgstr "终端"
 
-#: config.c:4317
+#: config.c:4333
 msgid "Terminal features"
 msgstr "终端特性"
 
-#: config.c:4319
+#: config.c:4335
 msgid "&Type"
 msgstr "终端类型(&T)"
 
 #. __ Options - Terminal: answerback string for ^E request
-#: config.c:4321
+#: config.c:4337
 msgid "&Answerback"
 msgstr "应答(&A)"
 
-#: config.c:4323
+#: config.c:4339
 msgid "Bell"
 msgstr "响铃"
 
-#: config.c:4326
+#: config.c:4342
 msgid "► &Play"
 msgstr "► 播放(&P)"
 
-#: config.c:4329
+#: config.c:4345
 msgid "&Wave"
 msgstr "声音"
 
-#: config.c:4349 config.c:4358
+#: config.c:4365 config.c:4374
 msgid "&Flash"
 msgstr "闪屏(&F)"
 
-#: config.c:4350 config.c:4359
+#: config.c:4366 config.c:4375
 msgid "&Highlight in taskbar"
 msgstr "任务栏高亮(&H)"
 
-#: config.c:4351 config.c:4360
+#: config.c:4367 config.c:4376
 msgid "&Popup"
 msgstr "弹出(&P)"
 
 #. __ Options - Terminal:
-#: config.c:4371
+#: config.c:4387
 msgid "Prompt about running processes on &close"
 msgstr "退出时提示还在运行的进程(&C)"
 
 #. __ Options - Terminal:
 #. __ Context menu:
-#: config.c:4373 wininput.c:438
+#: config.c:4389 wininput.c:438
 msgid "Status Line"
 msgstr "状态行"
 
@@ -2443,16 +2443,16 @@ msgstr "无法加载图标"
 msgid "WSL"
 msgstr "WSL"
 
-#: winmain.c:4894
+#: winmain.c:4958
 msgid "Usage:"
 msgstr "用法："
 
-#: winmain.c:4895
+#: winmain.c:4959
 msgid "[OPTION]... [ PROGRAM [ARG]... | - ]"
 msgstr "[选项]... [ 程序名 [参数]... | - ]"
 
 #. __ help text (output of -H / --help), after initial line ("synopsis")
-#: winmain.c:4898
+#: winmain.c:4962
 msgid ""
 "Start a new terminal session running the specified program or the user's "
 "shell.\n"
@@ -2461,9 +2461,16 @@ msgid ""
 "Options:\n"
 "  -b, --tab COMMAND     Spawn a new tab and execute the command\n"
 "  -c, --config FILE     Load specified config file (cf. -C or -o ThemeFile)\n"
+"  -C, --loadconfig FILE Load specified config file (cf. -C or -o ThemeFile)\n"
+"      --configdir DIR   Load specified config file (cf. -C or -o ThemeFile)\n"
 "  -e, --exec ...        Treat remaining arguments as the command to execute\n"
 "  -h, --hold never|start|error|always  Keep window open after command "
 "finishes\n"
+"  -i, --icon FILE[,IX]  Load window icon from file, optionally with index\n"
+"  -l, --log FILE|-      Log output to file or stdout\n"
+"      --logfile FILE    Set Logfile \n"
+"  -u, --utmp            create_utmp\n"
+"  -o, --option OPT=VAL  Set/Override config file option with given value\n"
 "  -p, --position X,Y    Open window at specified coordinates\n"
 "  -p, --position center|left|right|top|bottom  Open window at special "
 "position\n"
@@ -2473,78 +2480,141 @@ msgid ""
 "  -t, --title TITLE     Set tab title (default: the invoked command)(cf. -"
 "T)\n"
 "                        Must be set before -b/--tab option\n"
+"  -T, --Title TITLE     Like -t,but readonly\n"
+"      --horbar          scrollbar\n"
+"  -R  --Report s|o|m|f|W|p|P|t \n"
+"           s:o:         Report window position (short/long) after exit\n"
+"           m:           report monitor\n"
+"           f:           list_fonts and exit\n"
+"           W:           list_wsl and exit\n"
+"           p:           report_child_pid \n"
+"           P:           report_winpid\n"
+"           t:           report_child_tty\n"
 "  -w, --window normal|min|max|full|hide  Set initial window state\n"
-"  -i, --icon FILE[,IX]  Load window icon from file, optionally with index\n"
-"  -l, --log FILE|-      Log output to file or stdout\n"
-"      --nobidi|--nortl  Disable bidi (right-to-left support)\n"
-"  -o, --option OPT=VAL  Set/Override config file option with given value\n"
-"  -B, --Border frame|void  Use thin/no window border\n"
-"  -R, --Report s|o      Report window position (short/long) after exit\n"
-"      --nopin           Make this instance not pinnable to taskbar\n"
+"      --class           Set Window class name\n"
+"      --dir DIR         Set Start Dir\n"
+"      --dir~            Set Start from home\n"
+"      --wsl             Set support_wsl\n"
+"      --WSL[=...]       start WSL [distrbution]\n"
+"      --WSLmode[=...]   Select WSL [distrbution]\n"
+"      --rootfs          Set wsl_basepath\n"
+"  -P, -pcon TRUE|FALSE  conpty_support\n"
+"      --nopin           prevent taskbar pinning\n"
+"      --store-taskbar-properties store-taskbar-properties\n"
+"      --trace FILE      trace in file\n"
+"  -d, --nodaemon        not Start new instance with Windows shortcut key\n"
 "  -D, --daemon          Start new instance with Windows shortcut key\n"
+"      --nobidi|--nortl  Disable bidi (right-to-left support)\n"
+"  -B, --Border frame|void  Use thin/no window border\n"
+"      --nopin           Make this instance not pinnable to taskbar\n"
 "  -H, --help            Display help and exit\n"
 "  -V, --version         Print version information and exit\n"
+"      --fg COLOR        set ForegroundColour\n"
+"      --bg COLOR        set BackgroundColour\n"
+"      --cr COLOR        set CursorColour\n"
+"      --selfg COLOR     set HighlightForegroundColour\n"
+"      --selbg COLOR     set HighlightBackgroundColour\n"
+"      --fn --font FONT  set Font\n"
+"      --fs  fontsize    set FontSize\n"
+"      --geometry [NXxNY[+|x+-y[@moni]] window size and position\n"
+"      --en              set Charset\n"
+"      --lf FILE         Logfile \n"
+"      --sl NUM          set ScrollbackLines\n"
 "See manual page for further command line options and configuration.\n"
 msgstr ""
 " 用于新终端会话来运行用户 shell 的指定程序。\n"
 "如果指定的程序是 dash，那么将它作为一个登陆 shell 来运行。\n"
 "\n"
 "选项：\n"
+"  -b, --tab COMMAND     Spawn a new tab and execute the command\n"
 "  -c, --config FILE     加载特定的配置文件（相关选项 -C 或者 -o 主题文件）\n"
+"  -C, --loadconfig FILE 加载特定的配置文件（相关选项 -C 或者 -o 主题文件）\n"
+"      --configdir DIR   \n"
 "  -e, --exec ...        将剩余参数作为命令来运行\n"
 "  -h, --hold never|start|error|always  命令运行结束后维持窗口开启状态\n"
+"  -i, --icon FILE[,IX]  从文件加载图标，图标序号可选\n"
+"  -l, --log FILE|-      输出日志到文件或者标准输出\n"
+"      --logfile FILE|-  设置日志到文件或者标准输出\n"
+"  -u, --utmp            create_utmp\n"
+"  -o, --option OPT=VAL  用指定的值覆盖配置文件中的值\n"
 "  -p, --position X,Y    在指定屏幕坐标打开窗口\n"
 "  -p, --position center|left|right|top|bottom  在特定位置打开窗口\n"
 "  -p, --position @N     在第 N 个显示器打开窗口\n"
 "  -s, --size COLS,ROWS  设置屏幕大小（也可以用 COLSxROWS）\n"
 "  -s, --size maxwidth|maxheight  设置屏幕的最大宽度或高度\n"
 "  -t, --title TITLE     设置窗口标题（默认是运行过的命令（相关选项  -T）\n"
+"  -T, --Title TITLE     设置窗口只读标题\n"
+"  -R  --Report s|o|m|f|W|p|P|t \n"
+"           s:o:         退出后报告窗口位置信息（短/长）\n"
+"           m:           报告显示器\n"
+"           f:           显示字体列表\n"
+"           W:           显示WSL\n"
+"           p:           显示child_pid \n"
+"           P:           显示winpid\n"
+"           t:           显示child_tty\n"
 "  -w, --window normal|min|max|full|hide  设置窗口的初始状态\n"
-"  -i, --icon FILE[,IX]  从文件加载图标，图标序号可选\n"
-"  -l, --log FILE|-      输出日志到文件或者标准输出\n"
-"      --nobidi|--nortl  禁用 bidi（从右向左的支持）\n"
-"  -o, --option OPT=VAL  用指定的值覆盖配置文件中的值\n"
-"  -B, --Border frame|void  使用窗口窄边框/无边框\n"
-"  -R, --Report s|o      退出后报告窗口位置信息（短/长）\n"
-"      --nopin           让这个实例不能被固定在任务栏上\n"
+"      --class           设置Window class name\n"
+"      --dir DIR         设置启动目录\n"
+"      --dir~            设置启动目录为$HOME\n"
+"      --wsl             设置支持WSL\n"
+"      --WSL[=...]       启动WSL [分发]\n"
+"      --WSLmode[=...]   选择WSL [分发]\n"
+"      --rootfs          设置wsl_basepath\n"
+"  -P, -pcon TRUE|FALSE  设置是否支持ConPTY\n"
+"      --store-taskbar-properties store-taskbar-properties\n"
+"      --trace FILE      trace in file\n"
+"  -d, --nodaemon        not Start new instance with Windows shortcut key\n"
 "  -D, --daemon          使用 Win 快捷键来启动新实例\n"
+"      --nobidi|--nortl  禁用 bidi（从右向左的支持）\n"
+"  -B, --Border frame|void  使用窗口窄边框/无边框\n"
+"      --nopin           让这个实例不能被固定在任务栏上\n"
 "  -H, --help            显示帮助信息然后退出\n"
 "  -V, --version         打印版本信息然后退出\n"
+"      --fg COLOR        设置前景色\n"
+"      --cr COLOR        设置光标色\n"
+"      --selfg COLOR     设置高亮前景色\n"
+"      --selbg COLOR     设置高亮背景色\n"
+"      --fn --font FONT  设置字体\n"
+"      --fs  fontsize    设置字体大小\n"
+"      --geometry [NXxNY[+|x+-y[@moni]] 窗口大小位置和显示器\n"
+"      --en              设置set Charset\n"
+"      --lf FILE         设置日志文件\n"
+"      --sl NUM          设置设置回滚行数\n"
 "请查阅 man 手册了解更多命令行选项和配置相关帮助内容。\n"
 
-#: winmain.c:5116 winmain.c:5123 winmain.c:5477
-msgid "WSL distribution '%s' not found"
-msgstr "找不到 '%s' WSL 发行版"
-
-#: winmain.c:5154
+#: winmain.c:5212
 msgid "Duplicate option '%s'"
 msgstr "重复的选项 %s"
 
-#: winmain.c:5162 winmain.c:5250
+#: winmain.c:5225 winmain.c:5232 winmain.c:5577
+msgid "WSL distribution '%s' not found"
+msgstr "找不到 '%s' WSL 发行版"
+
+#: winmain.c:5262 winmain.c:5350
 msgid "Unknown option '%s'"
 msgstr "未知的选项 %s"
 
-#: winmain.c:5164
+#: winmain.c:5264
 msgid "Option '%s' requires an argument"
 msgstr "选项 %s 需要一个参数"
 
-#: winmain.c:5191
+#: winmain.c:5291
 msgid "Syntax error in position argument '%s'"
 msgstr "position 选项的参数 '%s' 有语法错误"
 
-#: winmain.c:5202
+#: winmain.c:5302
 msgid "Syntax error in size argument '%s'"
 msgstr "size 选项的参数 '%s' 有语法错误"
 
-#: winmain.c:5354
+#: winmain.c:5454
 msgid "Syntax error in geometry argument '%s'"
 msgstr "geometry 选项的参数 '%s' 有语法错误"
 
-#: winmain.c:5558
+#: winmain.c:5659
 msgid "Mintty could not detach from caller, starting anyway"
 msgstr "Mintty 不能从调用者分离，但继续启动"
 
-#: winmain.c:5859
+#: winmain.c:5960
 msgid "Using default title due to invalid characters in program name"
 msgstr "使用默认的标题栏文字，因为程序名中有无效字符"
 
@@ -2596,6 +2666,7 @@ msgstr ""
 " 在 mintty 项目主页的 Issues 版块反馈问题或者提交功能改进\n"
 "地址：%s\n"
 "Wiki 页面中有更多帮助、鸣谢和许可等信息。"
+
 
 #~ msgid "– None –"
 #~ msgstr "– 无 –"

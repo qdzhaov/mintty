@@ -602,6 +602,7 @@ win_init_ctxmenu(bool extended_menu, bool with_user_commands)
   apcm( IDM_OPTIONS,0, _W("&Options..."));
 }
 
+extern SessDef sessdefs[];
 void
 win_init_menus(void)
 {
@@ -610,7 +611,7 @@ win_init_menus(void)
 #endif
   HMENU smenu;
   sysmenu = GetSystemMenu(wv.wnd, false);
-  void insm(int id,wstring cap){
+  void insm(UINT_PTR id,wstring cap){
     if(id){
       if(id>0xF000) InsertMenuW(sysmenu, 0,MF_BYPOSITION|MF_POPUP,   id, cap);
       else          InsertMenuW(sysmenu, 0,MF_BYPOSITION|MF_ENABLED, id, cap);
@@ -618,7 +619,7 @@ win_init_menus(void)
       InsertMenuW(sysmenu, 0,MF_BYPOSITION|MF_SEPARATOR, 0, 0);
     }
   }
-  void apsm(int id,wstring cap){
+  void apsm(UINT_PTR id,wstring cap){
     AppendMenuW(smenu,  MF_ENABLED, id, cap);
   }
 
@@ -639,28 +640,24 @@ win_init_menus(void)
     insm( IDM_OPTIONS   , _W("&Options..."));
   }
   insm( 0, 0);
+  int i;
   smenu = CreatePopupMenu();
-  apsm( IDM_NEWWSLW, _W("WS&L"         ));
-  apsm( IDM_NEWCYGW, _W("&Cygwin"      ));
-  apsm( IDM_NEWCMDW, _W("C&MD"         ));
-  apsm( IDM_NEWPSHW, _W("&PowerShell"  ));
-  apsm( IDM_NEWUSRW, _W("&Faststart"   ));
+  for(i=1;sessdefs[i].menu;i++){
+    apsm( IDM_NEWWB+i, sessdefs[i].menu);
+  }
   insm((UINT_PTR)(smenu), _W("N&Ew Win"));
   smenu = CreatePopupMenu();
-  apsm( IDM_NEWWSLT, _W("WS&L"         ));
-  apsm( IDM_NEWCYGT, _W("&Cygwin"      ));
-  apsm( IDM_NEWCMDT, _W("C&MD"         ));
-  apsm( IDM_NEWPSHT, _W("&PowerShell"  ));
-  apsm( IDM_NEWUSRT, _W("&Faststart"   ));
+  for(i=1;sessdefs[i].menu;i++){
+    apsm( IDM_NEWTB+i, sessdefs[i].menu);
+  }
   insm( (UINT_PTR)(smenu), _W("New T&Ab"));
-  if(0){
+#if 0
     DeleteMenu(sysmenu,SC_RESTORE ,0);
     DeleteMenu(sysmenu,SC_MOVE    ,0);
     DeleteMenu(sysmenu,SC_SIZE    ,0);
     DeleteMenu(sysmenu,SC_MINIMIZE,0);
     DeleteMenu(sysmenu,SC_MAXIMIZE,0);
-  }
-
+#endif
   sysmenulen = GetMenuItemCount(sysmenu);
 }
 
@@ -3386,16 +3383,6 @@ void tab_next	    (){win_tab_change( 1);}
 void tab_move_prev(){win_tab_move  (-1);}
 void tab_move_next(){win_tab_move  ( 1);}
 void new_tab_def(){new_tab(IDSS_CUR);}
-void new_tab_wsl(){new_tab(IDSS_WSL);}
-void new_tab_cyg(){new_tab(IDSS_CYG);}
-void new_tab_cmd(){new_tab(IDSS_CMD);}
-void new_tab_psh(){new_tab(IDSS_PSH);}
-void new_tab_usr(){new_tab(IDSS_USR);}
-void new_win_wsl(){new_win(IDSS_WSL,0);}
-void new_win_cyg(){new_win(IDSS_CYG,0);}
-void new_win_cmd(){new_win(IDSS_CMD,0);}
-void new_win_psh(){new_win(IDSS_PSH,0);}
-void new_win_usr(){new_win(IDSS_USR,0);}
 void new_win_def(){new_win(IDSS_DEF,0);}
 static void win_hide() { ShowWindow(wv.wnd, IsIconic(wv.wnd) ?SW_RESTORE: SW_MINIMIZE ); }
 static void super_down(uint key, mod_keys mods) { super_key = key; (void)mods; }
@@ -4096,9 +4083,8 @@ void pstrsck(char*ssck){
 }
 
 void win_update_shortcuts(){
-  int i;
   memset (sckmask,0,sizeof(sckmask));
-  for(i=0;i<256;i++){
+  for(int i=0;i<256;i++){
     struct SCKDef *p=sckdef[i],*n;
     for(;p;p=n){
       desck(p); n=p->next; free(p);

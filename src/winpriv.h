@@ -54,6 +54,8 @@ typedef struct {
   bool report_child_tty;
   bool support_wsl ;
   wchar * wslname ;
+  char * wslcmd,*wslcmd0;
+  int wsltype;//0 raw wsl,1:wslbridge;2:wslbridge2
   wstring wsl_basepath ;
   bool report_config;
   string report_geom ;

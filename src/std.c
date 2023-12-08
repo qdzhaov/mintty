@@ -308,6 +308,8 @@ forkpty(int *amaster, char *name,
   switch (pid = fork())
     {
       case -1:
+        close(master);
+        close(slave);
         return -1;
       case 0:
         close(master);
