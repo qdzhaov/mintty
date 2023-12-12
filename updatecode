@@ -1,7 +1,26 @@
- update from origin:
- vd(){vimdiff mintty/$1 mintty_org/$1 minttyo/$1}
- pd(){ \cp mintty_org/$1 mintty/$1 ;\cp mintty_org/$1 minttyo/$1 }
- diff -r mintty_org minttyo>diffs
- grep diff diffs|sed "s/minttyo.*//g;s/diff.*_org\///g">f
- cat f
+#update from origin:
+vd(){vimdiff ~/dev/mintty/mintty/$1 ~/dev/mintty/mintty_org/$1 ~/dev/mintty/minttyo/$1}
+ve(){vimdiff ~/dev/mintty/mintty_org/$1 ~/dev/mintty/minttyo/$1}
+pd(){ \cp ~/dev/mintty/mintty_org/$1 ~/dev/mintty/mintty/$1 ;\cp ~/dev/mintty/mintty_org/$1 ~/dev/mintty/minttyo/$1 }
+dfs(){diff -r ~/dev/mintty/mintty_org/$1 ~/dev/mintty/minttyo/$1}
+DD=.
+diff -r mintty_org/$DD minttyo/$DD >diffs
+echo diff End >>diffs
+#diff -r mintty_org/LICENSE minttyo/LICENSE
+fnl(){
+  ln0=1;fn0=begin
+  while read ln fn;do
+      nn=$((ln-ln0))
+      if (( $nn >0 ));then 
+        echo $nn $fn0;
+      fi
+      ln0=$ln;fn0=$fn
+  done
+}
+fnlf(){
+  cat $1|fnl
+}
+grep -n "^diff " diffs|sed "s/minttyo.*//g;s/diff.*_org\///g;s/:/  /g"|grep -v lang/>f
+
+fnlf f
 

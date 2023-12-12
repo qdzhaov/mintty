@@ -320,7 +320,24 @@ to private sequences (see below). To support these subtle differences,
 both can be switched independently.
 
 By default, mousewheel events are reported as cursor key presses, which enables
-mousewheel scrolling in applications such as **[less](http://www.greenwoodsoftware.com/less)** without requiring any configuration. Alternatively, mousewheel reporting can be switched to _application mousewheel mode_, where the mousewheel sends its own separate keycodes that allow an application to treat the mousewheel differently from cursor keys:
+mousewheel scrolling in applications such as
+**[less](http://www.greenwoodsoftware.com/less)** without requiring any
+configuration.
+
+The cursor keycodes sent for mousewheel events can optionally have the Alt
+modifier applied, to distinguish them from plain Up/Down key presses.
+For example, in the nano editor, Alt+Up/Down scrolls the window immediately,
+whereas plain Up/Down moves the cursor.
+
+_Alt-modified mousewheel mode_ exchanges plain mousewheel events with 
+Alt-modified mousewheel events; it is controlled by these sequences:
+
+| **sequence**  | **mode**      |
+|:--------------|:--------------|
+| `^[[?7765l`   | unmodified    |
+| `^[[?7765h`   | Alt-modified  |
+
+Alternatively, mousewheel reporting can be switched to _application mousewheel mode_, where the mousewheel sends its own separate keycodes that allow an application to treat the mousewheel differently from cursor keys:
 
 | **event**   | **code**    |
 |:------------|:------------|
@@ -645,6 +662,7 @@ via iTerm2 controls:
 | **width=**               | size (*)           | cell/pixel/percentage     |
 | **height=**              | size (*)           | cell/pixel/percentage     |
 | **preserveAspectRatio=** | 1 _(default) or_ 0 | only used if **width** and **height** are given |
+| **doNotMoveCursor**      | 0 _(default) or_ 1 | no-scroll, no-move        |
 | _image_                  |                    | base64-encoded image data |
 
 The width or height size arguments use cell units by default. Optionally, 
@@ -657,6 +675,11 @@ select whether to fit the image in the denoted area or stretch it to fill it.
 If only one of width or height are given, the other dimension is scaled so 
 that the aspect ratio is preserved.
 If none of width or height are given, the image pixel size is used.
+
+Parameter **doNotMoveCursor** prevents scrolling if the image output would 
+extend below the bottom margin, and also keeps the cursor at its beginning 
+position after image output. Its effect is the same as DECSET 7780 mode 
+but can be controlled case-by-case on a per-image base.
 
 Image formats supported comprise PNG, JPEG, GIF, TIFF, BMP, Exif.
 
@@ -677,12 +700,24 @@ below the image (like xterm). The mintty private sequence 7730 chooses
 between the latter two options and is overridden by the xterm 
 control sequence 8452.
 
-| **sequence**  | **exit position**    |
-|:--------------|:---------------------|
-| `^[[?7730h`   | line beginning below |
-| `^[[?7730l`   | below left bottom    |
-| `^[[?8452h`   | next to right bottom |
-| `^[[?8452l`   | below image          |
+Image output near the bottom margin may scroll the terminal contents 
+if the image would otherwise extend below the margin. 
+This may be undesirable, so the new mode 7780 can prevent scrolling 
+(but start at the current cursor position, unlike "Sixel display mode");
+the image will be cropped instead at the bottom margin. It also keeps 
+the cursor at its beginning position after image output. This affects 
+both sixel and iTerm2 image output.
+For iTerm2-style image output, see also image parameter **doNotMoveCursor** 
+to achieve the same effect case-by-case per image.
+
+| **sequence**  | **exit position or scrolling behaviour**   |
+|:--------------|:-------------------------------------------|
+| `^[[?7730h`   | line beginning below                       |
+| `^[[?7730l`   | below left bottom                          |
+| `^[[?8452h`   | next to right bottom                       |
+| `^[[?8452l`   | below image                                |
+| `^[[?7780h`   | do not scroll, keep cursor position        |
+| `^[[?7780l`   | scroll as needed to fit image (default)    |
 
 
 ## Audio support ##
@@ -785,7 +820,7 @@ can be used to set the mouse pointer shape of the current mouse mode
 (mintty maintains two different mouse pointer shapes, to distinguish 
 application mouse reporting modes).
 Valid values are Windows predefined cursor names 
-(appstarting, arrow, cross, hand, help, ibeam, icon, no, size, sizeall, sizenesw, sizens, sizenwse, sizewe, uparrow, wait).
+(appstarting, arrow, cross, hand, help, ibeam, icon, no, size, sizeall, sizenesw, sizens, sizenwse, sizewe, uparrow, wait) 
 or cursor file names which are looked up in subdirectory `pointers` of 
 a mintty resource directory; supported file types are .cur, .ico, .ani.
 
@@ -799,7 +834,7 @@ a mintty resource directory; supported file types are .cur, .ico, .ani.
 The following _OSC_ sequences can be used to set or query the foreground and
 background variants of the ANSI colours.
 
-| **sequence**                        | ** effect **                         |
+| **sequence**                        | **effect**                           |
 |:------------------------------------|:-------------------------------------|
 | `^[]7704;`_index_`;`_colour_`^G`    | set fg and bg variants to same value |
 | `^[]7704;`_index_`;`_fg_`;`_bg_`^G` | set fg and bg to separate values     |

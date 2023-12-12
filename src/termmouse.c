@@ -1,5 +1,5 @@
 // termmouse.c (part of mintty)
-// Copyright 2008-12 Andy Koppe, 2017-20 Thomas Wolff
+// Copyright 2008-23 Andy Koppe, 2017-20 Thomas Wolff
 // Based on code from PuTTY-0.60 by Simon Tatham and team.
 // Licensed under the terms of the GNU General Public License v3 or later.
 
@@ -38,8 +38,22 @@ static char scheme = 0;
   }
   //printf("sel_ %d: forward %d level %d\n", p.x, forward, level);
 
+  wchar prevc1 = 0;
+  wchar prevc2 = 0;
   for (;;) {
     wchar c = get_char(line, p.x);
+
+    // special colon and double-colon handling
+    if (forward && prevc1 == ':' && prevc2 != ':' && !strchr(":/", c)) {
+      // handle previous match of : if not matching :: or :/
+      return ret_p;
+    }
+    else if (forward && prevc1 == ':' && strchr(":/", c)) {
+      // handle match of :: or :/
+      ret_p = p;
+    }
+    prevc2 = prevc1;
+    prevc1 = c;
 
     // scheme detection state machine
     if (!forward) {
@@ -103,7 +117,17 @@ static char scheme = 0;
     // what about #$%&*\^`|~ at the end?
     else if (c == ' ' && p.x > 0 && get_char(line, p.x - 1) == '\\')
       ret_p = p;
-    else if (!(strchr("&,;?!:", c) || c == (forward ? '=' : ':'))) {
+    else if (c == (forward ? '=' : ':')) {
+    }
+    else if (strchr("&,;?!", c)) {
+    }
+    else if (forward && c == ':') {
+      // could set marker in case we match : but not :: or :/
+      // but this is better handled at the beginning of the for loop alone;
+      // note: this could be handled more easily here with some look-ahead 
+      // but that is not possible as the URL may wrap into the next line
+    }
+    else {
       //printf("%d: %c forward %d level %d BREAK\n", p.x, c, forward, level);
       break;
     }
@@ -467,14 +491,14 @@ get_selpoint(const pos p)
 }
 
 static void
-send_keys(const char *code, uint len, uint count)
+send_keys(uint count, string code)
 {
   if (count) {
-    uint size = len * count;
-    char buf[size];
+    uint len = strlen(code);
+    char buf[len * count];
     char *p = buf;
     while (count--) { memcpy(p, code, len); p += len; }
-    child_write(&term,buf, size);
+    child_write(&term,buf, sizeof buf);
   }
 }
 static bool
@@ -707,16 +731,13 @@ term_mouse_release(mouse_button b, mod_keys mods, pos p)
 
     //printf(forward ? "keys +%d\n" : "keys -%d\n", count);
     if (mode == 2003) {
-      //char erase = cfg.backspace_sends_bs ? CTRL('H') : CDEL;
       struct termios attr;
       tcgetattr(0, &attr);
-      char erase = attr.c_cc[VERASE];
-      send_keys(&erase, 1, count);
+      send_keys(count, (char[]){attr.c_cc[VERASE], 0});
     }
     else {
-      char code[3] =
-        {'\e', term.app_cursor_keys ? 'O' : '[', forward ? 'C' : 'D'};
-      send_keys(code, 3, count);
+      send_keys(count, term.app_cursor_keys ? (forward ? "\eOC" : "\eOD")
+                                            : (forward ? "\e[C" : "\e[D"));
     }
 
     moved_previously = true;
@@ -970,17 +991,17 @@ term_mouse_wheel(bool horizontal, int delta, int lines_per_notch, mod_keys mods,
         int pages = lines / lines_per_page;
         lines -= pages * lines_per_page;
         if (term.app_wheel && !term.wheel_reporting_xterm) {
-          send_keys(up ? "\e[1;2a" : "\e[1;2b", 6, pages);
-          send_keys(up ? "\eOa" : "\eOb", 3, lines);
+          send_keys(pages,up ? "\e[1;2a" : "\e[1;2b" );
+          send_keys(lines,up ? "\eOa" : "\eOb");
         }
         else if (term.vt52_mode) {
-          send_keys(up ? "\eA" : "\eB", 2, lines);
+          send_keys(lines,up ? "\eA" : "\eB");
         }
         else {
-          send_keys(up ? "\e[5~" : "\e[6~", 4, pages);
+          send_keys(pages,up ? "\e[5~" : "\e[6~");
           char code[3] =
             {'\e', term.app_cursor_keys ? 'O' : '[', up ? 'A' : 'B'};
-          send_keys(code, 3, lines);
+          send_keys(lines,code);
         }
       }
     }

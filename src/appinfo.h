@@ -6,8 +6,8 @@
 #define WEBSITE "https://gitee.com/qdzhaov/mintty"
 
 #define MAJOR_VERSION  3
-#define MINOR_VERSION  6
-#define PATCH_NUMBER   4
+#define MINOR_VERSION  7
+#define PATCH_NUMBER   0
 #define BUILD_NUMBER   0
 
 // needed for res.rc

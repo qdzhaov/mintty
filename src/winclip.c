@@ -1,5 +1,5 @@
 // winclip.c (part of mintty)
-// Copyright 2008-12 Andy Koppe, 2018 Thomas Wolff
+// Copyright 2008-23 Andy Koppe, 2018 Thomas Wolff
 // Adapted from code from PuTTY-0.60 by Simon Tatham and team.
 // Licensed under the terms of the GNU General Public License v3 or later.
 
@@ -21,9 +21,9 @@
 
 
 #ifdef check_cygdrive
-// adapt /cygdrive prefix to actual configured one (like / or anything else);
-// this experimental approach is not enabled as it is 
-// only used for WSL and dynamic adaptation is hardly useful
+// Adapt /cygdrive prefix to actual configured one (like / or anything else);
+// this experimental approach is not enabled as it is only used for WSL and
+// dynamic adaptation is hardly useful.
 
 static char * _cygdrive = 0;
 static wchar * _wcygdrive = 0;
@@ -69,7 +69,8 @@ shell_exec_thread(void *data)
   cygwin_internal(CW_SYNC_WINENV);
 #endif
 
-  if ((INT_PTR)ShellExecuteW(wv.wnd, 0, wpath, 0, 0, SW_SHOWNORMAL) <= 32) {
+  SetLastError(ERROR_PATH_NOT_FOUND);  // in case !*wpath
+  if (!*wpath || (INT_PTR)ShellExecuteW(wv.wnd, 0, wpath, 0, 0, SW_SHOWNORMAL) <= 32) {
     uint error = GetLastError();
     if (error != ERROR_CANCELLED) {
       int msglen = 1024;
@@ -485,42 +486,90 @@ dewsl(const wchar * wpath) //free parameter
   return unwsl;
 }
 
+#if CYGWIN_VERSION_API_MINOR < 206
+#define wcsncasecmp wcsncmp
+#define wmemcpy(t, s, n)	memcpy(t, s, 2 * n)
+#endif
+
 void
 win_open(wchar*wpath, bool adjust_dir)
 // frees wpath
 {
-  // unescape
-  int wl = wcslen(wpath);
-  wchar * p0 = wpath;
-  if ((*wpath == '"' || *wpath == '\'') && wpath[wl - 1] == *wpath) {
-    // don't wpath++ (later delete!)
-    for (int i = 0; i < wl - 2; i++)
-      p0[i] = p0[i + 1];
-    p0[wl - 2] = 0;
-  }
-  else {
-    wchar * p1 = p0;
-    while (*p0) {
-      if (*p0 == '\\')
-        p0++;
-      if (*p0)
-        *p1++ = *p0++;
-    }
-    *p1 = 0;
-  }
+  size_t wl = wcslen(wpath);
+  wchar *wbuf = newn(wchar, wl + 1);
 
-  wstring p = wpath;
-  while (iswalpha(*p)) p++;
-  if (*wpath == '\\' || *p == ':' || wcsncmp(W("www."), wpath, 4) == 0) {
-    // Looks like it's a Windows path or URI
-    shell_exec(wpath); // frees wpath
+  if (wl > 2 && (*wpath == '"' || *wpath == '\'') && wpath[wl - 1] == *wpath) {
+    // Remove pair of leading and trailing quotes.
+    wl -= 2;
+    wmemcpy(wbuf, wpath + 1, wl);
+  }
+  else if (!wcsncmp(wpath, W("\\\\"), 2)) {
+    // Assume that a path starting with two backslashes is a Windows UNC path
+    // and copy it unmodified.
+    wmemcpy(wbuf, wpath, wl);
   }
   else {
-    wstring conv_wpath = child_conv_path(&term,wpath, adjust_dir);
-#ifdef debug_wslpath
-    printf("win_open <%ls> <%ls>\n", wpath, conv_wpath);
+    // Remove backslashes, but only if they precede shell special characters.
+    // Other backslashes are more likely to be Windows path separators.
+    wstring p = wpath;
+    wl = 0;
+    while (*p) {
+      if (*p == '\\' && wcschr(W(" \t\n|&;<>()$`\\\"'*?![]#~=%^"), p[1]))
+        p++;
+      wbuf[wl++] = *p++;
+    }
+  }
+  wbuf[wl] = 0;
+  delete(wpath);
+
+  // guard file opening against foreign network access
+  char * buf = cs__wcstoutf(wbuf);
+  char * gbuf = guardpath(buf, 4);
+  free(buf);
+  if (!gbuf)
+    return;
+
+  wchar *p = wbuf;
+  while (iswalpha(*p)) p++;
+  if (*p == ':' || *wbuf == '\\' || !wcsncasecmp(W("www."), wbuf, 4)) {
+    // Looks like it's a Windows path or URI
+    free(gbuf);
+    shell_exec(wbuf); // frees wbuf
+  }
+  else {
+#ifdef pathname_conversion_here
+#warning now deprecated; handled via guardpath
+    // Need to convert POSIX path to Windows first
+    if (support_wsl) {
+      // First, we need to replicate some of the handling of relative paths
+      // as implemented in child_conv_path, because the dewsl functionality
+      // would actually go in between the workflow of child_conv_path.
+      // We cannot determine the WSL foreground process and its current
+      // directory, so we can only consider the working directory explicitly
+      // communicated via the OSC 7 escape sequence here.
+      if (*wbuf != '/' && wcsncmp(wbuf, W("~/"), 2)) {
+        if (term.child.child_dir && *term.child.child_dir) {
+          wchar * cd = cs__mbstowcs(term.child.child_dir);
+          cd = renewn(cd, wcslen(cd) + wl + 2);
+          cd[wcslen(cd)] = '/';
+          wcscpy(&cd[wcslen(cd) + 1], wbuf);
+          delete(wbuf);
+          wbuf = cd;
+        }
+      }
+
+      wbuf = dewsl(wbuf);
+    }
+    wstring conv_wpath = child_conv_path(wbuf, adjust_dir);
+#else
+    (void)adjust_dir;
+    wchar *conv_wpath = path_posix_to_win_w(gbuf);
+    free(gbuf);
 #endif
-    delete(wpath);
+#ifdef debug_wslpath
+    printf("win_open <%ls> <%ls>\n", wbuf, conv_wpath);
+#endif
+    delete(wbuf);
     if (conv_wpath)
       shell_exec(conv_wpath); // frees conv_wpath
     else

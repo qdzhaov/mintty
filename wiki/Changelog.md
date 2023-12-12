@@ -1,11 +1,67 @@
-### 3.6.4 (21 Apr 2023) ###
+### 3.7.0 (14 November 2023) ###
+
+Misc
+  * Fix memory leak (mintty/wsltty#340) caused by dynamic emoji checking.
+  * Revise and unify handling of dynamic pathnames for terminal control.
+  * Guard network access via dynamic pathnames.
+
+Unicode and Emoji data
+  * Unicode 15.1 update.
+  * Adapt getemojis script to reduced format of unicode.org emoji charts (#1240).
+
 Terminal features
+  * Tweak mousewheel scrolling: do not mix line and page events (#1234).
+  * Tweak mousewheel scrolling: page scrolling one line less, consistent with keyboard paging (#1234).
+  * Send Alt modifier with mousewheel events (#1234).
+  * New DECSET 7765 to exchange normal and Alt-modified mouse wheel scrolling (#1234).
+  * Tweak double-click filename/URL selection with colon (#1236).
+  * Filter paste characters causing interrupt signals, according to the current stty settings.
+  * Fixed background in HTML screen dump.
+
+Window handling
+  * Better error handling if click-opening file fails.
+  * Save image file with proper access rights.
+
+Font rendering
+  * Support size adjustment of alternative fonts, for use as secondary fonts (mintty/wsltty#341).
+
+Configuration
+  * Alternative font specification supports initial + for size increase (mintty/wsltty#341).
+  * New option GuardNetworkPaths.
+  * Added STTY to FilterPasteControls settings (xterm 388), as default.
+
+### 3.6.5 (3 September 2023) ###
+
+Pathname handling
   * Fix file link detection (#1208), tweak URL detection (#1209).
+  * Restore opening of Windows path names (#1219; broken since 2.8.1).
+
+Terminal features
+  * Fix setup of initial status line if monitor DPI is 96.
+  * ESC/Enter restore alphanumeric keyboard input mode while IME is active (#1223).
+  * OSC 50 query response is "?" after font setting failed.
+  * Fix DECRQCRA Rectangular Checksum attribute handling.
+  * Added DECSACE to DECRQSS (xterm 383).
+  * Optionally indicate keyboard layout code in status line.
+  * Fix image display (iTerm2 protocol) in "Sixel display mode".
+  * New DECSET 7780 "Image display mode" to keep cursor position on image output (#1228).
+  * New parameter doNotMoveCursor for iTerm2-style image output (#1228).
+
+Window handling
+  * Revamp window operations, esp max/fullscreen, to not raise to foreground.
+  * Sanitize Alt+TAB behaviour: Group taskbar icons by setting -o Class (#1207).
+  * Handling transparency in tab sets (#1152, #1069, ~#1128).
+  * Workaround against dropping fullscreen on DPI change (#1226).
+  * Preserve "normal position" (unzoomed) during screen changes (~#1226).
 
 Configuration
   * New user-definable function compose (#1211).
   * New option setting ComposeKey=capslock (#1211).
   * New option ConfirmReset to guard confirm dialog on interactive reset (#1173).
+  * Support changed Drag-and-drop format for some theme file downloads.
+  * New option KeyAlphaMode (#1223).
+  * New option -Rw to report the Windows window id.
+  * New option StatusDebug to include debug information in the status line.
 
 ### 3.6.4 (25 Mar 2023) ###
 

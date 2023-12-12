@@ -519,7 +519,7 @@ typedef struct STerm {
   int marg_left, marg_right; /* horizontal margins */
   bool lrmargmode;           /* enable horizontal margins */
   bool dim_margins;
-  bool attr_rect;            /* rectangular attribute change extent */
+  uint attr_rect;            /* rectangular attribute change extent */
 
   bool printing, only_printing;  /* Are we doing ANSI printing? */
   int  print_state;       /* state of print-end-sequence scan */
@@ -563,7 +563,8 @@ typedef struct STerm {
   bool bell_popup;   // xterm: popOnBell;    switchable with CSI ? 1043 h/l
   bool wheel_reporting_xterm; // xterm: alternateScroll
   bool wheel_reporting;       // similar, but default true
-  bool app_wheel;             // format for wheel_reporting
+  bool app_wheel;             // dedicated wheel codes instead of cursor codes
+  bool alt_wheel;             // add Alt modifier to wheel cursor codes
   int  modify_other_keys;
   bool newline_mode;
   bool report_focus;
@@ -582,6 +583,7 @@ typedef struct STerm {
   bool readline_mouse_3;
 
   bool sixel_display;        // true if sixel scrolling mode is off
+  bool image_display;        // true if image scrolling is disabled
   bool sixel_scrolls_right;  // on: sixel scrolling leaves cursor to right of graphic
                              // off(default): the position after sixel depends on sixel_scrolls_left
   bool sixel_scrolls_left;   // on: sixel scrolling moves cursor to beginning of the line
@@ -714,8 +716,8 @@ extern STerm *cterm;
 
 extern void scroll_rect(int topline, int botline, int lines);
 
-extern void term_resize(int, int);
-extern void term_scroll(int, int);
+extern void term_resize(int rows, int cols, bool quick_reflow);
+extern void term_scroll(int relative_to, int where);
 extern void term_reset(bool full);
 extern void term_free(STerm* pterm);
 extern void term_clear_scrollback(STerm* pterm);

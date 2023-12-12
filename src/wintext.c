@@ -122,6 +122,7 @@ struct fontfam {
   char no_rtl;  // 1: no R/Hebrew, 2: no AL/Arabic, 4: either
   HFONT fonts[FONT_MAXNO];
   bool fontflag[FONT_MAXNO];
+  bool fontok;
   bool font_dualwidth;
   struct charpropcache * cpcache[FONT_BOLDITAL + 1];
   uint cpcachelen[FONT_BOLDITAL + 1];
@@ -268,11 +269,19 @@ static HFONT
 create_font(wstring name, int weight, bool underline)
 {
 #ifdef debug_create_font
-  printf("font [??]: %d (size %d) 0 w%4d i0 u%d s0\n", font_height, font_size, weight, underline);
+  printf("create_font [??]: %d (size %d) 0 w%4d i0 u%d s0\n", font_height, font_size, weight, underline);
 #endif
+  int height = font_height;
+  if (*name == '+') {
+    name ++;
+    height = height * 16 / 10;
+#ifdef debug_create_font
+    printf("create_font [??]: %d->%d\n", font_height, height);
+#endif
+  }
   return
     CreateFontW(
-      font_height, 0, 0, 0, weight, false, underline, false,
+      height, 0, 0, 0, weight, false, underline, false,
       DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
       get_font_quality(), FIXED_PITCH | FF_DONTCARE,
       name
@@ -531,6 +540,30 @@ adjust_font_weights(struct fontfam * ff, int findex)
   trace_font((" -> %d/%d\n", ff->fw_norm, ff->fw_bold));
 }
 
+static int fonts_found;
+
+static int CALLBACK
+enum_fonts_check_font(const LOGFONTW * lfp, const TEXTMETRICW * tmp, DWORD fontType, LPARAM lParam)
+{
+  (void)lfp, (void)tmp, (void)fontType, (void)lParam;
+  fonts_found ++;
+  return 1;  // continue
+}
+
+static int
+check_font(HDC dc, struct fontfam * ff)
+{
+  LOGFONTW lf;
+  wcscpy(lf.lfFaceName, W(""));
+  wcsncat(lf.lfFaceName, ff->name, lengthof(lf.lfFaceName) - 1);
+  lf.lfPitchAndFamily = 0;
+  lf.lfCharSet = DEFAULT_CHARSET;  // report all supported char ranges
+
+  fonts_found = 0;
+  EnumFontFamiliesExW(dc, &lf, enum_fonts_check_font, 0, 0);
+  return fonts_found;
+}
+
 /*
  * Initialise all the fonts of a font family we will need initially:
    Normal (the ordinary font), and optionally bold and underline;
@@ -594,6 +627,8 @@ win_init_fontfamily(HDC dc, int findex)
   }
 
   ff->fonts[FONT_NORMAL] = create_font(ff->name, ff->fw_norm, false);
+  // as this does not report error and font fallback, check explicitly:
+  ff->fontok = check_font(dc, ff);
 
   LOGFONT logfont;
   GetObject(ff->fonts[FONT_NORMAL], sizeof(LOGFONT), &logfont);
@@ -692,7 +727,7 @@ win_init_fontfamily(HDC dc, int findex)
   }
 
 #ifdef debug_create_font
-  printf("size %d -> height %d -> height %d\n", font_size, font_height, wv.cell_height);
+  printf("init_font_family: size %d -> height %d -> height %d\n", font_size, font_height, wv.cell_height);
 #endif
 
   //ff->font_dualwidth = (tm.tmMaxCharWidth >= tm.tmAveCharWidth * 3 / 2);
@@ -840,7 +875,7 @@ win_init_fontfamily(HDC dc, int findex)
 
   if (ff->bold_mode == BOLD_FONT) {
     int diffsize = abs(fontsize[FONT_BOLD] - fontsize[FONT_NORMAL]);
-#if defined(debug_create_font) || defined(debug_bold)
+#if defined(debug_create_font) || defined(debug_bold) || defined(debug_size)
     if (*ff->name)
       printf("bold_mode %d font_size %d size %d bold %d diff %d %s %ls\n",
              ff->bold_mode, font_size,
@@ -981,7 +1016,21 @@ wstring
 win_get_font(uint fi)
 {
   if (fi < lengthof(fontfamilies))
-    return fontfamilies[fi].name;
+    if (fontfamilies[fi].fontok) {
+#ifdef filter_controls_from_fontname
+      wstring fn = fontfamilies[fi].name;
+      while (*fn) {
+        if (*fn < ' ' || *fn == '\177') {
+          // most unlikely to happen if fontok is true
+          return W("??");
+        }
+        fn++;
+      }
+#endif
+      return fontfamilies[fi].name;
+    }
+    else
+      return W("?");
   else
     return null;
 }
@@ -1141,6 +1190,7 @@ toggle_charinfo()
 static void
 show_curchar_info(char tag)
 {
+  //if (term.st_type == 1) show_status_line(); //Fix me
   if (!show_charinfo)
     return;
   init_charnametable();
@@ -1506,7 +1556,7 @@ another_font(struct fontfam * ff, int fontno)
   }
 
 #ifdef debug_create_font
-  printf("font [%02X]: %d (size %d%s%s%s%s) %d w%4d i%d u%d s%d\n", 
+  printf("another_font: font [%02X]: %d (size %d%s%s%s%s) %d w%4d i%d u%d s%d\n", 
 	fontno, font_height * (1 + !!(fontno & FONT_HIGH)), font_size, 
 	fontno & FONT_HIGH     ? " hi" : "",
 	fontno & FONT_WIDE     ? " wd" : "",
@@ -2065,6 +2115,10 @@ get_bg_filename(void)
     bgfn = wcsdup(wallpfn);
   else {
     // path transformations
+    // for dynamic changes (OSC 11) they are already handled 
+    // before setting cfg.background in termout.c,
+    // but for static configuration (option Background) they 
+    // need to be applied here as well
     if (0 == strncmp("~/", bf, 2)) {
       char * bfexp = asform("%s/%s", wv.home, bf + 2);
       delete(bf);
@@ -2079,6 +2133,8 @@ get_bg_filename(void)
       }
     }
 
+#ifdef pathname_conversion_here
+#warning now deprecated; handled via guardpath
     if (wv.support_wsl && !wallp) {
       const wchar * wbf = cs__utftowcs(bf);
       const wchar * wdewbf = dewsl(wbf);  // delete(wbf)
@@ -2087,6 +2143,7 @@ get_bg_filename(void)
       delete(bf);
       bf = dewbf;
     }
+#endif
 
     bgfn = path_posix_to_win_w(bf);
   }

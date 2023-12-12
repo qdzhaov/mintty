@@ -1,5 +1,5 @@
 // winmain.c (part of mintty)
-// Copyright 2008-13 Andy Koppe, 2015-2022 Thomas Wolff
+// Copyright 2008-13 Andy Koppe, 2015-2023 Thomas Wolff
 // Based on code from PuTTY-0.60 by Simon Tatham and team.
 // Licensed under the terms of the GNU General Public License v3 or later.
 
@@ -34,6 +34,7 @@ typedef UINT_PTR uintptr_t;
 #include <mmsystem.h>  // PlaySound for MSys
 #include <shellapi.h>
 #include <windowsx.h>  // GET_X_LPARAM, GET_Y_LPARAM
+#include <shlwapi.h>  // PathIsNetworkPathW
 
 #ifdef __CYGWIN__
 #include <sys/cygwin.h>  // cygwin_internal
@@ -176,6 +177,237 @@ static HRESULT (WINAPI * pSetWindowTheme)(HWND, const wchar_t *, const wchar_t *
 static COLORREF (WINAPI * pGetThemeSysColor)(HTHEME hth, int colid) = 0;
 static HTHEME (WINAPI * pOpenThemeData)(HWND, LPCWSTR pszClassList) = 0;
 static HRESULT (WINAPI * pCloseThemeData)(HTHEME) = 0;
+
+#define dont_debug_guardpath
+
+#ifdef debug_guardpath
+#define trace_guard(p)	printf p
+#else
+#define trace_guard(p)	
+#endif
+
+
+// WSL path conversion, using wsl.exe
+static char *
+wslwinpath(string path)
+{
+  char * wslpath(char * path)
+  {
+    char * wslcmd;
+    // do the actual conversion with WSL wslpath -m
+    // wslpath -w fails in some cases during pathname postprocessing
+    // ~ needs to be unquoted to be expanded by sh
+    // other paths should be quoted; pathnames with quotes are not handled
+    if (*path == '~')
+      wslcmd = asform("wsl -d %ls sh -c 'wslpath -m ~ 2>/dev/null'", wv.wslname);
+    else
+      wslcmd = asform("wsl -d %ls sh -c 'wslpath -m \"%s\" 2>/dev/null'", wv.wslname, path);
+    FILE * wslpopen = popen(wslcmd, "r");
+    char line[MAX_PATH + 1];
+    char * got = fgets(line, sizeof line, wslpopen);
+    pclose(wslpopen);
+    free(wslcmd);
+    if (!got)
+      return 0;
+    // adjust buffer
+    int len = strlen(line);
+    if (line[len - 1] == '\n')
+      line[len - 1] = 0;
+    // return path string
+    if (*line)
+      return strdup(line);
+    else  // file does not exist
+      return 0;
+  }
+
+  if (0 == strcmp("~", path))
+    return wslpath("~");
+  else if (0 == strncmp("~/", path, 2)) {
+    char * wslhome = wslpath("~");
+    char * ret = asform("%s/%s", wslhome, path + 2);
+    free(wslhome);
+    return ret;
+  }
+  else {
+    char * abspath;
+    if (*path != '/') {
+      // if we have a relative pathname, let's prefix it with 
+      // the current working directory if possible (and check again);
+      // we cannot determine it via foreground_cwd through wslbridge, 
+      // so let's check OSC 7 in this case
+      if (term.child.child_dir && *term.child.child_dir)
+        abspath = asform("%s/%s", term.child.child_dir, path);
+      else
+        abspath = strdup(path);
+      if (*abspath != '/') {
+        // failed to determine an absolute path
+        free(abspath);
+        return 0;
+      }
+    }
+    else
+      abspath = strdup(path);
+    char * winpath = wslpath(abspath);
+    free(abspath);
+    return winpath;
+  }
+}
+
+// Safeguard checking path to guard against unexpected network access
+char *
+guardpath(string path, int level)
+{
+  if (!path)
+    return 0;
+
+  // path transformations
+  char * expath;
+  if (wv.support_wsl) {
+    expath = wslwinpath(path);
+    if (!expath)
+      return 0;
+  }
+  else if (0 == strcmp("~", path))
+    expath = strdup(wv.home);
+  else if (0 == strncmp("~/", path, 2))
+    expath = asform("%s/%s", wv.home, path + 2);
+  else if (*path != '/' && !(*path && path[1] == ':')) {
+    char * fgd = foreground_cwd(&term);
+    if (fgd) {
+      expath = asform("%s/%s", fgd, path);
+    }
+    else
+      return 0;
+  }
+  else
+    expath = strdup(path);
+
+  if (!(level & cfg.guard_path))
+    // use case level is not in configured guarding bitmask
+    return expath;
+
+  wstring wpath = path_posix_to_win_w(expath);  // implies realpath()
+  trace_guard(("guardpath <%s>\n       ex <%s>\n        w <%ls>\n", path, expath ?: "(null)", wpath ?: W("(null)")));
+  if (!wpath) {
+    free(expath);
+    return 0;
+  }
+
+  bool guard = false;
+
+  // guard access if its target is a network path ...
+  if (PathIsNetworkPathW(wpath))
+    guard = true;
+  else {
+    char drive[] = "@:\\";
+    *drive = *wpath;
+    if (GetDriveTypeA(drive) == DRIVE_REMOTE)
+      guard = true;
+  }
+  trace_guard(("   guard %d <%ls>\n", guard, wpath));
+  int plen = wcslen(wpath);
+
+  // ... but do not guard if it is in $HOME or $APPDATA
+  if (guard) {
+    void unguard(char * env) {
+      if (env) {
+        wchar * prepath = path_posix_to_win_w(env);
+        if (prepath && *prepath) {
+          int envlen = wcslen(prepath);
+          if (0 == wcsncmp(prepath, wpath, envlen))
+            if (prepath[envlen - 1] == '\\' || 
+                plen <= envlen || wpath[envlen] == '\\'
+               )
+              guard = false;
+        }
+        trace_guard(("         %d <%s>\n        -> <%ls>\n", guard, env, prepath ?: W("(null)")));
+        if (prepath)
+          free(prepath);
+      }
+      else {
+        trace_guard(("         null\n"));
+      }
+    }
+    unguard(getenv("APPDATA"));
+    if (wv.support_wsl) {
+      //char * rootdir = path_win_w_to_posix(wsl_basepath);
+      char * rootdir = wslwinpath("/");
+      unguard(rootdir);
+      free(rootdir);
+      // in case WSL ~ is outside WSL /
+      char * homedir = wslwinpath("~");
+      if (homedir) {
+        unguard(homedir);
+        free(homedir);
+      }
+#ifdef consider_WSL_OSC7
+#warning exemption from path guarding is not proper
+      // if the WSL bridge/gateway could be used to transport the 
+      // current working directory back to mintty, we could enable this
+      if (term.child.child_dir && *term.child.child_dir) {
+        char * cwd = wslwinpath(term.child.child_dir);
+        if (cwd) {
+          unguard(cwd);
+          free(cwd);
+        }
+      }
+#endif
+    }
+    else {
+      unguard(getenv("HOME"));
+      char * fg_cwd = foreground_cwd(&term);
+      if (fg_cwd) {
+        unguard(fg_cwd);
+        free(fg_cwd);
+      }
+      else {
+        // if tcgetpgrp / foreground_pid() / foreground_cwd() fails,
+        // check for processes $p where /proc/$p/ctty is child_tty()
+        // whether the checked filename is below their /proc/$p/cwd
+#include <dirent.h>
+        DIR * d = opendir("/proc");
+        if (d) {
+          char * tty = child_tty(&term);
+          struct dirent * e;
+          while (guard && (e = readdir(d))) {
+            char * pn = e->d_name;
+            int thispid = atoi(pn);
+            if (thispid) {
+              char * ctty = procres(thispid, "ctty");
+              if (ctty) {
+                if (0 == strcmp(ctty, tty)) {
+                  // check cwd
+                  char * fn = asform("/proc/%d/%s", thispid, "cwd");
+                  char target [MAX_PATH + 1];
+                  int ret = readlink (fn, target, sizeof (target) - 1);
+                  free(fn);
+                  if (ret >= 0) {
+                    target [ret] = '\0';
+                    unguard(target);
+                  }
+                }
+                free(ctty);
+              }
+            }
+          }
+          closedir(d);
+        }
+      }
+    }
+  }
+  delete(wpath);
+
+  trace_guard(("   -> %d -> <%s>\n", guard, expath));
+  if (guard) {
+    free(expath);
+    if (level & 0xF)  // could choose to beep or not to beep in future...
+      win_bell(&cfg);
+    return 0;
+  }
+  else
+    return expath;
+}
+
 
 // Helper for loading a system library. Using LoadLibrary() directly is insecure
 // because Windows might be searching the current working directory first.
@@ -475,18 +707,27 @@ win_set_scrollview(int pos, int len, int height)
    Window title functions.
  */
 
+// set window icon;
+// this is only used for OSC I / OSC 7773
 void
 win_set_icon(const char * s, int icon_index)
 {
   HICON large_icon = 0, small_icon = 0;
-  wstring icon_file = path_posix_to_win_w(s);
-  //printf("win_set_icon <%ls>,%d\n", icon_file, icon_index);
-  ExtractIconExW(icon_file, icon_index, &large_icon, &small_icon, 1);
-  delete(icon_file);
-  SetClassLongPtr(wv.wnd, GCLP_HICONSM, (LONG_PTR)small_icon);
-  SetClassLongPtr(wv.wnd, GCLP_HICON, (LONG_PTR)large_icon);
-  //SendMessage(wv.wnd, WM_SETICON, ICON_SMALL, (LPARAM)small_icon);
-  //SendMessage(wv.wnd, WM_SETICON, ICON_BIG, (LPARAM)large_icon);
+
+  char * iconpath = guardpath(s, 1);
+  if (iconpath) {
+    wstring icon_file = path_posix_to_win_w(iconpath);
+    //printf("win_set_icon <%ls>,%d\n", icon_file, icon_index);
+    if (icon_file) {
+      ExtractIconExW(icon_file, icon_index, &large_icon, &small_icon, 1);
+      delete(icon_file);
+      SetClassLongPtr(wv.wnd, GCLP_HICONSM, (LONG_PTR)small_icon);
+      SetClassLongPtr(wv.wnd, GCLP_HICON, (LONG_PTR)large_icon);
+      //SendMessage(wv.wnd, WM_SETICON, ICON_SMALL, (LPARAM)small_icon);
+      //SendMessage(wv.wnd, WM_SETICON, ICON_BIG, (LPARAM)large_icon);
+    }
+    free(iconpath);
+  }
 }
 
 // support tabbar
@@ -1036,6 +1277,10 @@ win_set_iconic(bool iconic)
 {
   if (iconic ^ IsIconic(wv.wnd))
     ShowWindow(wv.wnd, iconic ? SW_MINIMIZE : SW_RESTORE);
+  /* possible enhancements:
+     - avoid force-to-top on restore - implementation attempt failed
+     - remember/preset maximize/fullscreen while minimize (xterm)
+   */
 }
 
 /*
@@ -1046,7 +1291,7 @@ win_set_pos(int x, int y)
 {
   trace_resize(("--- win_set_pos %d %d\n", x, y));
   if (!IsZoomed(wv.wnd))
-    SetWindowPos(wv.wnd, null, x, y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
+    SetWindowPos(wv.wnd, null, x, y, 0, 0, SWP_NOACTIVATE | SWP_NOSIZE | SWP_NOZORDER);
 }
 
 /*
@@ -1390,29 +1635,63 @@ void  win_update_border(){
                | SWP_NOACTIVATE);
 }
 
+
+#define dont_debug_win_status
+
+#ifdef debug_win_status
+
+static void
+show_win_status(char * tag, HWND wnd)
+{
+  WINDOWPLACEMENT pl;
+  pl.length = sizeof(WINDOWPLACEMENT);
+  GetWindowPlacement(wnd, &pl);
+  RECT fr = pl.rcNormalPosition;
+  LONG style = GetWindowLong(wnd, GWL_STYLE);
+  int h, w;
+  win_get_pixels(&h, &w, false);
+  printf("%s[%d:%p] show %d y normal %dx%d (%dx%d @%d:%d) max %d zoom %d\n", 
+         tag, getpid(), wnd, 
+         pl.showCmd, 
+         h / cell_height, w / cell_width,
+         fr.bottom - fr.top, fr.right - fr.left, fr.top, fr.left,
+         style & WS_MAXIMIZE,
+         IsZoomed(wnd)
+        );
+  bool layered = GetWindowLong(wnd, GWL_EXSTYLE) & WS_EX_LAYERED;
+  BYTE b;
+  GetLayeredWindowAttributes(wnd, 0, &b, 0);
+  bool hidden = layered && !b;
+  bool tooled = GetWindowLong(wnd, GWL_EXSTYLE) & WS_EX_TOOLWINDOW;
+  printf("%s[%d:%p] tooled %d layered %d attr %d hidden %d\n", tag, getpid(), wnd, tooled, layered, b, hidden);
+}
+
+#else
+#define show_win_status(tag, wnd)	
+#endif
 /*
  * Go full-screen. This should only be called when we are already maximised.
  */
 static void
 make_fullscreen(void)
 {
+  show_win_status("make_full", wv.wnd);
   wv.win_is_fullscreen = true;
-
- /* Remove the window furniture. */
+  /* Remove the window furniture. */
   LONG style = GetWindowLong(wv.wnd, GWL_STYLE);
   style &= ~(WS_CAPTION | WS_BORDER | WS_THICKFRAME);
   SetWindowLong(wv.wnd, GWL_STYLE, style);
 
- /* The glass effect doesn't work for fullscreen windows */
+  /* The glass effect doesn't work for fullscreen windows */
   win_update_glass(cfg.opaque_when_focused);
 
- /* Resize ourselves to exactly cover the nearest monitor. */
+  /* Resize ourselves to exactly cover the nearest monitor. */
   MONITORINFO mi;
   get_my_monitor_info(&mi);
   RECT fr = mi.rcMonitor;
   // set window size
   SetWindowPos(wv.wnd, HWND_TOP, fr.left, fr.top,
-               fr.right - fr.left, fr.bottom - fr.top, SWP_FRAMECHANGED);
+               fr.right - fr.left, fr.bottom - fr.top, SWP_FRAMECHANGED | SWP_NOACTIVATE | SWP_NOZORDER);
 }
 
 /*
@@ -1421,11 +1700,17 @@ make_fullscreen(void)
 static void
 clear_fullscreen(void)
 {
+  show_win_status("clear_full", wv.wnd);
   wv.win_is_fullscreen = false;
   win_update_glass(cfg.opaque_when_focused);
  /* Reinstate the window furniture. */
   win_update_border();
 }
+
+#ifdef debug_clear_fullscreen
+
+#define clear_fullscreen() printf("calling cl_fs %s:%d\n", __FUNCTION__, __LINE__), clear_fullscreen()
+#endif
 
 void
 win_set_geom(int y, int x, int height, int width)
@@ -1487,6 +1772,17 @@ win_set_chars_zoom(int rows, int cols)
   trace_winsize("win_set_chars > win_fix_position");
 }
 
+static void
+win_set_chars_keep_fullscreen(int rows, int cols)
+{
+  // workaround against dropping fullscreen on DPI change (#1226);
+  // suppressing clear_fullscreen in win_set_chars does not suffice
+  bool was_fullscreen = wv.win_is_fullscreen;
+  win_set_chars(rows, cols);
+  if (was_fullscreen)
+    make_fullscreen();
+}
+
 void
 win_set_pixels(int height, int width)
 {
@@ -1506,6 +1802,11 @@ win_set_chars(int rows, int cols)
 // allow font zooming if called below
 #define win_set_pixels(height, width) win_set_pixels_zoom(height, width)
 #define win_set_chars(rows, cols) win_set_chars_zoom(rows, cols)
+
+#ifdef debug_win_set_chars
+#undef win_set_chars
+#define win_set_chars(rows, cols) printf("calling wsc %s:%d\n", __FUNCTION__, __LINE__), win_set_chars_zoom(rows, cols)
+#endif
 
 void
 taskbar_progress(int i)
@@ -1630,7 +1931,11 @@ static struct {
 
   wchar * sound_file = 0;
   if (strchr(sound_name, '/') || strchr(sound_name, '\\')) {
-    sound_file = path_posix_to_win_w(sound_name);
+    char * soundfn = guardpath(sound_name, 1);
+    if (!soundfn)
+      return;
+    sound_file = path_posix_to_win_w(soundfn);
+    free(soundfn);
   }
   else {
     wchar * sound_name_w = cs__mbstowcs(sound_name);
@@ -2057,8 +2362,8 @@ win_adjust_borders(int t_width, int t_height)
   wv.norm_extra_height = wv.extra_height;
 }
 
-void
-win_adapt_term_size(bool sync_size_with_font, bool scale_font_with_size)
+static void
+do_win_adapt_term_size(bool sync_size_with_font, bool scale_font_with_size, bool quick_reflow)
 {
   trace_resize(("--- win_adapt_term_size sync_size %d scale_font %d (full %d Zoomed %d)\n", sync_size_with_font, scale_font_with_size, wv.win_is_fullscreen, IsZoomed(wv.wnd)));
   if (IsIconic(wv.wnd))
@@ -2165,7 +2470,7 @@ win_adapt_term_size(bool sync_size_with_font, bool scale_font_with_size)
   int rows = max(1, term_height / wv.cell_height - term.st_rows);
   int save_st_rows = term.st_rows;
   if (rows != term.rows || cols != term.cols) {
-    term_resize(rows, cols);
+    term_resize(rows, cols, quick_reflow);
     if (save_st_rows) {
       // handle potentially resized status area;
       // better, rows would be calculated already considering 
@@ -2216,6 +2521,13 @@ win_adapt_term_size(bool sync_size_with_font, bool scale_font_with_size)
   }
 }
 
+void
+win_adapt_term_size(bool sync_size_with_font, bool scale_font_with_size)
+{
+  do_win_adapt_term_size(sync_size_with_font, scale_font_with_size, false);
+}
+
+
 /*
  * Maximise or restore the window in response to a server-side request.
  * Argument value of 2 means go fullscreen.
@@ -2223,29 +2535,132 @@ win_adapt_term_size(bool sync_size_with_font, bool scale_font_with_size)
 void
 win_maximise(int max)
 {
-//printf("win_max %d is_full %d IsZoomed %d\n", max, wv.win_is_fullscreen, IsZoomed(wv.wnd));
+  //printf("win_max %d is_full %d IsZoomed %d dpi %d\n", max, wv.win_is_fullscreen, IsZoomed(wv.wnd), dpi);
+  show_win_status("win_max", wv.wnd);
+
   if (max == -2) // toggle full screen
     max = wv.win_is_fullscreen ? 0 : 2;
-  if (IsZoomed(wv.wnd)) {
-    if (!max)
-      ShowWindow(wv.wnd, SW_RESTORE);
-    else if (max == 2 && !wv.win_is_fullscreen)
-      make_fullscreen();
+
+  static short normal_rows = 0;
+  static short normal_cols = 0;
+  static int normal_y, normal_x;
+  static uint normal_dpi;
+  void save_win_pos(void) {
+    normal_rows = term.rows;
+    normal_cols = term.cols;
+    win_get_scrpos(&normal_x, &normal_y, false);
+    normal_dpi = dpi;
   }
-  else if (max) {
-    if (max == 2) {  // full screen
-      wv.go_fullscr_on_max = true;
-      ShowWindow(wv.wnd, SW_MAXIMIZE);
-    }
-    else if (max == 1) {  // maximize
-      // this would apply the workaround to consider the taskbar
-      // but it would make maximizing irreversible, so let's not do it here
-      //ShowWindow(wv.wnd, SW_MAXIMIZE);
-      // rather let Windows maximize as it prefers, including the bug
-      ShowWindow(wv.wnd, SW_MAXIMIZE);
-    }
-    else
-      ShowWindow(wv.wnd, SW_MAXIMIZE);
+
+  /* for some weird reason, changes to avoid ShowWindow in commit 113286
+     make initial interactive fullscreen or win-max toggle fail;
+     mysteriously, requesting the WindowPlacement apparently fixes this
+   */
+  if (max) {
+    WINDOWPLACEMENT pl;
+    pl.length = sizeof(WINDOWPLACEMENT);
+    GetWindowPlacement(wv.wnd, &pl);
+  }
+
+  /* avoid ShowWindow (or SetWindowPlacement) esp. with SW_MAXIMIZE
+     so we can prevent the window from also being activated
+   */
+  if (IsZoomed(wv.wnd)) {
+    if (!max) {  // restore max/fullscreen -> normal
+      /* Resize to normal position; order is important:
+         1. determine old "normal position" as it may get forgotton 
+         by subsequent operations (esp after removing WS_MAXIMIZE)
+         2. restore the window title, or the reference for the 
+         subsequent SetWindowPos resizing will be wrong 
+         (and even window size and terminal size inconsistent)
+         3. perform the actual resizing to "normal position"
+         4. correct the position to locally saved normal position
+         */
+      /* Retrieve the previous unmaximised "normal" size */
+      WINDOWPLACEMENT pl;
+      pl.length = sizeof(WINDOWPLACEMENT);
+      GetWindowPlacement(wv.wnd, &pl);
+      RECT fr = pl.rcNormalPosition;
+
+     /* Reinstate the window furniture. */
+      LONG style = GetWindowLong(wv.wnd, GWL_STYLE);
+      if (wv.border_style) {
+        style |= WS_THICKFRAME;
+      }
+      else {
+        style |= WS_CAPTION | WS_BORDER | WS_THICKFRAME;
+      }
+      style &= ~(WS_MINIMIZE | WS_MAXIMIZE);
+      SetWindowLong(wv.wnd, GWL_STYLE, style);
+
+     /* Restore to normal size and position */
+      SetWindowPos(wv.wnd, null, fr.left, fr.top,
+                   fr.right - fr.left, fr.bottom - fr.top,
+                   SWP_FRAMECHANGED | SWP_NOACTIVATE | SWP_NOZORDER);
+      // after screen size changes or DPI changes, the previous size 
+      // is no longer remembered in rcNormalPosition 
+      // (maybe it got cleared after multiple induced window operations),
+      // so we keep our own "normal position" to be restored
+      if (normal_rows && normal_cols) {
+        win_set_chars(normal_rows, normal_cols);
+        win_set_pos(normal_x * normal_dpi / dpi, normal_y * normal_dpi / dpi);
+        (void)normal_dpi;
+        win_fix_position(false);
+      }
+
+      wv.win_is_fullscreen = false;
+    }else if (max == 2 && !wv.win_is_fullscreen)  // max -> fullscreen
+      make_fullscreen();
+    else if (max == 1)  // fullscreen -> max
+      clear_fullscreen();
+  }
+  else if (max == 2) {  // normal -> fullscreen
+    save_win_pos();
+
+#if 0
+    LONG style = GetWindowLong(wv.wnd, GWL_STYLE);
+    style |= WS_MAXIMIZE;
+    style &= ~(WS_CAPTION | WS_BORDER | WS_THICKFRAME);
+    SetWindowLong(wv.wnd, GWL_STYLE, style);
+
+    win_update_glass(cfg.opaque_when_focused);
+
+   /* Resize ourselves to exactly cover the nearest monitor. */
+    MONITORINFO mi;
+    get_my_monitor_info(&mi);
+    RECT fr = mi.rcMonitor;
+    // set window size
+    SetWindowPos(wv.wnd, HWND_TOP, fr.left, fr.top,
+                 fr.right - fr.left, fr.bottom - fr.top,
+                 SWP_FRAMECHANGED | SWP_NOACTIVATE | SWP_NOZORDER);
+
+    wv.win_is_fullscreen = true;
+#else
+    LONG style = GetWindowLong(wv.wnd, GWL_STYLE);
+    style |= WS_MAXIMIZE;
+    SetWindowLong(wv.wnd, GWL_STYLE, style);
+
+    SetWindowPos(wv.wnd, null, 0, 0, 0, 0,
+               SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER
+               | SWP_FRAMECHANGED);
+
+    make_fullscreen();
+#endif
+  }else if (max == 1) {  // normal -> max
+    save_win_pos();
+
+    LONG style = GetWindowLong(wv.wnd, GWL_STYLE);
+    style |= WS_MAXIMIZE;
+    //style &= ~WS_MINIMIZE;  // ??
+    SetWindowLong(wv.wnd, GWL_STYLE, style);
+    /* Resize ourselves to exactly cover the nearest monitor. */
+    MONITORINFO mi;
+    get_my_monitor_info(&mi);
+    RECT fr = mi.rcMonitor;
+    // set window size
+    SetWindowPos(wv.wnd, HWND_TOP, fr.left, fr.top,
+                 fr.right - fr.left, fr.bottom - fr.top,
+                 SWP_FRAMECHANGED | SWP_NOACTIVATE | SWP_NOZORDER);
   }
 }
 
@@ -2263,17 +2678,28 @@ default_size(void)
 void
 win_update_transparency(int trans, bool opaque)
 {
+  //printf("win_update_transparency %d opaque %d\n", trans, opaque);
   if (trans == TR_GLASS)
     trans = 0;
+
   LONG style = GetWindowLong(wv.wnd, GWL_EXSTYLE);
-  style = trans ? style | WS_EX_LAYERED : style & ~WS_EX_LAYERED;
-  SetWindowLong(wv.wnd, GWL_EXSTYLE, style);
-  if (trans) {
-    if (opaque && term.has_focus)
-      trans = 0;
-    if (wv.force_opaque)
-      trans = 0;
-    SetLayeredWindowAttributes(wv.wnd, 0, 255 - (uchar)trans, LWA_ALPHA);
+  // check whether this is actually a background tab that should be hidden
+  if (style & WS_EX_TOOLWINDOW) {
+    // for virtual hiding, set max transparency
+    SetWindowLong(wv.wnd, GWL_EXSTYLE, style | WS_EX_LAYERED);
+    SetLayeredWindowAttributes(wv.wnd, 0, 0, LWA_ALPHA);
+  }
+  else {
+    // otherwise, set actual transparency
+    style = trans ? style | WS_EX_LAYERED : style & ~WS_EX_LAYERED;
+    SetWindowLong(wv.wnd, GWL_EXSTYLE, style);
+    if (trans) {
+      if (opaque && term.has_focus)
+        trans = 0;
+      if (wv.force_opaque)
+        trans = 0;
+      SetLayeredWindowAttributes(wv.wnd, 0, 255 - (uchar)trans, LWA_ALPHA);
+    }
   }
 
   win_update_blur(opaque);
@@ -2783,6 +3209,11 @@ void win_tog_border(){
   if(wv.border_style>2)wv.border_style=0;
   win_update_border();
 }
+
+#ifdef debug_clear_fullscreen
+#define clear_fullscreen() printf("calling cl_fs %s:%d\n", __FUNCTION__, __LINE__), clear_fullscreen()
+#endif
+
 WPARAM win_set_font(HWND hwnd){//set font for gui,user do not release it;
   static int cfsize=0;
   int font_height;
@@ -3599,6 +4030,12 @@ static int olddelta;
           wv.zoom_token = wv.zoom_token >> 1;
         wv.default_size_token = false;
       }
+      else if (cfg.rewrap_on_resize == 2) {
+        // support continuous reflow while resizing;
+        // for this to work at acceptable speed (esp. with long scrollback) 
+        // a partial/lazy version of the reflow procedure is required
+        do_win_adapt_term_size(false, false, true);
+      }
 
       return 0;
     }
@@ -3755,7 +4192,7 @@ static int olddelta;
           printf("term w/h %d/%d -> %d/%d, fixing\n", x, y, term.cols, term.rows);
 #endif
           // win_fix_position also clips the window to desktop size
-          win_set_chars(y, x);
+          win_set_chars_keep_fullscreen(y, x);
         }
 
         is_in_dpi_change = false;
@@ -3802,7 +4239,7 @@ static int olddelta;
           // try to stabilize terminal size roundtrip
           if (term.rows != y || term.cols != x) {
             // win_fix_position also clips the window to desktop size
-            win_set_chars(y, x);
+            win_set_chars_keep_fullscreen(y, x);
           }
 #ifdef debug_dpi
           printf("SM_CXVSCROLL %d\n", GetSystemMetrics(SM_CXVSCROLL));
@@ -5350,6 +5787,8 @@ int LoadConfig(){
             wv.report_child_pid = true;
           when 'P':
             wv.report_winpid = true;
+          when 'w':
+            wv.report_winid = true;
           when 't':
             wv.report_child_tty = true;
           otherwise:
@@ -5720,45 +6159,6 @@ main(int argc, const char *argv[])
       *pargv++ = "--wsldir";
       *pargv++ = "~";
     }
-#endif
-
-#if 0
-#if CYGWIN_VERSION_API_MINOR >= 74
-    // provide wslbridge-backend in a reachable place for invocation
-    bool copyfile(const char * fn,const  char * tn, bool overwrite)
-    {
-# ifdef copyfile_posix
-      int f = open(fn, O_BINARY | O_RDONLY);
-      if (!f)
-        return false;
-      int t = open(tn, O_CREAT | O_WRONLY | O_BINARY |
-                   (overwrite ? O_TRUNC : O_EXCL), 0755);
-      if (!t) {
-        close(f);
-        return false;
-      }
-
-      char buf[1024];
-      int len;
-      bool res = true;
-      while ((len = read(t, buf, sizeof buf)) > 0)
-        if (write(t, buf, len) < 0) {
-          res = false;
-          break;
-        }
-      close(f);
-      close(t);
-      return res;
-# else
-      wchar * src = path_posix_to_win_w(fn);
-      wchar * dst = path_posix_to_win_w(tn);
-      bool ok = CopyFileW(src, dst, !overwrite);
-      free(dst);
-      free(src);
-      return ok;
-# endif
-    }
-#endif
 #endif
 
     while (*argv)
@@ -6270,7 +6670,16 @@ main(int argc, const char *argv[])
   }
 
   // Initialise the terminal.
+  // If term_reset tries to align the status line before 
+  // term.marg_bot is defined in term_resize 
+  // (as called from win_adapt_term_size after WM_SIZE), 
+  // mintty -o StatusLine=on will crash in call sequence
+  // term_reset - term_set_status_type - term_do_scroll - assert
+  // Happens with dpi == 96...
+  // So we'll have to call term_reset after term_resize:
   term.show_scrollbar = !!cfg.scrollbar;
+  term_resize(term_rows, term_cols, false);
+  term_reset(true);
 
   // Initialise the scroll bar.
   SetScrollInfo(
@@ -6318,7 +6727,7 @@ main(int argc, const char *argv[])
   if (*cfg.background == '%')
     scale_to_image_ratio();
   // Adjust ConPTY support if requested
-  if (cfg.conpty_support != (uchar)-1) {
+  if (cfg.conpty_support != -1) {
     char * env = 0;
 #ifdef __MSYS__
     env = "MSYS";
@@ -6397,7 +6806,14 @@ main(int argc, const char *argv[])
     printf("%d %d\n", getpid(), (int)wpid);
     fflush(stdout);
   }
+  if (wv.report_winid) {
+    printf("%p\n", wv.wnd);
+    printf("%08lX\n", (ulong)wv.wnd);
+    fflush(stdout);
+  }
   win_set_font(wv.wnd);
+  show_win_status("init", wv.wnd);
+
   wv.is_init = true;
   wv.logging = cfg.logging;
   // Message loop.
@@ -6406,8 +6822,12 @@ main(int argc, const char *argv[])
     while (PeekMessage(&msg, null, 0, 0, PM_REMOVE)) {
       if (msg.message == WM_QUIT) break; //return msg.wParam;
       // msg has not been processed by IsDialogMessage
-      if (!(wv.config_wnd&&IsDialogMessage(wv.config_wnd, &msg)))
+      if (!(wv.config_wnd&&IsDialogMessage(wv.config_wnd, &msg))){
+#ifdef monitor_memory_leak
+        printf("[main] data segment break %p\n", sbrk(0));
+#endif
         DispatchMessage(&msg);
+      }
     }
     if (msg.message == WM_QUIT) break;
     child_proc();

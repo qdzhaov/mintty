@@ -41,6 +41,8 @@ extern void child_resize(STerm* pterm,struct winsize * winp);
 extern void child_free(STerm* pterm);
 extern bool child_is_alive(STerm* pterm);
 extern bool child_is_parent(SChild *child);
+extern char * procres(int pid, const char * res);
+extern uchar * child_termios_chars(STerm* pterm);
 extern wchar * grandchild_process_list(STerm* pterm);
 extern char * child_tty(STerm* pterm);
 extern char * foreground_prog(STerm* pterm);  // to be free()d

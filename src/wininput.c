@@ -15,6 +15,7 @@
 #include "term.h"
 
 uint kb_trace = 0;
+uint mods_debug;
 
 static HMENU ctxmenu = NULL;
 static HMENU sysmenu;
@@ -2027,6 +2028,15 @@ win_key_down(WPARAM wp, LPARAM lp)
   bool super = super_key && is_key_down(super_key);
   bool hyper = hyper_key && is_key_down(hyper_key);
   mods |= super * MDK_SUPER | hyper * MDK_HYPER;
+  mods_debug = mods
+       | !!is_key_down(VK_LWIN) << 23
+       | !!is_key_down(VK_RWIN) << 22
+       | !!is_key_down(VK_LCONTROL) << 21
+       | !!is_key_down(VK_RCONTROL) << 20
+       | !!is_key_down(VK_LMENU) << 19
+       | !!is_key_down(VK_RMENU) << 18
+       | (uint)!!is_key_down(VK_LSHIFT) << 17
+       | (uint)!!is_key_down(VK_RSHIFT) << 16;
 
   update_mouse(mods);
   if (key == VK_MENU) {
@@ -2156,6 +2166,15 @@ win_key_down(WPARAM wp, LPARAM lp)
       }
       if (step)
         return true;
+    }
+
+    // On ESC or Enter key, restore keyboard IME state to alphanumeric mode.
+    if (cfg.key_alpha_mode && (key == VK_RETURN || key == VK_ESCAPE) && !mods) {
+      HIMC imc = ImmGetContext(wv.wnd);
+      if (ImmGetOpenStatus(imc)) {
+        ImmSetConversionStatus(imc, IME_CMODE_ALPHANUMERIC, IME_SMODE_NONE);
+      }
+      ImmReleaseContext(wv.wnd, imc);
     }
     // Handling special shifted key functions
     if (newwin_pending) {

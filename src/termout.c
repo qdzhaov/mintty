@@ -1,5 +1,5 @@
 // termout.c (part of mintty)
-// Copyright 2008-22 Andy Koppe, 2017-22 Thomas Wolff
+// Copyright 2008-23 Andy Koppe, 2017-22 Thomas Wolff
 // Adapted from code from PuTTY-0.60 by Simon Tatham and team.
 // Licensed under the terms of the GNU General Public License v3 or later.
 
@@ -284,7 +284,7 @@ attr_rect(cattrflags add, cattrflags sub, cattrflags xor, short y0, short x0, sh
     termline * l = term.lines[y];
     int xl = x0;
     int xr = x1;
-    if (!term.attr_rect) {
+    if (term.attr_rect < 2) {
       if (y != y0)
         xl = term.marg_left;
       if (y != y1)
@@ -624,11 +624,11 @@ sum_rect(short y0, short x0, short y1, short x1)
         cattrflags attr = line->chars[x].attr.attr;
         if (attr & ATTR_UNDER)
           sum += 0x10;
-        else if (attr & ATTR_REVERSE)
+        if (attr & ATTR_REVERSE)
           sum += 0x20;
-        else if (attr & ATTR_BLINK)
+        if (attr & ATTR_BLINK)
           sum += 0x40;
-        else if (attr & ATTR_BOLD)
+        if (attr & ATTR_BOLD)
           sum += 0x80;
         int xc = x;
         while (line->chars[xc].cc_next) {
@@ -2277,6 +2277,8 @@ set_modes(bool state)
           }
         when 7767:       /* 'C': Changed font reporting */
           term.report_font_changed = state;
+        when 7780:       /* ~ 80 (DECSDM) */
+          term.image_display = state;
         when 7783:       /* 'S': Shortcut override */
           term.shortcut_override = state;
         when 1007:       /* Alternate Scroll Mode, xterm */
@@ -2285,6 +2287,8 @@ set_modes(bool state)
           term.wheel_reporting = state;
         when 7787:       /* 'W': Application mousewheel mode */
           term.app_wheel = state;
+        when 7765:       /* 'A': Alt-Modified mousewheel mode */
+          term.alt_wheel = state;
         when 7796:       /* Bidi disable in current line */
           if (state)
             term.lines[term.curs.y]->lattr |= LATTR_NOBIDI;
@@ -2459,6 +2463,8 @@ get_mode(bool privatemode, int arg)
         return 2 - term.show_scrollbar;
       when 7767:       /* 'C': Changed font reporting */
         return 2 - term.report_font_changed;
+      when 7780:       /* ~ 80 (DECSDM) */
+        return 2 - term.image_display;
       when 7783:       /* 'S': Shortcut override */
         return 2 - term.shortcut_override;
       when 1007:       /* Alternate Scroll Mode, xterm */
@@ -2467,6 +2473,8 @@ get_mode(bool privatemode, int arg)
         return 2 - term.wheel_reporting;
       when 7787:       /* 'W': Application mousewheel mode */
         return 2 - term.app_wheel;
+      when 7765:       /* 'A': Alt-Modified mousewheel mode */
+        return 2 - term.alt_wheel;
       when 7796:       /* Bidi disable in current line */
         return 2 - !!(term.lines[term.curs.y]->lattr & LATTR_NOBIDI);
       when 77096:      /* Bidi disable */
@@ -2638,7 +2646,7 @@ pop_colours(uint ix)
 }
 
 /*
- * dtterm window operations and xterm extensions.
+ * XTWINOPS: dtterm window operations and xterm extensions.
    CSI Ps ; Ps ; Ps t
  */
 static void
@@ -3322,8 +3330,10 @@ do_csi(uchar c)
                 term.csi_argv[2] ?: urows, term.csi_argv[3] ?: ucols);
     when CPAIR('*', 'x'):  /* DECSACE: VT420 Select Attribute Change Extent */
       switch (arg0) {
-        when 2: term.attr_rect = true;
-        when 0 or 1: term.attr_rect = false;
+        // use original DECSACE values rather than effective bool value,
+        // so we can respond properly to DECRQSS like xterm
+        when 2: term.attr_rect = 2;
+        when 0 or 1 /*or 2*/: term.attr_rect = arg0;
       }
     when CPAIR('$', 'r')  /* DECCARA: VT420 Change Attributes in Area */
       or CPAIR('$', 't'): {  /* DECRARA: VT420 Reverse Attributes in Area */
@@ -3600,7 +3610,7 @@ do_csi(uchar c)
  * Fill image area with sixel placeholder characters and set cursor.
  */
 static void
-fill_image_space(imglist * img)
+fill_image_space(imglist * img, bool keep_positions)
 {
   cattrflags attr0 = term.curs.attr.attr;
   // refer SIXELCH cells to image for display/discard management
@@ -3623,11 +3633,15 @@ fill_image_space(imglist * img)
     term.curs.y = y0;
     term.curs.x = x0;
   } else {  // sixel scrolling mode
+    short y0 = term.curs.y;
     for (int i = 0; i < img->height; ++i) {
       term.curs.x = x0;
       //printf("SIXELCH @%d imgi %d\n", term.curs.y, term.curs.attr.imgi);
       for (int x = x0; x < x0 + img->width && x < term.cols; ++x)
         write_char(SIXELCH, 1);
+      // image display mode (7780): do not scroll
+      if (keep_positions && term.curs.y >= term.marg_bot)
+        break;
       if (i == img->height - 1) {  // in the last line
         if (!term.sixel_scrolls_right) {
           write_linefeed();
@@ -3636,6 +3650,10 @@ fill_image_space(imglist * img)
       } else {
         write_linefeed();
       }
+    }
+    if (keep_positions) {
+      term.curs.y = y0;
+      term.curs.x = x0;
     }
   }
 
@@ -3733,7 +3751,7 @@ do_dcs(void)
         img->cwidth = st->max_x;
         img->cheight = st->max_y;
 
-        fill_image_space(img);
+        fill_image_space(img, false);
 
         // add image to image list;
         // replace previous for optimisation in some cases
@@ -3935,6 +3953,8 @@ otherwise: {
             when CPAIR('$','|'):{  // DECSCPP (columns)
               child_printf(&term,"\eP1$r%u$|\e\\", term.cols);
             } 
+            when CPAIR('*','x'):   // DECSACE (attribute change extent)
+              child_printf(&term,"\eP1$r%u*x\e\\", term.attr_rect);
             when CPAIR('*','|'):{  // DECSNLS (lines)
               child_printf(&term,"\eP1$r%u*|\e\\", term.rows);
             } 
@@ -4226,13 +4246,22 @@ do_cmd(void)
     when 104: do_colour_osc(true, 4, true);
     when 105: do_colour_osc(true, 5, true);
     when 10:  do_colour_osc(false, FG_COLOUR_I, false);
-    when 11:  if (strchr("*_%=+", *term.cmd_buf)) {
-                wchar * bn = cs__mbstowcs(term.cmd_buf);
-                wstrset(&cfg.background, bn);
-                free(bn);
-                if (*term.cmd_buf == '%')
-                  scale_to_image_ratio();
-                win_invalidate_all(true);
+    when 11:  if (term.cmd_len && strchr("*_%=+", *term.cmd_buf)) {
+                char * bf = guardpath(term.cmd_buf + 1, 1);
+                if (bf) {
+                  string bf1 = asform("%c%s", *term.cmd_buf, bf);
+                  wchar * bn = cs__mbstowcs(bf1);
+                  if (!bn) {
+                    delete(bf);
+                    break;
+                  }
+                  wstrset(&cfg.background, bn);
+                  if (*term.cmd_buf == '%')
+                    scale_to_image_ratio();
+                  win_invalidate_all(true);
+                  free(bn);
+                }
+                free(bf);
               }
               else
                 do_colour_osc(false, BG_COLOUR_I, false);
@@ -4258,6 +4287,9 @@ do_cmd(void)
         s += 11;
       else if (!strncmp(s, "///", 3))
         s += 2;
+
+      // do not check guardpath() here or it might beep on every prompt...
+
       if (s[0] == '~' && (!s[1] || s[1] == '/')) {
         char * dir = asform("%s%s", wv.home, s + 1);
         child_set_fork_dir(&term,dir);
@@ -4265,6 +4297,8 @@ do_cmd(void)
       }
       else if (!*s || *s == '/')
         child_set_fork_dir(&term,s);
+      else
+        {}  // do not accept relative pathnames
     when 701:  // Set/get locale (from urxvt).
       if (!strcmp(s, "?"))
         child_printf(&term,"\e]701;%s%s", cs_get_locale(), osc_fini());
@@ -4375,7 +4409,7 @@ do_cmd(void)
     when 8: {  // hyperlink attribute
       char * link = s;
       char * url = strchr(s, ';');
-      if (url++ && *url) {
+      if (url && url[1]) {
         term.curs.attr.link = putlink(link);
       }
       else
@@ -4473,6 +4507,7 @@ do_cmd(void)
       int crop_y = 0;
       int crop_width = 0;
       int crop_height = 0;
+      bool keep_positions = term.image_display;
 
       // process parameters
       while (s && *s) {
@@ -4559,6 +4594,9 @@ do_cmd(void)
             crop_height = - val;
           }
         }
+        else if (0 == strcmp("doNotMoveCursor", s) && val) {
+          keep_positions = true;
+        }
 
         s = nxt;
       }
@@ -4589,8 +4627,12 @@ do_cmd(void)
           short left = term.curs.x;
           //short top = term.virtuallines + term.curs.y;
           short top = term.curs.y;
+          if (term.sixel_display) {  // sixel display mode
+            left = 0;
+            top = 0;
+          }
           if (winimg_new(&img, name, data, datalen, left, top, width, height, pixelwidth, pixelheight, pAR, crop_x, crop_y, crop_width, crop_height, term.curs.attr.attr & (ATTR_BLINK | ATTR_BLINK2))) {
-            fill_image_space(img);
+            fill_image_space(img, keep_positions);
 
             if (term.imgs.first == NULL) {
               term.imgs.first = term.imgs.last = img;

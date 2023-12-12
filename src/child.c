@@ -76,7 +76,7 @@ childerror(const char * action, bool from_fork, int errno_code, int code)
 
   char s[33];
   bool colour_code = code && !errno_code;
-  sprintf(s, "\033[30;%dm\033[K", from_fork ? 41 : colour_code ? code : 43);
+  sprintf(s, "\r\n\033[30;%dm\033[K", from_fork ? 41 : colour_code ? code : 43);
   term_write(s, strlen(s));
   term_write(action, strlen(action));
   if (errno_code) {
@@ -550,7 +550,28 @@ child_tty(STerm* pterm)
   return ptsname((pterm->child.pty_fd   ));
 }
 
+uchar *
+child_termios_chars(STerm* pterm)
+{
+static struct termios attr;
+  tcgetattr(pterm->child.pty_fd, &attr);
+  return attr.c_cc;
+}
+
 #define patch_319
+
+#ifdef debug_pty
+static void
+trace_line(char * tag, int n, const char * s, int len)
+{
+  printf("%s %d", tag, n);
+  for (int i = 0; i < len; i++)
+    printf(" %02X", (uint)s[i]);
+  printf("\n");
+}
+#else
+#define trace_line(tag, n, s, len)	
+#endif
 static void vprocclose(STerm* pterm){
   if (pterm->child.pid) {
     int status,tc=0 ;
@@ -687,6 +708,7 @@ child_proc(void)
 #endif
             do {
               int ret = read(pty_fd, buf + len, sizeof buf - len);
+              trace_line("read", ret, buf + len, ret);
               if (ret > 0)
                 len += ret;
               else
@@ -696,6 +718,8 @@ child_proc(void)
           if (len > 0) {
             buf[len]=0;
             term_write(buf, len);
+            trace_line("twrt", len, buf, len);
+
             // accelerate keyboard echo if (unechoed) keyboard input is pending
             if (wv.kb_input) {
               wv.kb_input = false;
@@ -751,7 +775,7 @@ child_is_alive(STerm* pterm)
 }
 
 
-static char *
+char *
 procres(int pid, const char * res)
 {
   char fbuf[99];
@@ -879,8 +903,13 @@ grandchild_process_list(STerm* pterm)
 void
 child_write(STerm* pterm,const char *buf, uint len)
 {
-  if ((pterm->child.pty_fd   ) >= 0)
+  if ((pterm->child.pty_fd   ) >= 0) {
+#ifdef debug_pty
+    int n =
+#endif
     write((pterm->child.pty_fd   ), buf, len);
+    trace_line("cwrt", n, buf, len);
+  }
   vtlog(pterm, buf, len,2);
 }
 
@@ -909,8 +938,13 @@ child_printf(STerm* pterm ,const char *fmt, ...)
     char *s;
     int len = vasprintf(&s, fmt, va);
     va_end(va);
-    if (len > 0)
+    if (len > 0) {
+#ifdef debug_pty
+      int n =
+#endif
       child_write(pterm,s, len);
+      trace_line("tprt", n, s, len);
+    }
     free(s);
   }
 }
@@ -945,7 +979,11 @@ child_resize(STerm* pterm,struct winsize *winp)
 static int
 foregroundpid(STerm* pterm)
 {
-  return ((pterm->child.pty_fd   ) >= 0) ? tcgetpgrp((pterm->child.pty_fd   )) : 0;
+  int fg_pid=((pterm->child.pty_fd   ) >= 0) ? tcgetpgrp((pterm->child.pty_fd   )) : 0;
+  if (fg_pid <= 0)
+    // fallback to child process
+    fg_pid = pterm->child.pid;
+  return fg_pid;
 }
 
 static char *
@@ -965,9 +1003,15 @@ get_foreground_cwd()
 char *
 foreground_cwd(STerm* pterm)
 {
+#ifdef consider_osc7
   // if working dir is communicated interactively, use it
+  // - drop this generic handling here as it would also affect 
+  //   relative pathname resolution outside OSC 7 usage
   if ((pterm->child.child_dir) && *(pterm->child.child_dir))
     return strdup((pterm->child.child_dir));
+#else
+  (void)pterm;
+#endif
   return get_foreground_cwd();
 }
 
@@ -1057,6 +1101,8 @@ user_command(STerm* pterm,wstring commands, int n)
   }
 }
 
+#ifdef pathname_conversion_here
+#warning now unused
 /*
    used by win_open
 */
@@ -1161,6 +1207,7 @@ child_conv_path(STerm* pterm,wstring wpath, bool adjust_dir)
 
   return win_wpath;
 }
+#endif
 
 void
 child_set_fork_dir(STerm* pterm,const char * dir)
@@ -1216,8 +1263,14 @@ do_child_fork(STerm* pterm,SessDef*sd, int moni, bool launch, bool config_size, 
 
   if (clone == 0) {  // prepare child process to spawn new terminal
     string set_dir = 0;
-    if (in_cwd)
-      set_dir = get_foreground_cwd(false);  // do this before close(pty_fd)!
+    if (in_cwd) {
+      if (wv.support_wsl) {
+        if (pterm->child.child_dir && *pterm->child.child_dir)
+          set_dir = strdup(pterm->child.child_dir);
+      }
+      else
+        set_dir = get_foreground_cwd();  // do this before close(pty_fd)!
+    }
     close(win_fd);
     //close all fds 
     for (int ifd=3;ifd<100;ifd++){
@@ -1229,7 +1282,10 @@ do_child_fork(STerm* pterm,SessDef*sd, int moni, bool launch, bool config_size, 
     if (((pterm->child.child_dir) && *(pterm->child.child_dir))||set_dir) {
       if (set_dir) {
         // use cwd of foreground process if requested via in_cwd
-      } else if (wv.support_wsl) {
+      } 
+#ifdef pathname_conversion_here
+#warning now deprecated; handled via guardpath
+      else if (wv.support_wsl) {
         const wchar * wcd = cs__utftowcs((pterm->child.child_dir));
 #ifdef debug_wsl
         printf("fork wsl <%ls>\n", wcd);
@@ -1240,8 +1296,15 @@ do_child_fork(STerm* pterm,SessDef*sd, int moni, bool launch, bool config_size, 
 #endif
         set_dir = (string)cs__wcstombs(wcd);
         delete(wcd);
-      } else
-        set_dir = strdup(pterm->child.child_dir);
+      } 
+#endif
+      else{
+        //set_dir = strdup(pterm->child.child_dir);
+        set_dir = guardpath(pterm->child.child_dir,2);
+        if (!set_dir)
+          sleep(1);  // let beep be audible before execv below
+          // also skip chdir below (guarded)
+      }
 
       if (set_dir) {
         chdir(set_dir);

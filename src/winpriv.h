@@ -61,6 +61,7 @@ typedef struct {
   string report_geom ;
   bool report_moni ;
   bool report_winpid ;
+  bool report_winid ;
   int monitor ;
   bool center ;
   bool right ;
@@ -148,6 +149,7 @@ extern void win_update_transparency(int transparency, bool opaque);
 extern void win_prefix_title(const wstring);
 extern void win_unprefix_title(const wstring);
 extern void win_set_icon(const char * s, int icon_index);
+extern char * guardpath(string path, int level);
 
 extern void win_show_tip(int x, int y, wstring text);
 extern void win_show_tip_size(int x, int y, int cols, int rows);

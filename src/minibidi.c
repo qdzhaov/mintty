@@ -597,6 +597,7 @@ do_bidi(bool autodir, int paragraphLevel, bool explicitRTL, bool box_mirror,
   if (!hasRTL && !paragraphLevel)
     return 0;
 
+
  /* Initialize types, levels */
   uchar types[count];
   uchar levels[count];
@@ -655,7 +656,7 @@ do_bidi(bool autodir, int paragraphLevel, bool explicitRTL, bool box_mirror,
       printf("\n");
     }
   }
-  void trace_mark(const char * tag) {
+  void trace_mark(char * tag) {
     (void)tag;
   }
   trace_bidi(0);
@@ -1342,7 +1343,15 @@ do_bidi(bool autodir, int paragraphLevel, bool explicitRTL, bool box_mirror,
   */
  /* we flip the character string and leave the level array */
   i = 0;
+#if __GNUC__ >= 13
+#pragma GCC diagnostic push
+// workaround wrong data flow analysis
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
   tempType = levels[0];
+#if __GNUC__ >= 13
+#pragma GCC diagnostic pop
+#endif
   while (i < count) {
     if (levels[i] > tempType)
       tempType = levels[i];

@@ -159,6 +159,11 @@ window border relative to the monitor.
 .br
 \(en Otherwise, coordinates are absolute and address the common multi-monitor 
 address space as provided by Windows.
+.br
+\(en Combination of this option with options \fBX\fP or \fBY\fP is not 
+supported; to place a window for example at the left or right screen border 
+with a certain top offset, use 
+\fBmintty -p left -p 0,50\fP or \fBmintty -p right -p 0,50\fP.
 
 \fINote:\fP For another option to select the monitor for a new mintty window, 
 see the description of Alt+F2.
@@ -253,6 +258,7 @@ Report requested information.
 With values "s" or "o", mintty reports the position and size of the window 
 when it exits. This can be used to manage last window positions and reopen 
 mintty windows accordingly.
+.br
 Reporting mode is "s" or "o" to choose short or long option syntax for the 
 restored (i.e. neither maximized nor minimized) geometry; 
 min/max/fullscreen information is added.
@@ -268,9 +274,13 @@ With value "W", mintty lists installed WSL distributions and properties,
 and exits.
 
 With value "t", mintty reports the tty name of the child process / shell.
+.br
 With value "p", mintty reports the PID of the child process (e.g. the shell).
+.br
 With value "P", mintty reports the cygwin PID and the Windows PID 
 of the mintty process (i.e. running the terminal).
+.br
+With value "w", mintty reports its Windows window id.
 
 Note also the invocation \fIMINTTY_DEBUG=C mintty ...\fP; it will list 
 all config files loaded by mintty and whether they are also considered 
@@ -706,6 +716,11 @@ Distinct sets of sessions can be set up with the setting \fB-o Class=...\fP.
 
 Virtual Tabs can be switched quickly with user-defined key assignments, 
 using user-definable functions switch-[visible-](prev|next).
+
+Mintty manages tabs in order to hide background tabs from appearing 
+while moving the window, and (since 3.6.5) to support transparency 
+(avoiding cumulation of opaqueness), and keep the tabbar consistent 
+in case a tab gets terminated irregularly.
 
 .TQ
 \fBTabbar	\fP
@@ -1265,8 +1280,8 @@ backward compatibility reasons.)
 The Options dialog also offers a numeric input option with slider buttons. 
 Use Shift or Control to adjust their step width.
 
-Note that opaqueness (non-transparency) cumulates in SessionGeomSync modes
-like with tabbar.
+Since 3.6.5, when overlaying multiple tabs (SessionGeomSync modes), 
+mintty manages tab window transparency to avoid cumulation of opaqueness.
 
 .TQ
 \fBOpaque when focused\fP (OpaqueWhenFocused=no)
@@ -1346,6 +1361,9 @@ can be configured which would then be selectable via ECMA-48 SGR character attri
 (see Tips wiki page \fIhttps://github.com/mintty/mintty/wiki/Tips#text-attributes-and-rendering\fP).
 .br
 They can also be used as secondary fonts with option \fBFontChoice\fP.
+To support size alignment of secondary fonts with the main font size, 
+alternative font specifications can be preceded with "+" which increases 
+their font size slightly.
 .br
 \fINote:\fP Font10 has a special preference property; if it is not configured, 
 mintty will try to activate it anyway, looking for an installed 
@@ -1393,6 +1411,9 @@ often used for additional icon symbols (e.g. by "Nerd Fonts" or "Powerline" font
 In addition to Unicode scripts, also Unicode blocks can be used 
 to specify a secondary font, by a "|" prefix to the block name, with block 
 specifications preceding over the more general script specifications.
+.br
+To align secondary font size with the main font size visually, the 
+respective alternative font specification can be preceded with "+".
 
 .br
 Examples:
@@ -1403,7 +1424,7 @@ Examples:
 .br
   \fBFont7=Simplified Arabic Fixed\fP
 .br
-  \fBFont5=Malgun Gothic\fP
+  \fBFont5=+SimSun Regular\fP
 .br
   \fBFont8=FangSong\fP
 .br
@@ -1815,6 +1836,13 @@ allowed to detect a Ctrl+Menu sequence as AltGr.
 This setting selects the escape sequence format for encoded modified 
 keys in modifyOtherKeys mode.
 (Corresponds to the xterm resource \fBformatOtherKeys\fP.)
+
+.TQ
+\fBEsc/Enter restore IME to alphanumeric keyboard\fP (KeyAlphaMode=1)
+On pressing ESC or Enter key while IME (input method editor) 
+input compose conversion is active, this setting will restore IME state to 
+Latin alphabet input mode or alphanumeric mode.
+This does not affect non-IME keyboard input operation.
 
 .TQ
 \fBOld modified special keys\fP (OldModifyKeys=0)
@@ -2268,6 +2296,16 @@ Note that an active host-writable status line overrides the setting
 and disables the context menu function.
 
 .TQ
+\fBDisplay debug information\fP (StatusDebug=0)
+This setting includes certain debug information in the status line display (if enabled). 
+The value is bitmask composed of the following values (subject to change):
+.RS
+\fB1\fP : Keyboard layout code.
+.br
+\fB2\fP : Keyboard modifiers (hex bitmap).
+.RE
+
+.TQ
 \fBAllow control sequence to set selection\fP (AllowSetSelection=false)
 If enabled, the terminal control sequence OSC 52 is allowed to set the 
 clipboard selection for pasting (using base64-encoded contents, like xterm).
@@ -2544,6 +2582,7 @@ initial coordinates of the top left corner of the terminal window.
 By default, these are unset, which means that the position suggested by the
 window manager is used.
 Setting only one of X, Y is not supported.
+See command-line option \fB-p\fP for further positioning options.
 
 .TQ
 \fBWindow class name\fP (Class=mintty)
@@ -2810,7 +2849,7 @@ programming languages.
 This string can list characters that are to be excluded from word selection.
 
 .TQ
-\fBFiltering pasted text\fP (FilterPasteControls=)
+\fBFiltering pasted text\fP (FilterPasteControls=STTY)
 With this setting, pasted text can be filtered for selected control 
 characters which are then replaced by space. Filtering is not applied 
 when Control is held while pasting. The option is a comma-separated list 
@@ -2833,6 +2872,8 @@ of character tags:
 \(en \fBC0\fP other control characters < \(aq \(aq
 .br
 \(en \fBC1\fP control characters 0x80...0x9F
+.br
+\(en \fBSTTY\fP characters that are configured to cause INT, QUIT, TSTP signals, according to the current stty settings
 .br
 (Corresponds to the xterm resource \fBdisallowedPasteControls\fP.)
 
@@ -3515,6 +3556,18 @@ update available whenever the Options dialog is opened and this was
 not checked within the last given number of seconds.
 
 .TQ
+\fBGuard against usage of dynamic network pathnames\fP (GuardNetworkPaths=7)
+Dynamic pathnames as used in escape sequences can access arbitrary files.
+These settings guard the respective functions against network file access.
+The value is a bitmask, adding the following values:
+.br
+\(en \fB1\fP guard background image (OSC 11), sound (OSC 440), icon (OSC I)
+.br
+\(en \fB2\fP guard set directory (OCS 7) for window cloning (Alt+F2)
+.br
+\(en \fB4\fP guard open file via link (OSC 8) or hovering
+
+.TQ
 \fBSixel image clipboard substitution\fP (SixelClipChars=\fIspace\fP)
 Characters to copy to clipboard as a substitute for Sixel image graphics,
 to indicate their positions. With an empty value, U+FFFC will be used.
@@ -3964,7 +4017,7 @@ Additional information can be found on the wiki on the mintty project page
 
 .SH LICENSE
 
-Copyright (C) 2022 Thomas Wolff, Andy Koppe
+Copyright (C) 2023 Thomas Wolff, Andy Koppe
 
 Mintty is released under the terms of the the \fIGNU General Public License\fP
 version 3.
