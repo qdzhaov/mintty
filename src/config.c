@@ -291,10 +291,7 @@ static void inithopt()
   string nm;
   for (uint i = 0; (nm=options[i].name); i++) {
     s_co_hashtab *pt=&hopts[HASHS(nm)];
-    if (pt->n>= pt->m) {
-      pt->m+= 20;
-      pt->t= renewn(pt->t, pt->m);
-    }
+    renewm(pt->t,pt->n, pt->m);
     pt->t[pt->n]=i;
     pt->n++;
   }
@@ -326,12 +323,12 @@ find_option(bool from_file, string name)
   return -1;
 }
 #endif
-typedef struct {
+typedef union{
   char * comment;
-  uchar opti;
+  uintptr_t opti;
 } cfg_file_opt;
 static cfg_file_opt *file_opts=NULL;
-static uchar *arg_opts=NULL;
+static ushort *arg_opts=NULL;
 static uint file_opts_num = 0,maxfileopt=0;
 static uint arg_opts_num=0,maxargopt=0;
 
@@ -339,8 +336,10 @@ static void
 clear_opts(void)
 {
   for (uint n = 0; n < file_opts_num; n++)
-    if (file_opts[n].comment)
+    if (file_opts[n].opti>0x10000){
       delete(file_opts[n].comment);
+      file_opts[n].opti=0;
+    }
   file_opts_num = 0;
   arg_opts_num = 0;
 }
@@ -350,7 +349,7 @@ seen_file_option(uint i)
 {
 //  return memchr(file_opts, i, file_opts_num);
   for (uint n = 0; n < file_opts_num; n++)
-    if (!file_opts[n].comment && file_opts[n].opti == i)
+    if (file_opts[n].opti == i)
       return true;
   return false;
 }
@@ -359,7 +358,10 @@ static bool
 seen_arg_option(uint i)
 {
   if(!arg_opts)return 0;
-  return memchr(arg_opts, i, arg_opts_num);
+  for(uint j=0;j<arg_opts_num;j++){
+    if(arg_opts[j]==i)return 1;
+  }
+  return 0;
 }
 
 static void
@@ -369,11 +371,7 @@ remember_file_option(const char * tag, uint i)
   trace_theme(("[%s] remember_file_option (file %d arg %d) %d %s\n", tag, seen_file_option(i), seen_arg_option(i), i, options[i].name));
 
   if (!seen_file_option(i)) {
-    if(file_opts_num>=maxfileopt){
-      maxfileopt+=16;
-      file_opts=renewn(file_opts,maxfileopt);
-    }
-    file_opts[file_opts_num].comment = null;
+    renewm(file_opts,file_opts_num,maxfileopt);
     file_opts[file_opts_num].opti = i;
     file_opts_num++;
   }
@@ -383,13 +381,8 @@ static void
 remember_file_comment(const char * comment)
 {
   trace_theme(("[] remember_file_comment <%s>\n", comment));
-  if(file_opts_num>=maxfileopt){
-    maxfileopt+=16;
-    file_opts=renewn(file_opts,maxfileopt);
-  }
-
+  renewm(file_opts,file_opts_num,maxfileopt);
   file_opts[file_opts_num].comment = strdup(comment);
-  file_opts[file_opts_num].opti = 0;
   file_opts_num++;
 }
 
@@ -400,10 +393,7 @@ remember_arg_option(const char * tag, uint i)
   trace_theme(("[%s] remember_arg_option (file %d arg %d) %d %s\n", tag, seen_file_option(i), seen_arg_option(i), i, options[i].name));
 
   if (!seen_arg_option(i)){
-    if(arg_opts_num>=maxargopt){
-      maxargopt+=16;
-      arg_opts=renewn(arg_opts,maxargopt);
-    }
+    renewm(arg_opts,arg_opts_num,maxargopt);
     arg_opts[arg_opts_num++] = i;
   }
 }
@@ -789,10 +779,7 @@ static void clear_messages()
 static void add_message(string msg, string locmsg)
 {
   s_hashtab *pt=&hmsgt[HASHS(msg)];
-  if (pt->n>= pt->m) {
-    pt->m+= 20;
-    pt->t= renewn(pt->t, pt->m);
-  }
+  renewm(pt->t,pt->n, pt->m);
   setmsg(& pt->t[pt->n], msg, locmsg);
   pt->n++;
 }
@@ -813,11 +800,7 @@ static void clear_messages()
 }
 static void add_message(string msg, string locmsg)
 {
-  if (nmessages >= maxmessages) {
-    if (maxmessages) maxmessages += 20;
-    else maxmessages = 180;
-    messages = renewn(messages, maxmessages);
-  }
+  renewm(messages,nmessages , maxmessages);
 #if defined(debug_messages) && debug_messages > 3
   printf("add %d <%s> <%s>\n", nmessages, msg, locmsg);
 #endif
@@ -1309,7 +1292,7 @@ save_config(void)
   }
   void *cfg_p = &file_cfg;
   for (uint j = 0; j < file_opts_num; j++) {
-    if (file_opts[j].comment) {
+    if (file_opts[j].opti>0x10000) {
       fprintf(file, "%s\n", file_opts[j].comment);
       continue;
     }
@@ -1659,10 +1642,7 @@ do_file_resources(control *ctrl, wstring pattern, bool list_dirs, str_fn fnh)
     for (int i=0;i<nl;i++){
       if(wcscasecmp(lst[i],s)==0)return i;
     }
-    if(nl>=ml){
-      ml+=16;
-      lst=renewn(lst,ml);
-    }
+    renewm(lst,nl,ml);
     lst[nl++]=wcsdup(s);
     return -nl;
   }
@@ -1747,10 +1727,7 @@ do_file_resources(control *ctrl, wstring pattern, bool list_dirs, str_fn fnh)
     for (int i=0;i<nl;i++){
       if(strcasecmp(lst[i],s)==0)return i;
     }
-    if(nl>=ml){
-      ml+=16;
-      lst=renewn(lst,ml);
-    }
+    renewm(lst,nl,ml);
     lst[nl++]=strdup(s);
     return -nl;
   }

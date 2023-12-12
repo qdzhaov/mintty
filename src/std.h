@@ -36,6 +36,7 @@ _realloc(void *aptr, size_t nbytes)
 #define new(type) ((type *) malloc(sizeof(type)))
 #define newn(type, n) ((type *) calloc((n), sizeof(type)))
 #define renewn(p, n) ((typeof(p)) _realloc((p), sizeof(*p) * (n)))
+#define renewm(p, n,m) if(n>=m){m+=16;if(n>=m)m=n+16;p=renewn(p,m);}
 static inline void delete(const void *p) { if(p)free((void *)p); }
 
 
