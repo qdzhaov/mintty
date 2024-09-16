@@ -1,3 +1,111 @@
+Unicode and Emoji data
+  * Unicode 16.0 update.
+
+Terminal features
+  * Emoji width mode (DECSET 2027) to always render emojis in 2-cell width.
+  * Dropped deprecated DECSET mode 2027 for terminal reflow.
+  * Fix CopyTab=true behaviour (#1281).
+
+Character encoding
+  * Disable GB18030 workaround for cygwin since 3.5 which supports it natively.
+
+Font and character rendering
+  * Fix rendering of combined characters in South East Asian scripts (#1285).
+  * Fix and enable rendering for geometric Powerline symbols (#979, #943).
+  * Avoid bottom padding artefacts of double-height self-drawn symbols.
+  * Box Drawing characters (U+2500..U+257F) are self-drawn (#935, #1119).
+
+Mouse and menu handling
+  * Allow disabling of mouse menus by clearing Menu* (#1279).
+
+Window handling
+  * Tweak initial window display, mitigate bright flash (#1284).
+
+Configuration
+  * New option BoxDrawing (#935, #1119).
+  * Setting options Menu* to empty value disables the respective menu (#1279).
+  * Skip config files in $HOME if $HOME does not exist (mintty/wsltty#351).
+
+### 3.7.4 (03 July 2024) ###
+
+Keyboard handling
+  * Tweak revised AltGr handling to avoid sticky Ctrl state (#1273, ~#1266).
+
+### 3.7.3 (28 June 2024) ###
+
+Misc
+  * Fix version tag and package building problems.
+
+Configuration
+  * Prevent saving changed settings to /etc/minttyrc.
+
+### 3.7.2 (27 June 2024) ###
+
+Terminal features
+  * Restore wrap modes on return from VT52 mode.
+  * Fix scrolling artefacts at overhanging emojis with setting EmojiPlacement=full (#1261).
+  * Drop exemptions from emoji space expansion (numbers and flag letters, ~#1104).
+  * Escape sequence DECST8C reset tab stops (xterm 389, VT510).
+  * Escape sequence DECRQDE request display extent (xterm 387, VT340).
+  * Support OSC 52 ? to paste base64-encoded clibboard (#1264, xterm).
+  * Support OSC 52 to clear clibboard (xterm).
+  * Fixed DSR Locator status response.
+
+Text rendering
+  * Render dim attribute as a Light font variation if available.
+  * Tentatively changing default bold rendering as bold font.
+  * Fix CJK quote marks auto-expansion for FontChoice-set fonts (#1271).
+  * Fix artefacts from auto-narrowing end-of-line overhang (#1179).
+
+Keyboard handling
+  * Revise AltGr handling to support flexible right-Alt+left-Ctrl combinations (#1266).
+
+Misc
+  * Support fallback to legacy wslbridge for old Windows versions (mintty/wsltty#350).
+  * Fix CopyTab=yes crash condition (#1269).
+  * Optional confirmation for pasting multi-line clipboard contents (#1268).
+  * Unsqueeze the Options dialog slightly.
+  * Ctrl+Win+mouse-scroll zooms font even if ZoomMouse is off.
+
+Desktop integration
+  * Avoid taskbar icon width twitching in Windows 11 (#1263).
+
+Configuration
+  * New option AllowPasteSelection (#1264).
+  * Drop AllowSetSelection from interactive Options menu (~#1264).
+  * New option TabFont.
+  * New option DimAsFont.
+  * Add "Show dim as font" to options dialog.
+  * Change default setting BoldAsFont=yes.
+  * New option ConfirmMultiLinePasting (#1268).
+
+### 3.7.1 (24 February 2024) ###
+
+Terminal features
+  * Dropped DSR 53 (legacy xterm mistake, dropped in xterm 389).
+  * HTML screen dump supports subscript or superscript.
+  * HTML screen dump supports DEC double-width lines and pairs of double-height lines.
+  * Tweak DECRQCRA Rectangular Checksum to match xterm (~#1225, xterm 390).
+  * Fix status area refresh, especially after restoring a minimized window.
+  * Workaround for rendering failure of top-left background text on background image.
+  * Fix invisible and blinking attributes on background image.
+  * Added XTQMODKEYS to DECRQSS (#1189, xterm 389).
+
+Misc
+  * Fix handling of options to be saved (#1246, #1247).
+  * Tune and fix click-opening URL (mintty/wsltty#346, #1254).
+  * Fix layout of Options dialog Selection pane (#1257).
+
+Window handling
+  * Fix instable window switching after minimize/restore (#1242, #1249).
+  * Fix window switching (Ctrl+ALT) after minimize/restore (#1242).
+  * New rewrap per-line disable mode DECRST 7723 (deprecated 2027, #1255).
+  * Semi-workaround for transparency loss when resizing unfocused grid-snapped window (#1256).
+
+Configuration
+  * New user-definable key Alt for option KeyFunctions (#1245).
+  * New user-definable function intr (~#1245).
+
 ### 3.7.0 (14 November 2023) ###
 
 Misc

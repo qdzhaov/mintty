@@ -49,6 +49,7 @@ HRESULT (WINAPI * pSetWindowTheme)(HWND, const wchar_t *, const wchar_t *) = 0;
 COLORREF (WINAPI * pGetThemeSysColor)(HTHEME hth, int colid) = 0;
 HTHEME (WINAPI * pOpenThemeData)(HWND, LPCWSTR pszClassList) = 0;
 HRESULT (WINAPI * pCloseThemeData)(HTHEME) = 0;
+static BOOL (WINAPI * pGetLayeredWindowAttributes)(HWND, COLORREF *, BYTE *, DWORD *) = 0;
 DPI_AWARENESS_CONTEXT (WINAPI * pSetThreadDpiAwarenessContext)(DPI_AWARENESS_CONTEXT dpic) = 0;
 HRESULT (WINAPI * pEnableNonClientDpiScaling)(HWND win) = 0;
 BOOL (WINAPI * pAdjustWindowRectExForDpi)(LPRECT lpRect, DWORD dwStyle, BOOL bMenu, DWORD dwExStyle, UINT dpi) = 0;
@@ -91,6 +92,8 @@ load_dwm_funcs(void)
       (void *)GetProcAddress(user32, "SetWindowCompositionAttribute");
     pSystemParametersInfo =
       (void *)GetProcAddress(user32, "SystemParametersInfoW");
+    pGetLayeredWindowAttributes =
+      (void *)GetProcAddress(user32, "GetLayeredWindowAttributes");
   }
   if (uxtheme) {
     DWORD win_version = GetVersion();
@@ -189,10 +192,13 @@ wslwinpath(string path)
       return 0;
   }
 
+  trace_guard(("wslwinpath %s\n", path));
   if (0 == strcmp("~", path))
     return wslpath("~");
   else if (0 == strncmp("~/", path, 2)) {
     char * wslhome = wslpath("~");
+    if (!wslhome)
+      return 0;
     char * ret = asform("%s/%s", wslhome, path + 2);
     free(wslhome);
     return ret;
@@ -208,6 +214,7 @@ wslwinpath(string path)
         abspath = asform("%s/%s", term.child.child_dir, path);
       else
         abspath = strdup(path);
+      trace_guard(("wslwinpath abspath %s\n", abspath));
       if (*abspath != '/') {
         // failed to determine an absolute path
         free(abspath);
@@ -217,6 +224,7 @@ wslwinpath(string path)
     else
       abspath = strdup(path);
     char * winpath = wslpath(abspath);
+    trace_guard(("wslwinpath -> %s\n", winpath));
     free(abspath);
     return winpath;
   }
@@ -228,6 +236,9 @@ guardpath(string path, int level)
 {
   if (!path)
     return 0;
+
+  if (0 == strncmp(path, "file:", 5))
+    path += 5;
 
   // path transformations
   char * expath;
@@ -255,7 +266,19 @@ guardpath(string path, int level)
     // use case level is not in configured guarding bitmask
     return expath;
 
-  wstring wpath = path_posix_to_win_w(expath);  // implies realpath()
+  wchar * wpath;
+
+  if ((expath[0] == '/' || expath[0] == '\\') && (expath[1] == '/' || expath[1] == '\\')) {
+    wpath = cs__mbstowcs(expath);
+    // transform network path to Windows syntax (\ separators)
+    for (wchar * p = wpath; *p; p++)
+      if (*p == '/')
+        *p = '\\';
+  }
+  else {
+    // transform cygwin path to Windows drive path
+    wpath = path_posix_to_win_w(expath);  // implies realpath()
+  }
   trace_guard(("guardpath <%s>\n       ex <%s>\n        w <%ls>\n", path, expath ?: "(null)", wpath ?: W("(null)")));
   if (!wpath) {
     free(expath);

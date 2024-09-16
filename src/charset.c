@@ -1,5 +1,5 @@
 // charset.c (part of mintty)
-// Copyright 2008-11 Andy Koppe, 2017 Thomas Wolff
+// Copyright 2008-11 Andy Koppe, 2024 Thomas Wolff
 // Based on code from PuTTY-0.60 by Simon Tatham and team.
 // Licensed under the terms of the GNU General Public License v3 or later.
 
@@ -36,6 +36,7 @@ bool cs_single_forced = false;
 
 static uint codepage = 0;
 static int default_codepage;
+static bool gb18030 = false;
 
 static wchar cp_default_wchar;
 static char cp_default_char[4];
@@ -111,6 +112,7 @@ cs_descs[] = {
   {   20866, "Russian"},
   {   21866, "Ukrainian"},
   {     936, "Chinese"},
+  {   54936, "Chinese"},
   {     950, "Chinese"},
   {     932, "Japanese"},
 #if HAS_LOCALES
@@ -268,7 +270,7 @@ get_cp_info(void)
 static void
 fallback_charset()
 {
-  if (0 == strcasecmp(cfg.charset, "GB18030")) {
+  if (!cygver_ge(3,5) && 0 == strcasecmp(cfg.charset, "GB18030")) {
 #if HAS_LOCALES
     if (!setlocale(LC_CTYPE, config_locale))
 #endif
@@ -301,6 +303,20 @@ update_mode(void)
 {
   codepage =
     mode == CSM_UTF8 ? CP_UTF8 : mode == CSM_OEM  ? 437 : default_codepage;
+  //printf("update_mode cp %d def %d\n", codepage, default_codepage);
+
+#ifdef support_codepage_alignment
+  // Align console codepage
+  // todo: handle GB18030 (set flag before calling update_mode...)
+  uint wincodepage =
+    mode == CSM_UTF8 ? CP_UTF8 : mode == CSM_OEM  ? 437 :
+            gb18030 ? 54936 : default_codepage;
+  // todo: inband signalling towards child stub,
+  // i.e. child process inside child_create (does not currently exist),
+  // to do the following:
+  //SetConsoleCP(wincodepage);
+  //SetConsoleOutputCP(wincodepage);
+#endif
 
 #if HAS_LOCALES
   bool use_default_locale = mode == CSM_DEFAULT && valid_default_locale;
@@ -500,8 +516,8 @@ update_locale(void)
   string set_locale = setlocale(LC_CTYPE, locale);
   trace_locale("update_locale", locale);
 
-  bool gb18030 = false;
-  if (!set_locale && strcasecmp(charset, "GB18030") == 0) {
+  gb18030 = false;
+  if (!set_locale && !cygver_ge(3,5) && strcasecmp(charset, "GB18030") == 0) {
     charset = "GBK";
     char * locgbk = strdup(locale);
     char * dot = strchr(locgbk, '.');
@@ -538,6 +554,9 @@ update_locale(void)
     }
   }
   else {
+#ifdef support_codepage_alignment
+    default_codepage = cs_codepage(charset);
+#endif
     cs_ambig_wide = font_ambig_wide;
   }
 
@@ -581,7 +600,7 @@ update_locale(void)
   default_codepage = cs_codepage(charset);
   default_locale = asform("C.%u", default_codepage);
   cs_ambig_wide = charwidth == 2 || font_ambig_wide;
-  bool gb18030 = 0 == strcasecmp(cfg.charset, "GB18030");
+  gb18030 = !cygver_ge(3,5) && 0 == strcasecmp(cfg.charset, "GB18030");
 #endif
 
   update_mode();
@@ -796,9 +815,12 @@ char *
 cs__wcstombs(const wchar * ws)
 {
   char defchar = '?';
-  char * defcharpoi = (codepage == CP_UTF8 ? 0 : &defchar);
+  char * defcharpoi = ((codepage == CP_UTF8 || codepage == 54936) ? 0 : &defchar);
   int size1 = WideCharToMultiByte(codepage, WC_OPT, ws, -1, 0, 0, 0, 0);
   char * s = malloc(size1);  // includes terminating NUL
+  // defcharpoi needs to be 0 also for GB18030 or it will fail 
+  // (which is NOT documented for the Windows API, unlike a similar 
+  // restriction for the flags parameter)
   WideCharToMultiByte(codepage, WC_OPT, ws, -1, s, size1, defcharpoi, 0);
   return s;
 }
@@ -807,10 +829,11 @@ char *
 cs__wcstombs_dropill(const wchar * ws)
 {
   char defchar = '\0';
-  char * defcharpoi = (codepage == CP_UTF8 ? 0 : &defchar);
+  char * defcharpoi = ((codepage == CP_UTF8 || codepage == 54936) ? 0 : &defchar);
   int illegal = 0;
   int size1 = WideCharToMultiByte(codepage, WC_OPT, ws, -1, 0, 0, 0, 0);
   char * s = malloc(size1);  // includes terminating NUL
+  // defcharpoi needs to be 0 also for GB18030 (see above)
   WideCharToMultiByte(codepage, WC_OPT, ws, -1, s, size1, defcharpoi, &illegal);
   if (illegal) {
     int i = 0;
@@ -939,7 +962,14 @@ wchar
 cs_btowc_glyph(char c)
 {
   wchar wc = 0;
-  MultiByteToWideChar(codepage, MB_USEGLYPHCHARS, &c, 1, &wc, 1);
+  DWORD glyphopt = MB_USEGLYPHCHARS;
+  if (codepage == 54936) {
+    // Windows API description says for UTF-8 and GB18030 the 
+    // flags parameter should be zero; however, for UTF-8 the function 
+    // works anyway while for GB18030 it only returns 0...
+    glyphopt = 0;
+  }
+  MultiByteToWideChar(codepage, glyphopt, &c, 1, &wc, 1);
   return wc;
 }
 
@@ -1147,7 +1177,7 @@ path_posix_to_win_w(const char * p)
   char ap[MAX_PATH];
   cygwin_conv_to_win32_path(p, ap);
   wchar * wp = newn(wchar, MAX_PATH);
-  MultiByteToWideChar(0, 0, ap, -1, wp, MAX_PATH);
+  MultiByteToWideChar(codepage, 0, ap, -1, wp, MAX_PATH);
   wp = renewn(wp, wcslen(wp) + 1);
   return wp;
 }

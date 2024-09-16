@@ -187,7 +187,7 @@ installed, mintty can be called from cygwin to run a WSL terminal session:
 * `mintty --WSL` (for the Default distribution as set with `wslconfig /s` or `wsl -s`)
 
 Note, the `wslbridge2` gateways need to be installed in `/bin` for this purpose 
-(see below for details).
+(see below for details). (Fallback to legacy wslbridge on older Windows is supported.)
 
 A WSL terminal session can be configured for the mintty session launcher 
 in the config file, like:
@@ -333,6 +333,24 @@ You can also set mintty option `ConPTY=true` to override the MSYS2 setting.
 As a workaround on older versions of Cygwin or Windows, you can use 
 [winpty](https://github.com/rprichard/winpty) as a wrapper to invoke 
 the Windows program.
+
+### Text attribute handling from WSL and other Windows programs ###
+
+When running native Windows programs, like `wsl` access program to WSL, 
+or `cmd` and `powershell`, the `conhost` console layer of Windows interferes 
+with escape sequence controls; even for WSL, it does not pass them through 
+transparently but imposes its own idea of terminal capabilities, mangling 
+basic controls like bold and reverse attributes, so bold text is enforced 
+to appear white. This broken behaviour was fixed for Windows 11 but not 
+back-ported to Windows 10.
+
+You can however fix the issue by updating your conhost layer to its update 
+as distributed with the Windows Terminal project.
+From the [release area](https://github.com/microsoft/terminal/releases), 
+among the Assets, download the WindowsTerminalPreview zip file of your 
+architecture, extract its `OpenConsole.exe`, rename it to `conhost.exe` 
+and replace the conhost program in your Windows System32 folder with it.
+(Do **not** copy conhost.exe from Windows 11 into Windows 10.)
 
 ### Signal processing with alien programs ###
 
@@ -756,6 +774,10 @@ Mintty also provides the command-line script ```mintheme``` which can
 display the themes available in the mintty configuration directories or 
 activate one of them in the current mintty window.
 
+Note that some theme files also define foreground/background or cursor colours, 
+which overrides manually changed settings of those. If you do not want that, 
+simply make a copy of the theme file with those settings removed.
+
 ### Background image ###
 
 As an alternative to a background colour, mintty also supports graphic 
@@ -886,6 +908,16 @@ to specify a secondary font, by a "|" prefix to the block name, with block
 specifications preceding over the more general script specifications.
 ```
 FontChoice=Greek:3;|Greek Extended:4
+```
+
+For Box Drawing characters (U+2500..U+257F), most fonts do not provide 
+proper glyphs for seamless box drawing. The following font configuration 
+would fix that. However, option BoxDrawing (default on) overrides this 
+and lets mintty draw box drawing characters itself.
+```
+FontChoice=|Box Drawing:3
+Font3=DejaVu Sans Mono
+BoxDrawing=no
 ```
 
 ### Dynamic fonts ###
@@ -1208,7 +1240,7 @@ all-users deployment of the emojis listed at Unicode.org and the flags emojis:
 You may also use the scripts for deployment in your preferred config directory.
 
 To deploy in your personal local resource folder:
-* `mkdir -p ~/.config//mintty/emojis; cd ~/.config/mintty/emojis`
+* `mkdir -p ~/.config/mintty/emojis; cd ~/.config/mintty/emojis`
 * `/usr/share/mintty/emojis/getemojis -d`
 * `/usr/share/mintty/emojis/getflags -de`
 

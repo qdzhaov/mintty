@@ -600,6 +600,9 @@ typedef struct STerm {
   uchar esc_mod;  // Modifier character in escape sequences
 
   uchar vt52_mode;
+  bool save_autowrap;
+  bool save_rev_wrap;
+  bool emoji_width;
 
   uint csi_argc;
   uint csi_argv[32];
@@ -731,7 +734,7 @@ extern void term_invalidate(int left, int top, int right, int bottom);
 extern void term_open(void);
 extern void term_copy(void);
 extern void term_copy_as(char what);
-extern void term_paste(const wchar *, uint len, bool all);
+extern void term_paste(wchar *, uint len, bool all);
 extern void term_send_paste(void);
 extern void term_cancel_paste(void);
 extern void term_cmd(const char * cmdpat);

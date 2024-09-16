@@ -1,9 +1,11 @@
 #!/bin/bash 
 VER=`cat VERSION`;
-reldir=../mintty-$VER;
+reldir=../rel/v$VER;
+cwd=`pwd`
+echo $reldir
 vcp(){
-  mkdir -p $reldir/$2
-  cp $1 $reldir/$2/$3
+  mkdir -p $reldir/mintty/$2
+  cp $1 $reldir/mintty/$2/$3
 }
 set -v
 vcp cygwin/minttyrc               etc
@@ -22,6 +24,12 @@ vcp icon/\*.ico                   share/mintty/icon
 vcp lang/\*.po                    share/mintty/lang
 vcp sounds/\*.wav                 share/mintty/sounds
 vcp themes/\*                     share/mintty/themes
-gzip -rf $reldir/share/man
-strip $reldir/bin/mintty.exe
+gzip -rf $reldir/mintty/share/man
+strip $reldir/mintty/bin/mintty.exe
+cd $reldir
+zip -r mintty-$VER.zip mintty
+cd $cwd
+mkdir -p dist
+\cp  $reldir/mintty-$VER.zip dist/
+
 

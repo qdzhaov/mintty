@@ -30,6 +30,7 @@ extern void child_proc(void);
 extern void child_kill(bool point_blank);
 extern void child_terminate(STerm* pterm);
 extern void child_break(STerm* pterm);
+extern void child_intr();
 extern int  child_get_pid(STerm*pterm);
 
 extern void child_write(STerm* pterm,const char *, uint len);

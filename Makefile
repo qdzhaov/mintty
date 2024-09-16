@@ -1,15 +1,18 @@
 # Interesting make targets:
 # - exe: Just the executable. This is the default.
 # - tar: Source tarball.
-# - zip: Zip for standalone release.
+# - release: New release with checks, lang files, git tag.
 # - pkg: Cygwin package.
+# - upload: Upload cygwin packages for publishing.
+# - ann: Create cygwin announcement mail.
+# Auxiliary:
 # - html: HTML version of the manual page.
 # - pdf: PDF version of the manual page.
 # - clean: Delete generated files.
-# - upload: Upload cygwin packages for publishing.
-# - ann: Create cygwin announcement mail.
 # - _: Create language translation template, update translation files.
 # - install: Install locally into $(DESTDIR)/
+# Obsolete:
+# - zip: Zip for standalone release.
 
 # Variables intended for setting on the make command line.
 # - RELEASE: release number for packaging
@@ -37,19 +40,72 @@ pdf:
 clean:
 	cd src; $(MAKE) clean
 
+#############################################################################
+
+DIST := release
+TARUSER := --owner=root --group=root --owner=mintty --group=cygwin
+REL := 1
+arch := $(shell uname -m)
+
+#############################################################################
+# release
+
 version := \
   $(shell echo $(shell echo VERSION | cpp -P $(CPPFLAGS) --include src/appinfo.h))
 name_ver := $(NAME)-$(version)
 
 changelogversion := $(shell sed -e '1 s,^\#* *\([0-9.]*\).*,\1,' -e t -e d wiki/Changelog.md)
+# must not set gitversion via := (would be version before tagging)
+gitversion=$(shell src/mkvertag)
 
 ver:
-	echo checking same version in changelog and source
-	test "$(version)" = "$(changelogversion)"
 	echo $(version) > VERSION
 
-DIST := release
-TARUSER := --owner=root --group=root --owner=mintty --group=cygwin
+checkver:
+	echo checking same version in changelog, source, and git
+	test "$(version)" = "$(changelogversion)"
+	test "$(version)" = "$(gitversion)"
+
+tag:
+	git tag -f $(version)
+	#git push --tags
+
+committed:
+	if git status -suno | sed -e "s,^..,," | grep .; then false; fi
+
+$(DIST):
+	mkdir -p $(DIST)
+release: $(DIST) check-x11 cop check _ ver
+checkrelease: committed tag checkver tar
+cygport := $(name_ver)-$(REL).cygport
+pkg: release checkrelease srcpkg binpkg binver
+
+binver:
+	$(DIST)/$(name_ver)-$(REL).$(arch)/inst/usr/bin/mintty -V | grep "mintty $(version) "
+
+check:
+	cd src; $(MAKE) check
+
+cop:
+	grep YEAR.*`date +%Y` src/appinfo.h
+
+_:
+	cd src; $(MAKE) _
+
+check-x11:	src/rgb.t src/composed.t
+
+src/rgb.t:	/usr/share/X11/rgb.txt # X11 color names, from package 'rgb'
+	rm -f src/rgb.t
+	cd src; $(MAKE) rgb.t
+
+compose_list=/usr/share/X11/locale/en_US.UTF-8/Compose
+keysymdefs=/usr/include/X11/keysymdef.h
+src/composed.t:	$(compose_list) $(keysymdefs)
+	rm -f src/composed.t
+	cd src; $(MAKE) composed.t
+
+#############################################################################
+# build
 
 arch_files := Makefile LICENSE* INSTALL VERSION
 arch_files += src/Makefile src/*.c src/*.h src/*.rc src/*.mft
@@ -75,44 +131,12 @@ $(src): $(arch_files)
 	echo AA $(src)
 	mkdir -p $(DIST)
 	rm -rf $(name_ver)
-	mkdir $(name_ver)
+	mkdir -p $(name_ver)
 	#cp -ax --parents $^ $(name_ver)
 	cp -dl --parents $^ $(name_ver)
 	rm -f $@
 	tar czf $@ --exclude="*~" $(TARUSER) $(name_ver)
 	rm -rf $(name_ver)
-
-REL := 1
-arch := $(shell uname -m)
-
-cygport := $(name_ver)-$(REL).cygport
-pkg: $(DIST) ver check-x11 cop tar check _ srcpkg binpkg
-$(DIST):
-	mkdir $(DIST)
-TTA:
-	echo TTA ==========
-check:
-	echo make check
-	cd src; $(MAKE) check
-
-cop:
-	echo make cop
-	grep YEAR.*`date +%Y` src/appinfo.h
-
-_:
-	cd src; $(MAKE) _
-
-check-x11:	#src/rgb.t src/composed.t
-
-src/rgb.t:	/usr/share/X11/rgb.txt # X11 color names, from package 'rgb'
-	rm -f src/rgb.t
-	cd src; $(MAKE) rgb.t
-
-compose_list=/usr/share/X11/locale/en_US.UTF-8/Compose
-keysymdefs=/usr/include/X11/keysymdef.h
-src/composed.t:	# $(compose_list) $(keysymdefs)
-	rm -f src/composed.t
-	cd src; $(MAKE) composed.t
 
 binpkg:$(DIST)
 	cp cygwin/mintty.cygport $(DIST)/$(cygport)
@@ -144,6 +168,9 @@ $(DIST)/$(name_ver)-$(REL)-src.tar.xz: $(DIST)/$(name_ver).tar.gz
 	cp cygwin/mintty.cygport $(DIST)/$(cygport)
 	cd $(DIST); tar cJf $(name_ver)-$(REL)-src.tar.xz $(TARUSER) $(name_ver).tar.gz $(name_ver)-$(REL).cygport
 
+#############################################################################
+# cygwin
+
 upload:
 	REL=$(REL) cygwin/upload.sftp
 
@@ -161,6 +188,9 @@ announcement:
 	echo  >> $(announcement)
 	echo ------ >> $(announcement)
 	echo Thomas >> $(announcement)
+
+#############################################################################
+# local installation
 
 .PHONY: install # prevent file INSTALL to be taken as target install
 installm:
@@ -202,3 +232,5 @@ install:
 	#echo "Categories=System;TerminalEmulator;" >> $(DESTDIR)/usr/share/applications/mintty.desktop
 	#echo "OnlyShowIn=X-Cygwin;" >> $(DESTDIR)/usr/share/applications/mintty.desktop
 
+#############################################################################
+# end

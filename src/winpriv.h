@@ -22,10 +22,18 @@ enum {
   WIN_MINIMIZE = 0,
   WIN_MAXIMIZE = -1,
   WIN_FULLSCREEN = -2,
+#ifdef sanitize_min_restore_via_sync
+  WIN_RESTORE = -3,
+#endif
+#ifdef async_horflush
+  WIN_HORFLUSH = -4,
+#endif
   WIN_TOP = 1,
   WIN_TITLE = 4,
   WIN_INIT_POS = 5,
+#ifdef sanitize_min_restore_via_hide
   WIN_HIDE = 8,
+#endif
 };
 typedef struct {
 // State
@@ -35,6 +43,12 @@ typedef struct {
   bool clipboard_token ;
   bool keep_screen_on ;
   bool force_opaque;
+#ifdef sanitize_min_restore_via_sync
+// multi-tab minimise/restore management:
+  bool restoring ;
+  bool focus_here ;
+  bool focus_inhibit ;
+#endif
   bool is_init ;
   bool go_fullscr_on_max;
   bool resizing;
@@ -77,6 +91,7 @@ typedef struct {
   bool wsl_launch ;
   bool start_home ;
   bool wsltty_appx ;
+  OSVERSIONINFO winver;
   //filled by win_adjust_borders:
   int term_width, term_height;
   int width, height;
@@ -120,6 +135,7 @@ extern void toggle_charinfo(void);
 extern void toggle_vt220(void);
 extern wchar * fontpropinfo(void);
 
+extern char * version(void);
 
 extern void win_update_now(void);
 
@@ -148,6 +164,7 @@ extern void set_dpi_auto_scaling(bool on);
 extern void win_update_transparency(int transparency, bool opaque);
 extern void win_prefix_title(const wstring);
 extern void win_unprefix_title(const wstring);
+extern void strip_title(wchar * title);
 extern void win_set_icon(const char * s, int icon_index);
 extern char * guardpath(string path, int level);
 

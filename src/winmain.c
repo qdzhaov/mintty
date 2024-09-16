@@ -1,5 +1,5 @@
 // winmain.c (part of mintty)
-// Copyright 2008-13 Andy Koppe, 2015-2023 Thomas Wolff
+// Copyright 2008-13 Andy Koppe, 2015-2024 Thomas Wolff
 // Based on code from PuTTY-0.60 by Simon Tatham and team.
 // Licensed under the terms of the GNU General Public License v3 or later.
 
@@ -69,6 +69,8 @@ SessDef sessdefs[]={
   {0,IDSS_USR,L"&Faststart" ,"view"       ,"/bin/vim"        ,(const char*[]){"/bin/vim",0}},
   {0,0,0,0,0,0},
 }; 
+static wchar * iconlabelpad = W("                                                  ");
+
 SessDef main_sd={0};
 SessDef cursd={0};
 static bool invoked_from_shortcut = false;
@@ -192,6 +194,13 @@ win_keep_screen_on(bool on)
     SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED /*| ES_AWAYMODE_REQUIRED*/);
   else
     SetThreadExecutionState(ES_CONTINUOUS);
+}
+void
+strip_title(wchar * title)
+{
+  wchar * tp = title + wcslen(title) - 1;
+  while (tp > title && *tp == L'\u00A0')
+    *tp-- = 0;
 }
 /* removed tab code here
  * */
@@ -339,13 +348,33 @@ void
 win_set_title(const wchar*title)
 {
   //printf("win_set_title settable %d <%s>\n", title_settable, title);
+static int padlen = -1;
+  if (padlen < 0) {
+    if (wv.winver.dwMajorVersion >= 10 && wv.winver.dwBuildNumber >= 22000)
+      // Windows 11
+      padlen = wcslen(iconlabelpad);
+    else {
+      padlen = 0;
+      iconlabelpad = 0;
+    }
+  }
+
   if (cfg.title_settable) {
-      // check current title to suppress unnecessary update_tab_titles()
-      int len = GetWindowTextLengthW(wv.wnd);
-      wchar oldtitle[len + 1];
-      GetWindowTextW(wv.wnd, oldtitle, len + 1);
-      if (0 != wcscmp(title, oldtitle)) {
+    // check current title to suppress unnecessary update_tab_titles()
+    int len = GetWindowTextLengthW(wv.wnd);
+    wchar oldtitle[len + 1];
+    GetWindowTextW(wv.wnd, oldtitle, len + 1);
+    strip_title(oldtitle);
+    if (0 != wcscmp(title, oldtitle)) {
+      if (padlen > 0){
+        // Windows 11: pad title with trailing non-break space
+        wchar wtitle[wcslen(title) + 1 + padlen];
+        wcscpy(wtitle,title);
+        wcscat(wtitle, iconlabelpad);
+        SetWindowTextW(wv.wnd, wtitle);
+      }else{
         SetWindowTextW(wv.wnd, title);
+      }
     }
   }
 }
@@ -356,7 +385,8 @@ win_copy_title(void)
   int len = GetWindowTextLengthW(wv.wnd);
   wchar title[len + 1];
   len = GetWindowTextW(wv.wnd, title, len + 1);
-  win_copy(title, 0, len + 1);
+  strip_title(title);
+  win_copy(title, 0, wcslen(title) + 1);
 }
 
 char *
@@ -365,23 +395,8 @@ win_get_title(void)
   int len = GetWindowTextLengthW(wv.wnd);
   wchar title[len + 1];
   GetWindowTextW(wv.wnd, title, len + 1);
+  strip_title(title);
   return cs__wcstombs(title);
-}
-
-void
-win_copy_text(const char *s)
-{
-  unsigned int size;
-  wchar *text = cs__mbstowcs(s);
-
-  if (text == NULL) {
-    return;
-  }
-  size = wcslen(text);
-  if (size > 0) {
-    win_copy(text, 0, size + 1);
-  }
-  free(text);
 }
 
 void
@@ -856,6 +871,9 @@ win_set_iconic(bool iconic)
     ShowWindow(wv.wnd, iconic ? SW_MINIMIZE : SW_RESTORE);
   /* possible enhancements:
      - avoid force-to-top on restore - implementation attempt failed
+       - using SW_HIDE/SW_SHOWNA instead seems to work initially
+       - but would need to be amended to ensure window accessibility,
+       - also SW_MINIMIZE/SW_RESTORE would have to be adapted throughout
      - remember/preset maximize/fullscreen while minimize (xterm)
    */
 }
@@ -2134,6 +2152,17 @@ win_update_transparency(int trans, bool opaque)
         trans = 0;
       if (wv.force_opaque)
         trans = 0;
+      // set the alpha value to opaque first, then back, 
+      // in order to catch weird behaviour of Windows;
+      // if the window is resized while it does not have focus, 
+      // as via Windows 11 grid snap resizing 
+      // (mintty/wsltty#348, transferred to #1256), 
+      // transparency is lost although configuration settings 
+      // (GWL_EXSTYLE, Layered alpha attribute) do not get changed;
+      // this workaround at least recovers the configured mintty setting 
+      // after the window gets focus again; it is, however, not called 
+      // immediately during this resize
+      SetLayeredWindowAttributes(wv.wnd, 0, 255, LWA_ALPHA);
       SetLayeredWindowAttributes(wv.wnd, 0, 255 - (uchar)trans, LWA_ALPHA);
     }
   }
@@ -2605,6 +2634,7 @@ show_iconwarn(const wchar * winmsg)
 #define dont_debug_only_focus_messages
 #define dont_debug_only_sizepos_messages
 #define dont_debug_mouse_messages
+#define dont_debug_minor_messages
 #define dont_debug_hook
 
 static void win_global_keyboard_hook(bool on,bool autooff);
@@ -2670,6 +2700,9 @@ win_proc(HWND wnd, UINT message, WPARAM wp, LPARAM lp)
 # ifndef debug_mouse_messages
     && message != WM_SETCURSOR
     && message != WM_MOUSEMOVE && message != WM_NCMOUSEMOVE
+# endif
+# ifndef debug_minor_messages
+      && !strstr(wm_name, "_GET") && !strstr(wm_name, "_IME")
 # endif
     )
 # ifdef debug_only_sizepos_messages
@@ -2769,6 +2802,13 @@ win_proc(HWND wnd, UINT message, WPARAM wp, LPARAM lp)
 
         ShowWindow(wnd, SW_RESTORE);
       }
+#ifdef sanitize_min_restore_via_sync
+      else if (!wp && lp == WIN_RESTORE) {
+        //printf("[%p] WIN_RESTORE\n", wnd);
+        //ShowWindow(wnd, SW_RESTORE);  // only if we used SW_MINIMIZE
+        ShowWindow(wnd, SW_SHOWNA);
+      }
+#endif
       else if (!wp && lp == WIN_TITLE) {
         //refresh_tab_titles(false);
         //win_update_tabbar();
@@ -2779,7 +2819,7 @@ win_proc(HWND wnd, UINT message, WPARAM wp, LPARAM lp)
     wv.wm_user = false;
 
     when WM_COMMAND or WM_SYSCOMMAND: {
-# ifdef debug_messages
+# if defined(debug_messages) || defined(debug_tabs)
       static struct {
         uint idm_;
         char * idm_name;
@@ -2902,7 +2942,29 @@ win_proc(HWND wnd, UINT message, WPARAM wp, LPARAM lp)
             //printf("IDM_KEY_DOWN_UP -> do_win_key_toggle %02X\n", vk);
             do_win_key_toggle(vk, on);
           }
+#ifdef sanitize_min_restore_via_sync
+#ifdef IDM_RESTORE
+        when IDM_RESTORE: {
+          focus_inhibit = true;
+          //printf("[%p] IDM_RESTORE restoring %d focus_here %d\n", wnd, restoring, focus_here);
+          //ShowWindow(wnd, SW_RESTORE);  // only if we used SW_MINIMIZE
+          ShowWindow(wnd, SW_SHOWNA);
+          //printf("[%p] IDM_RESTORE >restore focus_here %d\n", wnd, focus_here);
         }
+#endif
+#ifdef IDM_FOCUS
+        when IDM_FOCUS: {
+          //printf("[%p] IDM_FOCUS restoring %d focus_here %d\n", wnd, restoring, focus_here);
+          // set focus to raised tab 
+          // after having restored other tab windows of a tab set
+          //BringWindowToTop(wnd);
+          //SetForegroundWindow(wnd);
+          SetActiveWindow(wnd);
+          SetFocus(wnd);
+        }
+#endif
+#endif
+      }
     }
 
     when WM_APP:
@@ -3403,6 +3465,82 @@ win_proc(HWND wnd, UINT message, WPARAM wp, LPARAM lp)
         return 0;
 #endif
 
+    /*
+      When restoring a window from minimized/iconized which is part 
+      of a virtual tabs tabset, there were some problems:
+      • Tabsets did not support transparency as opacity used to cumulate 
+        (handled since 3.6.5).
+      • Every tab had its own taskbar icon (grouped since 3.6.5).
+      • After taskbar grouping of the tabset, window switching behaved 
+        eratically (fixed in f1712).
+      • After taskbar grouping of the tabset, restoring the tab shown there 
+        did not restore the background tabs, so they were not accessible 
+        as usual; while they could be activated on the mintty tabbar, 
+        a noticeable delay exposed that they were just being restored; also 
+        it was not possible to switch to them with Ctrl+TAB (#1242 step 5).
+        To fix this, 4 strategies have been considered:
+        1. when restoring, also restore all background tabs 
+           (selected via #ifdef sanitize_min_restore_via_sync);
+           however, after the procedure, either the wrong tab was brought 
+           to the foreground, or the right foreground tab did not get 
+           the keyboard focus; all attempts to sort this out are still 
+           documented in the code but the approach was finally given up;
+           one problem appeared to be mutual restoring taking place, 
+           which was tried to be inhibited by sending the background 
+           tabs inhibit tokens (see IDM_RESTORE handling) but when that 
+           worked tabs still did not get restored properly
+        2. the current foreground tab could be marked using GWL_USERDATA 
+           and thus maintained while minimized, and a distributed 
+           procedure could use that information to focus the proper tab -
+           (not implemented)
+        3. given that background tabs are hidden anyway (using full 
+           transparency), they are not minimized in the first place;
+           this is enabled below by #ifndef sanitize_min_restore_via_sync 
+           and appears to be working; background tabs are kept hidden 
+           in order to simulate minimized state
+        4. monitor all tabs for being hidden or minimized 
+           and ensure at least one tab is accessible in case the 
+           actual foreground tab gets killed 
+           (selected via #ifdef sanitize_min_restore_via_monitoring, 
+           concept outlined but not fully implemented)
+     */
+#ifdef sanitize_min_restore_via_sync
+      if (wp == SIZE_RESTORED && manage_tab_hiding()) {
+        // sync tab set by spreading RESTORED to all background tabs
+        // to restore all windows of a tab set (see Ctrl+TAB issue above)
+
+        if (!focus_inhibit) {
+          restoring = true;
+          //printf("[%p=%s] restoring/sync focus_here %d focus_inhibit %d\n", wnd, foreground_cwd(), focus_here, focus_inhibit);
+          win_synctabs(3);
+          restoring = false;
+        }
+
+        // after restoring a tab set, the focus must be set to the 
+        // actually restored foreground window;
+        // to distinguish it from the other (hidden) tabs, it was 
+        // marked with the flag focus_here
+        if (focus_here && !focus_inhibit) {
+          // after restoring the tab set, (try to) make sure we get the 
+          // focus into the primary restored window;
+#ifdef IDM_FOCUS
+          // set focus asynchronously
+          //printf("[%p] sending IDM_FOCUS restoring %d focus_here %d\n", wnd, restoring, focus_here);
+          PostMessage(wnd, WM_SYSCOMMAND, IDM_FOCUS, ' ');
+#else
+          // set focus now
+          //BringWindowToTop(wnd);	// prepare SetFocus? doesn't work...
+          //SetForegroundWindow(wnd);	// prepare SetFocus? doesn't work...
+          //SetActiveWindow(wnd);	// prepare SetFocus? doesn't work...
+          SetFocus(wnd);
+#endif
+        }
+
+        focus_here = false;
+        focus_inhibit = false;
+      }
+      else
+#endif
       if (wp == SIZE_RESTORED && wv.win_is_fullscreen)
         clear_fullscreen();
       else if (wp == SIZE_MAXIMIZED && wv.go_fullscr_on_max) {
@@ -3666,26 +3804,56 @@ win_proc(HWND wnd, UINT message, WPARAM wp, LPARAM lp)
       break;
     }
 
-#ifdef debug_stylestuff
-    when WM_STYLECHANGING: {
-      printf("STYLE %08X -> %08X\n", ((STYLESTRUCT *)lp)->styleOld, ((STYLESTRUCT *)lp)->styleNew);
-      //return 0;
+#if defined(debug_stylestuff) || defined(debug_messages)
+    when /* WM_STYLECHANGING or */ WM_STYLECHANGED: {
+      string what = message == WM_STYLECHANGING ? "CHNGING" : "CHANGED";
+      string which = (int)wp == GWL_EXSTYLE ? "EX" : (int)wp == GWL_STYLE ? "" : "?";
+      DWORD old = ((STYLESTRUCT *)lp)->styleOld;
+      DWORD new = ((STYLESTRUCT *)lp)->styleNew;
+      DWORD off = old & ~new;
+      DWORD on = new & ~old;
+      printf("%sSTYLE%s %08X -> %08X, off %08X on %08X\n", which, what, old, new, off, on);
+
+typedef struct {
+  DWORD st;
+  string style;
+} style_desc;
+#ifndef WS_EX_NOREDIRECTIONBITMAP
+#define WS_EX_NOREDIRECTIONBITMAP 0x00200000
+#endif
+#include "_wstyles.t"
+      void stylebits(bool off, DWORD bits, style_desc * styles, int len)
+      {
+        for (int i = 0; i < len; i++)
+          if (styles[i].st && (bits & styles[i].st) == styles[i].st)
+            printf("               %c %s\n", off ? '-' : '+', styles[i].style);
+      }
+      if ((int)wp == GWL_EXSTYLE) {
+        stylebits(true, off, ws_ex_styles, lengthof(ws_ex_styles));
+        stylebits(false, on, ws_ex_styles, lengthof(ws_ex_styles));
+      }
+      else if ((int)wp == GWL_STYLE) {
+        stylebits(true, off, ws_styles, lengthof(ws_styles));
+        stylebits(false, on, ws_styles, lengthof(ws_styles));
+      }
+
+      //if (message == WM_STYLECHANGING) return 0;
     }
 
     when WM_ERASEBKGND:
 #endif
 
-        when WM_NCHITTEST: {
-          LRESULT result = DefWindowProcW(wnd, message, wp, lp);
+    when WM_NCHITTEST: {
+      LRESULT result = DefWindowProcW(wnd, message, wp, lp);
 
-          // implement Ctrl+Alt+click to move window
-          if (result == HTCLIENT &&
-            (GetKeyState(VK_MENU) & 0x80) && (GetKeyState(VK_CONTROL) & 0x80))
-            // redirect click target from client area to caption
-            return HTCAPTION;
-          else
-            return result;
-        }
+      // implement Ctrl+Alt+click to move window
+      if (result == HTCLIENT &&
+        (GetKeyState(VK_MENU) & 0x80) && (GetKeyState(VK_CONTROL) & 0x80))
+        // redirect click target from client area to caption
+        return HTCAPTION;
+      else
+        return result;
+    }
 
     when WM_SETHOTKEY:
 #ifdef debug_hook
@@ -3913,9 +4081,10 @@ win_to_top(HWND top_wnd)
   // this does not work properly (see comments at when WM_USER:)
   // PostMessage(top_wnd, WM_USER, 0, WIN_TOP);
 
-  // one of these works:
+  // this used to work but fails in multiple tabs:
+  // bool fgok = SetActiveWindow(top_wnd);
+  // this works:
   int fgok = SetForegroundWindow(top_wnd);
-  // SetActiveWindow(top_wnd);
   if (IsIconic(top_wnd))
     ShowWindow(top_wnd, SW_RESTORE);
 
@@ -4299,7 +4468,7 @@ int LoadConfig(){
     load_config(rc_file, true);
     delete(rc_file);
   }
-  if (!wv.support_wsl) {
+  if (!wv.support_wsl && access(wv.home, X_OK) == 0) {
     // try XDG config base directory default location (#525)
     string rc_file = asform("%s/.config/mintty/config", wv.home);
     load_config(rc_file, true);
@@ -4681,6 +4850,10 @@ main(int argc, const char *argv[])
     fflush(mtlog);
   }
 #endif
+
+  wv.winver.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
+  GetVersionEx(&wv.winver);
+
   init_config();
   cs_init();
 
@@ -5096,6 +5269,15 @@ main(int argc, const char *argv[])
   else if (horbar == 2 && horsqueeze())
     window_style |= WS_HSCROLL;
 
+  // Avoid twitching taskbar icon (#1263)
+  if (wv.winver.dwMajorVersion >= 10 && wv.winver.dwBuildNumber >= 22000) {
+    // Windows 11: pad title with trailing non-break space
+    wchar * labelbuf = newn(wchar, wcslen(wtitle) + wcslen(iconlabelpad) + 1);
+    wcscpy(labelbuf, wtitle);
+    wcscat(labelbuf, iconlabelpad);
+    wtitle = labelbuf;
+  }
+
   // Create initial window.
   //term.show_scrollbar = cfg.scrollbar;  // hotfix #597
   window_style=up_borderstyle(window_style);
@@ -5461,11 +5643,17 @@ main(int argc, const char *argv[])
                &(struct winsize){term_rows, term_cols, term_cols * wv.cell_width, term_rows * wv.cell_height}
               );
 #endif
+//#ifdef show_window_early
+  // This is now postponed to be aligned with hiding other windows 
+  // (in case of tabbed windows) 
+  // and to reduce initial white flickering (#1284).
   // Finally show the window.
   ShowWindow(wv.wnd, show_cmd);
   // and grab focus again, just in case and for Windows 11
   // (https://github.com/mintty/mintty/issues/1113#issuecomment-1210278957)
   SetFocus(wv.wnd);
+//#endif
+
   // Cloning fullscreen window
   if (run_max == 2)
     win_maximise(2);

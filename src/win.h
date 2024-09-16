@@ -21,7 +21,7 @@ extern void win_update(bool update_sel_tip);
 extern void win_schedule_update(void);
 extern void do_update(void);
 
-extern void win_text(int x, int y, wchar *text, int len, cattr attr, cattr *textattr, ushort lattr, char has_rtl, bool clearpad, uchar phase);
+extern void win_text(int x, int y, wchar *text, int len, cattr attr, cattr *textattr, ushort lattr, char has_rtl, char has_sea, bool clearpad, uchar phase);
 
 /* input */
 extern void win_update_mouse(void);
@@ -41,7 +41,6 @@ extern void win_save_title(void);
 extern void win_restore_title(void);
 extern void win_copy_title(void);
 extern char * win_get_title(void);
-extern void win_copy_text(const char *s);
 
 /* colour */
 extern colour win_get_colour(colour_i);
@@ -82,10 +81,12 @@ extern int win_char_width(xchar, cattrflags attr);
 extern wchar win_combine_chars(wchar bc, wchar cc, cattrflags attr);
 
 extern void win_open(wchar*path, bool adjust_dir);
+extern void win_copy_text(const char *s);
 extern void win_copy(const wchar *data, cattr *cattrs, int len);
 extern void win_copy_as(const wchar *data, cattr *cattrs, int len, char what);
 extern void win_paste(void);
 extern void win_paste_path(void);
+extern char * get_clipboard(void);
 
 extern void win_set_timer(void_fn cb, uint ticks);
 
@@ -95,6 +96,7 @@ extern void win_show_error(const char * msg);
 extern void win_show_warning(const char * msg);
 extern int message_box(HWND parwnd, const char * wtext, const char * wcaption, int type, wstring ok);
 extern int message_box_w(HWND parwnd, const wchar * wtext, const wchar * wcaption, int type, wstring ok);
+extern bool win_confirm_text(wchar * text, wchar * caption);
 
 extern bool win_is_glass_available(void);
 

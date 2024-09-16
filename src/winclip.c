@@ -522,6 +522,14 @@ win_open(wchar*wpath, bool adjust_dir)
   wbuf[wl] = 0;
   delete(wpath);
 
+  // check for URL
+  wchar *p = wbuf;
+  while (iswalpha(*p)) p++;
+  if (*p == ':' && p - wbuf > 2) {
+    shell_exec(wbuf); // frees wbuf
+    return;
+  }
+
   // guard file opening against foreign network access
   char * buf = cs__wcstoutf(wbuf);
   char * gbuf = guardpath(buf, 4);
@@ -529,14 +537,7 @@ win_open(wchar*wpath, bool adjust_dir)
   if (!gbuf)
     return;
 
-  wchar *p = wbuf;
-  while (iswalpha(*p)) p++;
-  if (*p == ':' || *wbuf == '\\' || !wcsncasecmp(W("www."), wbuf, 4)) {
-    // Looks like it's a Windows path or URI
-    free(gbuf);
-    shell_exec(wbuf); // frees wbuf
-  }
-  else {
+  {
 #ifdef pathname_conversion_here
 #warning now deprecated; handled via guardpath
     // Need to convert POSIX path to Windows first
@@ -623,6 +624,22 @@ apply_attr_colour_rtf(cattr ca, attr_colour_mode mode, int * pfgi, int * pbgi)
     *pbgi = rgb_to_x256(red(ca.truebg), green(ca.truebg), blue(ca.truebg));
 
   return ca.attr;
+}
+
+void
+win_copy_text(const char *s)
+{
+  unsigned int size;
+  wchar *text = cs__mbstowcs(s);
+
+  if (text == NULL) {
+    return;
+  }
+  size = wcslen(text);
+  if (size > 0) {
+    win_copy(text, 0, size + 1);
+  }
+  free(text);
 }
 
 void
@@ -1312,6 +1329,36 @@ do_win_paste(bool do_path)
   }
 
   CloseClipboard();
+}
+
+char *
+get_clipboard(void)
+{
+  if (!OpenClipboard(null))
+    return 0;
+
+  HGLOBAL data;
+  char * res;
+  if ((data = GetClipboardData(CF_UNICODETEXT))) {
+    wchar *s = GlobalLock(data);
+    //printf("CF_UNICODETEXT <%ls>\n", s);
+    res = cs__wcstombs(s);
+    GlobalUnlock(data);
+  }
+  else if ((data = GetClipboardData(CF_TEXT))) {
+    char *cs = GlobalLock(data);
+    //printf("CF_TEXT <%s>\n", cs);
+    uint l = MultiByteToWideChar(CP_ACP, 0, cs, -1, 0, 0) - 1;
+    wchar s[l];
+    MultiByteToWideChar(CP_ACP, 0, cs, -1, s, l);
+    res = cs__wcstombs(s);
+    GlobalUnlock(data);
+  }
+  else
+    res = 0;
+
+  CloseClipboard();
+  return res;
 }
 
 void

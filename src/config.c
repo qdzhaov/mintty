@@ -1,5 +1,5 @@
 // config.c (part of mintty)
-// Copyright 2008-2022 Andy Koppe, 2015-2022 Thomas Wolff
+// Copyright 2008-2023 Andy Koppe, 2015-2024 Thomas Wolff
 // Based on code from PuTTY-0.60 by Simon Tatham and team.
 // Licensed under the terms of the GNU General Public License v3 or later.
 
@@ -689,7 +689,7 @@ init_config_dirs(void)
     sprintf(appdata, "%s/mintty", getenv("APPDATA"));
     config_dirs[++last_config_dir] = appdata;
   }
-  if (!wv.support_wsl) {
+  if (!wv.support_wsl && access(wv.home, X_OK) == 0) {
     char * xdgconf = newn(char, strlen(wv.home) + 16);
     sprintf(xdgconf, "%s/.config/mintty", wv.home);
     config_dirs[++last_config_dir] = xdgconf;
@@ -710,7 +710,7 @@ get_resource_file(wstring sub, wstring res, bool towrite)
   for (int i = last_config_dir; i >= 0; i--) {
     char * resfn = asform(("%s/%ls/%ls"), config_dirs[i], sub,res);
     fd = open(resfn, towrite ? O_CREAT |  O_WRONLY | O_BINARY : O_RDONLY | O_BINARY, 0644);
-#if CYGWIN_VERSION_API_MINOR >= 74
+#if CYGWIN_VERSION_API_MINOR >= 194
     if (towrite && fd < 0 && errno == ENOENT) {
       // try to create resource subdirectories
       int dd = open(config_dirs[i], O_RDONLY | O_DIRECTORY);
@@ -1092,6 +1092,10 @@ load_config(string filename, int to_save)
   rok=access(filename, R_OK) == 0;
 
   if (rok && access(filename, W_OK) < 0)
+    to_save = false;
+
+  // prevent saving to /etc/minttyrc
+  if (strstr(filename, "/etc/") == filename)
     to_save = false;
 
   if (wv.report_config)
@@ -1749,7 +1753,7 @@ do_file_resources(control *ctrl, wstring pattern, bool list_dirs, str_fn fnh)
     DIR * dir = opendir(rcpat);
     if (dir) {
       struct dirent * direntry;
-      while ((direntry = readdir (dir)) != 0) {
+      while ((direntry = readdir(dir)) != 0) {
         if (patsuf && !strstr(direntry->d_name, patsuf))
           continue;
 
@@ -3484,10 +3488,17 @@ setup_config_box(controlbox * b)
       ctrl_checkbox( s,2, _W("xterm"),0, bold_handler, &bold_like_xterm);
      }
      else {
+
+      ctrl_columns(s, 1, 100);  // reset column stuff so we can rearrange them
+      ctrl_columns(s, 2, 50, 50);
       ctrl_combobox( s,-1, _W("Show bold"),0,
         50, showbold_handler, 0);
       ctrl_checkbox( s,-1, _W("&Allow blinking"),0,
-        dlg_stdcheckbox_handler, &new_cfg.allow_blinking);
+        dlg_stdcheckbox_handler, &new_cfg.allow_blinking
+      )->column = 0;
+      ctrl_checkbox( s,-1, _W("Show dim as font"),0,
+        dlg_stdcheckbox_handler, &new_cfg.dim_as_font
+      )->column = 1;
      }
     }
   }
@@ -3534,8 +3545,14 @@ setup_config_box(controlbox * b)
       s = ctrl_new_set(b, _W("Text"), null, null);
       ctrl_combobox( s,-1, _W("Show bold"),0,
         50, showbold_handler, 0);
+
+      ctrl_columns(s, 2, 50, 50);
       ctrl_checkbox( s,-1, _W("&Allow blinking"),0,
-        dlg_stdcheckbox_handler, &new_cfg.allow_blinking);
+        dlg_stdcheckbox_handler, &new_cfg.allow_blinking
+      )->column = 0;
+      ctrl_checkbox(s,-1,_W("Show dim as font"),0,
+        dlg_stdcheckbox_handler, &new_cfg.dim_as_font
+      )->column = 1;
      }
     }
   }
@@ -3701,17 +3718,18 @@ setup_config_box(controlbox * b)
     ctrl_columns(s, 2, 100, 0);
     ctrl_checkbox( s,-1, _W("Clear selection on input"),0, dlg_stdcheckbox_handler, &new_cfg.input_clears_selection);
 
-#define copy_as_html_single_line
-
     s = ctrl_new_set(b, _W("Selection"), null, _W("Clipboard"));
-    ctrl_columns(s, 2, 50, 50);
+    ctrl_columns(s, 2, 100, 0);
     ctrl_checkbox( s,0, _W("Cop&y on select"),0, dlg_stdcheckbox_handler, &new_cfg.copy_on_select);
     ctrl_checkbox( s,0, _W("Copy with TABs"),0, dlg_stdcheckbox_handler, &new_cfg.copy_tabs);
     ctrl_columns(s, 2, 50, 50);
     ctrl_checkbox( s,0, _W("Copy as &rich text"),0,
       dlg_stdcheckbox_handler, &new_cfg.copy_as_rtf
     );
-#ifndef copy_as_html_single_line
+#ifdef copy_as_html_right_block
+    // HTML selection as 2×2 block in right column, with previous:
+    ctrl_columns(s, 1, 100);  // reset column stuff so we can rearrange them
+    ctrl_columns(s, 2, 50, 50);
     ctrl_radiobuttons( s,1, _W("Copy as &HTML"),0, 2,
       dlg_stdradiobutton_handler, &new_cfg.copy_as_html,
       _W("&None"), 0,
@@ -3734,7 +3752,9 @@ setup_config_box(controlbox * b)
 
     ctrl_columns(s, 2, 50, 50);
     ctrl_checkbox( s,-1, _W("Trim space from selection"),0, dlg_stdcheckbox_handler, &new_cfg.trim_selection);
+#ifdef options_menu_allow_selection
     ctrl_checkbox( s,-1, _W("Allow setting selection"),0, dlg_stdcheckbox_handler, &new_cfg.allow_set_selection);
+#endif
 
     s = ctrl_new_set(b, _W("Selection"), null, _W("Window"));
     ctrl_columns(s, 2, 100, 0);

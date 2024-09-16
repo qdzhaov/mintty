@@ -1,5 +1,5 @@
 // termclip.c (part of mintty)
-// Copyright 2008-23 Andy Koppe, 2018 Thomas Wolff
+// Copyright 2008-23 Andy Koppe, 2024 Thomas Wolff
 // Adapted from code from PuTTY-0.60 by Simon Tatham and team.
 // Licensed under the terms of the GNU General Public License v3 or later.
 
@@ -21,10 +21,11 @@ typedef struct {
 } clip_workbuf;
 
 static void
-destroy_clip_workbuf(clip_workbuf * b)
+destroy_clip_workbuf(clip_workbuf * b, bool with_text)
 {
   assert(b && b->capacity); // we're only called after get_selection, which always allocates
-  free(b->text);
+  if (with_text)
+    free(b->text);
   if (b->with_attrs)
     // the attributes part of the buffer was only filled as requested
     free(b->cattrs);
@@ -77,8 +78,10 @@ clip_addchar(clip_workbuf * b, wchar chr, cattr * ca, bool tabs, ulong sizehint)
   }
 
   cattr copattr = ca ? *ca : CATTR_DEFAULT;
+  //printf("setting clipbuf[%ld] = %02X\n", b->len, chr);
   if (copattr.attr & TATTR_CLEAR) {
-    copattr.attr &= ~(ATTR_BOLD | ATTR_DIM | TATTR_CLEAR);
+    if (!tabs)
+      copattr.attr &= ~(ATTR_BOLD | ATTR_DIM | TATTR_CLEAR);
   }
 
   b->text[b->len] = chr;
@@ -95,6 +98,8 @@ get_selection(bool attrs, pos start, pos end, bool rect, bool allinline, bool wi
 {
   //printf("get_selection attrs %d all %d tabs %d\n", attrs, allinline, with_tabs);
 
+  if (with_tabs)
+    attrs = true;  // ensure we can check expanded TABs (#1269)
   clip_workbuf *buf = newn(clip_workbuf, 1);
   *buf = (clip_workbuf){.with_attrs = attrs,
                         .capacity = 0, .len = 0, .text = 0, .cattrs = 0};
@@ -223,7 +228,10 @@ get_selection(bool attrs, pos start, pos end, bool rect, bool allinline, bool wi
     }
     if (nl) {
       clip_addchar(buf, '\r', 0, false, hint);
-      clip_addchar(buf, '\n', 0, false, hint);
+      // mark lineend with line attributes, particularly double-width/height
+      cattr lcattr = CATTR_DEFAULT;
+      lcattr.link = line->lattr;
+      clip_addchar(buf, '\n', &lcattr, false, hint);
     }
     start.y++;
     start.x = rect ? old_top_x : 0;
@@ -240,7 +248,7 @@ get_sel_str(pos start, pos end, bool rect, bool allinline, bool with_tabs)
 {
   clip_workbuf * buf = get_selection(false, start, end, rect, allinline, with_tabs);
   wchar * selstr = buf->text;
-  free(buf);
+  destroy_clip_workbuf(buf, false);
   return selstr;
 }
 
@@ -258,7 +266,7 @@ term_copy_as(char what)
   clip_workbuf *buf = get_selection(true, term.sel_start, term.sel_end, term.sel_rect,
                                     false, with_tabs);
   win_copy_as(buf->text, buf->cattrs, buf->len, what);
-  destroy_clip_workbuf(buf);
+  destroy_clip_workbuf(buf, true);
 }
 
 void
@@ -383,13 +391,31 @@ contains(string s, wchar c)
 #endif
 
 void
-term_paste(const wchar *data, uint len, bool all)
+term_paste(wchar *data, uint len, bool all)
 {
-  term_cancel_paste();
-
   // set/refresh list of characters to be filtered;
   // stty settings may have changed
   set_filter(cfg.filter_paste);
+
+  if (cfg.confirm_multi_line_pasting
+      && !(strchr(filter, '\r') && strchr(filter, '\n')))
+  {
+    // check multi-line pasting
+    bool multi_line = false;
+    for (uint i = 0; i < len; i++) {
+      if (data[i] == '\r' || data[i] == '\n') {
+        multi_line = true;
+        break;
+      }
+    }
+    if (multi_line
+        && !win_confirm_text(data, W("Multi-line pasting – confirm?")))
+    {
+      return;
+    }
+  }
+
+  term_cancel_paste();
 
   uint size = len;
   term.paste_buffer = newn(wchar, len);
@@ -712,6 +738,12 @@ term_create_html(FILE * hf, int level)
     );
   if (level >= 3)
     hprintf(hf, "  body.mintty { margin: 0; padding: 0; }\n");
+  hprintf(hf, "  .super, .sub, .small { line-height: 0; font-size: 0.7em; letter-spacing: 0.3em; }\n");
+  hprintf(hf, "  .super { vertical-align: super; }\n");
+  hprintf(hf, "  .sub { vertical-align: sub; }\n");
+  hprintf(hf, "  .double-width {display: inline-block; line-height: 1.2; transform-origin: left; transform: scale(2, 1);}\n");
+  hprintf(hf, "  .double-height-top {display: inline-block; line-height: 2.4; transform-origin: left; transform: scale(2, 2);}\n");
+  hprintf(hf, "  .double-height-bottom {display: none;}\n");
   hprintf(hf, "  #vt100 span {\n");
   if (level >= 2) {
     // font needed in <span> for some tools (e.g. Powerpoint)
@@ -868,11 +900,13 @@ term_create_html(FILE * hf, int level)
   hprintf(hf, "<body class=mintty onload='setup();'>\n");
   //hprintf(hf, "  <table border=0 cellpadding=0 cellspacing=0><tr><td>\n");
   hprintf(hf, "  <div class=background id='vt100'>\n");
-  hprintf(hf, "   <pre>");
+  hprintf(hf, "   <pre\n>");
 
   clip_workbuf * buf = get_selection(true, start, end, rect, level >= 3, false);
   int i0 = 0;
   bool odd = true;
+  bool new_line = true;
+  ushort lattr = LATTR_NORM;
   for (uint i = 0; i < buf->len; i++) {
     if (!buf->text[i] || buf->text[i] == '\r' || buf->text[i] == '\n'
         // buf->cattrs[i] ~!= buf->cattrs[i0] ?
@@ -885,6 +919,21 @@ term_create_html(FILE * hf, int level)
         || buf->cattrs[i].ulcolr != buf->cattrs[i0].ulcolr
        )
     {
+      if (new_line) {
+        wchar * nl = wcschr(&buf->text[i], '\n');
+        if (nl) {
+          int offset = nl - &buf->text[i];
+          lattr = (ushort)buf->cattrs[i + offset].link & LATTR_MODE;
+        }
+        else
+          lattr = LATTR_NORM;
+        if (lattr)
+          hprintf(hf, "<div class='double-%s'>",
+                      lattr == LATTR_WIDE ? "width" :
+                      lattr == LATTR_TOP ? "height-top" : "height-bottom");
+        new_line = false;
+      }
+
       // flush chunk with equal attributes
       hprintf(hf, "<span class='%s", odd ? "od" : "ev");
 
@@ -930,6 +979,14 @@ term_create_html(FILE * hf, int level)
       // add marker classes
       if (ca->attr & ATTR_FRAMED)
         hprintf(hf, " emoji");  // mark emoji style
+
+      // add subscript or superscript
+      if ((ca->attr & (ATTR_SUBSCR | ATTR_SUPERSCR)) == (ATTR_SUBSCR | ATTR_SUPERSCR))
+        hprintf(hf, " small");
+      else if (ca->attr & ATTR_SUBSCR)
+        hprintf(hf, " sub");
+      else if (ca->attr & ATTR_SUPERSCR)
+        hprintf(hf, " super");
 
       // style adding function
       bool with_style = false;
@@ -1116,16 +1173,39 @@ term_create_html(FILE * hf, int level)
         // more precise cursor colour adjustments could be made...
       }
 
+      // finish styles
+      hprintf(hf, "'>");
+
       // retrieve chunk of text from buffer
       wchar save = buf->text[i];
       buf->text[i] = 0;
       char * s = cs__wcstoutf(&buf->text[i0]);
       buf->text[i] = save;
+      // here we could:
+      // * handle the chunk string by Unicode glyphs
+      // * check whether each char is an emoji char or sequence
+      // * check its terminal width
+      // * scale width to actual (narrow or multi-cell) width
 
       // write chunk, apply HTML escapes
+      void hprinttext(char * t) {
+        if (ca->attr & ATTR_FRAMED)
+          while (*t) {
+            hprintf(hf, "%c", *t++);
+#ifdef export_emoji_style
+            // here we should, in addition to the above:
+            // * check whether each char actually has an emoji presentation:
+            //   (emoji_tags(emoji_idx(ch)) & EM_emoj)
+            //   and only append 0xFE0F then
+            if ((*t & 0xC0) != 0x80)
+              hprintf(hf, "️");
+#endif
+          }
+        else
+          hprintf(hf, "%s", t);
+      }
       char * s1 = strpbrk(s, "<&");
       if (s1) {
-        hprintf(hf, "'>");
         char * s0 = s;
         do {
           if (*s0 == '<') {
@@ -1140,7 +1220,7 @@ term_create_html(FILE * hf, int level)
             char c = s1 ? *s1 : 0;
             if (s1)
               *s1 = 0;
-            hprintf(hf, "%s", s0);
+            hprinttext(s0);
             if (s1) {
               *s1 = c;
               s0 = s1;
@@ -1150,11 +1230,11 @@ term_create_html(FILE * hf, int level)
           }
           s1 = strpbrk(s0, "<&");
         } while (*s0);
-        hprintf(hf, "</span>");
       }
       else
-        hprintf(hf, "'>%s</span>", s);
+        hprinttext(s);
       free(s);
+      hprintf(hf, "</span>");
 
       // forward chunk pointer
       i0 = i;
@@ -1168,15 +1248,20 @@ term_create_html(FILE * hf, int level)
     if (buf->text[i] == '\n') {
       i++;
       i0 = i;
+      if (lattr)
+        hprintf(hf, "</div>");
       if (enhtml)
-        // <br> needed for Powerpoint
-        hprintf(hf, "<br\n>");
+        // <br> needed for HTML and for Powerpoint
+        hprintf(hf, "<br%s\n>", lattr == LATTR_BOT ? " class='double-height-bottom'" : "");
       else
         hprintf(hf, "\n");
       odd = !odd;
+
+      new_line = true;
+      lattr = LATTR_NORM;
     }
   }
-  destroy_clip_workbuf(buf);
+  destroy_clip_workbuf(buf, true);
 
   hprintf(hf, "</pre>\n");
   hprintf(hf, "  </div>\n");
@@ -1239,6 +1324,6 @@ print_screen(void)
   clip_workbuf * buf = get_selection(false, start, end, rect, false, false);
   printer_wwrite(buf->text, buf->len);
   printer_finish_job();
-  destroy_clip_workbuf(buf);
+  destroy_clip_workbuf(buf, true);
 }
 

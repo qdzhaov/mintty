@@ -92,9 +92,9 @@ ifndef RELEASE
   endif
 endif
 
-version := \
+srcversion := \
   $(shell echo $(shell echo VERSION | cpp -P $(CPPFLAGS) --include appinfo.h))
-name_ver := $(NAME)-$(version)
+name_ver := $(NAME)-$(srcversion)
 
 #############################################################################
 # compilation parameters
@@ -119,13 +119,13 @@ ifneq ($(platform), msys)
 endif
 # support cygwin debug package (use += to accept injected options)
 #-Wall 
-CFLAGS += -std=gnu99 -include std.h -Wall -Wextra -Wundef  $(SECUR) \
+CFLAGS += -std=gnu99 -include std.h -Wall -Wextra -Wundef  \
 					-Werror  -Wno-stringop-truncation -Wno-stringop-overflow
 # verify additional flags that are also injected into pkg build by cygport
 CFLAGS += -Wformat-security
 
-ifeq ($(shell VER=`$(CC) -dumpversion`; expr $${VER%.*} '>=' 4.5), 1)
-  CFLAGS += -mtune=atom
+ifeq ($(shell VER=`$(CC) -dumpversion`; expr $${VER%%.*} '>=' 5), 1)
+  CFLAGS += -mtune=atom $(SECUR)
 endif
 
 scriptlib=-lusp10
@@ -179,6 +179,9 @@ $(BINDIR)/term.o: term.c emojibase.t emojiseqs.t
 $(BINDIR)/wintext.o: wintext.c
 	$(CC) -c $(DEPOPT) $(CCFLAGS) -O0 $(CPPFLAGS) -fstack-check $< -o $(BINDIR)/wintext.o
 
+$(BINDIR)/appinfo.o: appinfo.c appinfo.h appinfo.t
+	$(CC) -c $(DEPOPT) -O0 $(CPPFLAGS) -fstack-check $< -o $(BINDIR)/appinfo.o
+
 $(BINDIR)/%.o: %.c
 	$(CC) -c $(DEPOPT) $(CCFLAGS) $(CPPFLAGS) -fstack-check $< -o $(BINDIR)/$*.o
 
@@ -188,6 +191,14 @@ $(BINDIR)/%.o: %.rc %.h %.mft
 	$(CC) -E -xc -DRC_INVOKED $(DEPOPT) $(CPPFLAGS) $< | $(RC) -c 65001 -o $(BINDIR)/$*.o
 	-mv $*.d $(BINDIR)/
 
+gitversion := $(shell ./mkvertag "$(srcversion)")
+
+appinfo.t:	stamp
+
+stamp:
+	echo "#define VERSION_STAMP \"$(gitversion)\"" > appinfo.n
+	cmp appinfo.n appinfo.t && rm -f appinfo.n || /bin/mv appinfo.n appinfo.t
+
 exe := $(NAME).exe
 exe: $(exe)
 $(exe): $(objs)
@@ -195,7 +206,7 @@ $(exe): $(objs)
 	#-du -b $@
 
 bin := $(BINDIR)/$(NAME).exe
-bin: $(BINDIR) $(bin)
+bin: stamp $(BINDIR) $(bin)
 $(BINDIR):
 	mkdir -p $(BINDIR)
 $(bin): $(bins)
@@ -348,7 +359,7 @@ emojiseqs.t:	# emoji-sequences.txt emoji-zwj-sequences.txt emoji-test.txt
 composed.t:	# $(compose_list) $(keysymdefs)
 	sh ./mkcomposedt > composed.t
 
-XGETTEXT_OPTS=--package-name=mintty #--package-version=$(version)
+XGETTEXT_OPTS=--package-name=mintty #--package-version=$(srcversion)
 XGETTEXT_OPTS+=--msgid-bugs-address=https://github.com/mintty/mintty/issues/700
 
 _:	localization checkloc
@@ -391,12 +402,12 @@ $(zip): $(exe) $(zip_files)
 pdf := $(DIST)/$(name_ver).pdf
 pdf: $(pdf)
 $(pdf): ../docs/$(NAME).1
-	groff -t -man -Tps $< | ps2pdf - $@
+	(echo .fp 5 CR; echo .fp 7 CB; cat $<) | groff -t -man -Tps | ps2pdf - $@
 
 html := ../docs/$(NAME).1.html
 html: $(html)
 $(html): ../docs/$(NAME).1 htmlroff.sed html.sed
-	sed -f htmlroff.sed $< | groff -t -man -mwww -Thtml | sed -f html.sed > $@
+	sed -f htmlroff.sed $< | groff -t -man -mwww -Thtml | sed -f htmlhtml.sed | tr -d '\003\004' > $@
 
 clean:
 	#rm -rf *.d *.o $(NAME)*
@@ -452,7 +463,10 @@ _vk.t:	# Windows Virtual Key Code names, only for debugging
 	sed -e 's/^#define \(VK_[^ ]*\) \(0x[0-9A-Fa-f]*\)$$/	{\2, "\1"},/' -e t -e d /usr/include/w32api/winuser.h > _vk.t
 
 _winidm.t:	winids.h
-	sed -e 's/#define *\(IDM_[^ ]*\).*/	{\1, "\1"},/' -e t -e d winids.h > _winidm.t
+	sed -e '$$ d' -e '/#ifdef/ b' -e '/#endif/ b' -e 's/#define *\(IDM_[^ ]*\).*/	{\1, "\1"},/' -e t -e d winids.h > _winidm.t
+
+_wstyles.t:	# Windows GWL_STYLE and GWL_EXSTYLE values
+	./mkstyles > $@
 
 target:
 	echo TARGET $(TARGET)
@@ -467,7 +481,8 @@ ver:
 	echo "$(call getappinfo,POINT_VERSION)"
 	echo "$(call getappinfo,COMMA_VERSION)"
 	echo "$(call getappinfo,DECIMAL_VERSION)"
-	echo version $(version)
+	echo src version $(srcversion)
+	echo version_stamp $(gitversion)
 
 #############################################################################
 # end

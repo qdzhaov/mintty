@@ -109,7 +109,7 @@ Keyboard auto-repeat can also be disabled with DECSET 8 (DECARM).
 | **sequence**   | **comment**         |
 |:---------------|:--------------------|
 | `^[[`_cps_`-p` | max 30              |
-| `^[[-p       ` | unlimited           |
+| `^[[-p`        | unlimited           |
 | `^[[?8l`       | disable auto-repeat |
 | `^[[?8h`       | enable auto-repeat  |
 
@@ -203,10 +203,12 @@ Mintty supports reflow of wrapped lines if the terminal is resized and its
 width is changed. This feature, applicable with setting `RewrapOnResize`, 
 can be disabled per line, usable for example for prompt lines.
 
-| **sequence**  | **rewrap on resize** |
-|:--------------|:---------------------|
-| `^[[?2027l`   | disabled             |
-| `^[[?2027h`   | enabled (default)    |
+| **sequence**    | **rewrap on resize** |
+|:----------------|:---------------------|
+| `^[[?7723l`     | disabled             |
+| `^[[?7723h`     | enabled (default)    |
+
+Note: Previous alternative mode 2027 was DEPRECATED and now dropped.
 
 
 ## Scrollbar hiding ##
@@ -458,6 +460,8 @@ with one extension:
 | `^[[22 Z`    | zoom down to single-cell display (like setting `Charwidth=single`) |
 | `^[[2;2 Z`   | like `^[[22 Z`                                |
 
+Note: There is one space character before the `Z`.
+
 
 ## Overstrike ##
 
@@ -516,7 +520,52 @@ it changes the font that is currently selected (and keeps that setting).
 Like OSC 50 for font style, this sequence can change the emojis style.
 For values, see setting `Emojis` in the manual.
 
-> `^[]7750;_emojis-style_`^G`
+> `^[]7750;`_emojis-style_`^G`
+
+
+## Emoji width mode ##
+
+— EXPERIMENTAL —
+
+By default, mintty displays emojis, particularly emoji sequences, in a 
+grid cell width as defined by the locale function wcswidth. 
+This can yield emoji display in variable width, from 1 cell up to 8 cells, 
+for sequences composed of as many components.
+
+In order to select a preferred design-oriented constant width 
+rendering of emojis, an application can choose to display emojis 
+always in 2-cell width, matching the appearance of emoji graphics, 
+albeit compromising system-defined string width.
+
+| **sequence**  | **emoji width**                          |
+|:--------------|:-----------------------------------------|
+| `^[[?2027l`   | wcwidth/wcswidth                         |
+| `^[[?2027h`   | 2-cell (mode setting of other terminals) |
+| `^[[?7769l`   | wcwidth/wcswidth                         |
+| `^[[?7769h`   | 2-cell (mintty mode setting)             |
+
+The following rules describe the character sequences to be handled as 
+2-cell emojis:
+
+0. The rules below need to be applied to any character sequence 
+   depending on the respective pattern only, 
+   regardless of whether it has a Unicode emoji definition, and 
+   regardless of whether it has a glyph in the current glyph set.
+1. Appending variation selector U+FE0F as a combining character changes any 
+   character to double-width.
+2. Appending a zero-width joiner U+200D or a Fitzpatrick modifier 
+   or a TAG (U+E0020..U+E007F) also forces any character to double-width.
+3. Fitzpatrick modifiers have zero width except at line beginning.
+4. The zero-width joiner U+200D forces the subsequent character to 
+   also be treated like a combining character, thus not add any width.
+
+Note that rule 0 is important to keep screen width predictable for 
+applications; otherwise screen positioning would be hardly manageable 
+with respect to changing Unicode versions and emoji graphic resources.
+
+Note that other terminals support a “Unicode width” mode which may deviate 
+from the rules applied by mintty; a common specification is not yet agreed.
+For this reason, there are currently 2 mode setting sequences.
 
 
 ## Background image ##
@@ -572,7 +621,7 @@ This sequence is disabled by default setting `AllowSetSelection=no`.
 The following _OSC_ ("operating system command") sequence can be used to 
 set the window title (alternatively to OSC 2):
 
-> `^[]l;1^G`
+> `^[]l;`_title_`^G`
 
 
 ## Window icon ##
@@ -580,7 +629,7 @@ set the window title (alternatively to OSC 2):
 The following _OSC_ ("operating system command") sequence can be used to 
 set the window icon from the given file and optional icon index:
 
-> `^[]I;icon_file,index^G`
+> `^[]I;` _icon_file_ [ `,` _index_ ] `^G`
 
 
 ## Working directory ##
@@ -778,9 +827,9 @@ can be used to control cursor type (shape) and blinking.
 It takes an optional second parameter (proprietary extension) to set the 
 blinking interval in milliseconds.
 
-> `^[[` _arg_ _SP_ `q`
+> `^[[` _arg_ SP `q`
 
-> `^[[` _arg_ `;` _blink_ _SP_ `q`
+> `^[[` _arg_ `;` _blink_ SP `q`
 
 | **arg** | **shape**    | **blink** |
 |:--------|:-------------|:----------|
@@ -793,6 +842,8 @@ blinking interval in milliseconds.
 | **6**   | line         | no        |
 | **7**   | box          | yes       |
 | **8**   | box          | no        |
+
+Note: There is one space character before the `q`.
 
 Furthermore, the following Linux console sequence can be used to set the 
 size of the active underscore cursor.

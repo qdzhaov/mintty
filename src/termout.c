@@ -1,5 +1,5 @@
 // termout.c (part of mintty)
-// Copyright 2008-23 Andy Koppe, 2017-22 Thomas Wolff
+// Copyright 2008-23 Andy Koppe, 2017-2024 Thomas Wolff
 // Adapted from code from PuTTY-0.60 by Simon Tatham and team.
 // Licensed under the terms of the GNU General Public License v3 or later.
 
@@ -241,6 +241,9 @@ insert_char(int n)
 static int
 charwidth(xchar chr)
 {
+  // EMOJI MODIFIER FITZPATRICKs
+  if (term.emoji_width && chr >= 0x1F3FB && chr <= 0x1F3FF)
+    return 0;
 #if HAS_LOCALES
   if (cfg.charwidth % 10)
     return xcwidth(chr);
@@ -626,14 +629,35 @@ sum_rect(short y0, short x0, short y1, short x1)
           sum += 0x10;
         if (attr & ATTR_REVERSE)
           sum += 0x20;
-        if (attr & ATTR_BLINK)
+        if (attr & (ATTR_BLINK | ATTR_BLINK2))
           sum += 0x40;
         if (attr & ATTR_BOLD)
           sum += 0x80;
+        if (attr & ATTR_INVISIBLE) {
+          sum += 0x08;
+#ifdef xterm_before_390
+          // fixed in xterm 390: invisible char value was always 0x20
+          sum -= line->chars[x].chr;
+          sum += ' ';
+#endif
+        }
+        if (attr & ATTR_PROTECTED)
+          sum += 0x04;
+#ifdef support_vt525_color_checksum
+        // it's a bit more complex than this, supports only 16 colours, 
+        // and xterm/VT525 checksum handling is incompatible with 
+        // xterm/VT420 checksum calculation, so we skip this
+        int fg = (attr & ATTR_FGMASK) >> ATTR_FGSHIFT;
+        if (fg < 16)
+          sum += fg << 4;
+        int bg = (attr & ATTR_BGMASK) >> ATTR_BGSHIFT;
+        if (bg < 16)
+          sum += bg;
+#endif
         int xc = x;
         while (line->chars[xc].cc_next) {
           xc += line->chars[xc].cc_next;
-          sum += line->chars[xc].chr & 0xFF;
+          sum += line->chars[xc].chr & 0xFFFF;
         }
       }
     }
@@ -948,6 +972,24 @@ write_char(wchar c, int width)
     }
   }
 
+  // check whether to continue an emoji joined sequence
+  if (term.emoji_width && curs->x > 0) {
+    // find previous character position
+    int x = curs->x - !curs->wrapnext;
+    if (line->chars[x].chr == UCSWIDE)
+      x--;
+    //printf("ini %d:%d prev :%d\n", curs->y, curs->x, x);
+    // if it's a pending emoji joined sequence, enforce handling of 
+    // current character like a combining character
+    if (line->chars[x].attr.attr & TATTR_EMOJI)
+      //printf("@:%d (%04X) %04X prev joiner\n", x, line->chars[x].chr, c),
+      width = 0;
+  }
+
+  // in insert mode, shift rest of line before insertion;
+  // do this after width trimming of ZWJ-joined characters,
+  // the case of subsequent widening of single-width characters 
+  // needs to be tuned later
   if (term.insert && width > 0)
     insert_char(width);
 
@@ -1020,11 +1062,94 @@ write_char(wchar c, int width)
        /*
         * If the previous character is UCSWIDE, back up another one.
         */
+        bool is_wide = false;
         if (line->chars[x].chr == UCSWIDE) {
           assert(x > 0);
           x--;
+          is_wide = true;
         }
-       /* Try to precompose with the cell's base codepoint */
+        //printf("cur %d:%d prev :%d\n", curs->y, curs->x, x);
+
+        if (term.emoji_width) {
+         /* Mark pending emoji joined sequence;
+            check for a previous Fitzpatrick high surrogate 
+            before we add its low surrogate (add_cc below)
+         */
+          if (c == 0x200D)
+            //printf("%d:%d (%04X) %04X mark joiner\n", curs->y, curs->x, line->chars[x].chr, c),
+            line->chars[x].attr.attr |= TATTR_EMOJI;
+          else
+            line->chars[x].attr.attr &= ~TATTR_EMOJI;
+
+          wchar last_comb(termline *line, int col) {
+            while (line->chars[col].cc_next)
+              col += line->chars[col].cc_next;
+            return line->chars[col].chr;
+          }
+          bool is_fitzpatrick = false;
+
+         /* Tune Fitzpatrick colour on non-emojis */
+          if (// U+1F3FB..U+1F3FF EMOJI MODIFIER FITZPATRICKs
+              // UTF-16: D83C DFFB .. D83C DFFF
+              c >= 0xDFFB && c <= 0xDFFF && last_comb(line, x) == 0xD83C)
+          {
+            is_fitzpatrick = true;
+            static colour skin_tone[5] = {
+              RGB(0xFB, 0xD8, 0xB7),
+              RGB(0xE0, 0xBE, 0x95),
+              RGB(0xBC, 0x92, 0x6A),
+              RGB(0x9B, 0x72, 0x44),
+              RGB(0x6E, 0x51, 0x3C)
+            };
+            line->chars[x].attr.attr &= ~ATTR_FGMASK;
+            line->chars[x].attr.attr |= TRUE_COLOUR << ATTR_FGSHIFT;
+            line->chars[x].attr.truefg = skin_tone[c - 0xDFFB];
+          }
+
+         /* Enforce wide with certain modifiers */
+          if (!is_wide &&
+              // enforce emoji sequence on:
+              // U+FE0F VARIATION SELECTOR-16
+              // U+200D ZERO WIDTH JOINER
+              (c == 0xFE0F || c == 0x200D
+              // U+1F3FB..U+1F3FF EMOJI MODIFIER FITZPATRICKs
+              // UTF-16: D83C DFFB .. D83C DFFF
+            || is_fitzpatrick
+              // U+E0020..U+E007F TAGs
+              // UTF-16: D83C DFFB .. D83C DFFF
+            || (c >= 0xDC20 && c <= 0xDC7F && last_comb(line, x) == 0xDB40)
+              )
+             )
+          {
+            // enforce double-width rendering of single-width contents
+            line->chars[x].attr.attr |= TATTR_EXPAND;
+
+            if (curs->x == term.marg_right || curs->x == term.cols - 1
+             || ((line->lattr & LATTR_MODE) != LATTR_NORM && curs->x >= (term.cols - 1) / 2)
+               )
+            {
+              // skip for now; shall we wrap subsequently in this case?
+              // ... and move over the previous contents to the next line...
+            }
+            else {
+              //printf("%d:%d (:%d %04X) %04X make wide\n", curs->y, curs->x, x, line->chars[x].chr, c),
+              // if we widen the previous position:
+              // in insert mode, shift rest of line by 1 more cell
+              if (term.insert)
+                insert_char(1);
+
+              // seen a single-width char before current position,
+              // so cursor is at the right half of the newly wide position,
+              // so unlike above, put UCSWIDE here, then forward position
+              put_char(UCSWIDE);
+              curs->x++;
+            }
+          }
+        }
+
+       /* Try to precompose with the previous cell's base codepoint;
+          otherwise, add the combining character to the previous cell
+        */
         wchar pc;
         if (termattrs_equal_fg(&line->chars[x].attr, &curs->attr))
           pc = win_combine_chars(line->chars[x].chr, c, curs->attr.attr);
@@ -1051,7 +1176,7 @@ write_char(wchar c, int width)
   curs->x++;
   if ((line->lattr & LATTR_MODE) != LATTR_NORM) {
     if (curs->x >= term.cols / 2) {
-      curs->x --;
+      curs->x--;
       if (term.autowrap)
         curs->wrapnext = true;
     }
@@ -1204,6 +1329,18 @@ write_ucschar(wchar hwc, wchar wc, int width)
 #endif
   if (cf && cf <= 10 && !(attr & FONTFAM_MASK))
     term.curs.attr.attr = attr | ((cattrflags)cf << ATTR_FONTFAM_SHIFT);
+
+  // Auto-expanded glyphs
+  if (width == 2
+      // && wcschr(W("〈〉《》「」『』【】〔〕〖〗〘〙〚〛"), wc)
+      && wc >= 0x3008 && wc <= 0x301B
+      && (wc | 1) != 0x3013  // exclude 〒〓 from the range
+      && win_char_width(wc, term.curs.attr.attr) < 2
+      // ensure symmetric handling of matching brackets
+      && win_char_width(wc ^ 1, term.curs.attr.attr) < 2)
+  {
+    term.curs.attr.attr |= TATTR_EXPAND;
+  }
 
   if (hwc) {
     if (width == 1
@@ -1440,14 +1577,14 @@ do_vt52(uchar c)
 {
   term_cursor *curs = &term.curs;
   term.state = NORMAL;
-  term.autowrap = false;
-  term.rev_wrap = false;
   term.esc_mod = 0;
   switch (c) {
     when '\e':
       term.state = ESCAPE;
     when '<':  /* Exit VT52 mode (Enter VT100 mode). */
       term.vt52_mode = 0;
+      term.autowrap = term.save_autowrap;
+      term.rev_wrap = term.save_rev_wrap;
     when '=':  /* Enter alternate keypad mode. */
       term.app_keypad = true;
     when '>':  /* Exit alternate keypad mode. */
@@ -2093,8 +2230,13 @@ set_modes(bool state)
             term.curs.cset_single = CSET_ASCII;
             term_update_cs();
           }
-          else
+          else {
             term.vt52_mode = 1;
+            term.save_autowrap = term.autowrap;
+            term.save_rev_wrap = term.rev_wrap;
+            term.autowrap = false;
+            term.rev_wrap = false;
+          }
         when 3:  /* DECCOLM: 80/132 columns */
           if (term.deccolm_allowed) {
             term.selected = false;
@@ -2320,8 +2462,10 @@ set_modes(bool state)
             do_update();
             usleep(1000);  // flush update
           }
-        when 2027:
+        when 7723: /* Reflow mode; 2027 is dropped */
           term.curs.rewrap_on_resize = state;
+        when 2027 or 7769: /* Emoji 2-cell width mode */
+          term.emoji_width = state;
       }
     }
     else { /* SM/RM: set/reset mode */
@@ -2489,8 +2633,10 @@ get_mode(bool privatemode, int arg)
         return 2 - !!(term.curs.bidimode & LATTR_BOXMIRROR);
       when 2501: /* bidi direction auto-detection */
         return 2 - !(term.curs.bidimode & LATTR_BIDISEL);
-      when 2027:
+      when 7723: /* Reflow mode; 2027 is dropped */
         return 2 - term.curs.rewrap_on_resize;
+      when 2027 or 7769: /* Emoji 2-cell width mode */
+        return 2 - term.emoji_width;
       otherwise:
         return 0;
     }
@@ -3059,6 +3205,13 @@ do_csi(uchar c)
           term.tabs[i] = false;
         term.newtab = 0;  // don't set new default tabs on resize
       }
+    when CPAIR('?', 'W'):  /* DECST8C: reset tab stops (VT510, xterm 389) */
+      if (arg0 == 5 && term.tabs) {
+        for (int i = 0; i < term.cols; i++)
+          term.tabs[i] = (i % 8 == 0);
+      }
+    when CPAIR('"', 'v'):  /* DECRQDE: request display extent (VT340, xterm 387) */
+      child_printf(&term,"\e[%d;%d;1;1;1\"w", term.rows, term.cols);
     when 'r': {      /* DECSTBM: set scrolling region */
       int top = arg0_def1 - 1;
       int bot = (arg1 ? min(arg1, term.rows) : term.rows) - 1;
@@ -3219,8 +3372,8 @@ do_csi(uchar c)
         when 26:  // Keyboard Report
           child_printf(&term,"\e[?27;0;%cn", term.has_focus ? '0' : '8');
         // DEC Locator
-        when 53 or 55:
-          child_printf(&term,"\e[?53n");
+        when 55:  // alternative 53 was a legacy xterm mistake, dropped in 389
+          child_printf(&term,"\e[?50n");  // 53 was a ctlseqs mistake
         when 56:
           child_printf(&term,"\e[?57;1n");
       }
@@ -3967,6 +4120,11 @@ otherwise: {
             when CPAIR('-','p'):{  // DECARR (auto repeat rate)
               child_printf(&term,"\eP1$r%u-p\e\\", term.repeat_rate);
             } 
+            when CPAIR('>','4'):{  // XTQMODKEYS
+              if(s[2]=='m'){
+                child_printf(&term,"\eP1$r>4;%um\e\\", term.modify_other_keys);
+              }else ok=0;
+            } 
             otherwise:  ok=0;  
           }
           if(ok==0) {
@@ -4177,10 +4335,6 @@ do_clipboard(void)
   int len;
   int ret;
 
-  if (!cfg.allow_set_selection) {
-    return;
-  }
-
   while (*s != ';' && *s != '\0') {
     s += 1;
   }
@@ -4188,10 +4342,30 @@ do_clipboard(void)
     return;
   }
   s += 1;
-  if (*s == '?') {
-    /* Reading from clipboard is unsupported */
+  if (*s == '?'&&s[1]==0) {
+    if (!cfg.allow_paste_selection) {
+      return;
+    }
+
+    char * cb = get_clipboard();
+    if (!cb)
+      return;
+    char * b64 = base64(cb);
+    //printf("<%s> -> <%s>\n", s, cb, b64);
+    free(cb);
+    if (!b64)
+      return;
+
+    child_printf(&term,"\e]52;;%s%s", b64, osc_fini());
+
+    free(b64);
     return;
   }
+
+  if (!cfg.allow_set_selection) {
+    return;
+  }
+
   len = strlen(s);
 
   output = malloc(len + 1);
@@ -4204,6 +4378,9 @@ do_clipboard(void)
     output[ret] = '\0';
     win_copy_text(output);
   }
+  else
+    // clear selection
+    win_copy(W(""), 0, 1);
   free(output);
 }
 
@@ -4819,6 +4996,8 @@ term_do_write(const char *buf, uint len, bool fix_status)
         if (term.curs.oem_acs && !memchr("\e\n\r\b", c, 4)) {
           if (term.curs.oem_acs == 2)
             c |= 0x80;
+          // with codepage set to 437, function cs_btowc_glyph 
+          // maps VGA characters to their glyphs
           write_ucschar(0, cs_btowc_glyph(c), 1);
           continue;
         }
@@ -4896,6 +5075,10 @@ term_do_write(const char *buf, uint len, bool fix_status)
             //if (term.curs.width)
             //  width = term.curs.width % 10;
 #endif
+            // EMOJI MODIFIER FITZPATRICKs U+1F3FB..U+1F3FF
+            if (term.emoji_width && term.curs.x && hwc == 0xD83C && wc >= 0xDFFB && wc <= 0xDFFF)
+              width = 0;
+
             write_ucschar(hwc, wc, width);
           }
           else
@@ -4923,8 +5106,7 @@ term_do_write(const char *buf, uint len, bool fix_status)
           continue;
         }
 
-        // Everything else
-
+        // NRCS matching function
         wchar NRC(const wchar * map)
         {
           static char * rpl = "#@[\\]^_`{|}~";
@@ -4937,6 +5119,35 @@ term_do_write(const char *buf, uint len, bool fix_status)
 
         cattrflags asav = term.curs.attr.attr;
 
+        // Some more special graphic renderings
+        // Do these before the NRCS switch below as that transforms 
+        // some characters into this range which would then get 
+        // doubly-transformed
+        if (wc >= 0x2580 && wc <= 0x259F) {
+          // Block Elements (U+2580-U+259F)
+          // ▀▁▂▃▄▅▆▇█▉▊▋▌▍▎▏▐░▒▓▔▕▖▗▘▙▚▛▜▝▞▟
+          term.curs.attr.attr |= ((cattrflags)(wc & 0xF)) << ATTR_GRAPH_SHIFT;
+          uchar gcode = 14 + ((wc >> 4) & 1);
+          // extend graph encoding with unused font numbers
+          term.curs.attr.attr &= ~FONTFAM_MASK;
+          term.curs.attr.attr |= (cattrflags)gcode << ATTR_FONTFAM_SHIFT;
+        }
+        else if (cfg.box_drawing && wc >= 0x2500 && wc <= 0x257F) {
+          // Box Drawing (U+2500-U+257F)
+          // ─━│┃┄┅┆┇┈┉┊┋┌┍┎┏┐┑┒┓└┕┖┗┘┙┚┛├┝┞┟┠┡┢┣┤┥┦┧┨┩┪┫┬┭┮┯┰┱┲┳┴┵┶┷┸┹┺┻┼┽┾┿
+          // ╀╁╂╃╄╅╆╇╈╉╊╋╌╍╎╏═║╒╓╔╕╖╗╘╙╚╛╜╝╞╟╠╡╢╣╤╥╦╧╨╩╪╫╬╭╮╯╰╱╲╳╴╵╶╷╸╹╺╻╼╽╾╿
+          term.curs.attr.attr &= ~FONTFAM_MASK;
+          term.curs.attr.attr |= (cattrflags)13 << ATTR_FONTFAM_SHIFT;
+        }
+        else if (wc >= 0xE0B0 && wc <= 0xE0BF && wc != 0xE0B5 && wc != 0xE0B7) {
+          // draw geometric full-cell Powerline symbols,
+          // to avoid artefacts at their borders (#943)
+          term.curs.attr.attr &= ~FONTFAM_MASK;
+          term.curs.attr.attr |= (cattrflags)13 << ATTR_FONTFAM_SHIFT;
+          term.curs.attr.attr |= (cattrflags)15 << ATTR_GRAPH_SHIFT;
+        }
+        else
+        // Everything else
         switch (cset) {
           when CSET_VT52DRW:  // VT52 "graphics" mode
             if (0x5E <= wc && wc <= 0x7E) {
@@ -5109,27 +5320,6 @@ term_do_write(const char *buf, uint len, bool fix_status)
           otherwise: ;
         }
 
-        // Some more special graphic renderings
-        if (wc >= 0x2580 && wc <= 0x259F) {
-          // Block Elements (U+2580-U+259F)
-          // ▀▁▂▃▄▅▆▇█▉▊▋▌▍▎▏▐░▒▓▔▕▖▗▘▙▚▛▜▝▞▟
-          term.curs.attr.attr |= ((cattrflags)(wc & 0xF)) << ATTR_GRAPH_SHIFT;
-          uchar gcode = 14 + ((wc >> 4) & 1);
-          // extend graph encoding with unused font numbers
-          term.curs.attr.attr &= ~FONTFAM_MASK;
-          term.curs.attr.attr |= (cattrflags)gcode << ATTR_FONTFAM_SHIFT;
-        }
-#ifdef draw_powerline_geometric_symbols
-#warning graphical results of this approach are unpleasant; not enabled
-        else if (wc >= 0xE0B0 && wc <= 0xE0BF && wc != 0xE0B5 && wc != 0xE0B7) {
-          // draw geometric full-cell Powerline symbols,
-          // to avoid artefacts at their borders (#943)
-          term.curs.attr.attr &= ~FONTFAM_MASK;
-          term.curs.attr.attr |= (cattrflags)13 << ATTR_FONTFAM_SHIFT;
-          term.curs.attr.attr |= (cattrflags)15 << ATTR_GRAPH_SHIFT;
-        }
-#endif
-
         // Determine width of character to be rendered
         int width;
         if (term.wide_indic && wc >= 0x0900 && indicwide(wc))
@@ -5169,20 +5359,10 @@ term_do_write(const char *buf, uint len, bool fix_status)
             width = 1;
         }
 
-        // Auto-expanded glyphs
-        if (width == 2
-            // && wcschr(W("〈〉《》「」『』【】〒〓〔〕〖〗〘〙〚〛"), wc)
-            && wc >= 0x3008 && wc <= 0x301B && (wc | 1) != 0x3013
-            && win_char_width(wc, term.curs.attr.attr) < 2
-            // ensure symmetric handling of matching brackets
-            && win_char_width(wc ^ 1, term.curs.attr.attr) < 2)
-        {
-          term.curs.attr.attr |= TATTR_EXPAND;
-        }
-
         // Control characters
         if (wc < 0x20 || wc == 0x7F) {
           if (!do_ctrl(wc) && c == wc) {
+            // the rôle of function cs_btowc_glyph in this case is unclear
             wc = cs_btowc_glyph(c);
             if (wc != c)
               write_ucschar(0, wc, 1);
