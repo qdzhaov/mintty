@@ -204,6 +204,7 @@
   _CFGDEFD(int      ,OPT_INT               ,"ScrollbackLines"          ,scrollback_lines            ,"ScrollbackLines"          ,10000)
   _CFGDEFD(int      ,OPT_INT               ,"MaxScrollbackLines"       ,max_scrollback_lines        ,"MaxScrollbackLines"       ,250000)
   _CFGDEFD(int      ,OPT_MOD               ,"ScrollMod"                ,scroll_mod                  ,"ScrollMod"                ,MDK_SHIFT)
+  _CFGDEFD(int      ,OPT_BORDER            ,"BorderStyle"              ,border_style                ,"BorderStyle"              ,BORDER_NORMAL)
   _CFGDEFD(int      ,OPT_BOOL              ,"PgUpDnScroll"             ,pgupdn_scroll               ,"PgUpDnScroll"             ,0)
   _CFGDEFD(int      ,OPT_BOOL              ,"allocconsole"             ,allocconsole                ,"allocconsole"             ,0)
   _CFGDEFD(wstring  ,OPT_WSTR              ,"Language"                 ,lang                        ,"Language"                 ,W(""))

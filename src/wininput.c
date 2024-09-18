@@ -419,9 +419,9 @@ win_update_menus(bool callback)
   MFCM( IDM_SCROLLBAR, mflags       , _W("Scrollbar(&S)"), null);
 
   mflags=MF_CHECKED;
-  switch(wv.border_style){    
-    when 1:cap=_W("&Border[T]");
-    when 2:cap=_W("&Border[N]");
+  switch(cfg.border_style){    
+    when BORDER_FRAME:cap=_W("&Border[T]");
+    when BORDER_VOID:cap=_W("&Border[N]");
     otherwise: cap=_W("&Border"); mflags=MF_UNCHECKED;
   }
   MFCM( IDM_BORDERS  , mflags, cap, null);

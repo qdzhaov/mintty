@@ -52,6 +52,7 @@ typedef UINT_PTR uintptr_t;
 #ifndef GWL_USERDATA
 #define GWL_USERDATA -21
 #endif
+#define GWL_TIMEMASK ~1
 
 winvar wv={0};
 
@@ -1130,10 +1131,10 @@ win_update_blur(bool opaque)
 
 static LONG up_borderstyle(LONG style){
   style &= ~(WS_CAPTION | WS_BORDER | WS_THICKFRAME);
-  switch(wv.border_style){
-    when 0: style |= (WS_CAPTION | WS_BORDER | WS_THICKFRAME);
-    when 1: style |= WS_THICKFRAME;
-    when 2:
+  switch(cfg.border_style){
+    when BORDER_NORMAL: style |= (WS_CAPTION | WS_BORDER | WS_THICKFRAME);
+    when BORDER_FRAME: style |= WS_THICKFRAME;
+    when BORDER_VOID:
   }
   return style;
 }
@@ -2039,8 +2040,10 @@ win_maximise(int max)
 
      /* Reinstate the window furniture. */
       LONG style = GetWindowLong(wv.wnd, GWL_STYLE);
-      if (wv.border_style) {
-        style |= WS_THICKFRAME;
+      if (cfg.border_style != BORDER_NORMAL) {
+        if (cfg.border_style == BORDER_VOID) {
+          style |= WS_THICKFRAME;
+        }
       }
       else {
         style |= WS_CAPTION | WS_BORDER | WS_THICKFRAME;
@@ -2649,8 +2652,8 @@ void win_tog_scrollbar(){
   win_update_scrollbar(true);
 }
 void win_tog_border(){
-  wv.border_style++;
-  if(wv.border_style>2)wv.border_style=0;
+  cfg.border_style++;
+  if(cfg.border_style>BORDER_VOID)cfg.border_style=BORDER_NORMAL;
   win_update_border();
 }
 
@@ -4103,7 +4106,8 @@ exit_mintty(void)
   // so we'd have to add a safeguard here...
   SetWindowTextA(wv.wnd, "");
   // indicate "terminating"
-  SetWindowLong(wv.wnd, GWL_USERDATA, -1);
+  LONG ud = GetWindowLong(wv.wnd, GWL_USERDATA);
+  SetWindowLong(wv.wnd, GWL_USERDATA, ud | 1);
   // flush properties cache
   SetWindowPos(wv.wnd, null, 0, 0, 0, 0,
                SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER
@@ -4646,8 +4650,7 @@ int LoadConfig(){
         //set_arg_option("TabBar", strdup("1"));
         //set_arg_option("SessionGeomSync", optarg ?: strdup("2"));
       when 'B':
-        if (strcmp(optarg,"frame")==0) wv.border_style = 1;
-        else wv.border_style=2;
+        set_arg_option("Border", strdup(optarg));
       when 'R':
         switch (*optarg) {
           when 's' or 'o':
@@ -5147,6 +5150,15 @@ main(int argc, const char *argv[])
   wstring wclass = W(APPNAME);
   if (*cfg.class)
     wclass = group_id(cfg.class);
+  if (cfg.geom_sync > 1) {
+    char * class = cs__wcstoutf(wclass);
+    char * syncclass = asform("%s_%d", class, cfg.geom_sync);
+    free(class);
+    set_arg_option("Class", syncclass);
+    wclass = cs__utftowcs(syncclass);
+    free(syncclass);
+  }
+
 #ifdef prevent_grouping_hidden_tabs
   // should an explicitly hidden window not be grouped with a "class" of tabs?
   if (!cfg.window)
@@ -5417,7 +5429,7 @@ main(int argc, const char *argv[])
           // but window size hopefully adjusted already
 
           /* Note: this used to be guarded by
-          //if (wv.border_style)
+          //if (cfg.border_style)
           but should be done always to avoid maxheight windows to 
           be covered by the taskbar
           */
@@ -5643,7 +5655,6 @@ main(int argc, const char *argv[])
                &(struct winsize){term_rows, term_cols, term_cols * wv.cell_width, term_rows * wv.cell_height}
               );
 #endif
-//#ifdef show_window_early
   // This is now postponed to be aligned with hiding other windows 
   // (in case of tabbed windows) 
   // and to reduce initial white flickering (#1284).
@@ -5652,7 +5663,9 @@ main(int argc, const char *argv[])
   // and grab focus again, just in case and for Windows 11
   // (https://github.com/mintty/mintty/issues/1113#issuecomment-1210278957)
   SetFocus(wv.wnd);
-//#endif
+
+  // mark userdata with timestamp, for initial tabbar ordering
+  SetWindowLong(wv.wnd, GWL_USERDATA, mtime() & GWL_TIMEMASK);
 
   // Cloning fullscreen window
   if (run_max == 2)

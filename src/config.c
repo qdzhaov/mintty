@@ -51,7 +51,8 @@ config cfg, new_cfg, file_cfg;
 
 typedef enum {
   OPT_BOOL=0, OPT_MOD, OPT_TRANS, OPT_CURSOR, OPT_FONTSMT, OPT_FONTRENDER,
-  OPT_MIDDLECLICK, OPT_RIGHTCLICK, OPT_SCROLLBAR, OPT_WINDOW, OPT_HOLD,
+  OPT_MIDDLECLICK, OPT_RIGHTCLICK, OPT_SCROLLBAR, OPT_BORDER, OPT_WINDOW,
+  OPT_HOLD,
   OPT_CHARWIDTH, OPT_EMOJIS, OPT_EMOJI_PLACEMENT, OPT_COMPOSE_KEY,
   OPT_COMMENT, OPT_INT, OPT_CLR, OPT_CLRFG, OPT_STR, OPT_WSTR,OPT_FONT,
   OPT_TYPE_MASK = 0x1F,
@@ -152,6 +153,12 @@ static opt_val * const opt_vals[] = {
     {__("left"), -1},
     {__("right"), 1},
     {__("none"), 0},
+    {0, 0}
+  },
+  [OPT_BORDER] = (opt_val[]) {
+    {"normal", BORDER_NORMAL},
+    {"frame", BORDER_FRAME},
+    {"void", BORDER_VOID},
     {0, 0}
   },
   [OPT_WINDOW] = (opt_val[]){

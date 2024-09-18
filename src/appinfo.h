@@ -7,7 +7,7 @@
 
 #define MAJOR_VERSION  3
 #define MINOR_VERSION  7
-#define PATCH_NUMBER   4
+#define PATCH_NUMBER   5
 #define BUILD_NUMBER   0
 
 // needed for res.rc
@@ -47,7 +47,8 @@
 
 // needed for mintty -V and Options... - About...
 #ifdef VERSION_SUFFIX
-#define VERSION_APPENDIX " (" STRINGIFY(TARGET) ") " STRINGIFY(VERSION_SUFFIX)#define VERSION_TEXT \
+#define VERSION_APPENDIX " (" STRINGIFY(TARGET) ") " STRINGIFY(VERSION_SUFFIX)
+#define VERSION_TEXT \
 
   APPNAME " " VERSION " (" STRINGIFY(TARGET) ") " STRINGIFY(VERSION_SUFFIX)
 #else

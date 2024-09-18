@@ -30,6 +30,6 @@ cd $reldir
 zip -r mintty-$VER.zip mintty
 cd $cwd
 mkdir -p dist
-\cp  $reldir/mintty-$VER.zip dist/
+\cp  $reldir/mintty-$VER.zip dist/mintty.zip
 
 

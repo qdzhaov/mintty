@@ -37,7 +37,7 @@ enum {
 };
 typedef struct {
 // State
-  int border_style ;
+//int border_style ;
   bool win_is_fullscreen;
   bool win_is_always_on_top;
   bool clipboard_token ;
