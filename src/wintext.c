@@ -1168,7 +1168,7 @@ init_charnametable()
     charnametable_len++;
   }
 
-  char * cnfn = get_resource_file(W("info"), W("charnames.txt"), false);
+  char * cnfn = get_resource_file("info", "charnames.txt", false);
   FILE * cnf = 0;
   if (cnfn) {
     cnf = fopen(cnfn, "r");
@@ -1246,7 +1246,7 @@ toggle_charinfo()
 static void
 show_curchar_info(char tag)
 {
-  //if (term.st_type == 1) show_status_line(); //Fix me
+  //if (term.st_type == 1) show_status_line(); //ZZ Fix me
   if (!show_charinfo)
     return;
   init_charnametable();
@@ -2940,12 +2940,12 @@ win_text(int tx, int ty,wchar *text, int len, cattr attr, cattr *textattr, ushor
 
   int char_width = wv.cell_width * (1 + (lattr != LATTR_NORM));
 
- /* Only want the left half of double width lines */
+  /* Only want the left half of double width lines */
   // check this before scaling up x to pixels!
   if (lattr != LATTR_NORM && tx * 2 >= term.cols)
     return;
 
- /* Convert to window coordinates */
+  /* Convert to window coordinates */
   int x = tx * char_width + PADDING;
   int y = ty * wv.cell_height + OFFSET + PADDING;
 

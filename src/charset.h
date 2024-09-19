@@ -76,6 +76,7 @@ extern bool is_ambigwide(xchar c);
 
 // path conversions
 extern char * path_win_w_to_posix(const wchar * wp);
+extern char * path_win_to_posix(const char * wp);
 extern wchar * path_posix_to_win_w(const char * p);
 extern char * path_posix_to_win_a(const char * p);
 
@@ -126,5 +127,9 @@ extern wchar * wcsdup(const wchar * s);
 
 #endif
 
+extern void strset2w(const wchar**sp, const char*s);
+extern void wstrset2a(const char**sp, const wchar*s);
+static inline  char*wstrdup2a(wchar*s){return cs__wcstoutf(s);}
+static inline wchar* strdup2w( char*s){return cs__utftowcs(s); }
 
 #endif

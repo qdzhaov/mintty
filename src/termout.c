@@ -4575,9 +4575,7 @@ do_cmd(void)
         }
       }
     when 22: {  // set mouse pointer style
-      wchar * ps = cs__mbstowcs(s);
-      set_cursor_style(term.mouse_mode || term.locator_1_enabled, ps);
-      free(ps);
+      set_cursor_style(term.mouse_mode || term.locator_1_enabled, s);
     }
     when 7750:
       set_arg_option("Emojis", strdup(s));

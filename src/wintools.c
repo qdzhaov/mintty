@@ -1028,7 +1028,7 @@ wslicon(const wchar * params)
       }
     }
     if (!icon) {  // no WSL distro specified or failed to find icon
-      char * wslico = get_resource_file(W("icon"), W("wsl.ico"), false);
+      char * wslico = get_resource_file("icon", "wsl.ico", false);
       if (wslico) {
         icon = path_posix_to_win_w(wslico);
         free(wslico);

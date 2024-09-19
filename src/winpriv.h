@@ -175,7 +175,7 @@ extern void win_destroy_tip(void);
 
 extern void taskbar_progress(int percent);
 extern HCURSOR win_get_cursor(bool appmouse);
-extern void set_cursor_style(bool appmouse, const wchar * style);
+extern void set_cursor_style(bool appmouse, const char * style);
 
 extern void win_init_menus(void);
 extern void win_update_menus(bool callback);

@@ -1401,14 +1401,16 @@ static struct {
     free(soundfn);
   }
   else {
-    wchar * sound_name_w = cs__mbstowcs(sound_name);
+    char * sf;
     if (!strchr(sound_name, '.')) {
-      int len = wcslen(sound_name_w);
-      sound_name_w = renewn(sound_name_w, len + 5);
-      wcscpy(&sound_name_w[len], W(".wav"));
+      int len = strlen(sound_name);
+      char * sound_name_f  = newn(char, len + 5);
+      strcpy(sound_name_f,sound_name);
+      strcpy(sound_name_f+len, ".wav");
+      sf = get_resource_file("sounds", sound_name_f, false);
+    }else{
+      sf = get_resource_file("sounds", sound_name, false);
     }
-    char * sf = get_resource_file(W("sounds"), sound_name_w, false);
-    free(sound_name_w);
     if (sf) {
       sound_file = path_posix_to_win_w(sf);
       free(sf);
@@ -1569,8 +1571,8 @@ win_beep(uint tone, float vol, float freq, uint ms)
     float freq;
   } params = {tone, ms, vol, freq};
 
-static int beep_pid = -1;
-static int fd[2];
+  static int beep_pid = -1;
+  static int fd[2];
   if (beep_pid <= 0) {
     pipe(fd);
     beep_pid = fork();
@@ -1593,12 +1595,6 @@ static int fd[2];
       close(fd[0]);
       // invoke external beeper:
       execl("minbeep", "minbeep", (char*)0);
-      //handle invocation error...
-      // the external beeper runs:
-      //while (read(0, &params, sizeof(params)) > 0) {
-      //  Beep(params[0], params[1]);
-      //}
-      //exit(0);
 #endif
 
       while (read(fd[0], &params, sizeof(params)) > 0) {
@@ -1643,13 +1639,13 @@ do_win_bell(config * conf, bool margin_bell)
     bellstate->last_bell = now;
     bellstate->last_vol = bellstate->vol;
 
-    wchar * bell_name = 0;
+    const char * bell_name = 0;
     void set_bells(const char * belli)
     {
       while (*belli) {
         int i = (*belli & 0x0F) - 2;
         if (i >= 0 && i < (int)lengthof(conf->bell_file))
-          bell_name = (wchar *)conf->bell_file[i];
+          bell_name = conf->bell_file[i];
         if (bell_name && *bell_name) {
           return;
         }
@@ -1671,29 +1667,28 @@ do_win_bell(config * conf, bool margin_bell)
 
     bool free_bell_name = false;
     if (bell_name && *bell_name) {
-      if (wcschr(bell_name, L'/') || wcschr(bell_name, L'\\')) {
+      if (strchr(bell_name, '/') || strchr(bell_name, '\\')) {
         if (bell_name[1] != ':') {
-          char * bf = path_win_w_to_posix(bell_name);
-          bell_name = path_posix_to_win_w(bf);
+          char * bf = path_win_to_posix(bell_name);
+          bell_name = path_posix_to_win_a(bf);
           free(bf);
           free_bell_name = true;
         }
       }
       else {
-        wchar * bell_file = bell_name;
         char * bf;
-        if (!wcschr(bell_name, '.')) {
-          int len = wcslen(bell_name);
-          bell_file = newn(wchar, len + 5);
-          wcscpy(bell_file, bell_name);
-          wcscpy(&bell_file[len], W(".wav"));
-          bf = get_resource_file(W("sounds"), bell_file, false);
+        if (!strchr(bell_name, '.')) {
+          int len = strlen(bell_name);
+          char * bell_file = newn(char, len + 5);
+          strcpy(bell_file, bell_name);
+          strcpy(&bell_file[len], ".wav");
+          bf = get_resource_file("sounds", bell_file, false);
           free(bell_file);
         }
         else
-          bf = get_resource_file(W("sounds"), bell_name, false);
+          bf = get_resource_file("sounds", bell_name, false);
         if (bf) {
-          bell_name = path_posix_to_win_w(bf);
+          bell_name = path_posix_to_win_a(bf);
           free(bf);
           free_bell_name = true;
         }
@@ -1702,7 +1697,7 @@ do_win_bell(config * conf, bool margin_bell)
       }
     }
 
-    if (bell_name && *bell_name && PlaySoundW(bell_name, NULL, SND_ASYNC | SND_FILENAME)) {
+    if (bell_name && *bell_name && PlaySound(bell_name, NULL, SND_ASYNC | SND_FILENAME)) {
       // played
     }
     else if (bellstate->vol <= 1) {
@@ -1722,7 +1717,7 @@ do_win_bell(config * conf, bool margin_bell)
       MessageBeep(0xFFFFFFFF);
 
     if (free_bell_name)
-      free(bell_name);
+      free((void*)bell_name);
   }
 
   if (cfg.bell_flash_style & FLASH_FRAME)
@@ -2441,24 +2436,24 @@ app_close()
 
 static struct {
   void * tag;
-  wchar * name;
+  char * name;
 } cursorstyles[] = {
-  {IDC_APPSTARTING, W("appstarting")},
-  {IDC_ARROW, W("arrow")},
-  {IDC_CROSS, W("cross")},
-  {IDC_HAND, W("hand")},
-  {IDC_HELP, W("help")},
-  {IDC_IBEAM, W("ibeam")},
-  {IDC_ICON, W("icon")},
-  {IDC_NO, W("no")},
-  {IDC_SIZE, W("size")},
-  {IDC_SIZEALL, W("sizeall")},
-  {IDC_SIZENESW, W("sizenesw")},
-  {IDC_SIZENS, W("sizens")},
-  {IDC_SIZENWSE, W("sizenwse")},
-  {IDC_SIZEWE, W("sizewe")},
-  {IDC_UPARROW, W("uparrow")},
-  {IDC_WAIT, W("wait")},
+  {IDC_APPSTARTING, ("appstarting")},
+  {IDC_ARROW, ("arrow")},
+  {IDC_CROSS, ("cross")},
+  {IDC_HAND, ("hand")},
+  {IDC_HELP, ("help")},
+  {IDC_IBEAM, ("ibeam")},
+  {IDC_ICON, ("icon")},
+  {IDC_NO, ("no")},
+  {IDC_SIZE, ("size")},
+  {IDC_SIZEALL, ("sizeall")},
+  {IDC_SIZENESW, ("sizenesw")},
+  {IDC_SIZENS, ("sizens")},
+  {IDC_SIZENWSE, ("sizenwse")},
+  {IDC_SIZEWE, ("sizewe")},
+  {IDC_UPARROW, ("uparrow")},
+  {IDC_WAIT, ("wait")},
 };
 
 static HCURSOR cursors[2] = {0, 0};
@@ -2470,11 +2465,11 @@ win_get_cursor(bool appmouse)
 }
 
 void
-set_cursor_style(bool appmouse, const wchar * style)
+set_cursor_style(bool appmouse, const char * style)
 {
   HCURSOR c = 0;
-  if (wcschr(style, '.')) {
-    char * pf = get_resource_file(W("pointers"), style, false);
+  if (strchr(style, '.')) {
+    char * pf = get_resource_file("pointers", style, false);
     wchar * wpf = 0;
     if (pf) {
       wpf = path_posix_to_win_w(pf);
@@ -2490,7 +2485,7 @@ set_cursor_style(bool appmouse, const wchar * style)
   }
   if (!c)
     for (uint i = 0; i < lengthof(cursorstyles); i++)
-      if (0 == wcscmp(style, cursorstyles[i].name)) {
+      if (0 == strcmp(style, cursorstyles[i].name)) {
         c = LoadCursor(null, cursorstyles[i].tag);
         break;
       }
@@ -2507,8 +2502,8 @@ set_cursor_style(bool appmouse, const wchar * style)
 static void
 win_init_cursors()
 {
-  set_cursor_style(true, W("arrow"));
-  set_cursor_style(false, W("ibeam"));
+  set_cursor_style(true, "arrow");
+  set_cursor_style(false,"ibeam");
 }
 
 /*
@@ -3933,84 +3928,90 @@ hookprockbll(int nCode, WPARAM wParam, LPARAM lParam)
       }
     }
     return CallNextHookEx(kb_hook, nCode, wParam, lParam);
-  }else{
-    uint key = kbdll->vkCode;
-    if(hotkey&&key == hotkey&&wParam==WM_KEYDOWN ){
-      if(get_mods()== hotkey_mods){
-        ShowWindow(wv.wnd, SW_SHOW);  // in case it was started with -w hide
-        ShowWindow(wv.wnd, SW_MINIMIZE);
+  }
+  uint key = kbdll->vkCode;
+  if(hotkey&&key == hotkey&&wParam==WM_KEYDOWN ){
+    if(get_mods()== hotkey_mods){
+      ShowWindow(wv.wnd, SW_SHOW);  // in case it was started with -w hide
+      ShowWindow(wv.wnd, SW_MINIMIZE);
+      return 1;
+    }
+  }
+#define UNCAP_INFO (WM_APP + 3195) /* 35963 */
+  if(cfg.capmapesc&&key==VK_CAPITAL&&kbdll->dwExtraInfo != UNCAP_INFO){
+    INPUT inputs;
+    PKEYBDINPUT ki = &inputs.ki;
+    inputs.type = INPUT_KEYBOARD;
+    ki->time = ki->wScan = 0;
+    ki->wVk = VK_ESCAPE;
+    ki->dwFlags = (wParam == WM_KEYUP || wParam == WM_SYSKEYUP) ? KEYEVENTF_KEYUP : 0;
+    ki->dwExtraInfo = UNCAP_INFO;
+    SendInput(1, &inputs, sizeof (inputs));
+    return 1;
+  }
+  if (nCode != HC_ACTION ||term.shortcut_override ||(kbdll->flags&0x10)){
+    return CallNextHookEx(kb_hook, nCode, wParam, lParam);
+  }
+  //keybd_event('Z', 0, 0, 0)　;//　表示模拟按下Z键
+  //keybd_event('Z', 0, 2, 0)　;//　表示模拟弹起Z键
+  ULONG msgt=kbdll->time;
+  if(msgt-wv.last_wink_time>5000){
+    wv.winkey=wv.lwinkey=wv.rwinkey=0;
+  }
+  switch(wParam){
+    when WM_KEYDOWN: {
+      if(key==VK_LWIN){
+        if(!wv.winkey) {
+          wv.last_wink_time=msgt ;
+          wv.winkey=wv.lwinkey= 1;
+          wv.pwinkey=key;
+        }
+        return 1;
+      } else if(key==VK_RWIN){
+        if(!wv.winkey) {
+          wv.last_wink_time=msgt ;
+          wv.winkey=wv.rwinkey= 1;
+          wv.pwinkey=key;
+        }
+        return 1;
+      }
+      if(wv.winkey){  
+        LPARAM lp = 1|(LPARAM)kbdll->flags << 24 | (LPARAM)kbdll->scanCode << 16;
+        wv.pressedkey=key;
+        wv.pkeys=1;
+        win_tab_actv();
+        if((!win_whotkey(key, lp))&&(cfg.hkwinkeyall==0)){
+          keybd_event(wv.pwinkey,0,2,0);
+          keybd_event(key,kbdll->scanCode,0,0);
+          keybd_event(key,kbdll->scanCode,2,0);
+          keybd_event(wv.pwinkey,0,2,0);
+        }
         return 1;
       }
     }
-    if (nCode != HC_ACTION ||term.shortcut_override ||(kbdll->flags&0x10)){
-      return CallNextHookEx(kb_hook, nCode, wParam, lParam);
-    }
-    //keybd_event('Z', 0, 0, 0)　;//　表示模拟按下Z键
-    //keybd_event('Z', 0, 2, 0)　;//　表示模拟弹起Z键
-    ULONG msgt=kbdll->time;
-    if(msgt-wv.last_wink_time>5000){
-      wv.winkey=wv.lwinkey=wv.rwinkey=0;
-    }
-    switch(wParam){
-      when WM_KEYDOWN: {
-        if(key==VK_LWIN)     {
-          if(!wv.winkey) {
-            wv.last_wink_time=msgt ;
-            wv.winkey=wv.lwinkey= 1;
-            wv.pwinkey=key;
+    when WM_KEYUP:{ 
+      if(wv.winkey){
+        int iwk=0;
+        if(key==VK_LWIN){ wv.winkey=wv.lwinkey=0;iwk=1; }
+        else if(key==VK_RWIN){wv.winkey=wv.rwinkey=0;iwk=1;}
+        if(iwk){
+          if(wv.pkeys==0&&cfg.hkwinkeyall==0){
+            keybd_event(VK_LWIN,0,0,0);
+            keybd_event(VK_LWIN,0,2,0);
           }
-          return 1;
-        } else if(key==VK_RWIN){
-          if(!wv.winkey) {
-            wv.last_wink_time=msgt ;
-            wv.winkey=wv.rwinkey= 1;
-            wv.pwinkey=key;
-          }
-          return 1;
+          wv.pkeys=0;
         }
-        if(wv.winkey){  
-          LPARAM lp = 1|(LPARAM)kbdll->flags << 24 | (LPARAM)kbdll->scanCode << 16;
-          wv.pressedkey=key;
-          wv.pkeys=1;
-          win_tab_actv();
-          if((!win_whotkey(key, lp))&&(cfg.hkwinkeyall==0)){
-            keybd_event(wv.pwinkey,0,2,0);
-            keybd_event(key,kbdll->scanCode,0,0);
-            keybd_event(key,kbdll->scanCode,2,0);
-            keybd_event(wv.pwinkey,0,2,0);
-          }
-          return 1;
-        }
-      }
-      when WM_KEYUP:{ 
-        if(wv.winkey){
-          int iwk=0;
-          if(key==VK_LWIN){ wv.winkey=wv.lwinkey=0;iwk=1; }
-          else if(key==VK_RWIN){wv.winkey=wv.rwinkey=0;iwk=1;}
-          if(iwk){
-            if(wv.pkeys==0&&cfg.hkwinkeyall==0){
-              keybd_event(VK_LWIN,0,0,0);
-              keybd_event(VK_LWIN,0,2,0);
-            }
-            wv.pkeys=0;
-          }
-          return 1; 
-        }
+        return 1; 
       }
     }
   }
   return CallNextHookEx(kb_hook, nCode, wParam, lParam);
 }
 static void
-hook_windows(int id, HOOKPROC hookproc, bool global)
-{
-  kb_hook = SetWindowsHookExW(id, hookproc, 0, global ? 0 : GetCurrentThreadId());
-}
-static void
 win_global_keyboard_hook(bool on,bool autooff)
 {
   int global=1;
-  (void)hook_windows;(void)autooff;
+  (void)autooff;
   //spid=getpid(); stid=GetCurrentThreadId();
   if(on){
     if(!cfg.hook_keyboard)return;
@@ -5213,7 +5214,7 @@ main(int argc, const char *argv[])
     else
       printf("Failed to add font %s\n", fn);
   }
-  handle_file_resources(W("fonts/*"), add_font);
+  handle_file_resources("fonts/*", add_font);
   //printf("Added %d fonts\n", dynfonts);
 
   // Initialise the fonts, thus also determining their width and height.

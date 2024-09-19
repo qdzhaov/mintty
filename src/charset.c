@@ -1111,6 +1111,27 @@ path_win_w_to_posix(const wchar * wp)
   return res;
 #endif
 }
+char *
+path_win_to_posix(const char * wp)
+{
+#ifdef let_cygwin_malloc
+#warning may return null with errno == ENOSPC
+  return cygwin_create_path(CCP_WIN_A_TO_POSIX, wp);
+#else
+  int size = cygwin_conv_path(CCP_WIN_A_TO_POSIX, wp, 0, 0);
+  char * res;
+  if (size >= 0) {
+    res = malloc(size);
+    size = cygwin_conv_path(CCP_WIN_A_TO_POSIX, wp, res, size);
+    if (size >= 0)
+      return res;
+    free(res);
+  }
+  res = newn(char, 1);
+  *res = '\0';
+  return res;
+#endif
+}
 
 wchar *
 path_posix_to_win_w(const char * p)
@@ -1198,3 +1219,15 @@ path_posix_to_win_a(const char * p)
 
 #endif
 
+void strset2w(const wchar**sp, const char*s)
+{
+  if(!s)s="";
+  if(*sp)free((void*)*sp);
+  *sp=cs__utftowcs(s);
+}
+void wstrset2a(const char**sp, const wchar*s)
+{
+  if(!s)s=W("");
+  if(*sp)free((void*)*sp);
+  *sp=cs__wcstoutf(s);
+}

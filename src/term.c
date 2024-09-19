@@ -2692,13 +2692,11 @@ fallback:;
     strappend(en, ec);
   }
   strappend(en, suf);
-  wchar * wen = cs__utftowcs(en);
 
-  char * ef = get_resource_file(W("emojis"), wen, false);
+  char * ef = get_resource_file("emojis", en, false);
 #if defined(debug_emojis) && debug_emojis > 1
   printf("check_emoji seq %d idx %d (style %d) <%s> file <%s>\n", e.seq, e.idx, style, en, ef);
 #endif
-  delete(wen);
   delete(en);
 
   if (ef) {

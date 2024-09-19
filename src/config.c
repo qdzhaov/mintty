@@ -34,11 +34,14 @@ static wstring rc_filename = 0;
 static colourfg def_colours[16]={0};
 static colourfg cfg_colours[16]={0};
 static colourfg theme_colours[16]={0};
-static wchar theme_file[128]={0};
+static char theme_file[128]={0};
 
-#define HASHTS 31
+#define HASHTS 257
 static inline int HASHS(const void*s){
-  return (*(char*)s?((*(unsigned short*)s)|0x2020)%(HASHTS):0);
+  const unsigned char*p=(const unsigned char*)s;
+  if(*p==0)return 0;
+  if(p[1]==0||p[2]==0) return ((*(unsigned short*)s)|0x2020)%(HASHTS);
+  return ((*(unsigned int*)s)|0x20202020)%(HASHTS);
 }
 // all entries need initialisation in options[] or crash...
 #define CFGDEFT  DEFVAL
@@ -50,11 +53,14 @@ const config default_cfg = {
 config cfg, new_cfg, file_cfg;
 
 typedef enum {
-  OPT_BOOL=0, OPT_MOD, OPT_TRANS, OPT_CURSOR, OPT_FONTSMT, OPT_FONTRENDER,
-  OPT_MIDDLECLICK, OPT_RIGHTCLICK, OPT_SCROLLBAR, OPT_BORDER, OPT_WINDOW,
-  OPT_HOLD,
-  OPT_CHARWIDTH, OPT_EMOJIS, OPT_EMOJI_PLACEMENT, OPT_COMPOSE_KEY,
-  OPT_COMMENT, OPT_INT, OPT_CLR, OPT_CLRFG, OPT_STR, OPT_WSTR,OPT_FONT,
+  OPT_BOOL=0,     OPT_MOD,        OPT_TRANS,      OPT_CURSOR, 
+  OPT_FONTSMT,    OPT_FONTRENDER, OPT_MIDDLECLICK,OPT_RIGHTCLICK, 
+  OPT_SCROLLBAR,  OPT_BORDER,     OPT_WINDOW,     OPT_HOLD,
+  OPT_CHARWIDTH,  OPT_EMOJIS,     OPT_COMPOSE_KEY,OPT_EMOJI_PLACEMENT,
+  //0x10
+  OPT_BOLD,       OPT_COMMENT,    
+  OPT_INT,        OPT_STR,        OPT_WSTR,       OPT_CLR,        
+  OPT_CLRFG,      OPT_FONT,
   OPT_TYPE_MASK = 0x1F,
   OPT_LEGACY = 0x20,
   OPT_KEEPCR = 0x40,
@@ -62,8 +68,6 @@ typedef enum {
 } opt_type;
 
 #define offcfg(option) offsetof(config, option)
-
-
 typedef const struct {
   string name;
   ushort type;
@@ -76,36 +80,33 @@ static cfg_option options[]= {
   {0}
 };
 
-typedef const struct {
+typedef struct {
   string name;
   int val;
 } opt_val;
 
-static opt_val * const opt_vals[] = {
+//__ terminal theme / colour scheme
+static const opt_val * lopt_vals[OPT_COMMENT];
+static opt_val * loptvals=NULL;
+static const opt_val * const opt_vals[] = {
   [OPT_BOOL] = (opt_val[]) {
-    //__ Setting false for Boolean options (localization optional)
     {__("no"), false},
-    //__ Setting true for Boolean options (localization optional)
     {__("yes"), true},
-    //__ Setting false for Boolean options (localization optional)
     {__("false"), false},
-    //__ Setting true for Boolean options (localization optional)
     {__("true"), true},
-    //__ Setting false for Boolean options (localization optional)
     {__("off"), false},
-    //__ Setting true for Boolean options (localization optional)
     {__("on"), true},
     {0, 0}
   },
   [OPT_MOD] = (opt_val[]) {
-    {("off"), 0},
-    {("shift"), MDK_SHIFT},
-    {("alt"), MDK_ALT},
-    {("ctrl"), MDK_CTRL},
-    {("win"), MDK_WIN},
-    {("super"), MDK_SUPER},
-    {("hyper"), MDK_HYPER},
-    {("capslock"), MDK_CAPSLOCK},
+    {__("off"), 0},
+    {__("shift"), MDK_SHIFT},
+    {__("alt"), MDK_ALT},
+    {__("ctrl"), MDK_CTRL},
+    {__("win"), MDK_WIN},
+    {__("super"), MDK_SUPER},
+    {__("hyper"), MDK_HYPER},
+    {__("capslock"), MDK_CAPSLOCK},
     {0, 0}
   },
   [OPT_TRANS] = (opt_val[]) {
@@ -200,36 +201,295 @@ static opt_val * const opt_vals[] = {
     {__("zoom"), EMOJIS_ZOOM},
     {0, 0}
   },
+  [OPT_COMPOSE_KEY] = (opt_val[]) {
+    {__("off"), 0},
+    {__("shift"), MDK_SHIFT},
+    {__("alt"), MDK_ALT},
+    {__("ctrl"), MDK_CTRL},
+    {__("super"), MDK_SUPER},
+    {__("hyper"), MDK_HYPER},
+    {0, 0}
+  },
   [OPT_EMOJI_PLACEMENT] = (opt_val[]) {
-    //__ Options - Text - Emojis - Placement (localization optional)
     {__("stretch"), EMPL_STRETCH},
-    //__ Options - Text - Emojis - Placement (localization optional)
     {__("align"), EMPL_ALIGN},
-    //__ Options - Text - Emojis - Placement (localization optional)
     {__("middle"), EMPL_MIDDLE},
-    //__ Options - Text - Emojis - Placement (localization optional)
     {__("full"), EMPL_FULL},
     {0, 0}
   },
-  [OPT_COMPOSE_KEY] = (opt_val[]) {
-    {("off"), 0},
-    {("shift"), MDK_SHIFT},
-    {("alt"), MDK_ALT},
-    {("ctrl"), MDK_CTRL},
-    {("super"), MDK_SUPER},
-    {("hyper"), MDK_HYPER},
+  [OPT_BOLD] = (opt_val[]) {
+    {__("as font"), 1},
+    {__("as colour"), 2},
+    {__("as font & as colour"), 3},
+    {__("xterm"), 0},
     {0, 0}
-  },
+  }
 };
-
+static void init_loptvals(){
+  int i,n,m=0;
+  if(loptvals)return ;
+  for(i=0;i<OPT_COMMENT;i++){
+    const opt_val *o = opt_vals[i];
+    for(n=0;o[n].name;n++);
+    m+=n+1;
+  }
+  loptvals=(opt_val*)malloc(m*sizeof(opt_val));
+  opt_val *od=loptvals;
+  for(i=0;i<OPT_COMMENT;i++){
+    const opt_val *o = opt_vals[i];
+    lopt_vals[i]=od;
+    for(n=0;o[n].name;n++){
+      od[n].val=o[n].val;
+      od[n].name=_(o[n].name);
+    }
+    od[n].name=NULL;
+    od[n].val=0;
+    od+=n+1;
+  }
+}
 
 #ifdef debug_theme
 #define trace_theme(params)	printf params
 #else
 #define trace_theme(params)
 #endif
+static struct {
+  uchar r, g, b;
+  char * name;
+} xcolours[] = {
+#include "rgb.t"
+};
 
+bool parse_colour(string s, colour *cp)
+{
+  uint r, g, b ,ok=0;
+  float c, m, y, k = 0;
+  switch(s[0]){
+    when '#':
+        if (sscanf(s, "#%2x%2x%2x", &r, &g, &b) == 3) ok=1;
+        else if (sscanf(s, "#%4x%4x%4x", &r, &g, &b) == 3) {
+          r >>= 8;
+          g >>= 8;
+          b >>= 8;
+          ok=2;
+        }
+    when 'r':
+        if (sscanf(s, "rgb:%2x/%2x/%2x", &r, &g, &b) == 3) ok=3;
+        else if (sscanf(s, "rgb:%4x/%4x/%4x", &r, &g, &b) == 3)
+          r >>= 8, g >>= 8, b >>= 8,ok=4;
+    when 'c':
+        if (sscanf(s, "cmy:%f/%f/%f", &c, &m, &y) == 3
+          || sscanf(s, "cmyk:%f/%f/%f/%f", &c, &m, &y, &k) == 4
+          ){
+          if (c >= 0 && c <= 1 && m >= 0 && m <= 1 && y >= 0 && y <= 1 && k >= 0 && k <= 1) {
+            r = (1 - c) * (1 - k) * 255;
+            g = (1 - m) * (1 - k) * 255;
+            b = (1 - y) * (1 - k) * 255;
+            ok=5;
+          }
+        }
+    when '0' ... '9':
+        if (sscanf(s, "%u,%u,%u", &r, &g, &b) == 3) ok=6;
+  }
+  if(!ok){
+    int coli = -1;
+    int len = strlen(s);
+    while (len && s[len - 1] == ' ') len--;
+    for (uint i = 0; i < lengthof(xcolours); i++)
+      if (0 == strncasecmp(s, xcolours[i].name, len)) {
+        r = xcolours[i].r;
+        g = xcolours[i].g;
+        b = xcolours[i].b;
+        coli = i;
+        break;
+      }
+    if (coli < 0)
+      return false;
+    ok=7;
+  }
 
+  *cp = make_colour(r, g, b);
+  return true;
+}
+static int GetOptVal(int type,const char*val_str){
+  int len = strlen(val_str);
+  if (!len)return -1;
+  for (const opt_val *o = lopt_vals[type]; o->name; o++) {
+    if (!strncasecmp(val_str, o->name, len)) {
+      return o->val;
+    }
+  }
+  for (const opt_val *o = opt_vals[type]; o->name; o++) {
+    if (!strncasecmp(val_str, o->name, len)) {
+      return o->val;
+    }
+  }
+  // Value not found: try interpreting it as a number.
+  char *val_end;
+  int val = strtol(val_str, &val_end, 0);
+  if (val_end != val_str) {
+    return val;
+  }
+  return -1;
+}
+static void validcfgtype(opt_type type,const char *tag){
+  if((type& OPT_TYPE_MASK)>=OPT_COMMENT){
+    printf("In %s, Error opt_type %d>%d\n",tag,type,OPT_COMMENT);
+  }
+}
+static int set_opt(int type,void*val_p,const char*val_str,bool from_file){
+  int res=1;
+  switch (type& OPT_TYPE_MASK) {
+    when OPT_INT: {
+      char *val_end;
+      int val = strtol(val_str, &val_end, 0);
+      if (val_end != val_str) {
+        *(int *)val_p = val;
+      }
+    }
+    when OPT_STR:
+        strset(val_p, val_str);
+    when OPT_WSTR: {
+      wchar * ws;
+      if (from_file)
+        ws = cs__utforansitowcs(val_str);
+      else
+        ws = cs__mbstowcs(val_str);
+      wstrset(val_p, ws);
+      delete(ws);
+    }
+    when OPT_CLR:
+#ifdef debug_theme
+        printf("set_option <%s> <%s>\n", name, val_str);
+#endif
+    if (!parse_colour(val_str, val_p))res=0;
+    when OPT_CLRFG: {
+#ifdef debug_theme
+      printf("set_option <%s> <%s>\n", name, val_str);
+#endif
+      colourfg *pair = val_p;
+      if (parse_colour(val_str, &pair->fg)) {
+        const char *sep = strchr(val_str, ';');
+        if (!sep) pair->bg = pair->fg;
+        else if (!parse_colour(sep + 1, &pair->bg)) res=0;
+      }else res=0;
+    }
+    when OPT_FONT: {
+      wchar ws[64];
+      char bold[64];
+      font_spec *p=(font_spec*)val_p;
+      bold[0]=0;
+      sscanf(val_str,"%64l[^,],%d,%d,%64s",ws,&p->size,&p->weight,bold);
+      wstrset(&p->name, ws);
+      if(bold[0]){
+        int val=GetOptVal(OPT_BOOL,bold);
+        if(val>=0) p->isbold=(val>0);
+      }
+    }
+    when OPT_COMMENT: 
+    otherwise: {
+      validcfgtype(type, "Set_Option ");
+      int val=GetOptVal(type,val_str);
+      if(val>=0){
+        *(CTYPE*)val_p = val;
+      }else res=0;
+    }
+  }
+  return res;
+}
+
+static void copy_opt(int type,void*dst_val_p ,void*src_val_p ){
+  switch (type & OPT_TYPE_MASK) {
+    when OPT_INT:
+        *(int *)dst_val_p = *(int *)src_val_p;
+    when OPT_STR:
+        strset(dst_val_p, *(string *)src_val_p);
+    when OPT_WSTR:
+        wstrset(dst_val_p, *(wstring *)src_val_p);
+    when OPT_CLR:
+        *(colour *)dst_val_p = *(colour *)src_val_p;
+    when OPT_CLRFG:
+        *(colourfg *)dst_val_p = *(colourfg *)src_val_p;
+    when OPT_FONT:{ 
+      font_spec *pd=(font_spec*)dst_val_p;
+      font_spec *ps=(font_spec*)src_val_p;
+      wstrset(&pd->name, ps->name);
+      pd->size=ps->size;
+      pd->weight=ps->weight;
+      pd->isbold=ps->isbold;
+    }
+    when OPT_COMMENT: 
+        otherwise:
+        validcfgtype(type, "copy_config");
+    *(CTYPE *)dst_val_p = *(CTYPE *)src_val_p;
+  }
+}
+static int ischg_opt(int type,const void*val_p,const void*new_val_p){
+  int changed=0;
+  switch (type & OPT_TYPE_MASK) {
+    when OPT_INT:
+        changed = (*(int *)val_p != *(int *)new_val_p);
+    when OPT_STR:
+        changed = strcmp(*(string *)val_p, *(string *)new_val_p);
+    when OPT_WSTR:
+        changed = wcscmp(*(wstring *)val_p, *(wstring *)new_val_p);
+    when OPT_CLR:
+        changed = (*(colour *)val_p != *(colour *)new_val_p);
+    when OPT_CLRFG:
+        changed = memcmp(val_p, new_val_p, sizeof(colourfg));
+    when OPT_FONT:{ 
+      font_spec *pd=(font_spec*)val_p;
+      font_spec *ps=(font_spec*)new_val_p;
+      changed=pd->size!=ps->size|| 
+          pd->weight!=ps->weight||
+          pd->isbold!=ps->isbold||
+          wcscmp(pd->name, ps->name);
+    }
+    when OPT_COMMENT: 
+    otherwise:
+      validcfgtype(type, "apply_config");
+      changed = (*(CTYPE *)val_p != *(CTYPE *)new_val_p);
+  }
+  return changed;
+}
+static void printOptVar(FILE*file,int type,const void*val_p){
+  switch (type & OPT_TYPE_MASK) {
+    when OPT_INT:
+        fprintf(file, "%i", *(int *)val_p);
+    when OPT_STR:
+        fprintf(file, "%s", *(string *)val_p);
+    when OPT_WSTR: {
+      char * s = cs__wcstoutf(*(wstring *)val_p);
+      fprintf(file, "%s", s);
+      delete(s);
+    }
+    when OPT_CLR: {
+      colour c = *(colour *)val_p;
+      fprintf(file, "%u,%u,%u", red(c), green(c), blue(c));
+    }
+    when OPT_CLRFG: {
+      colourfg p = *(colourfg *)val_p;
+      fprintf(file, "%u,%u,%u", red(p.fg), green(p.fg), blue(p.fg));
+      if (p.fg != p.bg)
+        fprintf(file, ";%u,%u,%u", red(p.bg), green(p.bg), blue(p.bg));
+    }
+    when OPT_FONT: 
+      font_spec *pd=(font_spec*)val_p;
+      fprintf(file,"%ls,%d,%d,%d",pd->name,pd->size,pd->weight,pd->isbold);
+    when OPT_COMMENT: 
+    otherwise: {
+      validcfgtype(type, "printOptVar");
+      int val = *(CTYPE *)val_p;
+      const opt_val *o = lopt_vals[type];
+      for (; o->name; o++) {
+        if (o->val == val)
+          break;
+      }
+      if (o->name) fputs(o->name, file);
+      else fprintf(file, "%i", val);
+    }
+  }
+}
 char *
 save_filename(const char * suf)
 {
@@ -422,161 +682,14 @@ check_legacy_options(void (*remember_option)(const char * tag, uint))
   }
 }
 
-static struct {
-  uchar r, g, b;
-  char * name;
-} xcolours[] = {
-#include "rgb.t"
-};
-
-bool
-parse_colour(string s, colour *cp)
-{
-  uint r, g, b ,ok=0;
-  float c, m, y, k = 0;
-  switch(s[0]){
-    when '#':
-        if (sscanf(s, "#%2x%2x%2x", &r, &g, &b) == 3) ok=1;
-        else if (sscanf(s, "#%4x%4x%4x", &r, &g, &b) == 3) {
-          r >>= 8;
-          g >>= 8;
-          b >>= 8;
-          ok=2;
-        }
-    when 'r':
-        if (sscanf(s, "rgb:%2x/%2x/%2x", &r, &g, &b) == 3) ok=3;
-        else if (sscanf(s, "rgb:%4x/%4x/%4x", &r, &g, &b) == 3)
-          r >>= 8, g >>= 8, b >>= 8,ok=4;
-    when 'c':
-        if (sscanf(s, "cmy:%f/%f/%f", &c, &m, &y) == 3
-          || sscanf(s, "cmyk:%f/%f/%f/%f", &c, &m, &y, &k) == 4
-          ){
-          if (c >= 0 && c <= 1 && m >= 0 && m <= 1 && y >= 0 && y <= 1 && k >= 0 && k <= 1) {
-            r = (1 - c) * (1 - k) * 255;
-            g = (1 - m) * (1 - k) * 255;
-            b = (1 - y) * (1 - k) * 255;
-            ok=5;
-          }
-        }
-    when '0' ... '9':
-        if (sscanf(s, "%u,%u,%u", &r, &g, &b) == 3) ok=6;
-  }
-  if(!ok){
-    int coli = -1;
-    int len = strlen(s);
-    while (len && s[len - 1] == ' ') len--;
-    for (uint i = 0; i < lengthof(xcolours); i++)
-      if (0 == strncasecmp(s, xcolours[i].name, len)) {
-        r = xcolours[i].r;
-        g = xcolours[i].g;
-        b = xcolours[i].b;
-        coli = i;
-        break;
-      }
-    if (coli < 0)
-      return false;
-    ok=7;
-  }
-
-  *cp = make_colour(r, g, b);
-  return true;
-}
-static int GetOptVal(int type,const char*val_str){
-  int len = strlen(val_str);
-  if (!len)return -1;
-  for (opt_val *o = opt_vals[type]; o->name; o++) {
-    if (!strncasecmp(val_str, o->name, len)) {
-      return o->val;
-    }
-  }
-  // Value not found: try interpreting it as a number.
-  char *val_end;
-  int val = strtol(val_str, &val_end, 0);
-  if (val_end != val_str) {
-    return val;
-  }
-  return -1;
-}
 static int
 set_option(config * p,string name, string val_str, bool from_file)
 {
   int i = find_option(from_file, name);
-  if (i < 0)
-    return i;
-
-  void *val_p = (void *)p + options[i].offset;
-  if (!(options[i].type & OPT_KEEPCR))
-    ((char *)val_str)[strcspn(val_str, "\r")] = 0;
-  uint type = options[i].type & OPT_TYPE_MASK;
-
-  switch (type) {
-    when OPT_STR:
-      strset(val_p, val_str);
-      return i;
-    when OPT_WSTR: {
-      wchar * ws;
-      if (from_file)
-        ws = cs__utforansitowcs(val_str);
-      else
-        ws = cs__mbstowcs(val_str);
-      wstrset(val_p, ws);
-      delete(ws);
-      return i;
-    }
-    when OPT_FONT: {
-      wchar ws[64];
-      char bold[64];
-      font_spec *p=(font_spec*)val_p;
-      bold[0]=0;
-      sscanf(val_str,"%64l[^,],%d,%d,%64s",ws,&p->size,&p->weight,bold);
-      wstrset(&p->name, ws);
-      if(bold[0]){
-        int val=GetOptVal(OPT_BOOL,bold);
-        if(val>=0) p->isbold=(val>0);
-      }
-      return i;
-    }
-    when OPT_COMMENT: 
-    when OPT_INT: {
-      char *val_end;
-      int val = strtol(val_str, &val_end, 0);
-      if (val_end != val_str) {
-        *(int *)val_p = val;
-        return i;
-      }
-    }
-    when OPT_CLR:
-#ifdef debug_theme
-      printf("set_option <%s> <%s>\n", name, val_str);
-#endif
-      if (parse_colour(val_str, val_p))
-        return i;
-    when OPT_CLRFG: {
-#ifdef debug_theme
-      printf("set_option <%s> <%s>\n", name, val_str);
-#endif
-      colourfg *pair = val_p;
-      if (parse_colour(val_str, &pair->fg)) {
-        const char *sep = strchr(val_str, ';');
-        if (!sep) {
-          pair->bg = pair->fg;
-          return i;
-        }
-        else if (parse_colour(sep + 1, &pair->bg))
-          return i;
-      }
-    }
-    otherwise: {
-      if(type>OPT_COMMENT){
-        printf("Set Option Error Cfg type %d>%d\n",type,OPT_COMMENT);
-      }
-      int val=GetOptVal(type,val_str);
-      if(val>=0){
-          *(int*)val_p = val;
-          return i;
-      }
-    }
-  }
+  if (i < 0) return i;
+  uint type = options[i].type ;
+  if (!(type & OPT_KEEPCR))((char *)val_str)[strcspn(val_str, "\r")] = 0;
+  if(set_opt(type ,(void *)p + options[i].offset,val_str,from_file))return i;
   //__ %2$s: option name, %1$s: invalid value
   if (!wv.wnd)  // report errors only during initialisation
     opterror(_("Ignoring invalid value '%s' for option '%s'"), 
@@ -710,12 +823,12 @@ init_config_dirs(void)
 }
 
 char *
-get_resource_file(wstring sub, wstring res, bool towrite)
+get_resource_file(string sub, string res, bool towrite)
 {
   init_config_dirs();
   int fd;
   for (int i = last_config_dir; i >= 0; i--) {
-    char * resfn = asform(("%s/%ls/%ls"), config_dirs[i], sub,res);
+    char * resfn = asform(("%s/%s/%s"), config_dirs[i], sub,res);
     fd = open(resfn, towrite ? O_CREAT |  O_WRONLY | O_BINARY : O_RDONLY | O_BINARY, 0644);
 #if CYGWIN_VERSION_API_MINOR >= 194
     if (towrite && fd < 0 && errno == ENOENT) {
@@ -741,7 +854,6 @@ get_resource_file(wstring sub, wstring res, bool towrite)
   }
   return null;
 }
-
 
 #define dont_debug_messages 1
 
@@ -783,12 +895,13 @@ static void clear_messages()
     pt->t=0;pt->n=0;pt->m=0;
   }
 }
-static void add_message(string msg, string locmsg)
+static s_message *add_message(string msg, string locmsg)
 {
   s_hashtab *pt=&hmsgt[HASHS(msg)];
   renewm(pt->t,pt->n, pt->m);
   setmsg(& pt->t[pt->n], msg, locmsg);
   pt->n++;
+  return & pt->t[pt->n-1];
 }
 #else
 static s_message * messages = {0};
@@ -805,7 +918,7 @@ static void clear_messages()
   for (int i = 0; i < nmessages; i++) { freemsg(messages+i); }
   nmessages = 0;
 }
-static void add_message(string msg, string locmsg)
+static s_message *add_message(string msg, string locmsg)
 {
   renewm(messages,nmessages , maxmessages);
 #if defined(debug_messages) && debug_messages > 3
@@ -813,6 +926,7 @@ static void add_message(string msg, string locmsg)
 #endif
   setmsg(& messages[nmessages], msg, locmsg);
   nmessages ++;
+  return & messages[nmessages];
 }
 #endif
 
@@ -826,13 +940,10 @@ const char*loctext(string msg)
 const wchar *wloctext(string msg)
 {
   s_message *pm=findmsg(msg);
-  if(pm){
-    if (pm->wmsg == null)
-      pm->wmsg = cs__utftowcs(pm->locmsg);
-    return (wchar*)pm->wmsg;
-  }
-  add_message(strdup(msg), strdup(msg));
-  return wloctext(msg);
+  if(!pm)pm=add_message(strdup(msg), strdup(msg));
+  if (pm->wmsg == null)
+    pm->wmsg = cs__utftowcs(pm->locmsg);
+  return (wchar*)pm->wmsg;
 }
 
 static char *
@@ -926,22 +1037,22 @@ load_messages_file(const char * textdbf)
 }
 
 static bool
-load_messages_lang_w(wstring lang, bool fallback)
+load_messages_lang(string lang, bool fallback)
 {
+
   if (lang) {
-    wchar * wl = newn(wchar, wcslen(lang) + 4);
-    wcscpy(wl, lang);
+    char * wl = newn(char, strlen(lang) + 4);
+    strcpy(wl, lang);
     if (fallback) {
-      wchar * _ = wcschr(wl, '_');
+      char * _ = strchr(wl, '_');
       if (_) {
         *_ = '\0';
-        // continue below
       }
       else
         return false;
     }
-    wcscat(wl, W(".po"));
-    const char * textdbf = get_resource_file(W("lang"), wl, false);
+    strcat(wl, ".po");
+    const char * textdbf = get_resource_file("lang", wl, false);
     delete(wl);
 #ifdef debug_messages
     printf("Trying to load messages from <%ls>: <%s>\n", lang, textdbf);
@@ -955,15 +1066,6 @@ load_messages_lang_w(wstring lang, bool fallback)
   return false;
 }
 
-static bool
-load_messages_lang(string lang, bool fallback)
-{
-  wchar * wlang = cs__utftowcs(lang);
-  bool res = load_messages_lang_w((wstring)wlang, fallback);
-  delete(wlang);
-  return res;
-}
-
 static void
 load_messages(config * cfg_p)
 {
@@ -972,16 +1074,16 @@ load_messages(config * cfg_p)
     printf("Loading localization <%ls> (fallback %d)\n", cfg_p->lang, fallback);
 #endif
     clear_messages();
-    if (wcscmp(cfg_p->lang, W("=")) == 0) {
+    if (strcmp(cfg_p->lang, ("=")) == 0) {
       if (load_messages_lang(cfg_p->locale, fallback))
         return;
     }
-    else if (wcscmp(cfg_p->lang, W("@")) == 0) {
+    else if (strcmp(cfg_p->lang, ("@")) == 0) {
       // locale_menu[1] is transformed from GetUserDefaultUILanguage()
       if (load_messages_lang(locale_menu[1], fallback))
         return;
     }
-    else if (wcscmp(cfg_p->lang, W("*")) == 0) {
+    else if (strcmp(cfg_p->lang, ("*")) == 0) {
       // determine UI language from environment
       const char * lang = getenv("LANGUAGE");
       if (lang) {
@@ -1010,7 +1112,7 @@ load_messages(config * cfg_p)
       }
     }
     else {
-      if (load_messages_lang_w(cfg_p->lang, fallback))
+      if (load_messages_lang(cfg_p->lang, fallback))
         return;
     }
   }
@@ -1144,34 +1246,7 @@ copy_config(string tag, config * dst_p, const config * src_p)
     opt_type type = options[i].type;
     if (!(type & OPT_LEGACY)) {
       uint offset = options[i].offset;
-      void *dst_val_p = (void *)dst_p + offset;
-      void *src_val_p = (void *)src_p + offset;
-      switch (type & OPT_TYPE_MASK) {
-        when OPT_STR:
-          strset(dst_val_p, *(string *)src_val_p);
-        when OPT_WSTR:
-          wstrset(dst_val_p, *(wstring *)src_val_p);
-        when OPT_FONT:{ 
-          font_spec *pd=(font_spec*)dst_val_p;
-          font_spec *ps=(font_spec*)src_val_p;
-          wstrset(&pd->name, ps->name);
-          pd->size=ps->size;
-          pd->weight=ps->weight;
-          pd->isbold=ps->isbold;
-        }
-        when OPT_COMMENT: 
-        when OPT_INT:
-          *(int *)dst_val_p = *(int *)src_val_p;
-        when OPT_CLR:
-          *(colour *)dst_val_p = *(colour *)src_val_p;
-        when OPT_CLRFG:
-          *(colourfg *)dst_val_p = *(colourfg *)src_val_p;
-        otherwise:
-          if(type>OPT_COMMENT){
-            printf("copy config Error Cfg type %d>%d\n",type,OPT_COMMENT);
-          }
-          *(char *)dst_val_p = *(char *)src_val_p;
-      }
+      copy_opt(type,(void *)dst_p + offset,(void *)src_p + offset);
     }
   }
 }
@@ -1179,6 +1254,7 @@ copy_config(string tag, config * dst_p, const config * src_p)
 void
 init_config(void)
 {
+  init_loptvals();
   copy_config("init", &cfg, &default_cfg);
   CLRFGSCPY(def_colours,default_cfg.ansi_colours);
 }
@@ -1198,7 +1274,7 @@ fix_config(void)
 void
 finish_config(void)
 {
-  if (*cfg.lang && (wcscmp(cfg.lang, W("=")) != 0 || *cfg.locale))
+  if (*cfg.lang && (strcmp(cfg.lang, ("=")) != 0 || *cfg.locale))
     load_messages(&cfg);
 #if defined(debug_messages) && debug_messages > 1
   else
@@ -1232,46 +1308,6 @@ finish_config(void)
   if (0 < cfg.transparency && cfg.transparency <= 3)
     cfg.transparency *= 16;
   //printf("finish_config bd %d\n", cfg.bold_as_font);
-}
-static void printOptVar(FILE*file,int type,const void*val_p){
-  switch (type & OPT_TYPE_MASK) {
-    when OPT_STR:
-        fprintf(file, "%s", *(string *)val_p);
-    when OPT_WSTR: {
-      char * s = cs__wcstoutf(*(wstring *)val_p);
-      fprintf(file, "%s", s);
-      delete(s);
-    }
-    when OPT_FONT: 
-      font_spec *pd=(font_spec*)val_p;
-      fprintf(file,"%ls,%d,%d,%d",pd->name,pd->size,pd->weight,pd->isbold);
-    when OPT_INT:
-        fprintf(file, "%i", *(int *)val_p);
-    when OPT_COMMENT: 
-    when OPT_CLR: {
-      colour c = *(colour *)val_p;
-      fprintf(file, "%u,%u,%u", red(c), green(c), blue(c));
-    }
-    when OPT_CLRFG: {
-      colourfg p = *(colourfg *)val_p;
-      fprintf(file, "%u,%u,%u", red(p.fg), green(p.fg), blue(p.fg));
-      if (p.fg != p.bg)
-        fprintf(file, ";%u,%u,%u", red(p.bg), green(p.bg), blue(p.bg));
-    }
-    otherwise: {
-      if(type>OPT_COMMENT){
-        printf("print optvar config Error Cfg type %d>%d\n",type,OPT_COMMENT);
-      }
-      int val = *(char *)val_p;
-      opt_val *o = opt_vals[type];
-      for (; o->name; o++) {
-        if (o->val == val)
-          break;
-      }
-      if (o->name) fputs(o->name, file);
-      else fprintf(file, "%i", val);
-    }
-  }
 }
 
 static void
@@ -1319,24 +1355,24 @@ save_config(void)
 }
 
 static int 
-load_themer(config *p,wstring theme)
+load_themer(config *p,string theme)
 {
   char * thf=NULL;
   if (!*theme) return 0;
-  if (wcschr(theme, L'/') || wcschr(theme, L'\\')) 
-    thf = path_win_w_to_posix(theme);
+  if (strchr(theme, '/') || strchr(theme, '\\')) 
+    thf = path_win_to_posix(theme);
   else 
-    thf = get_resource_file(W("themes"), theme, false);
+    thf = get_resource_file("themes", theme, false);
   if(!thf)return 0;
   int r=load_configr(p,thf, false);
   delete(thf);
   if(!r)return 0;
   CLRFGSCPY(theme_colours,p->ansi_colours);
-  wcsncpy(theme_file,theme,128);
+  strncpy(theme_file,theme,128);
   return 1;
 }
 void 
-load_theme(wstring theme){
+load_theme(string theme){
   load_themer(&cfg,theme);
 }
 
@@ -1373,9 +1409,9 @@ load_scheme(string cs){
   load_schemer(&cfg,cs);
 }
 
-static control *cols_box, *rows_box, *locale_box, *charset_box;
-static control *transparency_valbox, *transparency_selbox;
-static control *font_sample, *font_list, *font_weights;
+static control *cols_box=NULL, *rows_box=NULL, *locale_box=NULL, *charset_box=NULL;
+static control *transparency_valbox=NULL, *transparency_selbox=NULL;
+static control *font_sample=NULL, *font_list=NULL, *font_weights=NULL;
 
 void
 apply_config(bool save)
@@ -1385,50 +1421,23 @@ apply_config(bool save)
     opt_type type = options[i].type;
     uint offset = options[i].offset;
     //void *val_p = (void *)&cfg + offset;
-    void *val_p = (void *)&file_cfg + offset;
-    void *new_val_p = (void *)&new_cfg + offset;
     if (!(type & OPT_LEGACY)) {
-      bool changed;
-      switch (type & OPT_TYPE_MASK) {
-        when OPT_STR:
-          changed = strcmp(*(string *)val_p, *(string *)new_val_p);
-        when OPT_WSTR:
-          changed = wcscmp(*(wstring *)val_p, *(wstring *)new_val_p);
-        when OPT_FONT:{ 
-          font_spec *pd=(font_spec*)val_p;
-          font_spec *ps=(font_spec*)new_val_p;
-          changed=pd->size!=ps->size|| 
-              pd->weight!=ps->weight||
-              pd->isbold!=ps->isbold||
-              wcscmp(pd->name, ps->name);
-        }
-        when OPT_INT:
-          changed = (*(int *)val_p != *(int *)new_val_p);
-        when OPT_CLR:
-          changed = (*(colour *)val_p != *(colour *)new_val_p);
-        when OPT_CLRFG:
-          changed = memcmp(val_p, new_val_p, sizeof(colourfg));
-        otherwise:
-          if(type>OPT_COMMENT){
-            printf("apply_config Error Cfg type %d>%d\n",type,OPT_COMMENT);
-          }
-          changed = (*(char *)val_p != *(char *)new_val_p);
-      }
-      if (changed)
+      if(ischg_opt(type ,(void *)&file_cfg + offset,(void *)&new_cfg + offset)){
         remember_file_option("apply", i);
+      }
     }
   }
 
   copy_config("apply", &file_cfg, &new_cfg);
-  if (wcscmp(new_cfg.lang, cfg.lang) != 0
-      || (wcscmp(new_cfg.lang, W("=")) == 0 && new_cfg.locale != cfg.locale)
+  if (strcmp(new_cfg.lang, cfg.lang) != 0
+      || (strcmp(new_cfg.lang, ("=")) == 0 && new_cfg.locale != cfg.locale)
      ){
     load_messages(&new_cfg);
   }
   if(CLRFGSCMP(theme_colours,file_cfg.ansi_colours)==0){
     CLRFGSCPY(file_cfg.ansi_colours,cfg_colours);
   }else{
-    *(wchar*)file_cfg.theme_file=0;
+    *(char*)file_cfg.theme_file=0;
   }
   win_reconfig();  // copy_config(&cfg, &new_cfg);
   fix_config();
@@ -1637,7 +1646,7 @@ about_handler(control *unused(ctrl), int event)
 
 #ifdef use_findfile
 static void
-do_file_resources(control *ctrl, wstring pattern, bool list_dirs, str_fn fnh)
+do_file_resources(control *ctrl, string pattern, bool list_dirs, str_fn fnh)
 {
   static wstring *lst=NULL;
   static int nl=0,ml=0;
@@ -1659,15 +1668,14 @@ do_file_resources(control *ctrl, wstring pattern, bool list_dirs, str_fn fnh)
   }
   clrlist();
   init_config_dirs();
-  //printf("add_file_resources <%ls> dirs %d\n", pattern, list_dirs);
 
 
   for (int i = last_config_dir; i >= 0; i--) {
-    wstring suf = wcsrchr(pattern, L'.');
-    int sufl = suf ? wcslen(suf) : 0;
-    wchar * rc = awsform(W("%s/%ls"), config_dirs[i], pattern);
+    string suf = strrchr(pattern, '.');
+    int sufl = suf ? strlen(suf) : 0;
+    char * rc = asform(W("%s/%s"), config_dirs[i], pattern);
     wchar * rcpat = path_posix_to_win_w(rc);
-    wchar *rt=wcsrchr(rc,L'/');
+    char *rt=strrchr(rc,L'/');
     int len=0;
     if(rt)len=rt-rc+1;
 
@@ -1722,7 +1730,7 @@ do_file_resources(control *ctrl, wstring pattern, bool list_dirs, str_fn fnh)
 }
 #else
 static void
-do_file_resources(control *ctrl, wstring pattern, bool list_dirs, str_fn fnh)
+do_file_resources(control *ctrl, string pattern, bool list_dirs, str_fn fnh)
 {
   static string *lst=NULL;
   static int nl=0,ml=0;
@@ -1743,13 +1751,13 @@ do_file_resources(control *ctrl, wstring pattern, bool list_dirs, str_fn fnh)
     return -nl;
   }
   init_config_dirs();
-  //printf("add_file_resources <%ls> dirs %d\n", pattern, list_dirs);
+  //printf("add_file_resources <%s> dirs %d\n", pattern, list_dirs);
   clrlist();
 
 
 #include <dirent.h>
   for (int i = last_config_dir; i >= 0; i--) {
-    char * pat = cs__wcstombs(pattern);
+    char*pat=strdup(pattern);
     char * patsuf = strrchr(pat, '.');
     int patsuflen = patsuf ? strlen(patsuf) : 0;
     char * patbase = strrchr(pat, '/');
@@ -1801,13 +1809,13 @@ do_file_resources(control *ctrl, wstring pattern, bool list_dirs, str_fn fnh)
 #endif
 
 static void
-add_file_resources(control *ctrl, wstring pattern, bool list_dirs)
+add_file_resources(control *ctrl, string pattern, bool list_dirs)
 {
   do_file_resources(ctrl, pattern, list_dirs, 0);
 }
 
 void
-handle_file_resources(wstring pattern, str_fn fn_handler)
+handle_file_resources(string pattern, str_fn fn_handler)
 {
   do_file_resources(0, pattern, false, fn_handler);
 }
@@ -1952,29 +1960,29 @@ lang_handler(control *ctrl, int event)
       dlg_listbox_add_w(ctrl, WINLOC);
       dlg_listbox_add_w(ctrl, LOCENV);
       dlg_listbox_add_w(ctrl, LOCALE);
-      add_file_resources(ctrl, W("lang/*.po"), false);
-      if (wcscmp(new_cfg.lang, W("")) == 0)
+      add_file_resources(ctrl, ("lang/*.po"), false);
+      if (strcmp(new_cfg.lang, ("")) == 0)
         dlg_editbox_set_w(ctrl, NONE);
-      else if (wcscmp(new_cfg.lang, W("@")) == 0)
+      else if (strcmp(new_cfg.lang, ("@")) == 0)
         dlg_editbox_set_w(ctrl, WINLOC);
-      else if (wcscmp(new_cfg.lang, W("*")) == 0)
+      else if (strcmp(new_cfg.lang, ("*")) == 0)
         dlg_editbox_set_w(ctrl, LOCENV);
-      else if (wcscmp(new_cfg.lang, W("=")) == 0)
+      else if (strcmp(new_cfg.lang, ("=")) == 0)
         dlg_editbox_set_w(ctrl, LOCALE);
       else
-        dlg_editbox_set_w(ctrl, new_cfg.lang);
+        dlg_editbox_set(ctrl, new_cfg.lang);
     when EVENT_VALCHANGE or EVENT_SELCHANGE: {
       int n = dlg_listbox_getcur(ctrl);
       if (n == 0)
-        wstrset(&new_cfg.lang, W(""));
+        strset(&new_cfg.lang, (""));
       else if (n == 1)
-        wstrset(&new_cfg.lang, W("@"));
+        strset(&new_cfg.lang, ("@"));
       else if (n == 2)
-        wstrset(&new_cfg.lang, W("*"));
+        strset(&new_cfg.lang, ("*"));
       else if (n == 3)
-        wstrset(&new_cfg.lang, W("="));
+        strset(&new_cfg.lang, ("="));
       else
-        dlg_editbox_get_w(ctrl, &new_cfg.lang);
+        dlg_editbox_get(ctrl, &new_cfg.lang);
     }
   }
 }
@@ -2097,21 +2105,21 @@ bell_handler(control *ctrl, int event)
 static void
 bellfile_handler(control *ctrl, int event)
 {
-  const wstring NONE = _W("◇ None (system sound) ◇");  // ♢◇
-  const wstring CFG_NONE = W("");
-  wstring bell_file = new_cfg.bell_file[6];
+  const string NONE = ("◇ None (system sound) ◇");  // ♢◇
+  const string CFG_NONE = ("");
+  string bell_file = new_cfg.bell_file[6];
   if (event == EVENT_REFRESH) {
     dlg_listbox_clear(ctrl);
-    dlg_listbox_add_w(ctrl, NONE);
-    add_file_resources(ctrl, W("sounds/*.wav"), false);
+    dlg_listbox_add(ctrl, NONE);
+    add_file_resources(ctrl, ("sounds/*.wav"), false);
     // strip std dir prefix...
-    dlg_editbox_set_w(ctrl, *bell_file ? bell_file : NONE);
+    dlg_editbox_set(ctrl, *bell_file ? bell_file : NONE);
   }
   else if (event == EVENT_VALCHANGE || event == EVENT_SELCHANGE) {
     if (dlg_listbox_getcur(ctrl) == 0)
-      wstrset(&bell_file, CFG_NONE);
+      strset(&bell_file, CFG_NONE);
     else
-      dlg_editbox_get_w(ctrl, &bell_file);
+      dlg_editbox_get(ctrl, &bell_file);
 
     // add std dir prefix?
     new_cfg.bell_file[6] = bell_file;
@@ -2119,7 +2127,7 @@ bellfile_handler(control *ctrl, int event)
   }
   else if (event == EVENT_DROP) {
     dlg_editbox_set_w(ctrl, dragndrop);
-    wstrset(&new_cfg.bell_file[6], dragndrop);
+    wstrset2a(&new_cfg.bell_file[6], dragndrop);
     win_bell(&new_cfg);
   }
 }
@@ -2521,11 +2529,11 @@ scheme_return:
   return sch;
 }
 static int themechanged(){
-  wstring theme_name = new_cfg.theme_file;
+  string theme_name = new_cfg.theme_file;
   if(!*theme_name)return 0;
-  if(wcschr(theme_name, L'/') || wcschr(theme_name, L'\\'))return 0;
+  if(strchr(theme_name, '/') || strchr(theme_name, '\\'))return 0;
   if(CLRFGSCMP(theme_colours,new_cfg.ansi_colours))return 1;
-  if(wcscmp(theme_name,theme_file))return 1;
+  if(strcmp(theme_name,theme_file))return 1;
   return 0;
 }
 
@@ -2533,22 +2541,22 @@ static void
 theme_handler(control *ctrl, int event)
 {
   //__ terminal theme / colour scheme
-  const wstring NONE = _W("◇ None ◇");  // ♢◇
-  const wstring CFG_NONE = W("");
+  const string NONE = ("◇ None ◇");  // ♢◇
+  const string CFG_NONE = ("");
   //__ indicator of unsaved downloaded colour scheme
-  const wstring DOWNLOADED = _W("downloaded / give me a name!");
+  const string DOWNLOADED = _("downloaded / give me a name!");
   // downloaded theme indicator must contain a slash
   // to steer enabled state of Store button properly
-  const wstring CFG_DOWNLOADED = W("@/@");
-  wstring theme_name = new_cfg.theme_file;
+  const string CFG_DOWNLOADED = ("@/@");
+  string theme_name = new_cfg.theme_file;
   int upd=0;
   static int ued=0;
   switch(event){
     when EVENT_REFRESH: {
       ued=0;
       dlg_listbox_clear(ctrl);
-      dlg_listbox_add_w(ctrl, NONE);
-      add_file_resources(ctrl, W("themes/*"), false);
+      dlg_listbox_add(ctrl, NONE);
+      add_file_resources(ctrl, ("themes/*"), false);
 #ifdef attempt_to_keep_scheme_hidden
       if (*new_cfg.colour_scheme)
         // don't do this, rather keep previously entered name to store scheme
@@ -2556,13 +2564,13 @@ theme_handler(control *ctrl, int event)
         dlg_editbox_set_w(ctrl, W(""));
       else
 #endif
-        dlg_editbox_set_w(ctrl, !wcscmp(theme_name, CFG_DOWNLOADED) ? DOWNLOADED : *theme_name ? theme_name : NONE);
+        dlg_editbox_set(ctrl, !strcmp(theme_name, CFG_DOWNLOADED) ? DOWNLOADED : *theme_name ? theme_name : NONE);
     }
     when EVENT_SELCHANGE: {  // pull-down selection
       if (dlg_listbox_getcur(ctrl) == 0)
-        wstrset(&theme_name, CFG_NONE);
+        strset(&theme_name, CFG_NONE);
       else
-        dlg_editbox_get_w(ctrl, &theme_name);
+        dlg_editbox_get(ctrl, &theme_name);
 
       new_cfg.theme_file = theme_name;
       // clear pending colour scheme
@@ -2577,7 +2585,7 @@ theme_handler(control *ctrl, int event)
     when EVENT_UNFOCUS: {  // edit end
       if(ued){
         ued=0;
-        dlg_editbox_get_w(ctrl, &theme_name);
+        dlg_editbox_get(ctrl, &theme_name);
         new_cfg.theme_file = theme_name;
         enable_widget(store_button,themechanged());
         upd=1;
@@ -2588,21 +2596,22 @@ theme_handler(control *ctrl, int event)
 #ifdef debug_scheme
       printf("EVENT_DROP <%ls>\n", dragndrop);
 #endif
+      char * url = cs__wcstoutf(dragndrop);
       if (wcsncmp(W("data:text/plain,"), dragndrop, 16) == 0) {
         // indicate availability of downloaded scheme to be stored
-        dlg_editbox_set_w(ctrl, DOWNLOADED);
-        wstrset(&new_cfg.theme_file, CFG_DOWNLOADED);
+        dlg_editbox_set(ctrl, DOWNLOADED);
+        strset(&new_cfg.theme_file, CFG_DOWNLOADED);
         // un-URL-escape scheme description
         char * scheme = cs__wcstoutf(&dragndrop[16]);
-        char * url = scheme;
+        char * purl = scheme;
         char * sch = scheme;
-        while (*url) {
+        while (*purl) {
           int c;
-          if (sscanf(url, "%%%02X", &c) == 1) {
-            url += 3;
+          if (sscanf(purl, "%%%02X", &c) == 1) {
+            purl += 3;
           }
           else
-            c = *url++;
+            c = *purl++;
           if (c == '\n')
             *sch++ = ';';
           else if (c != '\r')
@@ -2627,19 +2636,18 @@ theme_handler(control *ctrl, int event)
 #endif
         )
       {
-        char * url = cs__wcstoutf(dragndrop);
         char * sch = download_scheme(url);
         if (sch) {
-          wchar * urlpoi = wcschr(dragndrop, '?');
+          char * urlpoi = strchr(url, '?');
           if (urlpoi)
             *urlpoi = 0;
           // find URL basename
-          urlpoi = wcsrchr(dragndrop, '/');
+          urlpoi = strrchr(url, '/');
           if (urlpoi) {
             // set theme name proposal to url base name
             urlpoi++;
-            dlg_editbox_set_w(ctrl, urlpoi);
-            wstrset(&new_cfg.theme_file, urlpoi);
+            dlg_editbox_set(ctrl, urlpoi);
+            strset(&new_cfg.theme_file, urlpoi);
             // set scheme
             strset(&new_cfg.colour_scheme, sch);
 
@@ -2651,20 +2659,20 @@ theme_handler(control *ctrl, int event)
           win_bell(&new_cfg);  // Could not load web theme
           win_show_warning(_("Could not load web theme"));
         }
-        delete(url);
       }
       else {
-        dlg_editbox_set_w(ctrl, dragndrop);
-        wstrset(&new_cfg.theme_file, dragndrop);
+        dlg_editbox_set(ctrl, url);
+        strset(&new_cfg.theme_file, url);
         enable_widget(store_button, false);
       }
+      delete(url);
     }
   }
   // apply changed theme immediately
   if (strcmp(new_cfg.colour_scheme, cfg.colour_scheme) ){
     load_schemer(&new_cfg,cfg.colour_scheme);
     upd=1;
-  }else if( wcscmp(theme_name, theme_file)){
+  }else if( strcmp(theme_name, theme_file)){
     upd=load_themer(&new_cfg,theme_name);
   }
   else if(!*theme_name) { 
@@ -2680,7 +2688,7 @@ theme_handler(control *ctrl, int event)
 static void
 theme_saver(control *ctrl, int event)
 {
-  wstring theme_name = new_cfg.theme_file;
+  string theme_name =  new_cfg.theme_file;
   if (event == EVENT_REFRESH) {
     enable_widget(ctrl,themechanged());
   }
@@ -2689,7 +2697,7 @@ theme_saver(control *ctrl, int event)
     printf("%ls <- <%s>\n", new_cfg.theme_file, new_cfg.colour_scheme);
 #endif
     if(!themechanged()) return;
-    char * sn = get_resource_file(W("themes"), theme_name, true);
+    char * sn = get_resource_file("themes", theme_name, true);
     if (!sn) {
       win_bell(&new_cfg);  // Cannot store theme file
       win_show_warning(_("Cannot store theme file"));
@@ -2719,20 +2727,20 @@ theme_saver(control *ctrl, int event)
 static void
 scheme_saver(control *ctrl, int event)
 {
-  wstring theme_name = new_cfg.theme_file;
+  string theme_name = ( new_cfg.theme_file);
   if (event == EVENT_REFRESH) {
     enable_widget(ctrl,
                   *new_cfg.colour_scheme && *theme_name
-                  && !wcschr(theme_name, L'/') && !wcschr(theme_name, L'\\')
+                  && !strchr(theme_name, '/') && !strchr(theme_name, '\\')
                  );
   }
   else if (event == EVENT_ACTION) {
 #ifdef debug_dragndrop
     printf("%ls <- <%s>\n", new_cfg.theme_file, new_cfg.colour_scheme);
 #endif
-    if (*new_cfg.colour_scheme && *theme_name)
-      if (!wcschr(theme_name, L'/') && !wcschr(theme_name, L'\\')) {
-        char * sn = get_resource_file(W("themes"), theme_name, true);
+    if (*new_cfg.colour_scheme && *theme_name){
+      if (!strchr(theme_name, '/') && !strchr(theme_name, '\\')) {
+        char * sn = get_resource_file("themes", theme_name, true);
         if (sn) {
           // save colour_scheme to theme_file
           FILE * thf = fopen(sn, "w");
@@ -2759,6 +2767,7 @@ scheme_saver(control *ctrl, int event)
           win_show_warning(_("Cannot store theme file"));
         }
       }
+    }
   }
 }
 
@@ -3138,7 +3147,7 @@ emojis_handler(control *ctrl, int event)
   //__ emojis style
   const string NONE = _("? None ?");  // ??
   string emojis = NONE;
-  for (opt_val * o = opt_vals[OPT_EMOJIS]; o->name; o++) {
+  for (const opt_val * o = lopt_vals[OPT_EMOJIS]; o->name; o++) {
     if (new_cfg.emojis == o->val) {
       emojis = o->name;
       break;
@@ -3148,7 +3157,7 @@ emojis_handler(control *ctrl, int event)
   if (event == EVENT_REFRESH) {
     dlg_listbox_clear(ctrl);
     dlg_listbox_add(ctrl, NONE);
-    add_file_resources(ctrl, W("emojis/*"), true);
+    add_file_resources(ctrl, ("emojis/*"), true);
     // strip std dir prefix...
     dlg_editbox_set(ctrl, *emojis ? emojis : NONE);
   }
@@ -3159,7 +3168,13 @@ emojis_handler(control *ctrl, int event)
       new_cfg.emojis = 0;
       emojis = newn(char, 1);
       dlg_editbox_get(ctrl, &emojis);
-      for (opt_val * o = opt_vals[OPT_EMOJIS]; o->name; o++) {
+      for (const opt_val * o = lopt_vals[OPT_EMOJIS]; o->name; o++) {
+        if (!strcasecmp(emojis, o->name)) {
+          new_cfg.emojis = o->val;
+          break;
+        }
+      }
+      for (const opt_val * o = opt_vals[OPT_EMOJIS]; o->name; o++) {
         if (!strcasecmp(emojis, o->name)) {
           new_cfg.emojis = o->val;
           break;
@@ -3171,7 +3186,7 @@ emojis_handler(control *ctrl, int event)
 }
 
 static void
-opt_handler(control *ctrl, int event,int* popt, opt_val * ovals)
+opt_handler(control *ctrl, int event,int* popt, const opt_val * ovals)
 {
   switch (event) {
     when EVENT_REFRESH:
@@ -3196,41 +3211,30 @@ opt_handler(control *ctrl, int event,int* popt, opt_val * ovals)
 static void
 emoji_placement_handler(control *ctrl, int event)
 {
-  opt_handler(ctrl, event, &new_cfg.emoji_placement, opt_vals[OPT_EMOJI_PLACEMENT]);
+  opt_handler(ctrl, event, &new_cfg.emoji_placement, lopt_vals[OPT_EMOJI_PLACEMENT]);
 }
 
 static void
 compose_key_handler(control *ctrl, int event)
 {
-  opt_handler(ctrl, event, &new_cfg.compose_key, opt_vals[OPT_COMPOSE_KEY]);
+  opt_handler(ctrl, event, &new_cfg.compose_key, lopt_vals[OPT_COMPOSE_KEY]);
 }
 
 static void
 smoothing_handler(control *ctrl, int event)
 {
-  opt_handler(ctrl, event, &new_cfg.font_smoothing, opt_vals[OPT_FONTSMT]);
+  opt_handler(ctrl, event, &new_cfg.font_smoothing, lopt_vals[OPT_FONTSMT]);
 }
 
-static opt_val * const showbold_vals =
-(opt_val[]) {
-    {__("as font"), 1},
-    {__("as colour"), 2},
-    {__("as font & as colour"), 3},
-    {__("xterm"), 0},
-    {0, 0}
-};
 
 static int showbold;
-
 static void
 showbold_handler(control *ctrl, int event)
 {
   showbold = new_cfg.bold_as_font | ((char)new_cfg.bold_as_colour) << 1;
-  //printf("bold as font %d as colour %d event %d\n", new_cfg.bold_as_font, new_cfg.bold_as_colour, event);
-  opt_handler(ctrl, event, &showbold, showbold_vals);
+  opt_handler(ctrl, event, &showbold, lopt_vals[OPT_BOLD]);
   new_cfg.bold_as_font = showbold & 1;
   new_cfg.bold_as_colour = showbold & 2;
-  //printf("bold as font %d as colour %d\n", new_cfg.bold_as_font, new_cfg.bold_as_colour);
 }
 
 static int bold_like_xterm;
@@ -3322,7 +3326,8 @@ transparency_selhandler(control *ctrl, int event)
 {
   dlg_stdradiobutton_handler(ctrl, event);
   if (event == EVENT_VALCHANGE) {
-    transparency_valhandler(transparency_valbox, EVENT_REFRESH);
+    if(transparency_valbox)
+      transparency_valhandler(transparency_valbox, EVENT_REFRESH);
   }
 }
 #if 0
@@ -3372,10 +3377,10 @@ setup_config_box(controlbox * b)
   control *c;
   copy_config("dialog", &new_cfg, &file_cfg);
   if(*theme_file)CLRFGSCPY(new_cfg.ansi_colours,theme_colours );
- /*
-  * The standard panel that appears at the bottom of all panels:
-  * Open, Cancel, Apply etc.
-  */
+  /*
+   * The standard panel that appears at the bottom of all panels:
+   * Open, Cancel, Apply etc.
+   */
   s = ctrl_new_set(b, W(""), W(""), W(""));
   ctrl_columns(s, 5, 20, 20, 20, 20, 20);
   c = ctrl_pushbutton(s,0, _W("About..."),0, about_handler, 0);
@@ -3389,9 +3394,9 @@ setup_config_box(controlbox * b)
   __W("OK");
 #endif
 
- /*
-  * The Looks panel.
-  */
+  /*
+   * The Looks panel.
+   */
   s = ctrl_new_set(b, _W("Looks"), _W("Looks in Terminal"), _W("Colours"));
   ctrl_columns(s, 3, 33, 33, 33);
   ctrl_pushbutton( s,0, _W("&Foreground..."),0, dlg_stdcolour_handler, &new_cfg.fg_colour);
@@ -3431,14 +3436,14 @@ setup_config_box(controlbox * b)
   s = ctrl_new_set(b, _W("Looks"), null, _W("Transparency"));
   bool with_glass = win_is_glass_available();
   transparency_selbox = ctrl_radiobuttons( s,-1, null,0, 4 + with_glass,
-    transparency_selhandler, &new_cfg.transparency,
-    _W("&Off"), TR_OFF,
-    _W("&Low"), TR_LOW,
-    with_glass ? _W("&Med.") : _W("&Medium"), TR_MEDIUM,
-    _W("&High"), TR_HIGH,
-    with_glass ? _W("Gla&ss") : null, TR_GLASS,
-    null
-  );
+                                           transparency_selhandler, &new_cfg.transparency,
+                                           _W("&Off"), TR_OFF,
+                                           _W("&Low"), TR_LOW,
+                                           with_glass ? _W("&Med.") : _W("&Medium"), TR_MEDIUM,
+                                           _W("&High"), TR_HIGH,
+                                           with_glass ? _W("Gla&ss") : null, TR_GLASS,
+                                           null
+                                         );
 #ifdef support_blurred
   ctrl_columns(s, 2, with_glass ? 80 : 75, with_glass ? 20 : 25);
   ctrl_checkbox( s,0, _W("Opa&que when focused"),0, dlg_stdcheckbox_handler, &new_cfg.opaque_when_focused);
@@ -3457,20 +3462,20 @@ setup_config_box(controlbox * b)
 
   s = ctrl_new_set(b, _W("Looks"), null, _W("Cursor"));
   ctrl_radiobuttons( s,-1, null,0, 4,
-    dlg_stdradiobutton_handler, &new_cfg.cursor_type,
-    _W("Li&ne"), CUR_LINE,
-    _W("Bloc&k"), CUR_BLOCK,
+                     dlg_stdradiobutton_handler, &new_cfg.cursor_type,
+                     _W("Li&ne"), CUR_LINE,
+                     _W("Bloc&k"), CUR_BLOCK,
 #ifdef cursor_type_box
-    _W("Bo&x"), CUR_BOX,
+                     _W("Bo&x"), CUR_BOX,
 #endif
-    _W("&Underscore"), CUR_UNDERSCORE,
-    null
-  );
+                     _W("&Underscore"), CUR_UNDERSCORE,
+                     null
+                   );
   ctrl_checkbox( s,-1, _W("Blinkin&g"),0, dlg_stdcheckbox_handler, &new_cfg.cursor_blinks);
 
- /*
-  * The Text panel.
-  */
+  /*
+   * The Text panel.
+   */
   s = ctrl_new_set(b, _W("Text"), _W("Text and Font properties"), _W("Font"));
   if (cfg.fontmenu == 0) {  // use built-in inline font menu
     ctrl_columns(s, 2, 70, 30);
@@ -3487,26 +3492,26 @@ setup_config_box(controlbox * b)
       ctrl_checkbox( s,1, _W("Show &bold as colour"),0, dlg_stdcheckbox_handler, &new_cfg.bold_as_colour);
     }
     else {
-     if (0 != strstr(cfg.old_options, "blinking")) {
-      s = ctrl_new_set(b, _W("Text"), null, _W("Show bold"));
-      ctrl_columns(s, 3, 35, 35, 30);
-      ctrl_checkbox( s,0, _W("as font"),0, bold_handler, &new_cfg.bold_as_font);
-      ctrl_checkbox( s,1, _W("as colour"),0, bold_handler, &new_cfg.bold_as_colour);
-      ctrl_checkbox( s,2, _W("xterm"),0, bold_handler, &bold_like_xterm);
-     }
-     else {
+      if (0 != strstr(cfg.old_options, "blinking")) {
+        s = ctrl_new_set(b, _W("Text"), null, _W("Show bold"));
+        ctrl_columns(s, 3, 35, 35, 30);
+        ctrl_checkbox( s,0, _W("as font"),0, bold_handler, &new_cfg.bold_as_font);
+        ctrl_checkbox( s,1, _W("as colour"),0, bold_handler, &new_cfg.bold_as_colour);
+        ctrl_checkbox( s,2, _W("xterm"),0, bold_handler, &bold_like_xterm);
+      }
+      else {
 
-      ctrl_columns(s, 1, 100);  // reset column stuff so we can rearrange them
-      ctrl_columns(s, 2, 50, 50);
-      ctrl_combobox( s,-1, _W("Show bold"),0,
-        50, showbold_handler, 0);
-      ctrl_checkbox( s,-1, _W("&Allow blinking"),0,
-        dlg_stdcheckbox_handler, &new_cfg.allow_blinking
-      )->column = 0;
-      ctrl_checkbox( s,-1, _W("Show dim as font"),0,
-        dlg_stdcheckbox_handler, &new_cfg.dim_as_font
-      )->column = 1;
-     }
+        ctrl_columns(s, 1, 100);  // reset column stuff so we can rearrange them
+        ctrl_columns(s, 2, 50, 50);
+        ctrl_combobox( s,-1, _W("Show bold"),0,
+                       50, showbold_handler, 0);
+        ctrl_checkbox( s,-1, _W("&Allow blinking"),0,
+                       dlg_stdcheckbox_handler, &new_cfg.allow_blinking
+                     )->column = 0;
+        ctrl_checkbox( s,-1, _W("Show dim as font"),0,
+                       dlg_stdcheckbox_handler, &new_cfg.dim_as_font
+                     )->column = 1;
+      }
     }
   }
   else {
@@ -3518,49 +3523,49 @@ setup_config_box(controlbox * b)
       s = ctrl_new_set(b, _W("Text"), null, null);
       ctrl_columns(s, 2, 50, 50);
       ctrl_radiobuttons( s,1, _W("Font smoothing"),0, 2,
-        dlg_stdradiobutton_handler, &new_cfg.font_smoothing,
-        _W("&Default"), FS_DEFAULT,
-        _W("&None"), FS_NONE,
-        _W("&Partial"), FS_PARTIAL,
-        _W("&Full"), FS_FULL,
-        null
-      );
+                         dlg_stdradiobutton_handler, &new_cfg.font_smoothing,
+                         _W("&Default"), FS_DEFAULT,
+                         _W("&None"), FS_NONE,
+                         _W("&Partial"), FS_PARTIAL,
+                         _W("&Full"), FS_FULL,
+                         null
+                       );
 
       ctrl_checkbox( s,0, _W("Sho&w bold as font"),0, dlg_stdcheckbox_handler, &new_cfg.bold_as_font);
       ctrl_checkbox( s,0, _W("Show &bold as colour"),0, dlg_stdcheckbox_handler, &new_cfg.bold_as_colour);
       ctrl_checkbox( s,0, _W("&Allow blinking"),0, dlg_stdcheckbox_handler, &new_cfg.allow_blinking);
     }
     else {
-     if (0 != strstr(cfg.old_options, "blinking")) {
-      ctrl_radiobuttons( s,0, _W("Font smoothing"),0, 4,
-        dlg_stdradiobutton_handler, &new_cfg.font_smoothing,
-        _W("&Default"), FS_DEFAULT,
-        _W("&None"), FS_NONE,
-        _W("&Partial"), FS_PARTIAL,
-        _W("&Full"), FS_FULL,
-        null
-      );
+      if (0 != strstr(cfg.old_options, "blinking")) {
+        ctrl_radiobuttons( s,0, _W("Font smoothing"),0, 4,
+                           dlg_stdradiobutton_handler, &new_cfg.font_smoothing,
+                           _W("&Default"), FS_DEFAULT,
+                           _W("&None"), FS_NONE,
+                           _W("&Partial"), FS_PARTIAL,
+                           _W("&Full"), FS_FULL,
+                           null
+                         );
 
-      s = ctrl_new_set(b, _W("Text"), null, _W("Show bold"));
-      ctrl_columns(s, 3, 35, 35, 30);
-      ctrl_checkbox( s,0, _W("as font"),0, bold_handler, &new_cfg.bold_as_font);
-      ctrl_checkbox( s,1, _W("as colour"),0, bold_handler, &new_cfg.bold_as_colour);
-      ctrl_checkbox( s,2, _W("xterm"),0, bold_handler, &bold_like_xterm);
-     }
-     else {
-      ctrl_combobox( s,-1, _W("Font smoothing"),0, 50, smoothing_handler, 0);
-      s = ctrl_new_set(b, _W("Text"), null, null);
-      ctrl_combobox( s,-1, _W("Show bold"),0,
-        50, showbold_handler, 0);
+        s = ctrl_new_set(b, _W("Text"), null, _W("Show bold"));
+        ctrl_columns(s, 3, 35, 35, 30);
+        ctrl_checkbox( s,0, _W("as font"),0, bold_handler, &new_cfg.bold_as_font);
+        ctrl_checkbox( s,1, _W("as colour"),0, bold_handler, &new_cfg.bold_as_colour);
+        ctrl_checkbox( s,2, _W("xterm"),0, bold_handler, &bold_like_xterm);
+      }
+      else {
+        ctrl_combobox( s,-1, _W("Font smoothing"),0, 50, smoothing_handler, 0);
+        s = ctrl_new_set(b, _W("Text"), null, null);
+        ctrl_combobox( s,-1, _W("Show bold"),0,
+                       50, showbold_handler, 0);
 
-      ctrl_columns(s, 2, 50, 50);
-      ctrl_checkbox( s,-1, _W("&Allow blinking"),0,
-        dlg_stdcheckbox_handler, &new_cfg.allow_blinking
-      )->column = 0;
-      ctrl_checkbox(s,-1,_W("Show dim as font"),0,
-        dlg_stdcheckbox_handler, &new_cfg.dim_as_font
-      )->column = 1;
-     }
+        ctrl_columns(s, 2, 50, 50);
+        ctrl_checkbox( s,-1, _W("&Allow blinking"),0,
+                       dlg_stdcheckbox_handler, &new_cfg.allow_blinking
+                     )->column = 0;
+        ctrl_checkbox(s,-1,_W("Show dim as font"),0,
+                      dlg_stdcheckbox_handler, &new_cfg.dim_as_font
+                     )->column = 1;
+      }
     }
   }
 
@@ -3585,15 +3590,16 @@ setup_config_box(controlbox * b)
     ctrl_combobox( s,1, _W("Placement"),0, 100, emoji_placement_handler, 0);
   }
 
- /*
-  * The Keys panel.
-  */
+  /*
+   * The Keys panel.
+   */
   s = ctrl_new_set(b, _W("Keys"), _W("Keyboard features"), null);
   ctrl_columns(s, 2, 50, 50);
   ctrl_checkbox( s,0, _W("&Backarrow sends ^H"),0, dlg_stdcheckbox_handler, &new_cfg.backspace_sends_bs);
   ctrl_checkbox( s,1, _W("&Delete sends DEL"),0, dlg_stdcheckbox_handler, &new_cfg.delete_sends_del);
   ctrl_checkbox( s,-1, _W("Ctrl+LeftAlt is Alt&Gr"),0, dlg_stdcheckbox_handler, &new_cfg.ctrl_alt_is_altgr);
   ctrl_checkbox( s,-1, _W("AltGr is also Alt"),0, dlg_stdcheckbox_handler, &new_cfg.altgr_is_alt);
+  ctrl_checkbox( s,-1, _W("Caplock As Escape"),0, dlg_stdcheckbox_handler, &new_cfg.capmapesc);
   ctrl_checkbox( s,-1, _W("&Esc/Enter reset IME to alphanumeric"),0, dlg_stdcheckbox_handler, &new_cfg.key_alpha_mode);
   s = ctrl_new_set(b, _W("Keys"), null, _W("Shortcuts"));
   ctrl_checkbox( s,-1, _W("Cop&y and Paste (Ctrl/Shift+Ins)"),0, dlg_stdcheckbox_handler, &new_cfg.clip_shortcuts);
@@ -3607,28 +3613,28 @@ setup_config_box(controlbox * b)
   if (strstr(cfg.old_options, "composekey")) {
     s = ctrl_new_set(b, _W("Keys"), null, _W("Compose key"));
     ctrl_radiobuttons( s,-1, null,0, 4,
-      dlg_stdradiobutton_handler, &new_cfg.compose_key,
-      _W("&Shift"), MDK_SHIFT,
-      _W("&Ctrl"), MDK_CTRL,
-      _W("&Alt"), MDK_ALT,
-      _W("&Off"), 0,
-      null
-    );
+                       dlg_stdradiobutton_handler, &new_cfg.compose_key,
+                       _W("&Shift"), MDK_SHIFT,
+                       _W("&Ctrl"), MDK_CTRL,
+                       _W("&Alt"), MDK_ALT,
+                       _W("&Off"), 0,
+                       null
+                     );
   }
   else {
     s = ctrl_new_set(b, _W("Keys"), null, null);
     ctrl_combobox(
-      s,-1, _W("Compose key"),0, 50, compose_key_handler, 0);
+                  s,-1, _W("Compose key"),0, 50, compose_key_handler, 0);
   }
 
- /*
-  * The Mouse panel.
-  */
+  /*
+   * The Mouse panel.
+   */
   s = ctrl_new_set(b, _W("Mouse"), _W("Mouse functions"), null);
   ctrl_columns(s, 2, 50, 50);
   if (strstr(cfg.old_options, "sel")) {
-//#define copy_as_html_checkbox
-//#define copy_as_html_right
+    //#define copy_as_html_checkbox
+    //#define copy_as_html_right
 #ifdef copy_as_html_checkbox
     ctrl_checkbox( s,0, _W("Cop&y on select"),0, dlg_stdcheckbox_handler, &new_cfg.copy_on_select);
     ctrl_checkbox( s,0, _W("Copy with TABs"),0, dlg_stdcheckbox_handler, &new_cfg.copy_tabs);
@@ -3638,13 +3644,13 @@ setup_config_box(controlbox * b)
 #else
 #ifdef copy_as_html_right
     ctrl_radiobuttons( s,1, _W("Copy as &HTML"),0, 2,
-      dlg_stdradiobutton_handler, &new_cfg.copy_as_html,
-      _W("&None"), 0,
-      _W("&Partial"), 1,
-      _W("&Default"), 2,
-      _W("&Full"), 3,
-      null
-    );
+                       dlg_stdradiobutton_handler, &new_cfg.copy_as_html,
+                       _W("&None"), 0,
+                       _W("&Partial"), 1,
+                       _W("&Default"), 2,
+                       _W("&Full"), 3,
+                       null
+                     );
     ctrl_checkbox( s,0, _W("Cop&y on select"),0, dlg_stdcheckbox_handler, &new_cfg.copy_on_select);
     ctrl_checkbox( s,0, _W("Copy with TABs"),0, dlg_stdcheckbox_handler, &new_cfg.copy_tabs);
     ctrl_checkbox( s,0, _W("Copy as &rich text"),0, dlg_stdcheckbox_handler, &new_cfg.copy_as_rtf);
@@ -3654,13 +3660,13 @@ setup_config_box(controlbox * b)
     ctrl_checkbox( s,1, _W("Copy as &rich text"),0, dlg_stdcheckbox_handler, &new_cfg.copy_as_rtf);
     ctrl_columns(s, 2, 100, 0);
     ctrl_radiobuttons( s,-1, _W("Copy as &HTML"),0, 4,
-      dlg_stdradiobutton_handler, &new_cfg.copy_as_html,
-      _W("&None"), 0,
-      _W("&Partial"), 1,
-      _W("&Default"), 2,
-      _W("&Full"), 3,
-      null
-    );
+                       dlg_stdradiobutton_handler, &new_cfg.copy_as_html,
+                       _W("&None"), 0,
+                       _W("&Partial"), 1,
+                       _W("&Default"), 2,
+                       _W("&Full"), 3,
+                       null
+                     );
 #endif
 #endif
   }
@@ -3670,40 +3676,40 @@ setup_config_box(controlbox * b)
 
   s = ctrl_new_set(b, _W("Mouse"), null, _W("Click actions"));
   ctrl_radiobuttons( s,-1, _W("Right mouse button"),0, 4,
-    dlg_stdradiobutton_handler, &new_cfg.right_click_action,
-    _W("&Paste"), RC_PASTE,
-    _W("E&xtend"), RC_EXTEND,
-    _W("&Menu"), RC_MENU,
-    _W("Ente&r"), RC_ENTER,
-    null
-  );
+                     dlg_stdradiobutton_handler, &new_cfg.right_click_action,
+                     _W("&Paste"), RC_PASTE,
+                     _W("E&xtend"), RC_EXTEND,
+                     _W("&Menu"), RC_MENU,
+                     _W("Ente&r"), RC_ENTER,
+                     null
+                   );
   ctrl_radiobuttons( s,-1, _W("Middle mouse button"),0, 4,
-    dlg_stdradiobutton_handler, &new_cfg.middle_click_action,
-    _W("&Paste"), MC_PASTE,
-    _W("E&xtend"), MC_EXTEND,
-    _W("&Nothing"), MC_VOID,
-    _W("Ente&r"), MC_ENTER,
-    null
-  );
+                     dlg_stdradiobutton_handler, &new_cfg.middle_click_action,
+                     _W("&Paste"), MC_PASTE,
+                     _W("E&xtend"), MC_EXTEND,
+                     _W("&Nothing"), MC_VOID,
+                     _W("Ente&r"), MC_ENTER,
+                     null
+                   );
 
   s = ctrl_new_set(b, _W("Mouse"), null, _W("Application mouse mode"));
   ctrl_radiobuttons( s,-1, _W("Default click target"),0, 4,
-    dlg_stdradiobutton_handler, &new_cfg.clicks_target_app,
-    _W("&Window"), false,
-    _W("&Application"), true,
-    null
-  );
+                     dlg_stdradiobutton_handler, &new_cfg.clicks_target_app,
+                     _W("&Window"), false,
+                     _W("&Application"), true,
+                     null
+                   );
 #define appl_override_buttons
 #ifdef appl_override_buttons
   ctrl_radiobuttons( s,-1, _W("Modifier for overriding default"),0, 5,
-    dlg_stdradiobutton_handler, &new_cfg.click_target_mod,
-    _W("&Shift"), MDK_SHIFT,
-    _W("&Ctrl"), MDK_CTRL,
-    _W("&Alt"), MDK_ALT,
-    _W("&Win"), MDK_WIN,
-    _W("&Off"), 0,
-    null
-  );
+                     dlg_stdradiobutton_handler, &new_cfg.click_target_mod,
+                     _W("&Shift"), MDK_SHIFT,
+                     _W("&Ctrl"), MDK_CTRL,
+                     _W("&Alt"), MDK_ALT,
+                     _W("&Win"), MDK_WIN,
+                     _W("&Off"), 0,
+                     null
+                   );
 #else
 #warning needs some coding
   ctrl_label( s,-1, _W("Modifier for overriding default"),0);
@@ -3718,9 +3724,9 @@ setup_config_box(controlbox * b)
 #endif
 
   if (!strstr(cfg.old_options, "sel")) {
-   /*
-    * The Selection and clipboard panel.
-    */
+    /*
+     * The Selection and clipboard panel.
+     */
     s = ctrl_new_set(b, _W("Selection"), _W("Selection and clipboard"), null);
     ctrl_columns(s, 2, 100, 0);
     ctrl_checkbox( s,-1, _W("Clear selection on input"),0, dlg_stdcheckbox_handler, &new_cfg.input_clears_selection);
@@ -3731,30 +3737,30 @@ setup_config_box(controlbox * b)
     ctrl_checkbox( s,0, _W("Copy with TABs"),0, dlg_stdcheckbox_handler, &new_cfg.copy_tabs);
     ctrl_columns(s, 2, 50, 50);
     ctrl_checkbox( s,0, _W("Copy as &rich text"),0,
-      dlg_stdcheckbox_handler, &new_cfg.copy_as_rtf
-    );
+                   dlg_stdcheckbox_handler, &new_cfg.copy_as_rtf
+                 );
 #ifdef copy_as_html_right_block
     // HTML selection as 2×2 block in right column, with previous:
     ctrl_columns(s, 1, 100);  // reset column stuff so we can rearrange them
     ctrl_columns(s, 2, 50, 50);
     ctrl_radiobuttons( s,1, _W("Copy as &HTML"),0, 2,
-      dlg_stdradiobutton_handler, &new_cfg.copy_as_html,
-      _W("&None"), 0,
-      _W("&Partial"), 1,
-      _W("&Default"), 2,
-      _W("&Full"), 3,
-      null
-    );
+                       dlg_stdradiobutton_handler, &new_cfg.copy_as_html,
+                       _W("&None"), 0,
+                       _W("&Partial"), 1,
+                       _W("&Default"), 2,
+                       _W("&Full"), 3,
+                       null
+                     );
 #else
     ctrl_columns(s, 2, 100, 0);
     ctrl_radiobuttons( s,-1, _W("Copy as &HTML"),0, 4,
-      dlg_stdradiobutton_handler, &new_cfg.copy_as_html,
-      _W("&None"), 0,
-      _W("&Partial"), 1,
-      _W("&Default"), 2,
-      _W("&Full"), 3,
-      null
-    );
+                       dlg_stdradiobutton_handler, &new_cfg.copy_as_html,
+                       _W("&None"), 0,
+                       _W("&Partial"), 1,
+                       _W("&Default"), 2,
+                       _W("&Full"), 3,
+                       null
+                     );
 #endif
 
     ctrl_columns(s, 2, 50, 50);
@@ -3774,9 +3780,9 @@ setup_config_box(controlbox * b)
 #endif
   }
 
- /*
-  * The Window panel.
-  */
+  /*
+   * The Window panel.
+   */
   s = ctrl_new_set(b, _W("Window"), _W("Window properties"), _W("Default size"));
   ctrl_columns(s, 5, 35, 4, 28, 3, 30);
   cols_box = ctrl_editbox( s,0, _W("Colu&mns"),0, 44, dlg_stdintbox_handler, &new_cfg.cols);
@@ -3785,30 +3791,30 @@ setup_config_box(controlbox * b)
 
   ctrl_columns(s, 1, 100);
   ctrl_checkbox(
-    //__ Options - Window:
-    s, 0,_W("Re&wrap on resize"),0,
-    dlg_stdcheckbox_handler, &new_cfg.rewrap_on_resize
-  );
+                //__ Options - Window:
+                s, 0,_W("Re&wrap on resize"),0,
+                dlg_stdcheckbox_handler, &new_cfg.rewrap_on_resize
+               );
   s = ctrl_new_set(b, _W("Window"), null, null);
   ctrl_columns(s, 2, 80, 20);
   ctrl_editbox( s,0, _W("Scroll&back lines"),0, 50, dlg_stdintbox_handler, &new_cfg.scrollback_lines);
   ctrl_radiobuttons( s,-1, _W("Scrollbar"),0, 4,
-    dlg_stdradiobutton_handler, &new_cfg.scrollbar,
-    _W("&Left"), -1,
-    _W("&None"), 0,
-    _W("&Right"), 1,
-    null
-  );
+                     dlg_stdradiobutton_handler, &new_cfg.scrollbar,
+                     _W("&Left"), -1,
+                     _W("&None"), 0,
+                     _W("&Right"), 1,
+                     null
+                   );
 #ifdef scroll_mod_buttons
   ctrl_radiobuttons( s,-1, _W("Modifier for scrolling"),0, 5,
-    dlg_stdradiobutton_handler, &new_cfg.scroll_mod,
-    _W("&Shift"), MDK_SHIFT,
-    _W("&Ctrl"), MDK_CTRL,
-    _W("&Alt"), MDK_ALT,
-    _W("&Win"), MDK_WIN,
-    _W("&Off"), 0,
-    null
-  );
+                     dlg_stdradiobutton_handler, &new_cfg.scroll_mod,
+                     _W("&Shift"), MDK_SHIFT,
+                     _W("&Ctrl"), MDK_CTRL,
+                     _W("&Alt"), MDK_ALT,
+                     _W("&Win"), MDK_WIN,
+                     _W("&Off"), 0,
+                     null
+                   );
 #else
   ctrl_columns(s, 1, 100);  // reset column stuff so we can rearrange them
   ctrl_label( s,-1, _W("Modifier for scrolling"),0);
@@ -3827,13 +3833,13 @@ setup_config_box(controlbox * b)
   ctrl_columns(s, 2, 60, 40);
   ctrl_combobox( s,0, null,0, 100, lang_handler, 0);
 
- /*
-  * The Terminal panel.
-  */
+  /*
+   * The Terminal panel.
+   */
   s = ctrl_new_set(b, _W("Terminal"), _W("Terminal features"), null);
   ctrl_columns(s, 2, 50, 50);
   ctrl_combobox( s,0, _W("&Type"),0, 100, term_handler, 0);
-    //__ Options - Terminal: answerback string for ^E request
+  //__ Options - Terminal: answerback string for ^E request
   ctrl_editbox( s,1, _W("&Answerback"),0, 100, dlg_stdstringbox_handler, &new_cfg.answerback);
 
   s = ctrl_new_set(b, _W("Terminal"), null, _W("Bell"));
@@ -3844,14 +3850,14 @@ setup_config_box(controlbox * b)
   ctrl_columns(s, 2, 100, 0);
   ctrl_combobox( s,0, _W("&Wave"),0, 83, bellfile_handler, &new_cfg.bell_file[6]);
   ctrl_columns(s, 1, 100);  // reset column stuff so we can rearrange them
-  // balance column widths of the following 3 fields 
-  // to accommodate different length of localized labels
+                            // balance column widths of the following 3 fields 
+                            // to accommodate different length of localized labels
   int strwidth(wstring s0) {
     int len = 0;
     wchar * sp = (wchar *)s0;
     while (*sp) {
       if ((*sp >= 0xE3 && *sp <= 0xED) || 
-          (*sp == 0xF0 && *(sp + 1) >= 0xA0 && *(sp + 1) <= 0xBF))
+        (*sp == 0xF0 && *(sp + 1) >= 0xA0 && *(sp + 1) <= 0xBF))
         // approx. CJK range
         len += 4;
       else if (strchr(" il.,'()!:;[]|", *sp))
@@ -3883,8 +3889,8 @@ setup_config_box(controlbox * b)
   ctrl_combobox( s,-1, null,0, 100, printer_handler, 0);
 #endif
   s = ctrl_new_set(b, _W("Terminal"), null, null);
-    //__ Options - Terminal:
+  //__ Options - Terminal:
   ctrl_checkbox( s,-1, _W("Prompt about running processes on &close"),0, dlg_stdcheckbox_handler, &new_cfg.confirm_exit);
-    //__ Options - Terminal:
+  //__ Options - Terminal:
   ctrl_checkbox( s,-1, _W("Status Line"),0, dlg_stdcheckbox_handler, &new_cfg.status_line);
 }
