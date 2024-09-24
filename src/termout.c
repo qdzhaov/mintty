@@ -3285,14 +3285,14 @@ do_csi(uchar c)
       * VT420 uses VGA like hardware and can support any size 
       * in reasonable range (24..49 AIUI) with no default specified.
       */
-      win_set_chars(arg0 ?: cfg.rows, term.cols);
+      win_set_chars(arg0 ?: cfg.winsize.y, term.cols);
       term.selected = false;
     when CPAIR('$', '|'):     /* DECSCPP */
      /*
       * Set number of columns per page
       * Docs imply range is only 80 or 132, but I'll allow any.
       */
-      win_set_chars(term.rows, arg0 ?: cfg.cols);
+      win_set_chars(term.rows, arg0 ?: cfg.winsize.x);
       term.selected = false;
     when 'x':        /* DECREQTPARM: report terminal characteristics */
       if (arg0 <= 1)

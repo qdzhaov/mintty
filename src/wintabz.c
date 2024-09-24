@@ -212,7 +212,7 @@ static void newtab(SessDef*sd,struct winsize *wsz, const char* cwd ){
 
 void win_tab_init(const char* home,SessDef*sd,const  int width, int height) {
   g_home = home;
-  struct winsize wsz={cfg.rows, cfg.cols, width, height};
+  struct winsize wsz={cfg.winsize.y, cfg.winsize.x, width, height};
   newtab(sd,&wsz, NULL);
   set_tab_bar_visibility();
 }

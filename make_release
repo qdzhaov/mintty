@@ -27,6 +27,7 @@ vcp themes/\*                     share/mintty/themes
 gzip -rf $reldir/mintty/share/man
 strip $reldir/mintty/bin/mintty.exe
 cd $reldir
+rm -f mintty-$VER.zip
 zip -r mintty-$VER.zip mintty
 cd $cwd
 mkdir -p dist

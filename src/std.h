@@ -107,8 +107,14 @@ typedef WCHAR wchar;    // UTF-16
 typedef const char *string;
 typedef const wchar *wstring;
 
+typedef struct {
+  int n,m;
+  const char **s;
+}strings;
+void strsadd(strings*a,string s);
+void strscpy(strings*a,strings*b);
+void strsclr(strings*b);
 #define null ((void *) 0)
-
 
 #define strappend(s0, s1) s0 = _strappend(s0, s1)
 

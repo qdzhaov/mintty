@@ -1377,7 +1377,7 @@ do_update(void)
   win_tab_actv();
 
   update_skipped++;
-  int output_speed = term.lines_scrolled / (term.rows ?: cfg.rows);
+  int output_speed = term.lines_scrolled / (term.rows ?: cfg.winsize.y);
   term.lines_scrolled = 0;
   if ((update_skipped < cfg.display_speedup && cfg.display_speedup < 10
        && output_speed > update_skipped
@@ -5093,8 +5093,8 @@ win_set_colour(colour_i i, colour c)
         else
           cc(BOLD_FG_COLOUR_I,
              brighten(wv.colours[FG_COLOUR_I], wv.colours[BG_COLOUR_I], true));
-      when FG_COLOUR_I: cc(i, cfg.fg_colour);
-      when BG_COLOUR_I: cc(i, cfg.bg_colour);
+      when FG_COLOUR_I: cc(i, cfg.colour.fg);
+      when BG_COLOUR_I: cc(i, cfg.colour.bg);
       when CURSOR_COLOUR_I:
         cc(i, cfg.cursor_colour);
         if (cfg.ime_cursor_colour != DEFAULT_COLOUR)
@@ -5218,8 +5218,8 @@ win_reset_colours(void)
   memcpy(&wv.colours[16], wv.xterm_colours, sizeof wv.xterm_colours);
 
   // Foreground, background, cursor
-  win_set_colour(FG_COLOUR_I, cfg.fg_colour);
-  win_set_colour(BG_COLOUR_I, cfg.bg_colour);
+  win_set_colour(FG_COLOUR_I, cfg.colour.fg);
+  win_set_colour(BG_COLOUR_I, cfg.colour.bg);
   win_set_colour(CURSOR_COLOUR_I, cfg.cursor_colour);
   if (cfg.ime_cursor_colour != DEFAULT_COLOUR) {
     win_set_colour(IME_CURSOR_COLOUR_I, cfg.ime_cursor_colour);

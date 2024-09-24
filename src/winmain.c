@@ -2124,7 +2124,7 @@ default_size(void)
 {
   if (IsZoomed(wv.wnd))
     ShowWindow(wv.wnd, SW_RESTORE);
-  win_set_chars(cfg.rows, cfg.cols);
+  win_set_chars(cfg.winsize.y, cfg.winsize.x);
 }
 
 void
@@ -2272,11 +2272,11 @@ win_reconfig(void)
 
   bool emojistyle_changed = new_cfg.emojis != cfg.emojis;
 
-  if (new_cfg.fg_colour != cfg.fg_colour)
-    win_set_colour(FG_COLOUR_I, new_cfg.fg_colour);
+  if (new_cfg.colour.fg != cfg.colour.fg)
+    win_set_colour(FG_COLOUR_I, new_cfg.colour.fg);
 
-  if (new_cfg.bg_colour != cfg.bg_colour)
-    win_set_colour(BG_COLOUR_I, new_cfg.bg_colour);
+  if (new_cfg.colour.bg != cfg.colour.bg)
+    win_set_colour(BG_COLOUR_I, new_cfg.colour.bg);
 
   if (new_cfg.cursor_colour != cfg.cursor_colour)
     win_set_colour(CURSOR_COLOUR_I, new_cfg.cursor_colour);
@@ -3303,7 +3303,7 @@ win_proc(HWND wnd, UINT message, WPARAM wp, LPARAM lp)
         //     -> Windows sends WM_THEMECHANGED and WM_SYSCOLORCHANGE
         // and in both case a couple of WM_WININICHANGE
 
-        win_adjust_borders(wv.cell_width * cfg.cols, wv.cell_height * (cfg.rows + term.st_rows));
+        win_adjust_borders(wv.cell_width * cfg.winsize.x, wv.cell_height * (cfg.winsize.y + term.st_rows));
     RedrawWindow(wnd, null, null, 
                  RDW_FRAME | RDW_INVALIDATE |
                  RDW_UPDATENOW | RDW_ALLCHILDREN);
@@ -4163,14 +4163,14 @@ static void setwslcmd(){
   }
   const char*getbridge2(){
     const char *p=chkfile("/bin/wslbridge2.exe");
-    if(chkfile("/bin/wslbridge2-backend.exe")){
+    if(chkfile("/bin/wslbridge2-backend")){
       return p;
     }
     return NULL;
   }
   const char*getbridge(){
     const char *p=chkfile("/bin/wslbridge.exe");
-    if(chkfile("/bin/wslbridge-backend.exe")){
+    if(chkfile("/bin/wslbridge-backend")){
       return p;
     }
     return NULL;
@@ -4623,9 +4623,9 @@ int LoadConfig(){
           wv.maxwidth = true;
         else if (strcmp(optarg, "maxheight") == 0)
           wv.maxheight = true;
-        else if (sscanf(optarg, "%u,%u%1s", &cfg.cols, &cfg.rows, (char[2]){}) == 2)
+        else if (sscanf(optarg, "%u,%u%1s", &cfg.winsize.x, &cfg.winsize.y, (char[2]){}) == 2)
           ;
-        else if (sscanf(optarg, "%ux%u%1s", &cfg.cols, &cfg.rows, (char[2]){}) == 2)
+        else if (sscanf(optarg, "%ux%u%1s", &cfg.winsize.x, &cfg.winsize.y, (char[2]){}) == 2)
           ;
         else
           option_error(__("Syntax error in size argument '%s'"), optarg, 0);
@@ -4758,7 +4758,7 @@ int LoadConfig(){
         int n;
 
         if (sscanf(oa, "%ux%u", &n, &n) == 2)
-          if (sscanf(oa, "%ux%u%n", &cfg.cols, &cfg.rows, &n) == 2)
+          if (sscanf(oa, "%ux%u%n", &cfg.winsize.x, &cfg.winsize.y, &n) == 2)
             oa += n;
 
         char pmx[2];
@@ -4918,22 +4918,22 @@ main(int argc, const char *argv[])
     lappdata = getlocalappdata();
 #endif
 
-  setwslcmd();
   LoadConfig();
+  setwslcmd();
 
   if(cfg.partline>6)cfg.partline=6;
-  int term_rows = cfg.rows;
-  int term_cols = cfg.cols;
+  int term_rows = cfg.winsize.y;
+  int term_cols = cfg.winsize.x;
   if (getenv("MINTTY_ROWS")) {
     term_rows = atoi(getenv("MINTTY_ROWS"));
     if (term_rows < 1)
-      term_rows = cfg.rows;
+      term_rows = cfg.winsize.y;
     unsetenv("MINTTY_ROWS");
   }
   if (getenv("MINTTY_COLS")) {
     term_cols = atoi(getenv("MINTTY_COLS"));
     if (term_cols < 1)
-      term_cols = cfg.cols;
+      term_cols = cfg.winsize.x;
     unsetenv("MINTTY_COLS");
   }
 #ifdef support_horizontal_scrollbar_with_tabbar
@@ -5457,7 +5457,7 @@ main(int argc, const char *argv[])
         else {
           // consider preset size (term_)
           // this also adjusts extra_height by horex()...
-          win_set_chars(term_rows ?: cfg.rows, term_cols ?: cfg.cols);
+          win_set_chars(term_rows ?: cfg.winsize.y, term_cols ?: cfg.winsize.x);
           trace_winsize("dpi > win_set_chars");
           //?win_set_pixels(term_rows * wv.cell_height, term_cols * wv.cell_width);
         }

@@ -2,7 +2,7 @@
 #define CTRLS_H
 
 #include "config.h"
-
+#define MAXCOLS 20
 /*
  * This is the big union which defines a single control, of any type.
  * 
@@ -25,6 +25,7 @@ enum {
   CTRL_FONTSELECT, /* label plus font selector */
   CTRL_LABEL,      /* static text/label only */
   CTRL_CLRBUTTON,  /* color push button (no label) */
+  CTRL_HOTKEY,     /* hotkey edit*/
 };
 
 /*
@@ -119,6 +120,8 @@ struct control {
    * be able to store a piece of `void *' data.
    */
   void * context;
+  struct _controlset*parent;
+  int ind;
   union {
     struct {
       /*
@@ -239,7 +242,7 @@ struct control {
  * In Windows and any similar-looking GUI, each `controlset'
  * in the config will be a container box within a panel.
  */
-typedef struct {
+typedef struct _controlset{
   const wchar * pathname;      /* panel path, e.g. "SSH/Tunnels" */
   const wchar * boxtitle;      /* title of container box */
   int ncolumns;         /* current no. of columns at bottom */
@@ -248,6 +251,10 @@ typedef struct {
   control * * ctrls;    /* actual array */
 } controlset;
 
+typedef struct {
+  string name;
+  int val;
+} opt_val;
 /*
  * This is the container structure which holds a complete set of
  * controls.
@@ -295,6 +302,7 @@ extern void * ctrl_alloc(controlbox *, size_t size);
 
 /* `ncolumns' is followed by that many percentages, as integers. */
 extern control * ctrl_columns(controlset *, int ncolumns, ...);
+extern control * ctrl_columnsa(controlset *s, int ncolumns,int *cols);
 
 extern control * ctrl_label(controlset *, int col, const wchar * label,const wchar * tip);
 extern control * ctrl_editbox(controlset *, int col, const wchar * label,const wchar * tip, int percentage,
@@ -307,6 +315,8 @@ extern control * ctrl_listbox(controlset *, int col, const wchar * label,const w
  * `ncolumns' is followed by (alternately) radio button titles and integers,
  * until a null in place of a title string is seen.
  */
+extern control * ctrl_radiobuttonsa(controlset *s, int col, const wchar * label,const wchar * tip, 
+                  handler_fn handler,int*context, const opt_val *pov);
 extern control * ctrl_radiobuttons(controlset *, int col, const wchar * label,const wchar * tip, int ncolumns,
                                    handler_fn handler, int * context, ...);
 
@@ -319,6 +329,8 @@ extern control * ctrl_droplist(controlset *, int col, const wchar * label,const 
 extern control * ctrl_fontsel(controlset *, int col, const wchar * label,const wchar * tip,
                               handler_fn handler, void * context);
 extern control * ctrl_checkbox(controlset *, int col, const wchar * label,const wchar * tip,
+                               handler_fn handler, void * context);
+extern control * ctrl_hotkey(controlset *, int col, const wchar * label,const wchar * tip,
                                handler_fn handler, void * context);
 
 /*

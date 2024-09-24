@@ -31,21 +31,17 @@ enum { EMPL_STRETCH = 0, EMPL_ALIGN = 1, EMPL_MIDDLE = 2, EMPL_FULL = 3 };
 
 typedef uint colour;
 typedef struct { colour fg, bg; } colourfg;
+typedef struct { int x, y; } intpair;
 
 enum { DEFAULT_COLOUR = UINT_MAX };
 
-static inline colour
-make_colour(uchar r, uchar g, uchar b) { return r | g << 8 | b << 16; }
-
-extern bool parse_colour(string, colour *);
-
+static inline colour make_colour(uchar r, uchar g, uchar b) { return r | g << 8 | b << 16; }
 static inline uchar red(colour c) { return c; }
 static inline uchar green(colour c) { return c >> 8; }
 static inline uchar blue(colour c) { return c >> 16; }
-
+extern bool parse_colour(string, colour *);
 
 // Font properties.
-
 typedef struct {
   wstring name;
   int size;

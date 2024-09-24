@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: mintty\n"
 "Report-Msgid-Bugs-To: https://github.com/mintty/mintty/issues/700\n"
-"POT-Creation-Date: 2024-09-19 17:02+0800\n"
+"POT-Creation-Date: 2024-09-25 00:57+0800\n"
 "PO-Revision-Date: 2022-09-16 00:06+0200\n"
 "Last-Translator: A Regnander <anton_r_3 at hotmail dot com>\n"
 "Language-Team: \n"
@@ -18,7 +18,7 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "X-Generator: Poedit 3.1.1\n"
 
-#: charset.c:228 charset.c:239 winmain.c:4553 winmain.c:4560 winmain.c:4909
+#: charset.c:228 charset.c:239 winmain.c:4554 winmain.c:4561 winmain.c:4910
 msgid "(Default)"
 msgstr "(standard)"
 
@@ -65,316 +65,326 @@ msgstr "AVSLUTAD"
 msgid "Error: Could not fork child daemon"
 msgstr "Fel: Kunde inte förgrena underdemon"
 
-#: config.c:93
+#: config.c:100
 msgid "no"
 msgstr ""
 
-#: config.c:94
+#: config.c:101
 msgid "yes"
 msgstr ""
 
-#: config.c:95
+#: config.c:102
 msgid "false"
 msgstr ""
 
-#: config.c:96
+#: config.c:103
 msgid "true"
 msgstr ""
 
-#: config.c:97 config.c:102 config.c:113 config.c:205
+#: config.c:104 config.c:109 config.c:120 config.c:212
 msgid "off"
 msgstr ""
 
-#: config.c:98
+#: config.c:105
 msgid "on"
 msgstr ""
 
-#: config.c:103 config.c:206
+#: config.c:110 config.c:213
 #, fuzzy
 msgid "shift"
 msgstr "&Shift"
 
-#: config.c:104 config.c:207
+#: config.c:111 config.c:214
 #, fuzzy
 msgid "alt"
 msgstr "&Standard"
 
-#: config.c:105 config.c:208
+#: config.c:112 config.c:215
 msgid "ctrl"
 msgstr ""
 
-#: config.c:106
+#: config.c:113
 #, fuzzy
 msgid "win"
 msgstr "Fönster"
 
-#: config.c:107 config.c:209
+#: config.c:114 config.c:216
 msgid "super"
 msgstr ""
 
-#: config.c:108 config.c:210
+#: config.c:115 config.c:217
 msgid "hyper"
 msgstr ""
 
-#: config.c:109
+#: config.c:116
 msgid "capslock"
 msgstr ""
 
-#: config.c:114
+#: config.c:121
 msgid "low"
 msgstr ""
 
-#: config.c:115
+#: config.c:122
 #, fuzzy
 msgid "medium"
 msgstr "&Medel"
 
-#: config.c:116
+#: config.c:123
 msgid "high"
 msgstr ""
 
-#: config.c:117
+#: config.c:124
 msgid "glass"
 msgstr ""
 
-#: config.c:121
+#: config.c:128
 msgid "line"
 msgstr ""
 
-#: config.c:122
+#: config.c:129
 msgid "block"
 msgstr ""
 
-#: config.c:123
+#: config.c:130
 msgid "box"
 msgstr ""
 
-#: config.c:124
+#: config.c:131
 #, fuzzy
 msgid "underscore"
 msgstr "&Understreck"
 
-#: config.c:128
+#: config.c:135
 #, fuzzy
 msgid "Default"
 msgstr "&Standard"
 
-#: config.c:129
+#: config.c:136
 #, fuzzy
 msgid "None"
 msgstr "&Ingen"
 
-#: config.c:130
+#: config.c:137
 #, fuzzy
 msgid "Partial"
 msgstr "&Delvis"
 
-#: config.c:131
+#: config.c:138
 #, fuzzy
 msgid "Full"
 msgstr "&Full"
 
-#: config.c:135
+#: config.c:142
 msgid "textout"
 msgstr ""
 
-#: config.c:136
+#: config.c:143
 msgid "uniscribe"
 msgstr ""
 
-#: config.c:140 config.c:147
+#: config.c:147 config.c:154
 #, fuzzy
 msgid "enter"
 msgstr "Skrivare"
 
-#: config.c:141 config.c:148
+#: config.c:148 config.c:155
 #, fuzzy
 msgid "paste"
 msgstr "&Klistra in"
 
-#: config.c:142 config.c:149
+#: config.c:149 config.c:156
 #, fuzzy
 msgid "extend"
 msgstr "&Utvidga"
 
-#: config.c:143
+#: config.c:150
 msgid "void"
 msgstr ""
 
-#: config.c:150
+#: config.c:157
 msgid "menu"
 msgstr ""
 
-#: config.c:154
+#: config.c:161
 msgid "left"
 msgstr ""
 
-#: config.c:155
+#: config.c:162
 #, fuzzy
 msgid "right"
 msgstr "H&öger"
 
-#: config.c:156 config.c:190
+#: config.c:163 config.c:197 config.c:228
 msgid "none"
 msgstr ""
 
-#: config.c:166
+#: config.c:173
 msgid "hide"
 msgstr ""
 
-#: config.c:167
+#: config.c:174
 msgid "normal"
 msgstr ""
 
-#: config.c:168
+#: config.c:175
 msgid "min"
 msgstr ""
 
-#: config.c:169
+#: config.c:176
 msgid "max"
 msgstr ""
 
-#: config.c:170
+#: config.c:177
 msgid "FULL"
 msgstr ""
 
-#: config.c:174
+#: config.c:181
 msgid "never"
 msgstr ""
 
-#: config.c:175
+#: config.c:182
 msgid "start"
 msgstr ""
 
-#: config.c:176
+#: config.c:183
 #, fuzzy
 msgid "error"
 msgstr "Fel"
 
-#: config.c:177
+#: config.c:184
 msgid "always"
 msgstr ""
 
-#: config.c:181
+#: config.c:188
 #, fuzzy
 msgid "locale"
 msgstr "Spr&åk"
 
-#: config.c:182
+#: config.c:189
 msgid "unicode"
 msgstr ""
 
-#: config.c:183
+#: config.c:190
 msgid "ambig-wide"
 msgstr ""
 
-#: config.c:184
+#: config.c:191
 msgid "ambig-narrow"
 msgstr ""
 
-#: config.c:185
+#: config.c:192
 msgid "single"
 msgstr ""
 
-#: config.c:186
+#: config.c:193
 msgid "single-unicode"
 msgstr ""
 
-#: config.c:191
+#: config.c:198
 msgid "openmoji"
 msgstr ""
 
-#: config.c:192
+#: config.c:199
 msgid "noto"
 msgstr ""
 
-#: config.c:193
+#: config.c:200
 msgid "joypixels"
 msgstr ""
 
-#: config.c:194
+#: config.c:201
 msgid "emojione"
 msgstr ""
 
-#: config.c:195
+#: config.c:202
 msgid "apple"
 msgstr ""
 
-#: config.c:196
+#: config.c:203
 msgid "google"
 msgstr ""
 
-#: config.c:197
+#: config.c:204
 msgid "twitter"
 msgstr ""
 
-#: config.c:198
+#: config.c:205
 msgid "facebook"
 msgstr ""
 
-#: config.c:199
+#: config.c:206
 msgid "samsung"
 msgstr ""
 
-#: config.c:200
+#: config.c:207
 #, fuzzy
 msgid "windows"
 msgstr "Fönster"
 
-#: config.c:201
+#: config.c:208
 msgid "zoom"
 msgstr ""
 
-#: config.c:214
+#: config.c:221
 msgid "stretch"
 msgstr "sträck ut"
 
-#: config.c:215
+#: config.c:222
 msgid "align"
 msgstr "justera"
 
-#: config.c:216
+#: config.c:223
 msgid "middle"
 msgstr "centrerad"
 
-#: config.c:217
+#: config.c:224 config.c:231
 msgid "full"
 msgstr "fullständig"
 
-#: config.c:221 config.c:3508 config.c:3561
+#: config.c:229
+#, fuzzy
+msgid "partial"
+msgstr "&Delvis"
+
+#: config.c:230
+#, fuzzy
+msgid "default"
+msgstr "&Standard"
+
+#: config.c:235 config.c:3587 config.c:3640
 msgid "as font"
 msgstr "teckensnitt"
 
-#: config.c:222 config.c:3509 config.c:3562
+#: config.c:236 config.c:3588 config.c:3641
 msgid "as colour"
 msgstr "färg"
 
-#: config.c:223
+#: config.c:237
 msgid "as font & as colour"
 msgstr "teckensnitt & färg"
 
-#: config.c:224 config.c:3510 config.c:3563
+#: config.c:238 config.c:3589 config.c:3642
 msgid "xterm"
 msgstr "xterm"
 
 #. __ %s: unknown option name
-#: config.c:577 config.c:589
+#: config.c:644 config.c:656
 msgid "Ignoring unknown option '%s'"
 msgstr "Ignorera det okända alternativet \"%s\""
 
 #. __ %2$s: option name, %1$s: invalid value
 #. report errors only during initialisation
-#: config.c:695
+#: config.c:762
 msgid "Ignoring invalid value '%s' for option '%s'"
 msgstr "Ignorerar det okänt värdet \"%s\" för alternativet \"%s\""
 
 #. __ %s: option name
-#: config.c:707
+#: config.c:774
 msgid "Ignoring option '%s' with missing value"
 msgstr "Ignorerar alternativet \"%s\" som saknar värde"
 
 #. __ %1$s: config file name, %2$s: error message
-#: config.c:1342
+#: config.c:1399
 msgid ""
 "Could not save options to '%s':\n"
 "%s."
@@ -382,832 +392,847 @@ msgstr ""
 "Kunde inte spara alternativ till \"%s\":\n"
 "%s."
 
-#: config.c:1850
+#: config.c:1904
 msgid "◇ None (printing disabled) ◇"
 msgstr "◇ Ingen (utskrift inaktiverat) ◇"
 
-#: config.c:1852
+#: config.c:1906
 msgid "◆ Default printer ◆"
 msgstr "◆ Standardskrivare ◆"
 
 #. __ UI localization disabled
-#: config.c:1961
+#: config.c:2015
 #, fuzzy
 msgid "- None -"
 msgstr "&Ingen"
 
 #. __ UI localization: use Windows desktop setting
-#: config.c:1963
+#: config.c:2017
 msgid "@ Windows language @"
 msgstr "@ Windowsspråk @"
 
 #. __ UI localization: use environment variable setting (LANGUAGE, LC_*)
-#: config.c:1965
+#: config.c:2019
 msgid "* Locale environm. *"
 msgstr "* Miljöspråk *"
 
 #. __ UI localization: use mintty configuration setting (Text - Locale)
-#: config.c:1967
+#: config.c:2021
 msgid "= cfg. Text Locale ="
 msgstr "= Konfigurerat språk ="
 
-#: config.c:2071
+#: config.c:2125
 msgid "simple beep"
 msgstr "enkel ljudsignal"
 
-#: config.c:2072
+#: config.c:2126
 msgid "no beep"
 msgstr "ingen ljudsignal"
 
-#: config.c:2073
+#: config.c:2127
 msgid "Default Beep"
 msgstr "Standardljudsignal"
 
-#: config.c:2074
+#: config.c:2128
 msgid "Critical Stop"
 msgstr "Kritiskt stopp"
 
-#: config.c:2075
+#: config.c:2129
 msgid "Question"
 msgstr "Fråga"
 
-#: config.c:2076
+#: config.c:2130
 msgid "Exclamation"
 msgstr "Varning"
 
-#: config.c:2077
+#: config.c:2131
 msgid "Asterisk"
 msgstr "Asterisk"
 
-#: config.c:2120
-msgid "◇ None (system sound) ◇"
-msgstr "◇ Inget (systemljud) ◇"
-
-#. __ terminal theme / colour scheme
-#: config.c:2556
-msgid "◇ None ◇"
-msgstr "◇ Inget ◇"
-
 #. __ indicator of unsaved downloaded colour scheme
-#: config.c:2559
+#: config.c:2613
 msgid "downloaded / give me a name!"
 msgstr "nedladdad / namnge mig!"
 
-#: config.c:2672
+#: config.c:2726
 msgid "Could not load web theme"
 msgstr "Kunde inte läsa in webbtema"
 
-#: config.c:2715 config.c:2723 config.c:2779
+#: config.c:2769 config.c:2777 config.c:2831
 msgid "Cannot store theme file"
 msgstr "Kan inte lagra temafil"
 
-#: config.c:2774
+#: config.c:2826
 msgid "Cannot write theme file"
 msgstr "Kan inte skriva temafil"
 
 #. __ emojis style
-#: config.c:3159
+#: config.c:3212
 #, fuzzy
 msgid "? None ?"
 msgstr "&Ingen"
 
-#: config.c:3396
+#: config.c:3476 config.c:4003
 msgid "About..."
 msgstr "Om..."
 
-#: config.c:3397
+#: config.c:3477 config.c:4004
 #, fuzzy
 msgid "&Save"
 msgstr "Spara"
 
-#: config.c:3399
+#: config.c:3479 config.c:4006
 #, fuzzy
 msgid "&Cancel"
 msgstr "Avbryt"
 
-#. __ Font chooser: button
-#: config.c:3401 winctrls.c:1286
+#: config.c:3481 config.c:4008
 msgid "&Apply"
 msgstr "&Verkställ"
 
-#: config.c:3410 config.c:3446 config.c:3473
+#: config.c:3490 config.c:3525 config.c:3552 configdef.h:48 configdef.h:49
+#: configdef.h:50 configdef.h:95 configdef.h:97 configdef.h:100 configdef.h:104
+#: configdef.h:113 configdef.h:120 configdef.h:126 configdef.h:147
+#: configdef.h:150
 msgid "Looks"
 msgstr "Utseende"
 
-#: config.c:3410
+#: config.c:3490 configdef.h:48
 msgid "Looks in Terminal"
 msgstr "Terminalutseende"
 
-#: config.c:3410
+#: config.c:3490 configdef.h:49
 msgid "Colours"
 msgstr "Färger"
 
-#: config.c:3412
+#: config.c:3492 configdef.h:52
 msgid "&Foreground..."
 msgstr "&Förgrund..."
 
-#: config.c:3413
+#: config.c:3493 configdef.h:53
 msgid "&Background..."
 msgstr "&Bakgrund..."
 
-#: config.c:3414
+#: config.c:3494
 msgid "&Cursor..."
 msgstr "Mark&ör..."
 
-#: config.c:3417
+#: config.c:3497
 msgid "&Theme"
 msgstr "&Tema"
 
-#: config.c:3418
+#: config.c:3498 config.c:4091
 msgid "T&heme Save"
 msgstr ""
 
-#: config.c:3422
+#: config.c:3501 config.c:4055
 msgid "Ansi:"
 msgstr ""
 
-#: config.c:3423 configdef.h:58
+#: config.c:3502 configdef.h:58
 msgid "Black"
 msgstr ""
 
-#: config.c:3424 configdef.h:59
+#: config.c:3503 configdef.h:59
 #, fuzzy
 msgid "Red"
 msgstr "&Röd:"
 
-#: config.c:3425 configdef.h:60
+#: config.c:3504 configdef.h:60
 #, fuzzy
 msgid "Green"
 msgstr "Gr&ön:"
 
-#: config.c:3426 configdef.h:61
+#: config.c:3505 configdef.h:61
 msgid "Yellow"
 msgstr ""
 
-#: config.c:3427 configdef.h:62
+#: config.c:3506 configdef.h:62
 #, fuzzy
 msgid "Blue"
 msgstr "&Blå:"
 
-#: config.c:3428 configdef.h:63
+#: config.c:3507 configdef.h:63
 msgid "Magenta"
 msgstr ""
 
-#: config.c:3429 configdef.h:64
+#: config.c:3508 configdef.h:64
 msgid "Cyan"
 msgstr ""
 
-#: config.c:3430 configdef.h:65
+#: config.c:3509 configdef.h:65
 msgid "White"
 msgstr ""
 
-#: config.c:3432
-msgid "BOLD:"
-msgstr ""
-
-#: config.c:3433 configdef.h:66
+#: config.c:3512 configdef.h:66
 msgid "BoldBlack"
 msgstr ""
 
-#: config.c:3434 configdef.h:67
+#: config.c:3513 configdef.h:67
 msgid "BoldRed"
 msgstr ""
 
-#: config.c:3435 configdef.h:68
+#: config.c:3514 configdef.h:68
 #, fuzzy
 msgid "BoldGreen"
 msgstr "Gr&ön:"
 
-#: config.c:3436 configdef.h:69
+#: config.c:3515 configdef.h:69
 msgid "BoldYellow"
 msgstr ""
 
-#: config.c:3437 configdef.h:70
+#: config.c:3516 configdef.h:70
 msgid "BoldBlue"
 msgstr ""
 
-#: config.c:3438 configdef.h:71
+#: config.c:3517 configdef.h:71
 msgid "BoldMagenta"
 msgstr ""
 
-#: config.c:3439 configdef.h:72
+#: config.c:3518 configdef.h:72
 msgid "BoldCyan"
 msgstr ""
 
-#: config.c:3440 configdef.h:73
+#: config.c:3519 configdef.h:73
 msgid "BoldWhite"
 msgstr ""
 
-#: config.c:3446 configdef.h:87
+#: config.c:3525 configdef.h:95
 msgid "Transparency"
 msgstr "Transparens"
 
-#: config.c:3450 config.c:3629 config.c:3719 config.c:3824
+#: config.c:3529 config.c:3705 config.c:3795 config.c:3898
 msgid "&Off"
 msgstr "A&v"
 
-#: config.c:3451
+#: config.c:3530
 msgid "&Low"
 msgstr "&Låg"
 
-#: config.c:3452
+#: config.c:3531
 msgid "&Med."
 msgstr "&Med."
 
-#: config.c:3452
+#: config.c:3531
 msgid "&Medium"
 msgstr "&Medel"
 
-#: config.c:3453
+#: config.c:3532
 msgid "&High"
 msgstr "&Hög"
 
-#: config.c:3454
+#: config.c:3533
 msgid "Gla&ss"
 msgstr "Gla&s"
 
-#: config.c:3459 config.c:3463 config.c:3466
+#: config.c:3538 config.c:3542 config.c:3545 configdef.h:98
 msgid "Opa&que when focused"
 msgstr "&Ingen transparens vid fokus"
 
-#: config.c:3460
+#: config.c:3539 configdef.h:99
 msgid "Blu&r"
 msgstr "S&uddighet"
 
-#: config.c:3468
+#: config.c:3547
 msgid "◄"
 msgstr ""
 
-#: config.c:3469
+#: config.c:3548
 msgid "►"
 msgstr ""
 
-#: config.c:3473
+#: config.c:3552 configdef.h:100
 msgid "Cursor"
 msgstr "Markör"
 
-#: config.c:3476
+#: config.c:3555
 msgid "Li&ne"
 msgstr "Li&nje"
 
-#: config.c:3477
+#: config.c:3556
 msgid "Bloc&k"
 msgstr "Blo&ck"
 
-#: config.c:3479
+#: config.c:3558
 msgid "Bo&x"
 msgstr "R&uta"
 
-#: config.c:3481
+#: config.c:3560
 msgid "&Underscore"
 msgstr "&Understreck"
 
-#: config.c:3484
+#: config.c:3563
 msgid "Blinkin&g"
 msgstr "B&linkande markör"
 
-#: config.c:3489 config.c:3499 config.c:3506 config.c:3533 config.c:3559
-#: config.c:3567 config.c:3582 config.c:3591 config.c:3596
+#: config.c:3568 config.c:3578 config.c:3585 config.c:3612 config.c:3638
+#: config.c:3646 config.c:3661 config.c:3669 configdef.h:130 configdef.h:131
+#: configdef.h:153 configdef.h:154 configdef.h:157 configdef.h:158
 msgid "Text"
 msgstr "Text"
 
-#: config.c:3489
+#: config.c:3568 configdef.h:130
 msgid "Text and Font properties"
 msgstr "Text- och teckensnittsegenskaper"
 
-#: config.c:3489 configdef.h:113
+#: config.c:3568 configdef.h:131 configdef.h:132
 msgid "Font"
 msgstr "Teckensnitt"
 
 #. __ Font chooser:
-#: config.c:3493 winctrls.c:1290
+#: config.c:3572 winctrls.c:1311
 msgid "Font st&yle:"
 msgstr "St&il:"
 
 #. __ Font chooser:
-#: config.c:3495 winctrls.c:1292
+#: config.c:3574 winctrls.c:1313
 msgid "&Size:"
 msgstr "&Storlek:"
 
-#: config.c:3501 config.c:3544
+#: config.c:3580 config.c:3623
 msgid "Sho&w bold as font"
 msgstr "&Visa fetstil som teckensnitt"
 
-#: config.c:3502 config.c:3545
+#: config.c:3581 config.c:3624
 msgid "Show &bold as colour"
 msgstr "&Visa fetstil som färg"
 
-#: config.c:3506 config.c:3516 config.c:3559 config.c:3568
+#: config.c:3585 config.c:3595 config.c:3638 config.c:3647
 msgid "Show bold"
 msgstr "Visa fetstil som"
 
-#: config.c:3518 config.c:3546 config.c:3572
+#: config.c:3597 config.c:3625 config.c:3651
 msgid "&Allow blinking"
 msgstr "&Blinka"
 
-#: config.c:3521 config.c:3575
+#: config.c:3600 config.c:3654
 msgid "Show dim as font"
 msgstr "Visa dim som teckensnitt"
 
-#: config.c:3535 config.c:3550 config.c:3566
+#: config.c:3614 config.c:3629 config.c:3645 configdef.h:146
 msgid "Font smoothing"
 msgstr "Teckensnittsutjämning"
 
-#: config.c:3537 config.c:3552 config.c:3659 config.c:3675 config.c:3759
-#: config.c:3769
+#: config.c:3616 config.c:3631 config.c:3735 config.c:3751 config.c:3833
+#: config.c:3843
 msgid "&Default"
 msgstr "&Standard"
 
-#: config.c:3538 config.c:3553 config.c:3657 config.c:3673 config.c:3757
-#: config.c:3767 config.c:3813
+#: config.c:3617 config.c:3632 config.c:3733 config.c:3749 config.c:3831
+#: config.c:3841 config.c:3887
 msgid "&None"
 msgstr "&Ingen"
 
-#: config.c:3539 config.c:3554 config.c:3658 config.c:3674 config.c:3758
-#: config.c:3768
+#: config.c:3618 config.c:3633 config.c:3734 config.c:3750 config.c:3832
+#: config.c:3842
 msgid "&Partial"
 msgstr "&Delvis"
 
-#: config.c:3540 config.c:3555 config.c:3660 config.c:3676 config.c:3760
-#: config.c:3770
+#: config.c:3619 config.c:3634 config.c:3736 config.c:3752 config.c:3834
+#: config.c:3844
 msgid "&Full"
 msgstr "&Full"
 
-#: config.c:3584
+#: config.c:3663
 msgid "&Locale"
 msgstr "Spr&åk"
 
-#: config.c:3585
+#: config.c:3664
 msgid "&Character set"
 msgstr "Tecken&uppsättning"
 
-#: config.c:3593 config.c:3596 configdef.h:281
+#: config.c:3669 config.c:3671 configdef.h:157
 msgid "Emojis"
 msgstr "Uttrycksymboler"
 
-#: config.c:3598
+#: config.c:3673 configdef.h:159
 msgid "Style"
 msgstr "Stil"
 
-#: config.c:3600
+#: config.c:3675 configdef.h:160
 msgid "Placement"
 msgstr "Placering"
 
-#: config.c:3606 config.c:3613 config.c:3623 config.c:3634
+#: config.c:3681 config.c:3689 config.c:3699 config.c:3710
 msgid "Keys"
 msgstr "Tangenter"
 
-#: config.c:3606
+#: config.c:3681 configdef.h:171
 msgid "Keyboard features"
 msgstr "Tangentbordsfunktioner"
 
-#: config.c:3608
+#: config.c:3683 configdef.h:174
 msgid "&Backarrow sends ^H"
 msgstr "&Bakåtpil skriver ^H"
 
-#: config.c:3609
+#: config.c:3684 configdef.h:175
 msgid "&Delete sends DEL"
 msgstr "&Delete skriver DEL"
 
-#: config.c:3610
+#: config.c:3685 configdef.h:176
 msgid "Ctrl+LeftAlt is Alt&Gr"
 msgstr "Ctrl+VänsterAlt fungerar likadant som Alt&Gr"
 
-#: config.c:3611
+#: config.c:3686 configdef.h:177
 msgid "AltGr is also Alt"
 msgstr "AltGr fungerar även likadant som Alt"
 
-#: config.c:3612
+#: config.c:3687 configdef.h:178
+msgid "Caplock As Escape"
+msgstr ""
+
+#: config.c:3688 configdef.h:180
 msgid "&Esc/Enter reset IME to alphanumeric"
 msgstr "&Esc/Enter återställer IME till alfanumeriskt"
 
-#: config.c:3613
+#: config.c:3689 configdef.h:186
 msgid "Shortcuts"
 msgstr "Kortkommandon"
 
-#: config.c:3614
+#: config.c:3690 configdef.h:187
 msgid "Cop&y and Paste (Ctrl/Shift+Ins)"
 msgstr "Ko&piera och klistra in (Ctrl/Shift+Ins)"
 
-#: config.c:3615
+#: config.c:3691 configdef.h:188
 msgid "&Menu and Full Screen (Alt+Space/Enter)"
 msgstr "&Meny och helskärm (Alt+Mellanslag/Enter)"
 
-#: config.c:3616
+#: config.c:3692 configdef.h:189
 msgid "&Switch window (Ctrl+[Shift+]Tab)"
 msgstr "B&yt fönster (Ctrl+[Shift+]Tabb)"
 
-#: config.c:3617
+#: config.c:3693 configdef.h:190
 msgid "&Zoom (Ctrl+plus/minus/zero)"
 msgstr "&Zooma (Ctrl+plus/minus/noll)"
 
-#: config.c:3618
+#: config.c:3694 configdef.h:191
 msgid "&Alt+Fn shortcuts"
 msgstr "Kortkommandon för Alt+&Fn"
 
-#: config.c:3619
+#: config.c:3695 configdef.h:192
 #, fuzzy
 msgid "&Win+x shortcuts"
 msgstr "Kortkommandon för Alt+&Fn"
 
-#: config.c:3620
+#: config.c:3696 configdef.h:193
 msgid "&Ctrl+Shift+letter shortcuts"
 msgstr "Kortkommandon för C&trl+Shift+bokstav"
 
-#: config.c:3623 config.c:3636
+#: config.c:3699 config.c:3712 configdef.h:194
 msgid "Compose key"
 msgstr "Kombinationstangent"
 
-#: config.c:3626 config.c:3715 config.c:3726 config.c:3820 config.c:3831
+#: config.c:3702 config.c:3791 config.c:3802 config.c:3894 config.c:3905
 msgid "&Shift"
 msgstr "&Shift"
 
-#: config.c:3627 config.c:3716 config.c:3728 config.c:3821 config.c:3833
+#: config.c:3703 config.c:3792 config.c:3804 config.c:3895 config.c:3907
+#: config.c:3985 config.c:3986 config.c:3987
 msgid "&Ctrl"
 msgstr "&Ctrl"
 
-#: config.c:3628 config.c:3717 config.c:3727 config.c:3822 config.c:3832
+#: config.c:3704 config.c:3793 config.c:3803 config.c:3896 config.c:3906
 msgid "&Alt"
 msgstr "&Alt"
 
-#: config.c:3642 config.c:3686 config.c:3704
+#: config.c:3718 config.c:3762 config.c:3780
 msgid "Mouse"
 msgstr "Mus"
 
-#: config.c:3642
+#. __("ShootFoot")                              ,0)
+#. _CFGDEFD(CBOOL    ,OPT_BOOL         ,OPF_H    ,0,"OldKeyFunctionsKeypad"    ,old_keyfuncs_keypad         ,__("OldKeyFunctionsKeypad")                  ,0)
+#: config.c:3718 configdef.h:210
 msgid "Mouse functions"
 msgstr "Musfunktioner"
 
-#: config.c:3648 config.c:3663 config.c:3667 config.c:3745
+#: config.c:3724 config.c:3739 config.c:3743 config.c:3820 configdef.h:234
 msgid "Cop&y on select"
 msgstr "Kopiera vid &markering"
 
-#: config.c:3649 config.c:3664 config.c:3746 wininput.c:543
+#: config.c:3725 config.c:3740 config.c:3821 wininput.c:543 configdef.h:235
 msgid "Copy with TABs"
 msgstr "Kopiera (som text) med &TABB"
 
-#: config.c:3650 config.c:3665 config.c:3669 config.c:3748
+#: config.c:3726 config.c:3741 config.c:3745 config.c:3822 configdef.h:236
 msgid "Copy as &rich text"
 msgstr "Kopiera som &RTF-text"
 
-#: config.c:3652 config.c:3655 config.c:3671 config.c:3755 config.c:3765
+#: config.c:3728 config.c:3731 config.c:3747 config.c:3829 config.c:3839
 msgid "Copy as &HTML"
 msgstr "Kopiera som &HTML"
 
-#: config.c:3682
+#: config.c:3758 configdef.h:212
 msgid "Clic&ks place command line cursor"
 msgstr "&Placera kommandotolkens markör vid musklick"
 
-#: config.c:3683
+#: config.c:3759 configdef.h:213
 msgid "Delimiters:"
 msgstr ""
 
-#: config.c:3684
+#: config.c:3760 configdef.h:214
 #, fuzzy
 msgid "Word Characters:"
 msgstr "Tecken&uppsättning"
 
-#: config.c:3686
+#: config.c:3762 configdef.h:215
 msgid "Click actions"
 msgstr "Klickåtgärder"
 
-#: config.c:3687
+#: config.c:3763 configdef.h:216
 msgid "Right mouse button"
 msgstr "Höger musknapp"
 
-#: config.c:3689 config.c:3697
+#: config.c:3765 config.c:3773
 msgid "&Paste"
 msgstr "&Klistra in"
 
-#: config.c:3690 config.c:3698
+#: config.c:3766 config.c:3774
 msgid "E&xtend"
 msgstr "&Utvidga"
 
-#: config.c:3691
+#: config.c:3767
 msgid "&Menu"
 msgstr "&Meny"
 
-#: config.c:3692 config.c:3700
+#: config.c:3768 config.c:3776
 msgid "Ente&r"
 msgstr "Ente&r"
 
-#: config.c:3695
+#: config.c:3771 configdef.h:217
 msgid "Middle mouse button"
 msgstr "Mittenmusknapp"
 
-#: config.c:3699
+#: config.c:3775
 msgid "&Nothing"
 msgstr "&Inget"
 
-#: config.c:3704
+#: config.c:3780
 msgid "Application mouse mode"
 msgstr "Applikationens musläge"
 
-#: config.c:3705
+#: config.c:3781
 msgid "Default click target"
 msgstr "Standardklickmål"
 
-#: config.c:3707
+#: config.c:3783
 msgid "&Window"
 msgstr "&Fönster"
 
-#: config.c:3708
+#: config.c:3784
 msgid "&Application"
 msgstr "App&likation"
 
-#: config.c:3713 config.c:3724
+#: config.c:3789 config.c:3800 configdef.h:219
 msgid "Modifier for overriding default"
 msgstr "Modifierare för att överskrida standardvärden"
 
-#: config.c:3718 config.c:3729 config.c:3823 config.c:3834
+#: config.c:3794 config.c:3805 config.c:3897 config.c:3908
 msgid "&Win"
 msgstr "&Win"
 
-#: config.c:3730 config.c:3835
+#: config.c:3806 config.c:3909
 msgid "&Sup"
 msgstr "S&up"
 
-#: config.c:3731 config.c:3836
+#: config.c:3807 config.c:3910
 msgid "&Hyp"
 msgstr "&Hyp"
 
-#: config.c:3739 config.c:3743 config.c:3781
+#: config.c:3815 config.c:3819 config.c:3855
 msgid "Selection"
 msgstr "Markering"
 
-#: config.c:3739
+#: config.c:3815 configdef.h:230
 msgid "Selection and clipboard"
 msgstr "Markering och urklipp"
 
-#: config.c:3741
+#: config.c:3817 configdef.h:232
 msgid "Clear selection on input"
 msgstr "Rensa markering vid inmatning"
 
-#: config.c:3743
+#: config.c:3819 configdef.h:233
 msgid "Clipboard"
 msgstr "Urklipp"
 
-#: config.c:3776
+#: config.c:3850 configdef.h:240
 msgid "Trim space from selection"
 msgstr "Rensa omgivande mellanrum från markering"
 
-#: config.c:3778
+#: config.c:3852 configdef.h:241
 msgid "Allow setting selection"
 msgstr "Låt kontrollsekvenser ändra markeringar"
 
-#: config.c:3781 config.c:3795 config.c:3807 config.c:3841 configdef.h:259
+#: config.c:3855 config.c:3869 config.c:3881 config.c:3915 configdef.h:311
 msgid "Window"
 msgstr "Fönster"
 
 #. __ Options - Selection: clock position of info popup for text size
-#: config.c:3785
+#: config.c:3859 configdef.h:243
 msgid "Show size while selecting (0..12)"
 msgstr "Visa storlek vid markering (0..12)"
 
-#: config.c:3788
+#: config.c:3862 configdef.h:244
 msgid "Suspend output while selecting"
 msgstr "Förhindra utmatning vid markering"
 
-#: config.c:3795
+#: config.c:3869
 msgid "Window properties"
 msgstr "Fönsteregenskaper"
 
-#: config.c:3795
+#: config.c:3869 configdef.h:247
 msgid "Default size"
 msgstr "Standardstorlek"
 
-#: config.c:3797
+#: config.c:3871 configdef.h:249
 msgid "Colu&mns"
 msgstr "Kolu&mner"
 
-#: config.c:3798
+#: config.c:3872 configdef.h:250
 msgid "Ro&ws"
 msgstr "Ra&der"
 
-#: config.c:3799
+#: config.c:3873 config.c:4083 configdef.h:251
 msgid "C&urrent size"
 msgstr "&Nuvarande"
 
 #. __ Options - Window:
-#: config.c:3804
+#: config.c:3878 configdef.h:252
 msgid "Re&wrap on resize"
 msgstr "Justera radbrytningar vid storleksförändring"
 
-#: config.c:3809
+#: config.c:3883 configdef.h:254
 msgid "Scroll&back lines"
 msgstr "&Radbuffert"
 
-#: config.c:3810 configdef.h:211
+#: config.c:3884 configdef.h:253
 msgid "Scrollbar"
 msgstr "Rullningslist"
 
-#: config.c:3812
+#: config.c:3886
 msgid "&Left"
 msgstr "&Vänster"
 
-#: config.c:3814
+#: config.c:3888
 msgid "&Right"
 msgstr "H&öger"
 
-#: config.c:3818 config.c:3829
+#: config.c:3892 config.c:3903 configdef.h:256
 msgid "Modifier for scrolling"
 msgstr "Modifierare för rullning"
 
-#: config.c:3838
+#: config.c:3912 configdef.h:258
 msgid "&PgUp and PgDn scroll without modifier"
 msgstr "Rulla med &PgUp och PgDn utan modifierare"
 
-#: config.c:3839
+#: config.c:3913 configdef.h:260
 msgid "&AllocConsole ,Some console programs need it."
 msgstr ""
 
-#: config.c:3841
+#: config.c:3915
 msgid "UI language"
 msgstr "Gränssnittsspråk"
 
-#: config.c:3848 config.c:3854 config.c:3893 config.c:3900
+#: config.c:3922 config.c:3928 config.c:3967 config.c:3974
 msgid "Terminal"
 msgstr "Terminal"
 
-#: config.c:3848
+#: config.c:3922 configdef.h:268
 msgid "Terminal features"
 msgstr "Terminalfunktioner"
 
-#: config.c:3850
+#: config.c:3924
 msgid "&Type"
 msgstr "&Typ"
 
 #. __ Options - Terminal: answerback string for ^E request
-#: config.c:3852
+#: config.c:3926 configdef.h:272
 msgid "&Answerback"
 msgstr "Svarstr&äng"
 
-#: config.c:3854
+#: config.c:3928 configdef.h:276
 msgid "Bell"
 msgstr "Ljud"
 
-#: config.c:3857
+#: config.c:3931 config.c:4111
 msgid "► &Play"
 msgstr "► &Spela upp"
 
-#: config.c:3860
+#: config.c:3934
 msgid "&Wave"
 msgstr ".&wav-fil"
 
-#: config.c:3880 config.c:3889
+#: config.c:3954 config.c:3963 configdef.h:288
 msgid "&Flash"
 msgstr "&Blinka"
 
-#: config.c:3881 config.c:3890
+#: config.c:3955 config.c:3964 configdef.h:290
 msgid "&Highlight in taskbar"
 msgstr "&Visa i aktivitetsfältet"
 
-#: config.c:3882 config.c:3891
+#: config.c:3956 config.c:3965 configdef.h:291
 msgid "&Popup"
 msgstr "&Popupp"
 
-#: config.c:3893 configdef.h:244
+#: config.c:3967 configdef.h:294
 msgid "Printer"
 msgstr "Skrivare"
 
 #. __ Options - Terminal:
-#: config.c:3902
+#: config.c:3976 configdef.h:296
 msgid "Prompt about running processes on &close"
 msgstr "Fråga om pågående processer vid &avslut"
 
 #. __ Options - Terminal:
 #. __ Context menu:
-#: config.c:3904 wininput.c:439
+#: config.c:3978 wininput.c:439 configdef.h:297
 msgid "Status Line"
 msgstr "Statusrad"
+
+#: config.c:3984
+msgid "Hotkey"
+msgstr ""
+
+#: config.c:3984
+msgid "hotkey define"
+msgstr ""
+
+#: config.c:3984
+msgid "hotkeys"
+msgstr ""
 
 #: textprint.c:44 textprint.c:128
 msgid "[Printing...] "
 msgstr "[Skriver ut...] "
 
 #. __ Options - Text: font chooser activation button
-#: winctrls.c:938
+#: winctrls.c:961
 msgid "&Select..."
 msgstr "&Tecken..."
 
-#: winctrls.c:1279 windialog.c:942
+#: winctrls.c:1297 windialog.c:936
 msgid "OK"
 msgstr "OK"
 
-#: winctrls.c:1280 windialog.c:943
+#: winctrls.c:1298 windialog.c:937
 msgid "Cancel"
 msgstr "Avbryt"
 
 #. __ Font chooser: title bar label
-#: winctrls.c:1284
+#: winctrls.c:1304
 msgid "Font "
 msgstr "Teckensnitt "
 
+#. __ Font chooser: button
+#: winctrls.c:1307
+#, fuzzy
+msgid "&ApplyA"
+msgstr "&Verkställ"
+
 #. __ Font chooser:
-#: winctrls.c:1288
+#: winctrls.c:1309
 msgid "&Font:"
 msgstr "&Teckensnitt:"
 
 #. __ Font chooser:
-#: winctrls.c:1294
+#: winctrls.c:1315
 msgid "Sample"
 msgstr "Exempel"
 
 #. __ Font chooser: text sample ("AaBbYyZz" by default)
-#: winctrls.c:1298 winctrls.c:1557 winctrls.c:1722
+#: winctrls.c:1319 winctrls.c:1575 winctrls.c:1740
 msgid "Ferqœm’4€"
 msgstr "Flygande bäckasiner söka hwila 0123456789"
 
 #. __ Font chooser: this field is only shown with FontMenu=1
-#: winctrls.c:1315
+#: winctrls.c:1335
 msgid "Sc&ript:"
 msgstr "Sk&ript:"
 
 #. __ Font chooser: this field is only shown with FontMenu=1
-#: winctrls.c:1317
+#: winctrls.c:1337
 msgid "<A>Show more fonts</A>"
 msgstr "<A>Visa fler teckensnitt</A>"
 
 #. __ Colour chooser: title bar label
-#: winctrls.c:1322
+#: winctrls.c:1343
 msgid "Colour "
 msgstr "Redigera färger "
 
 #. __ Colour chooser:
-#: winctrls.c:1335 winctrls.c:1347
+#: winctrls.c:1357 winctrls.c:1369
 msgid "B&asic colours:"
 msgstr "Gr&undfärger:"
 
 #. __ Colour chooser:
-#: winctrls.c:1356
+#: winctrls.c:1378
 msgid "&Custom colours:"
 msgstr "Anpassade f&ärger:"
 
 #. __ Colour chooser:
-#: winctrls.c:1363
+#: winctrls.c:1385
 msgid "De&fine Custom Colours >>"
 msgstr "&Definiera anpassade färger >>"
 
 #. __ Colour chooser:
-#: winctrls.c:1366
+#: winctrls.c:1388 configdef.h:51
 msgid "Colour"
 msgstr "Färg"
 
 #. __ Colour chooser:
-#: winctrls.c:1368
+#: winctrls.c:1390
 msgid "|S&olid"
 msgstr "|R&en färg"
 
 #. __ Colour chooser:
-#: winctrls.c:1370
+#: winctrls.c:1392
 msgid "&Hue:"
 msgstr "&Nyans:"
 
 #. __ Colour chooser:
-#: winctrls.c:1373
+#: winctrls.c:1395
 msgid "&Sat:"
 msgstr "&Mättnad:"
 
 #. __ Colour chooser:
-#: winctrls.c:1375
+#: winctrls.c:1397
 msgid "&Lum:"
 msgstr "&Ljusstyrka:"
 
 #. __ Colour chooser:
-#: winctrls.c:1377
+#: winctrls.c:1399
 msgid "&Red:"
 msgstr "&Röd:"
 
 #. __ Colour chooser:
-#: winctrls.c:1379
+#: winctrls.c:1401
 msgid "&Green:"
 msgstr "Gr&ön:"
 
 #. __ Colour chooser:
-#: winctrls.c:1381
+#: winctrls.c:1403
 msgid "&Blue:"
 msgstr "&Blå:"
 
 #. __ Colour chooser:
-#: winctrls.c:1384
+#: winctrls.c:1406
 msgid "A&dd to Custom Colours"
 msgstr "Lägg &till anpassade färger"
 
 #. __ Options: dialog title
-#: windialog.c:225 windialog.c:887
+#: windialog.c:219 windialog.c:881
 msgid "Options"
 msgstr "Alternativ"
 
 #. __ Options: dialog title: "mintty <release> available (for download)"
-#: windialog.c:227
+#: windialog.c:221
 msgid "available"
 msgstr "är tillgänglig"
 
-#: windialog.c:940
+#: windialog.c:934
 msgid "I see"
 msgstr "Jag förstår"
 
-#: windialog.c:972 windialog.c:999
+#: windialog.c:966 windialog.c:993
 msgid "Error"
 msgstr "Fel"
 
@@ -1417,45 +1442,45 @@ msgstr "Ny flik"
 msgid "User commands"
 msgstr "Användarkommandon"
 
-#: wininput.c:3573 wininput.c:3575 wininput.c:3577 wininput.c:3607
-#: wininput.c:3633
+#: wininput.c:3572 wininput.c:3574 wininput.c:3576 wininput.c:3606
+#: wininput.c:3632
 msgid "[NO SCROLL] "
 msgstr "[INGEN RULLNING] "
 
-#: wininput.c:3574 wininput.c:3579 wininput.c:3618 wininput.c:3646
+#: wininput.c:3573 wininput.c:3578 wininput.c:3617 wininput.c:3645
 msgid "[SCROLL MODE] "
 msgstr "[RULLNINGSLÄGE] "
 
-#: winmain.c:2374
+#: winmain.c:2369
 msgid "Processes are running in session:"
 msgstr "Processer som körs i sessionen:"
 
-#: winmain.c:2375
+#: winmain.c:2370
 msgid "Close anyway?"
 msgstr "Vill du stänga fönstret ändå?"
 
-#: winmain.c:2399
+#: winmain.c:2394
 msgid "Reset terminal?"
 msgstr "Rensa terminal?"
 
-#: winmain.c:2602
+#: winmain.c:2597
 msgid "Try '--help' for more information"
 msgstr "Prova att skriva \"--help\" för mer information"
 
-#: winmain.c:2610
+#: winmain.c:2605
 msgid "Could not load icon"
 msgstr "Kunde inte läsa in ikon"
 
-#: winmain.c:4283
+#: winmain.c:4284
 msgid "Usage:"
 msgstr "Användning:"
 
-#: winmain.c:4284
+#: winmain.c:4285
 msgid "[OPTION]... [ PROGRAM [ARG]... | - ]"
 msgstr "[ALTERNATIV]... [ PROGRAM [ARGUMENT]... | - ]"
 
 #. __ help text (output of -H / --help), after initial line ("synopsis")
-#: winmain.c:4287
+#: winmain.c:4288
 msgid ""
 "Start a new terminal session running the specified program or the user's "
 "shell.\n"
@@ -1526,39 +1551,39 @@ msgid ""
 "See manual page for further command line options and configuration.\n"
 msgstr ""
 
-#: winmain.c:4540
+#: winmain.c:4541
 msgid "Duplicate option '%s'"
 msgstr "Alternativet \"%s\" är en dubblett"
 
-#: winmain.c:4553 winmain.c:4560 winmain.c:4909
+#: winmain.c:4554 winmain.c:4561 winmain.c:4910
 msgid "WSL distribution '%s' not found"
 msgstr "WSL-distributionen \"%s\" hittades inte"
 
-#: winmain.c:4590 winmain.c:4679
+#: winmain.c:4591 winmain.c:4680
 msgid "Unknown option '%s'"
 msgstr "Alternativet \"%s\" är okänt"
 
-#: winmain.c:4592
+#: winmain.c:4593
 msgid "Option '%s' requires an argument"
 msgstr "Alternativet \"%s\" kräver ett argument"
 
-#: winmain.c:4619
+#: winmain.c:4620
 msgid "Syntax error in position argument '%s'"
 msgstr "Syntaxfel vid positionsargumentet \"%s\""
 
-#: winmain.c:4630
+#: winmain.c:4631
 msgid "Syntax error in size argument '%s'"
 msgstr "Syntaxfel i storleksargumentet \"%s\""
 
-#: winmain.c:4783
+#: winmain.c:4784
 msgid "Syntax error in geometry argument '%s'"
 msgstr "Syntaxfel i geometriargumentet \"%s\""
 
-#: winmain.c:4972
+#: winmain.c:4973
 msgid "Mintty could not detach from caller, starting anyway"
 msgstr "Mintty kunde inte frigöras från anroparen, men startas ändå"
 
-#: winmain.c:5183
+#: winmain.c:5184
 msgid "Using default title due to invalid characters in program name"
 msgstr "Standardnamnlisten används p.g.a. ogiltiga tecken i programmets namn"
 
@@ -1620,1181 +1645,1130 @@ msgstr ""
 "%s.\n"
 "Se även wikin där för mer tips, tack och erkännanden."
 
-#: configdef.h:41
-#, fuzzy
-msgid "Looks Options"
-msgstr "Alternativ"
-
-#: configdef.h:42
-#, fuzzy
-msgid "ForegroundColour"
-msgstr "&Förgrund..."
-
-#: configdef.h:43
-#, fuzzy
-msgid "BackgroundColour"
-msgstr "&Bakgrund..."
-
-#: configdef.h:44
-#, fuzzy
-msgid "BoldColour"
-msgstr "Färg"
-
-#: configdef.h:45
-#, fuzzy
-msgid "BlinkColour"
-msgstr "Färg"
-
-#: configdef.h:46
+#: configdef.h:54
 #, fuzzy
 msgid "CursorColour"
 msgstr "Markör"
 
-#: configdef.h:47
-#, fuzzy
-msgid "TekForegroundColour"
-msgstr "&Förgrund..."
-
-#: configdef.h:48
-#, fuzzy
-msgid "TekBackgroundColour"
-msgstr "&Bakgrund..."
-
-#: configdef.h:49
-msgid "TekCursorColour"
-msgstr ""
-
-#: configdef.h:50
-msgid "TekWriteThruColour"
-msgstr ""
-
-#: configdef.h:51
-msgid "TekDefocusedColour"
-msgstr ""
-
-#: configdef.h:52
-msgid "TekGlow"
-msgstr ""
-
-#: configdef.h:53
-msgid "TekStrap"
-msgstr ""
-
-#: configdef.h:54
-msgid "UnderlineColour"
-msgstr ""
-
 #: configdef.h:55
-#, fuzzy
-msgid "HoverColour"
-msgstr "Färg"
-
-#: configdef.h:75
-msgid "DispSpace"
-msgstr ""
-
-#: configdef.h:76
-msgid "DispClear"
-msgstr ""
-
-#: configdef.h:77
-msgid "DispTab"
-msgstr ""
-
-#: configdef.h:78
-msgid "UnderlineManual"
-msgstr ""
-
-#: configdef.h:79
-msgid "HighlightBackgroundColour"
-msgstr ""
-
-#: configdef.h:80
-msgid "HighlightForegroundColour"
-msgstr ""
-
-#: configdef.h:81
-msgid "SearchForegroundColour"
-msgstr ""
-
-#: configdef.h:82
-msgid "SearchBackgroundColour"
-msgstr ""
-
-#: configdef.h:83
-msgid "SearchCurrentColour"
-msgstr ""
-
-#: configdef.h:84
 #, fuzzy
 msgid "ThemeFile"
 msgstr "&Tema"
 
+#: configdef.h:56 configdef.h:57
+#, fuzzy
+msgid "ansi_colours"
+msgstr "färg"
+
+#: configdef.h:75
+#, fuzzy
+msgid "BoldColour"
+msgstr "Färg"
+
+#: configdef.h:76
+#, fuzzy
+msgid "BlinkColour"
+msgstr "Färg"
+
+#: configdef.h:77
+#, fuzzy
+msgid "TekForegroundColour"
+msgstr "&Förgrund..."
+
+#: configdef.h:78
+#, fuzzy
+msgid "TekBackgroundColour"
+msgstr "&Bakgrund..."
+
+#: configdef.h:79
+msgid "TekCursorColour"
+msgstr ""
+
+#: configdef.h:80
+msgid "TekWriteThruColour"
+msgstr ""
+
+#: configdef.h:81
+msgid "TekDefocusedColour"
+msgstr ""
+
+#: configdef.h:82
+msgid "TekGlow"
+msgstr ""
+
+#: configdef.h:83
+msgid "TekStrap"
+msgstr ""
+
+#: configdef.h:84
+msgid "UnderlineColour"
+msgstr ""
+
 #: configdef.h:85
+#, fuzzy
+msgid "HoverColour"
+msgstr "Färg"
+
+#: configdef.h:87
+msgid "HighlightBackgroundColour"
+msgstr ""
+
+#: configdef.h:88
+msgid "HighlightForegroundColour"
+msgstr ""
+
+#: configdef.h:89
+msgid "SearchForegroundColour"
+msgstr ""
+
+#: configdef.h:90
+msgid "SearchBackgroundColour"
+msgstr ""
+
+#: configdef.h:91
+msgid "SearchCurrentColour"
+msgstr ""
+
+#: configdef.h:92
 #, fuzzy
 msgid "Background"
 msgstr "&Bakgrund..."
 
-#: configdef.h:86
+#: configdef.h:93
 #, fuzzy
 msgid "ColourScheme"
 msgstr "Färgtemadesigner"
 
-#: configdef.h:89
-msgid "Blur"
-msgstr ""
-
-#: configdef.h:91
-#, fuzzy
-msgid "OpaqueWhenFocused"
-msgstr "&Ingen transparens vid fokus"
-
-#: configdef.h:92
+#: configdef.h:101
 #, fuzzy
 msgid "CursorType"
 msgstr "Markör"
 
-#: configdef.h:93
+#: configdef.h:102
 #, fuzzy
 msgid "CursorBlinks"
 msgstr "Markör"
 
-#: configdef.h:95
+#: configdef.h:104
+msgid "Disp"
+msgstr ""
+
+#: configdef.h:105
+msgid "UnderlineManual"
+msgstr ""
+
+#: configdef.h:106
+msgid "partline"
+msgstr ""
+
+#: configdef.h:107
+msgid "usepartline"
+msgstr ""
+
+#: configdef.h:108
+msgid "Padding"
+msgstr ""
+
+#: configdef.h:109
+msgid "DispClear"
+msgstr ""
+
+#: configdef.h:110
+msgid "DispTab"
+msgstr ""
+
+#: configdef.h:111
+msgid "DispSpace"
+msgstr ""
+
+#: configdef.h:113
+#, fuzzy
+msgid "Tab"
+msgstr "&Kopiera"
+
+#: configdef.h:114
 #, fuzzy
 msgid "TabForegroundColour"
 msgstr "&Förgrund..."
 
-#: configdef.h:96
+#: configdef.h:115
 #, fuzzy
 msgid "TabBackgroundColour"
 msgstr "&Bakgrund..."
 
-#: configdef.h:97
+#: configdef.h:116
 msgid "TabAttentionColour"
 msgstr ""
 
-#: configdef.h:98
+#: configdef.h:117
 msgid "TabActiveColour"
 msgstr ""
 
-#: configdef.h:99
-msgid "tab_bar_show"
-msgstr ""
-
-#: configdef.h:100
-msgid "indicator"
-msgstr ""
-
-#: configdef.h:101
-msgid "indicatorx"
-msgstr ""
-
-#: configdef.h:102
-msgid "indicatory"
-msgstr ""
-
-#: configdef.h:103
+#: configdef.h:118
 msgid "tab_font_size"
 msgstr ""
 
-#: configdef.h:104
+#: configdef.h:119
+msgid "tab_bar_show"
+msgstr ""
+
+#: configdef.h:120 configdef.h:121
+msgid "indicator"
+msgstr ""
+
+#: configdef.h:122
+msgid "indicatorx"
+msgstr ""
+
+#: configdef.h:123
+msgid "indicatory"
+msgstr ""
+
+#: configdef.h:126
+msgid "Dialog"
+msgstr ""
+
+#: configdef.h:127
 msgid "gui_font_size"
 msgstr ""
 
-#: configdef.h:105
+#: configdef.h:128
 msgid "scale_options_width"
 msgstr ""
 
-#: configdef.h:106
-msgid "Padding"
-msgstr ""
-
-#: configdef.h:107
-msgid "partline"
-msgstr ""
-
-#: configdef.h:108
-msgid "usepartline"
-msgstr ""
-
-#: configdef.h:111
+#: configdef.h:133
 #, fuzzy
-msgid "Text Options"
-msgstr "Alternativ"
+msgid "fonts"
+msgstr "tecken"
 
-#: configdef.h:115
+#: configdef.h:134
 #, fuzzy
 msgid "Font1"
 msgstr "Teckensnitt"
 
-#: configdef.h:116
+#: configdef.h:135
 #, fuzzy
 msgid "Font2"
 msgstr "Teckensnitt"
 
-#: configdef.h:117
+#: configdef.h:136
 #, fuzzy
 msgid "Font3"
 msgstr "Teckensnitt"
 
-#: configdef.h:118
+#: configdef.h:137
 #, fuzzy
 msgid "Font4"
 msgstr "Teckensnitt"
 
-#: configdef.h:119
+#: configdef.h:138
 #, fuzzy
 msgid "Font5"
 msgstr "Teckensnitt"
 
-#: configdef.h:120
+#: configdef.h:139
 #, fuzzy
 msgid "Font6"
 msgstr "Teckensnitt"
 
-#: configdef.h:121
+#: configdef.h:140
 #, fuzzy
 msgid "Font7"
 msgstr "Teckensnitt"
 
-#: configdef.h:122
+#: configdef.h:141
 #, fuzzy
 msgid "Font8"
 msgstr "Teckensnitt"
 
-#: configdef.h:123
+#: configdef.h:142
 #, fuzzy
 msgid "Font9"
 msgstr "Teckensnitt"
 
-#: configdef.h:124
+#: configdef.h:143
 #, fuzzy
 msgid "Font10"
 msgstr "Teckensnitt"
 
-#: configdef.h:125
+#: configdef.h:144
 #, fuzzy
 msgid "FontRTL"
 msgstr "Teckensnitt"
 
-#: configdef.h:127
-msgid "FontChoice"
-msgstr ""
-
-#: configdef.h:128
+#: configdef.h:147 configdef.h:150
 #, fuzzy
-msgid "FontSample"
-msgstr "Exempel"
+msgid "Bold"
+msgstr "Gr&ön:"
 
-#: configdef.h:129
-msgid "ShowHiddenFonts"
-msgstr ""
-
-#: configdef.h:130
-#, fuzzy
-msgid "FontSmoothing"
-msgstr "Teckensnittsutjämning"
-
-#: configdef.h:131
-msgid "FontRender"
-msgstr ""
-
-#: configdef.h:132
-#, fuzzy
-msgid "Dim as font"
-msgstr "teckensnitt"
-
-#: configdef.h:133
-msgid "BoldAsFont"
-msgstr ""
-
-#: configdef.h:134
-#, fuzzy
-msgid "BoldAsColour"
-msgstr "Färg"
-
-#: configdef.h:135
+#: configdef.h:148
 #, fuzzy
 msgid "AllowBlinking"
 msgstr "&Blinka"
 
-#: configdef.h:136
+#: configdef.h:149
+#, fuzzy
+msgid "Dim as font"
+msgstr "teckensnitt"
+
+#: configdef.h:151
+#, fuzzy
+msgid "Bold as font"
+msgstr "teckensnitt"
+
+#: configdef.h:152
+#, fuzzy
+msgid "Bold as colour"
+msgstr "färg"
+
+#: configdef.h:153 configdef.h:155
 #, fuzzy
 msgid "Locale"
 msgstr "Spr&åk"
 
-#: configdef.h:137
+#: configdef.h:156
 #, fuzzy
 msgid "Charset"
 msgstr "Tecken&uppsättning"
 
-#: configdef.h:138
+#: configdef.h:162
+msgid "FontChoice"
+msgstr ""
+
+#: configdef.h:163
+#, fuzzy
+msgid "FontSample"
+msgstr "Exempel"
+
+#: configdef.h:164
+msgid "ShowHiddenFonts"
+msgstr ""
+
+#: configdef.h:165
+msgid "FontRender"
+msgstr ""
+
+#: configdef.h:166
 msgid "Charwidth"
 msgstr ""
 
-#: configdef.h:139
-#, fuzzy
-msgid "OldLocale"
-msgstr "Spr&åk"
-
-#: configdef.h:140
+#: configdef.h:167
 #, fuzzy
 msgid "FontMenu"
 msgstr "Teckensnitt"
 
-#: configdef.h:141
+#: configdef.h:168
 #, fuzzy
 msgid "TekFont"
 msgstr "Teckensnitt"
 
-#: configdef.h:144
+#: configdef.h:169
 #, fuzzy
-msgid "Keys Options"
-msgstr "Alternativ"
+msgid "OldLocale"
+msgstr "Spr&åk"
 
-#: configdef.h:145
-msgid "BackspaceSendsBS"
-msgstr ""
-
-#: configdef.h:146
-#, fuzzy
-msgid "DeleteSendsDEL"
-msgstr "&Delete skriver DEL"
-
-#: configdef.h:147
-#, fuzzy
-msgid "CtrlAltIsAltGr"
-msgstr "Ctrl+VänsterAlt fungerar likadant som Alt&Gr"
-
-#: configdef.h:148
-#, fuzzy
-msgid "AltGrIsAlsoAlt"
-msgstr "AltGr fungerar även likadant som Alt"
-
-#: configdef.h:149
+#: configdef.h:179
 #, fuzzy
 msgid "CtrlAltDelayAltGr"
 msgstr "Ctrl+VänsterAlt fungerar likadant som Alt&Gr"
 
-#: configdef.h:150
-msgid "key_alpha_mode"
-msgstr ""
-
-#: configdef.h:151
+#: configdef.h:181
 msgid "OldAltGrDetection"
 msgstr ""
 
-#: configdef.h:152
+#: configdef.h:182
 msgid "OldModifyKeys"
 msgstr ""
 
-#: configdef.h:153
+#: configdef.h:183
 msgid "FormatOtherKeys"
 msgstr ""
 
-#: configdef.h:154
+#: configdef.h:184
 msgid "AutoRepeat"
 msgstr ""
 
-#: configdef.h:155
+#: configdef.h:185
 msgid "SupportExternalHotkeys"
 msgstr ""
 
-#: configdef.h:156
-#, fuzzy
-msgid "ClipShortcuts"
-msgstr "Kortkommandon"
-
-#: configdef.h:157
-#, fuzzy
-msgid "WindowShortcuts"
-msgstr "Kortkommandon"
-
-#: configdef.h:158
-#, fuzzy
-msgid "SwitchShortcuts"
-msgstr "Kortkommandon"
-
-#: configdef.h:159
-#, fuzzy
-msgid "ZoomShortcuts"
-msgstr "Kortkommandon"
-
-#: configdef.h:160
+#: configdef.h:195
 msgid "ZoomFontWithWindow"
 msgstr ""
 
-#: configdef.h:161
-#, fuzzy
-msgid "AltFnShortcuts"
-msgstr "Kortkommandon för Alt+&Fn"
-
-#: configdef.h:162
-#, fuzzy
-msgid "WinShortcuts"
-msgstr "Kortkommandon"
-
-#: configdef.h:163
+#: configdef.h:196
 msgid "hkwinkeyall"
 msgstr ""
 
-#: configdef.h:164
+#: configdef.h:197
 msgid "hook_keyboard"
 msgstr ""
 
-#: configdef.h:165
-#, fuzzy
-msgid "CtrlShiftShortcuts"
-msgstr "Kortkommandon för C&trl+Shift+bokstav"
-
-#: configdef.h:166
+#: configdef.h:198
 msgid "CtrlExchangeShift"
 msgstr ""
 
-#: configdef.h:167
+#: configdef.h:199
 msgid "CtrlControls"
 msgstr ""
 
-#: configdef.h:168
-#, fuzzy
-msgid "ComposeKey"
-msgstr "Kombinationstangent"
-
-#: configdef.h:169
+#: configdef.h:200
 msgid "Key_PrintScreen"
 msgstr ""
 
-#: configdef.h:170
+#: configdef.h:201
 msgid "Key_Pause"
 msgstr ""
 
-#: configdef.h:171
+#: configdef.h:202
 #, fuzzy
 msgid "Key_Break"
 msgstr "Skriv Break"
 
-#: configdef.h:172
+#: configdef.h:203
 #, fuzzy
 msgid "Key_Menu"
 msgstr "&Meny"
 
-#: configdef.h:173
+#: configdef.h:204
 #, fuzzy
 msgid "Key_ScrollLock"
 msgstr "Rensa radbuffert"
 
-#: configdef.h:174
+#: configdef.h:205
 #, fuzzy
 msgid "KeyFunctions"
 msgstr "Musfunktioner"
 
-#: configdef.h:175
+#: configdef.h:206
 msgid "ManageLEDs"
 msgstr ""
 
-#: configdef.h:176
-msgid "ShootFoot"
+#: configdef.h:218
+msgid "Clicks Send to App"
 msgstr ""
 
-#: configdef.h:177
-msgid "OldKeyFunctionsKeypad"
-msgstr ""
-
-#: configdef.h:180
-#, fuzzy
-msgid "Mouse Options"
-msgstr "Musfunktioner"
-
-#: configdef.h:181
-#, fuzzy
-msgid "ClicksPlaceCursor"
-msgstr "&Placera kommandotolkens markör vid musklick"
-
-#: configdef.h:182
-#, fuzzy
-msgid "MiddleClickAction"
-msgstr "Klickåtgärder"
-
-#: configdef.h:183
-#, fuzzy
-msgid "RightClickAction"
-msgstr "Klickåtgärder"
-
-#: configdef.h:184
+#: configdef.h:221
 msgid "OpeningClicks"
 msgstr ""
 
-#: configdef.h:185
+#: configdef.h:222
 msgid "OpeningMod"
 msgstr ""
 
-#: configdef.h:186
+#: configdef.h:223
 #, fuzzy
 msgid "ZoomMouse"
 msgstr "Mus"
 
-#: configdef.h:187
-msgid "ClicksTargetApp"
-msgstr ""
-
-#: configdef.h:188
-msgid "ClickTargetMod"
-msgstr ""
-
-#: configdef.h:189
+#: configdef.h:224
 #, fuzzy
 msgid "HideMouse"
 msgstr "Mus"
 
-#: configdef.h:190
+#: configdef.h:225
 msgid "ElasticMouse"
 msgstr ""
 
-#: configdef.h:191
-msgid "LinesPerMouseWheelNotch"
-msgstr ""
-
-#: configdef.h:192
-#, fuzzy
-msgid "MousePointer"
-msgstr "Skrivare"
-
-#: configdef.h:193
-msgid "AppMousePointer"
-msgstr ""
-
-#: configdef.h:195
-#, fuzzy
-msgid "Selection Options"
-msgstr "Markering"
-
-#: configdef.h:196
-#, fuzzy
-msgid "ClearSelectionOnInput"
-msgstr "Rensa markering vid inmatning"
-
-#: configdef.h:197
-#, fuzzy
-msgid "CopyOnSelect"
-msgstr "Kopiera vid &markering"
-
-#: configdef.h:198
-#, fuzzy
-msgid "CopyTab"
-msgstr "&Kopiera"
-
-#: configdef.h:199
-#, fuzzy
-msgid "CopyAsRTF"
-msgstr "Kopiera som RTF"
-
-#: configdef.h:200
-#, fuzzy
-msgid "CopyAsHTML"
-msgstr "Kopiera som HTML"
-
-#: configdef.h:201
-#, fuzzy
-msgid "CopyAsRTFFont"
-msgstr "Kopiera som RTF"
-
-#: configdef.h:202
-msgid "CopyAsRTFFontHeight"
-msgstr ""
-
-#: configdef.h:203
-#, fuzzy
-msgid "TrimSelection"
-msgstr "Markering"
-
-#: configdef.h:204
-#, fuzzy
-msgid "AllowSetSelection"
-msgstr "Låt kontrollsekvenser ändra markeringar"
-
-#: configdef.h:205
-#, fuzzy
-msgid "allow_paste_selection"
-msgstr "Låt kontrollsekvenser ändra markeringar"
-
-#: configdef.h:206
-#, fuzzy
-msgid "SelectionShowSize"
-msgstr "Markering"
-
-#: configdef.h:207
-#, fuzzy
-msgid "Window Options"
-msgstr "Fönsteregenskaper"
-
-#: configdef.h:208
-#, fuzzy
-msgid "Columns"
-msgstr "Kolu&mner"
-
-#: configdef.h:209
-msgid "Rows"
-msgstr ""
-
-#: configdef.h:210
-#, fuzzy
-msgid "RewrapOnResize"
-msgstr "Justera radbrytningar vid storleksförändring"
-
-#: configdef.h:212
-#, fuzzy
-msgid "ScrollbackLines"
-msgstr "&Radbuffert"
-
-#: configdef.h:213
-#, fuzzy
-msgid "MaxScrollbackLines"
-msgstr "&Radbuffert"
-
-#: configdef.h:214
-#, fuzzy
-msgid "ScrollMod"
-msgstr "Rullningslist"
-
-#: configdef.h:215
-#, fuzzy
-msgid "BorderStyle"
-msgstr "Stil"
-
-#: configdef.h:216
-msgid "PgUpDnScroll"
-msgstr ""
-
-#: configdef.h:217
-msgid "allocconsole"
-msgstr ""
-
-#: configdef.h:218
-#, fuzzy
-msgid "Language"
-msgstr "Gränssnittsspråk"
-
-#: configdef.h:219
-#, fuzzy
-msgid "SearchBar"
-msgstr "S&ök"
-
-#: configdef.h:220
-#, fuzzy
-msgid "SearchContext"
-msgstr "S&ök"
-
-#: configdef.h:221
-#, fuzzy
-msgid "Terminal Options"
-msgstr "Terminalfunktioner"
-
-#: configdef.h:222
-#, fuzzy
-msgid "Term"
-msgstr "Terminal"
-
-#: configdef.h:223
-#, fuzzy
-msgid "Answerback"
-msgstr "Svarstr&äng"
-
-#: configdef.h:224
-msgid "WrapTab"
-msgstr ""
-
-#: configdef.h:225
-msgid "OldWrapModes"
-msgstr ""
-
 #: configdef.h:226
-msgid "Enable132ColumnSwitching"
+msgid "LinesPerMouseWheelNotch"
 msgstr ""
 
 #: configdef.h:227
 #, fuzzy
+msgid "MousePointer"
+msgstr "Skrivare"
+
+#: configdef.h:228
+msgid "AppMousePointer"
+msgstr ""
+
+#: configdef.h:237
+#, fuzzy
+msgid "CopyAsHTML"
+msgstr "Kopiera som HTML"
+
+#: configdef.h:238
+#, fuzzy
+msgid "CopyAsRTFFont"
+msgstr "Kopiera som RTF"
+
+#: configdef.h:239
+msgid "CopyAsRTFFontHeight"
+msgstr ""
+
+#: configdef.h:242
+#, fuzzy
+msgid "allow_paste_selection"
+msgstr "Låt kontrollsekvenser ändra markeringar"
+
+#: configdef.h:246
+#, fuzzy
+msgid "Window Options"
+msgstr "Fönsteregenskaper"
+
+#: configdef.h:255
+#, fuzzy
+msgid "MaxScrollbackLines"
+msgstr "&Radbuffert"
+
+#: configdef.h:259
+#, fuzzy
+msgid "BorderStyle"
+msgstr "Stil"
+
+#. __("UI language")                            )
+#: configdef.h:262
+#, fuzzy
+msgid "Language"
+msgstr "Gränssnittsspråk"
+
+#. __("Search Bar")               )
+#: configdef.h:265
+#, fuzzy
+msgid "Search Bar"
+msgstr "S&ök"
+
+#: configdef.h:266
+#, fuzzy
+msgid "SearchContext"
+msgstr "S&ök"
+
+#: configdef.h:271
+#, fuzzy
+msgid "Term"
+msgstr "Terminal"
+
+#: configdef.h:273
+msgid "WrapTab"
+msgstr ""
+
+#: configdef.h:274
+msgid "OldWrapModes"
+msgstr ""
+
+#: configdef.h:275
+msgid "Enable132ColumnSwitching"
+msgstr ""
+
+#: configdef.h:277
+#, fuzzy
 msgid "BellType"
 msgstr "Ljud"
 
-#: configdef.h:229
+#: configdef.h:278
+#, fuzzy
+msgid "BellFiles"
+msgstr "Ljud"
+
+#: configdef.h:279
 #, fuzzy
 msgid "BellFile"
 msgstr "Ljud"
 
-#: configdef.h:230
+#: configdef.h:280
 #, fuzzy
 msgid "BellFile2"
 msgstr "Ljud"
 
-#: configdef.h:231
+#: configdef.h:281
 #, fuzzy
 msgid "BellFile3"
 msgstr "Ljud"
 
-#: configdef.h:232
+#: configdef.h:282
 #, fuzzy
 msgid "BellFile4"
 msgstr "Ljud"
 
-#: configdef.h:233
+#: configdef.h:283
 #, fuzzy
 msgid "BellFile5"
 msgstr "Ljud"
 
-#: configdef.h:234
+#: configdef.h:284
 #, fuzzy
 msgid "BellFile6"
 msgstr "Ljud"
 
-#: configdef.h:235
+#: configdef.h:285
 #, fuzzy
 msgid "BellFile7"
 msgstr "Ljud"
 
-#: configdef.h:236
+#: configdef.h:286
 #, fuzzy
 msgid "BellFreq"
 msgstr "Ljud"
 
-#: configdef.h:237
+#: configdef.h:287
 #, fuzzy
 msgid "BellLen"
 msgstr "Ljud"
 
-#: configdef.h:238
-#, fuzzy
-msgid "BellFlash"
-msgstr "&Blinka"
-
-#: configdef.h:239
+#: configdef.h:289
 msgid "BellFlashStyle"
 msgstr ""
 
-#: configdef.h:240
-msgid "BellTaskbar"
-msgstr ""
-
-#: configdef.h:241
-#, fuzzy
-msgid "BellPopup"
-msgstr "&Popupp"
-
-#: configdef.h:242
+#: configdef.h:292
 msgid "BellInterval"
 msgstr ""
 
-#: configdef.h:243
+#: configdef.h:293
 msgid "PlayTone"
 msgstr ""
 
-#: configdef.h:245
-msgid "ConfirmExit"
-msgstr ""
-
-#: configdef.h:246
+#: configdef.h:298
 msgid "ConfirmReset"
 msgstr ""
 
-#: configdef.h:247
+#: configdef.h:299
 msgid "ConfirmMultiLinePasting"
 msgstr ""
 
-#: configdef.h:248
+#: configdef.h:300
 msgid "Command line Options"
 msgstr ""
 
-#: configdef.h:249
+#: configdef.h:301
 msgid "Class"
 msgstr ""
 
-#: configdef.h:250
+#: configdef.h:302
 msgid "Hold"
 msgstr ""
 
-#: configdef.h:251
+#: configdef.h:303
 msgid "ExitWrite"
 msgstr ""
 
-#: configdef.h:252
+#: configdef.h:304
 msgid "ExitTitle"
 msgstr ""
 
-#: configdef.h:253
+#: configdef.h:305
 msgid "Icon"
 msgstr ""
 
-#: configdef.h:254
+#: configdef.h:306
 msgid "Log"
 msgstr ""
 
-#: configdef.h:255
+#: configdef.h:307
 msgid "Logging"
 msgstr ""
 
-#: configdef.h:256
+#: configdef.h:308
 msgid "Utmp"
 msgstr ""
 
-#: configdef.h:257
+#: configdef.h:309
 msgid "Title"
 msgstr ""
 
-#: configdef.h:258
+#: configdef.h:310
 msgid "title_settable"
 msgstr ""
 
-#: configdef.h:260
+#: configdef.h:312
 msgid "X"
 msgstr "X"
 
-#: configdef.h:261
+#: configdef.h:313
 msgid "Y"
 msgstr ""
 
-#: configdef.h:262
+#: configdef.h:314
 msgid "Daemonize"
 msgstr ""
 
-#: configdef.h:263
+#: configdef.h:315
 msgid "DaemonizeAlways"
 msgstr ""
 
-#: configdef.h:264
+#: configdef.h:316
 #, fuzzy
 msgid "Hidden Options"
 msgstr "Alternativ"
 
-#: configdef.h:265
-msgid "Bidi"
-msgstr ""
-
-#: configdef.h:266
-#, fuzzy
-msgid "NoAltScreen"
-msgstr "&Helskärm"
-
-#: configdef.h:267
-#, fuzzy
-msgid "EraseToScrollback"
-msgstr "Rensa radbuffert"
-
-#: configdef.h:268
-msgid "DisplaySpeedup"
-msgstr ""
-
-#: configdef.h:269
-msgid "SuppressSGR"
-msgstr ""
-
-#: configdef.h:270
-msgid "SuppressDEC"
-msgstr ""
-
-#: configdef.h:271
-msgid "SuppressWIN"
-msgstr ""
-
-#: configdef.h:272
-msgid "SuppressOSC"
-msgstr ""
-
-#: configdef.h:273
-msgid "SuppressNRC"
-msgstr ""
-
-#: configdef.h:274
-msgid "SuppressMouseWheel"
-msgstr ""
-
-#: configdef.h:275
-msgid "FilterPasteControls"
-msgstr ""
-
-#: configdef.h:276
-msgid "guard_path"
-msgstr ""
-
-#: configdef.h:277
-msgid "BracketedPasteByLine"
-msgstr ""
-
-#: configdef.h:278
-#, fuzzy
-msgid "SuspendWhileSelecting"
-msgstr "Förhindra utmatning vid markering"
-
-#: configdef.h:279
-msgid "PrintableControls"
-msgstr ""
-
-#: configdef.h:280
-msgid "CharNarrowing"
-msgstr ""
-
-#: configdef.h:282
-#, fuzzy
-msgid "EmojiPlacement"
-msgstr "Placering"
-
-#: configdef.h:283
-msgid "SaveFilename"
-msgstr ""
-
-#: configdef.h:284
-msgid "AppID"
-msgstr ""
-
-#: configdef.h:285
-msgid "AppName"
-msgstr ""
-
-#: configdef.h:286
-msgid "AppLaunchCmd"
-msgstr ""
-
-#: configdef.h:287
-#, fuzzy
-msgid "DropCommands"
-msgstr "Användarkommandon"
-
-#: configdef.h:288
-msgid "ExitCommands"
-msgstr ""
-
-#: configdef.h:289
-#, fuzzy
-msgid "UserCommands"
-msgstr "Användarkommandon"
-
-#: configdef.h:290
-#, fuzzy
-msgid "CtxMenuFunctions"
-msgstr "Musfunktioner"
-
-#: configdef.h:291
-#, fuzzy
-msgid "SysMenuFunctions"
-msgstr "Musfunktioner"
-
-#: configdef.h:292
-#, fuzzy
-msgid "UserCommandsPath"
-msgstr "Användarkommandon"
-
-#: configdef.h:293
-msgid "SessionCommands"
-msgstr ""
-
-#: configdef.h:294
-#, fuzzy
-msgid "TaskCommands"
-msgstr "Användarkommandon"
-
-#: configdef.h:295
-msgid "ConPTY"
-msgstr ""
-
-#: configdef.h:296
-#, fuzzy
-msgid "LoginFromShortcut"
-msgstr "Kortkommandon"
-
-#: configdef.h:297
-#, fuzzy
-msgid "MenuMouse"
-msgstr "Mus"
-
-#: configdef.h:298
-msgid "MenuCtrlMouse"
-msgstr ""
-
-#: configdef.h:299
-#, fuzzy
-msgid "MenuMouse5"
-msgstr "Mus"
-
-#: configdef.h:300
-#, fuzzy
-msgid "MenuMenu"
-msgstr "&Meny"
-
-#: configdef.h:301
-msgid "MenuCtrlMenu"
-msgstr ""
-
-#: configdef.h:302
-msgid "MenuTitleCtrlLeft"
-msgstr ""
-
-#: configdef.h:303
-msgid "MenuTitleCtrlRight"
-msgstr ""
-
-#: configdef.h:304
-msgid "SessionGeomSync"
-msgstr ""
-
-#: configdef.h:305
-msgid "ColSpacing"
-msgstr ""
-
-#: configdef.h:306
-msgid "RowSpacing"
-msgstr ""
-
-#: configdef.h:307
-msgid "AutoLeading"
-msgstr ""
-
-#: configdef.h:308
-msgid "Ligatures"
-msgstr ""
-
-#: configdef.h:309
-msgid "LigaturesSupport"
-msgstr ""
-
-#: configdef.h:310
-msgid "BoxDrawing"
-msgstr ""
-
-#: configdef.h:311
-msgid "HandleDPI"
-msgstr ""
-
-#: configdef.h:312
-msgid "CheckVersionUpdate"
-msgstr ""
-
-#: configdef.h:313
-#, fuzzy
-msgid "WordChars"
-msgstr "Tecken&uppsättning"
-
-#: configdef.h:314
-#, fuzzy
-msgid "WordCharsExcl"
-msgstr "Tecken&uppsättning"
-
-#: configdef.h:315
-msgid "IMECursorColour"
-msgstr ""
-
-#: configdef.h:316
-msgid "SixelClipChars"
-msgstr ""
-
 #: configdef.h:317
-msgid "OldBold"
+msgid "Bidi"
 msgstr ""
 
 #: configdef.h:318
 #, fuzzy
-msgid "ShortLongOpts"
-msgstr "Kortkommandon"
+msgid "NoAltScreen"
+msgstr "&Helskärm"
 
 #: configdef.h:319
-msgid "BoldAsRainbowSparkles"
-msgstr ""
+#, fuzzy
+msgid "EraseToScrollback"
+msgstr "Rensa radbuffert"
 
 #: configdef.h:320
-msgid "HoverTitle"
+msgid "DisplaySpeedup"
 msgstr ""
 
 #: configdef.h:321
-msgid "ProgressBar"
+msgid "SuppressSGR"
 msgstr ""
 
 #: configdef.h:322
-msgid "ProgressScan"
+msgid "SuppressDEC"
 msgstr ""
 
 #: configdef.h:323
-msgid "DimMargins"
+msgid "SuppressWIN"
 msgstr ""
 
 #: configdef.h:324
-#, fuzzy
-msgid "StatusLine"
-msgstr "Statusrad"
+msgid "SuppressOSC"
+msgstr ""
 
 #: configdef.h:325
-msgid "status_debug"
+msgid "SuppressNRC"
 msgstr ""
 
 #: configdef.h:326
-msgid "Baud"
+msgid "SuppressMouseWheel"
 msgstr ""
 
 #: configdef.h:327
-msgid "Bloom"
+msgid "FilterPasteControls"
 msgstr ""
 
 #: configdef.h:328
+msgid "GuardNetworkPaths"
+msgstr ""
+
+#: configdef.h:329
+msgid "BracketedPasteByLine"
+msgstr ""
+
+#: configdef.h:330
+msgid "PrintableControls"
+msgstr ""
+
+#: configdef.h:331
+msgid "CharNarrowing"
+msgstr ""
+
+#: configdef.h:332
+msgid "SaveFilename"
+msgstr ""
+
+#: configdef.h:333
+msgid "AppID"
+msgstr ""
+
+#: configdef.h:334
+msgid "AppName"
+msgstr ""
+
+#: configdef.h:335
+msgid "AppLaunchCmd"
+msgstr ""
+
+#: configdef.h:336
+#, fuzzy
+msgid "DropCommands"
+msgstr "Användarkommandon"
+
+#: configdef.h:337
+msgid "ExitCommands"
+msgstr ""
+
+#: configdef.h:338
+#, fuzzy
+msgid "UserCommands"
+msgstr "Användarkommandon"
+
+#: configdef.h:339
+#, fuzzy
+msgid "CtxMenuFunctions"
+msgstr "Musfunktioner"
+
+#: configdef.h:340
+#, fuzzy
+msgid "SysMenuFunctions"
+msgstr "Musfunktioner"
+
+#: configdef.h:341
+#, fuzzy
+msgid "UserCommandsPath"
+msgstr "Användarkommandon"
+
+#: configdef.h:342
+msgid "SessionCommands"
+msgstr ""
+
+#: configdef.h:343
+#, fuzzy
+msgid "TaskCommands"
+msgstr "Användarkommandon"
+
+#: configdef.h:344
+msgid "ConPTY"
+msgstr ""
+
+#: configdef.h:345
+#, fuzzy
+msgid "LoginFromShortcut"
+msgstr "Kortkommandon"
+
+#: configdef.h:346
+#, fuzzy
+msgid "MenuMouse"
+msgstr "Mus"
+
+#: configdef.h:347
+msgid "MenuCtrlMouse"
+msgstr ""
+
+#: configdef.h:348
+#, fuzzy
+msgid "MenuMouse5"
+msgstr "Mus"
+
+#. __("MenuMenu")                 ,"bs"  )
+#. _CFGDEFD(string   ,OPT_STR          ,OPF_H    ,0,"MenuCtrlMenu"             ,menu_ctrlmenu               ,__("MenuCtrlMenu")             ,"e|ls")
+#: configdef.h:351
+msgid "MenuTitleCtrlLeft"
+msgstr ""
+
+#: configdef.h:352
+msgid "MenuTitleCtrlRight"
+msgstr ""
+
+#: configdef.h:353
+msgid "SessionGeomSync"
+msgstr ""
+
+#: configdef.h:354
+msgid "ColSpacing"
+msgstr ""
+
+#: configdef.h:355
+msgid "RowSpacing"
+msgstr ""
+
+#: configdef.h:356
+msgid "AutoLeading"
+msgstr ""
+
+#: configdef.h:357
+msgid "Ligatures"
+msgstr ""
+
+#: configdef.h:358
+msgid "LigaturesSupport"
+msgstr ""
+
+#: configdef.h:359
+msgid "BoxDrawing"
+msgstr ""
+
+#: configdef.h:360
+msgid "HandleDPI"
+msgstr ""
+
+#: configdef.h:361
+msgid "CheckVersionUpdate"
+msgstr ""
+
+#: configdef.h:362
+msgid "IMECursorColour"
+msgstr ""
+
+#: configdef.h:363
+msgid "SixelClipChars"
+msgstr ""
+
+#: configdef.h:364
+msgid "OldBold"
+msgstr ""
+
+#: configdef.h:365
+#, fuzzy
+msgid "ShortLongOpts"
+msgstr "Kortkommandon"
+
+#: configdef.h:366
+msgid "BoldAsRainbowSparkles"
+msgstr ""
+
+#: configdef.h:367
+msgid "HoverTitle"
+msgstr ""
+
+#: configdef.h:368
+msgid "ProgressBar"
+msgstr ""
+
+#: configdef.h:369
+msgid "ProgressScan"
+msgstr ""
+
+#: configdef.h:370
+msgid "DimMargins"
+msgstr ""
+
+#. __("status_debug")             ,0)
+#: configdef.h:372
+msgid "Baud"
+msgstr ""
+
+#: configdef.h:373
+msgid "Bloom"
+msgstr ""
+
+#: configdef.h:374
 #, fuzzy
 msgid "OptionsFont"
 msgstr "Alternativ"
 
-#: configdef.h:329
+#: configdef.h:375
 msgid "OptionsFontHeight"
 msgstr ""
 
-#: configdef.h:330
+#: configdef.h:376
 #, fuzzy
 msgid "OldOptions"
 msgstr "Alternativ"
 
-#: configdef.h:331
+#: configdef.h:377
 msgid "OldXButtons"
 msgstr ""
 
-#: configdef.h:332
+#: configdef.h:378
 msgid "wslbridge version,0:nobridge,1:wslbridge,2:wslbreadge2"
 msgstr ""
 
-#: configdef.h:333
+#: configdef.h:379
 msgid "wslDistribution,null is default"
 msgstr ""
 
-#: configdef.h:337
+#: configdef.h:381
 #, fuzzy
 msgid "FontSize"
 msgstr "Teckensnitt"
 
-#: configdef.h:338
+#: configdef.h:382
 #, fuzzy
 msgid "Break"
 msgstr "Skriv Break"
 
-#: configdef.h:339
+#: configdef.h:383
 msgid "Pause"
 msgstr ""
 
-#: configdef.h:340
+#: configdef.h:384
 msgid "CopyAsRTFFontSize"
 msgstr ""
 
-#: configdef.h:341
+#: configdef.h:385
 msgid "OldFontMenu"
 msgstr ""
 
-#: configdef.h:342
+#: configdef.h:386
 #, fuzzy
 msgid "OptionsFontSize"
 msgstr "Alternativ"
 
-#: configdef.h:343
+#: configdef.h:387
 msgid "BoldAsBright"
 msgstr ""
 
-#: configdef.h:344
+#: configdef.h:388
 msgid "FontQuality"
 msgstr ""
 
-#: configdef.h:346
+#: configdef.h:389
 #, fuzzy
 msgid "UseSystemColours"
 msgstr "Färger"
+
+#, fuzzy
+#~ msgid "Looks Options"
+#~ msgstr "Alternativ"
+
+#, fuzzy
+#~ msgid "Foreground Colour"
+#~ msgstr "&Förgrund..."
+
+#, fuzzy
+#~ msgid "Background Colour"
+#~ msgstr "&Bakgrund..."
+
+#, fuzzy
+#~ msgid "OpaqueWhenFocused"
+#~ msgstr "&Ingen transparens vid fokus"
+
+#, fuzzy
+#~ msgid "Text Options"
+#~ msgstr "Alternativ"
+
+#, fuzzy
+#~ msgid "FontSmoothing"
+#~ msgstr "Teckensnittsutjämning"
+
+#, fuzzy
+#~ msgid "BoldAsColour"
+#~ msgstr "Färg"
+
+#, fuzzy
+#~ msgid "Keys Options"
+#~ msgstr "Alternativ"
+
+#, fuzzy
+#~ msgid "DeleteSendsDEL"
+#~ msgstr "&Delete skriver DEL"
+
+#, fuzzy
+#~ msgid "CtrlAltIsAltGr"
+#~ msgstr "Ctrl+VänsterAlt fungerar likadant som Alt&Gr"
+
+#, fuzzy
+#~ msgid "AltGrIsAlsoAlt"
+#~ msgstr "AltGr fungerar även likadant som Alt"
+
+#, fuzzy
+#~ msgid "ClipShortcuts"
+#~ msgstr "Kortkommandon"
+
+#, fuzzy
+#~ msgid "WindowShortcuts"
+#~ msgstr "Kortkommandon"
+
+#, fuzzy
+#~ msgid "SwitchShortcuts"
+#~ msgstr "Kortkommandon"
+
+#, fuzzy
+#~ msgid "ZoomShortcuts"
+#~ msgstr "Kortkommandon"
+
+#, fuzzy
+#~ msgid "AltFnShortcuts"
+#~ msgstr "Kortkommandon för Alt+&Fn"
+
+#, fuzzy
+#~ msgid "WinShortcuts"
+#~ msgstr "Kortkommandon"
+
+#, fuzzy
+#~ msgid "CtrlShiftShortcuts"
+#~ msgstr "Kortkommandon för C&trl+Shift+bokstav"
+
+#, fuzzy
+#~ msgid "ComposeKey"
+#~ msgstr "Kombinationstangent"
+
+#, fuzzy
+#~ msgid "Mouse Options"
+#~ msgstr "Musfunktioner"
+
+#, fuzzy
+#~ msgid "ClicksPlaceCursor"
+#~ msgstr "&Placera kommandotolkens markör vid musklick"
+
+#, fuzzy
+#~ msgid "MiddleClickAction"
+#~ msgstr "Klickåtgärder"
+
+#, fuzzy
+#~ msgid "RightClickAction"
+#~ msgstr "Klickåtgärder"
+
+#, fuzzy
+#~ msgid "Selection Options"
+#~ msgstr "Markering"
+
+#, fuzzy
+#~ msgid "ClearSelectionOnInput"
+#~ msgstr "Rensa markering vid inmatning"
+
+#, fuzzy
+#~ msgid "CopyOnSelect"
+#~ msgstr "Kopiera vid &markering"
+
+#, fuzzy
+#~ msgid "CopyAsRTF"
+#~ msgstr "Kopiera som RTF"
+
+#, fuzzy
+#~ msgid "TrimSelection"
+#~ msgstr "Markering"
+
+#, fuzzy
+#~ msgid "AllowSetSelection"
+#~ msgstr "Låt kontrollsekvenser ändra markeringar"
+
+#, fuzzy
+#~ msgid "SelectionShowSize"
+#~ msgstr "Markering"
+
+#, fuzzy
+#~ msgid "Columns"
+#~ msgstr "Kolu&mner"
+
+#, fuzzy
+#~ msgid "RewrapOnResize"
+#~ msgstr "Justera radbrytningar vid storleksförändring"
+
+#, fuzzy
+#~ msgid "ScrollbackLines"
+#~ msgstr "&Radbuffert"
+
+#, fuzzy
+#~ msgid "ScrollMod"
+#~ msgstr "Rullningslist"
+
+#, fuzzy
+#~ msgid "Terminal Options"
+#~ msgstr "Terminalfunktioner"
+
+#, fuzzy
+#~ msgid "Answerback"
+#~ msgstr "Svarstr&äng"
+
+#, fuzzy
+#~ msgid "BellFlash"
+#~ msgstr "&Blinka"
+
+#, fuzzy
+#~ msgid "BellPopup"
+#~ msgstr "&Popupp"
+
+#, fuzzy
+#~ msgid "SuspendWhileSelecting"
+#~ msgstr "Förhindra utmatning vid markering"
+
+#, fuzzy
+#~ msgid "EmojiPlacement"
+#~ msgstr "Placering"
+
+#, fuzzy
+#~ msgid "WordChars"
+#~ msgstr "Tecken&uppsättning"
+
+#, fuzzy
+#~ msgid "WordCharsExcl"
+#~ msgstr "Tecken&uppsättning"
+
+#, fuzzy
+#~ msgid "StatusLine"
+#~ msgstr "Statusrad"
+
+#~ msgid "◇ None (system sound) ◇"
+#~ msgstr "◇ Inget (systemljud) ◇"
+
+#~ msgid "◇ None ◇"
+#~ msgstr "◇ Inget ◇"
+
+#, fuzzy
+#~ msgid "MenuMenu"
+#~ msgstr "&Meny"
 
 #~ msgid "Internal error: too many options"
 #~ msgstr "Internt fel: För många alternativ"

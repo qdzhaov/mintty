@@ -406,7 +406,7 @@ win_update_menus(bool callback)
   MFCM( IDM_RESET, 0, _W("&Reset"), 
         alt_fn ? W("Alt+F8") : ct_sh ? W("Ctrl+Shift+R") : null);
 
-  mflags = IsZoomed(wv.wnd) || term.cols != cfg.cols || term.rows != cfg.rows ? MF_ENABLED : MF_GRAYED;
+  mflags = IsZoomed(wv.wnd) || term.cols != cfg.winsize.x || term.rows != cfg.winsize.y ? MF_ENABLED : MF_GRAYED;
   MFCM( IDM_DEFSIZE_ZOOM, mflags, _W("&Default Size"), 
         alt_fn ? W("Alt+F10") : ct_sh ? W("Ctrl+Shift+D") : null);
   MFCM( IDM_TABBAR   , CKED(cfg.tab_bar_show)  , _W("Tabbar(&H)"),    null);
@@ -2694,9 +2694,7 @@ win_key_down(WPARAM wp, LPARAM lp)
         win_bell(&cfg);
         // continue without composition
       }
-    }
-    else
-      compose_buflen = 0;
+    } else compose_buflen = 0;
 
     // Check that the keycode can be converted to the current charset
     // before returning success.
@@ -3384,10 +3382,11 @@ struct function_def {
   uint (*fct_status)(void);
   int p0,p1;
   /*type :
-   * 0: cmd;
-   * 1: fct();
-   * 2: fct_key(...)
-   * 3: fct_par(p0,...)
+   * 1: cmd;
+   * 2: fct();
+   * 3: fct_key(key,mods)
+   * 4: fct_par(p0,)
+   * 5: fct_par(p0,p1)
    */
 };
 
@@ -3500,7 +3499,7 @@ kb_select(uint key, mod_keys mods)
   key_special |= KS_TERMSEL;
   return 1;
 }
-static uint mflags_defsize() { return (IsZoomed(wv.wnd) || term.cols != cfg.cols || term.rows != cfg.rows) ? MF_ENABLED : MF_GRAYED; }
+static uint mflags_defsize() { return (IsZoomed(wv.wnd) || term.cols != cfg.winsize.x || term.rows != cfg.winsize.y) ? MF_ENABLED : MF_GRAYED; }
 #ifdef allow_disabling_scrollbar
 static uint mflags_scrollbar_outer() { return term.show_scrollbar ? MF_CHECKED : MF_UNCHECKED | cfg.scrollbar ? 0 : MF_GRAYED ; }
 #else

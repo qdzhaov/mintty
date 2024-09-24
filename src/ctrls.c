@@ -157,7 +157,7 @@ ctrl_new_set(controlbox *b, const wchar *path, const wchar *panel, const wchar *
 
   controlset *s = new(controlset);
   s->pathname = wcsdup(path);
-  s->boxtitle = title ? wcsdup(title) : null;
+  s->boxtitle = title&&*title ? wcsdup(title) : null;
   s->ncolumns = 1;
   s->ncontrols = s->ctrlsize = 0;
   s->ctrls = null;
@@ -188,11 +188,6 @@ static control *
 ctrl_new(controlset *s,int col, int type,wstring label,wstring tip, handler_fn handler, void *context)
 {
   control *c = new(control);
-  if (s->ncontrols >= s->ctrlsize) {
-    s->ctrlsize = s->ncontrols + 32;
-    s->ctrls = renewn(s->ctrls, s->ctrlsize);
-  }
-  s->ctrls[s->ncontrols++] = c;
  /*
   * Fill in the standard fields.
   */
@@ -204,29 +199,45 @@ ctrl_new(controlset *s,int col, int type,wstring label,wstring tip, handler_fn h
   c->label = label ? wcsdup(label) : null;
   c->tip   = tip   ? wcsdup(tip  ) : null;
   c->plat_ctrl = null;
+  c->parent=s;
+  c->ind=s->ncontrols;
+  if (s->ncontrols >= s->ctrlsize) {
+    s->ctrlsize = s->ncontrols + 32;
+    s->ctrls = renewn(s->ctrls, s->ctrlsize);
+  }
+  s->ctrls[s->ncontrols++] = c;
   return c;
 }
 
 /* `ncolumns' is followed by that many percentages, as integers. */
 control *
-ctrl_columns(controlset *s, int ncolumns, ...)
+ctrl_columnsa(controlset *s, int ncolumns,int *cols) 
 {
   control *c = ctrl_new(s,-1,CTRL_COLUMNS, 0,0,0,0);
   //assert(s->ncolumns == 1 || ncolumns == 1);
   c->columns.ncols = ncolumns;
   s->ncolumns = ncolumns;
-  if (ncolumns == 1)
+  if (ncolumns <= 1)
     c->columns.percentages = null;
   else {
-    va_list ap;
-    int i;
     c->columns.percentages = newn(int, ncolumns);
-    va_start(ap, ncolumns);
-    for (i = 0; i < ncolumns; i++)
-      c->columns.percentages[i] = va_arg(ap, int);
-    va_end(ap);
+    for (int i = 0; i < ncolumns; i++)
+      c->columns.percentages[i] = cols[i];
   }
   return c;
+}
+control *
+ctrl_columns(controlset *s, int ncolumns, ...)
+{
+  int cols[MAXCOLS];
+  if(ncolumns>1){
+    va_list ap;
+    va_start(ap, ncolumns);
+    for (int i = 0; i < ncolumns; i++)
+      cols[i] = va_arg(ap, int);
+    va_end(ap);
+  }
+  return ctrl_columnsa(s,ncolumns,cols);
 }
 
 control *
@@ -267,6 +278,24 @@ ctrl_listbox(controlset *s, int col, const wchar * label,const wchar * tip, int 
  * `ncolumns' is followed by (alternately) radio button labels and values,
  * until a null in place of a title string is seen.
  */
+control *
+ctrl_radiobuttonsa(controlset *s, int col, const wchar * label,const wchar * tip, 
+                  handler_fn handler,int*context, const opt_val *pov)
+{
+  int i;
+  control *c = ctrl_new(s,col, CTRL_RADIO, label,tip,handler, context);
+  for(i=0;pov[i].name;i++);
+  c->radio.nbuttons = i;
+  c->radio.ncolumns = i;
+  if(c->radio.ncolumns>5)c->radio.ncolumns =5; 
+  c->radio.labels = newn(wstring, c->radio.nbuttons);
+  c->radio.vals = newn(int, c->radio.nbuttons);
+  for (i = 0; i < c->radio.nbuttons; i++) {
+    c->radio.labels[i] = wcsdup(_W(pov[i].name));
+    c->radio.vals[i] = pov[i].val;
+  }
+  return c;
+}
 control *
 ctrl_radiobuttons(controlset *s, int col, const wchar * label,const wchar * tip, int ncolumns,
                   handler_fn handler,int*context, ...)
@@ -340,6 +369,14 @@ ctrl_checkbox(controlset *s, int col, const wchar * label,const wchar * tip,
               handler_fn handler, void *context)
 {
   control *c = ctrl_new(s,col, CTRL_CHECKBOX, label,tip,handler, context);
+  return c;
+}
+
+control *
+ctrl_hotkey(controlset *s, int col, const wchar * label,const wchar * tip,
+              handler_fn handler, void *context)
+{
+  control *c = ctrl_new(s,col, CTRL_HOTKEY, label,tip,handler, context);
   return c;
 }
 

@@ -32,6 +32,39 @@ wstradd(wstring *sp, wstring s)
   uint size = wcslen(*sp)+wcslen(s) + 1;
   *sp = wcscat(renewn((wchar *)*sp, size), s);
 }
+void strscpy(strings*a,strings*b){
+  strsclr(a);
+  a->m=b->m;
+  a->s=renewn(a->s,a->m+1);
+  memset(a->s,0,sizeof(*a->s)*(a->m-a->n+1));
+  for(int i=0;i<b->m;i++){
+    strset(&a->s[i],b->s[i]);
+  }
+  a->n=b->n;
+}
+void strsadd(strings*a,string s){
+  if(a->n>=a->m){
+    a->m+=16;
+    a->s=renewn(a->s,a->m+1);
+    memset(a->s+a->n,0,sizeof(*a->s)*(a->m-a->n+1));
+  }
+  if(s){
+    a->s[a->n]=newn(char,strlen(s)+1);
+    strcpy((char*)a->s[a->n],s);
+  }else{
+    a->s[a->n]=NULL;
+  }
+  a->n++;
+}
+void strsclr(strings*p){
+  int i;
+  for(i=0;i<p->n;i++){
+    free((char*)p->s[i]);
+  }
+  free(p->s);
+  p->s=NULL;
+  p->n=p->m=0;
+}
 
 char *
 tmpdir()

@@ -95,7 +95,9 @@ endif
 srcversion := \
   $(shell echo $(shell echo VERSION | cpp -P $(CPPFLAGS) --include appinfo.h))
 name_ver := $(NAME)-$(srcversion)
-
+DDBG=
+#-include ddbg
+CPPFLAGS +=$(DDBG)
 #############################################################################
 # compilation parameters
 
@@ -369,7 +371,7 @@ pot:
 	xgettext --from-code=UTF-8 -k_ -k_W -k__ -c__ $(XGETTEXT_OPTS) *.c appinfo.h configdef.h -o- | grep -v "^#, c-format" > ../lang/messages.pott
 	cd ../lang; if diff -I POT-Creation-Date messages.pot messages.pott | grep . > /dev/null; then /bin/mv messages.pott messages.pot; else /bin/rm messages.pott; fi
 po:
-	cd ../lang; for po in *.po; do [ "$$po" = en.po ] || msgmerge -U "$$po" messages.pot; done
+	cd ../lang; for po in *.po; do echo -n $$po;[ "$$po" = en.po ] || msgmerge -U "$$po" messages.pot; done
 checkloc:
 	echo checkloc
 	#cd ../lang; ! grep "^#, fuzzy" *.po

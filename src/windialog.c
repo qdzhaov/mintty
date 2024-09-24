@@ -68,12 +68,6 @@ static int dialog_height,dialog_width,ldpi=72;
 #define USECTLWND
 #define DLGH 28
 #define DLGW 35
-enum {
-  IDCX_TVSTATIC = 1001,
-  IDCX_TREEVIEW,
-  IDCX_STDBASE,
-  IDCX_PANELBASE = IDCX_STDBASE + 32
-};
 typedef struct {
   HWND treeview;
   HTREEITEM lastat[4];
@@ -142,7 +136,7 @@ create_controls(HWND wnd, const wchar *path)
   }
 
 #ifdef debug_layout
-  printf("create_controls (%s)\n", path);
+  printf("create_controls (%ls)\n", path);
 #endif
   for (index = -1; (index = ctrl_find_path(ctrlbox, path, index)) >= 0;) {
     controlset *s = ctrlbox->ctrlsets[index];
