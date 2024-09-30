@@ -127,7 +127,7 @@ create_controls(HWND wnd, const wchar *path)
     * Otherwise, we're creating the controls for a particular panel.
     */
 #ifdef USECTLWND
-    ctrlposinit(&cp, wnd, SC(3), SC(3), SC(-15));//for ctlwnd
+    ctrlposinit(&cp, wnd, SC(3), SC(3), SC(2));//for ctlwnd
 #else
     ctrlposinit(&cp, wnd, SC(69), SC(3), SC(3));//
 #endif
@@ -662,7 +662,7 @@ config_dialog_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 #endif
 
     when WM_DPICHANGED:
-      if (*cfg.options_font || cfg.options_fontsize != DIALOG_FONTSIZE)
+      if (*cfg.opt_font.name || cfg.opt_font.size != DIALOG_FONTSIZE)
         // rescaling does not work, so better drop the Options dialog
         DestroyWindow(hwnd);
 
@@ -862,9 +862,11 @@ win_open_config(void)
   HDC dc = GetDC(wv.wnd);
   ldpi= GetDeviceCaps(dc, LOGPIXELSY) ;
   ReleaseDC(wv.wnd, dc);
-  heightsc=cfg.gui_font_size*100*ldpi/(720);
-  dialog_width  = DLGW*10;//cfg.gui_font_size*72/ldpi;
-  dialog_height = DLGH*10;//cfg.gui_font_size*72/ldpi;
+  cfg.opt_font.size = cfg.opt_font.size ?: DIALOG_FONTSIZE;
+  //heightsc=cfg.gui_font_size*100*ldpi/(720);
+  heightsc=(cfg.opt_font.size ?: DIALOG_FONTSIZE)*100*ldpi/(720);
+  dialog_width  = DLGW*10;
+  dialog_height = DLGH*12;
 
   hook_windows(scale_options);
   wv.config_wnd = CreateDialog(wv.inst, MAKEINTRESOURCE(IDD_MAINBOX), wv.wnd, config_dialog_proc);

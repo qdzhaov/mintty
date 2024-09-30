@@ -397,7 +397,7 @@ term_paste(wchar *data, uint len, bool all)
   // stty settings may have changed
   set_filter(cfg.filter_paste);
 
-  if (cfg.confirm_multi_line_pasting
+  if (cfg.confirm_mline_past
       && !(strchr(filter, '\r') && strchr(filter, '\n')))
   {
     // check multi-line pasting
@@ -771,20 +771,11 @@ term_create_html(FILE * hf, int level)
   }
 
   if (level >= 3) {
-    if (*cfg.background && !term.selected) {
-      wstring wbg = cfg.background;
-      bool tiled = *wbg == '*';
-      if (*wbg == '*' || *wbg == '_')
-        wbg++;
+    if (cfg.backgfile.type&& !term.selected) {
+      wstring wbg = cfg.backgfile.fn;
+      bool tiled = cfg.backgfile.type=='*';
       char * bg = cs__wcstoutf(wbg);
-      int alpha = -1;
-      char * salpha = strrchr(bg, ',');
-      if (salpha) {
-        *salpha = 0;
-        salpha++;
-        sscanf(salpha, "%u%c", &alpha, &(char){0});
-      }
- 
+      int alpha=cfg.backgfile.alpha;
       if (alpha >= 0) {
         hprintf(hf, "  }\n");
         hprintf(hf, "  #vt100 pre {\n");

@@ -48,15 +48,23 @@ typedef struct {
   int weight;
   bool isbold;
 } font_spec;
-
+typedef struct {
+  wstring fn;
+  int type;
+  int alpha;
+  int update;
+}bg_file;
+#define CTYPE int
+#define CBOOL CTYPE
 
 // Configuration data.
 #define CFGDEFT  DEFVAR
 typedef struct {
-#include "configdef.h"
+#include "cdef.t"
 } config;
-
-
+#ifdef CFGDEFT  
+#undef CFGDEFT  
+#endif
 typedef void (* str_fn)(char *);
 
 extern string config_dir;
@@ -80,5 +88,7 @@ extern uint getregval(HKEY key, wstring subkey, wstring attribute);
 extern char * save_filename(const char * suf);
 // In a configuration parameter list, map tag to value
 extern char * matchconf(char * conf,const char * item);
+extern int backg_type(int c);
+extern void backg_analyse(string pbf,bg_file *backgfile);
 
 #endif

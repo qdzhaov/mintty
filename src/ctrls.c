@@ -133,15 +133,15 @@ ctrl_new_set(controlbox *b, const wchar *path, const wchar *panel, const wchar *
 {
   // See whether this path exists already
   int index = ctrl_find_set(b, path);
-
+  controlset *s=null;
   // If not, and it's not an empty path, set up a title.
-  if (index == b->nctrlsets && *path) {
+  if (path&&*path&&index == b->nctrlsets ) {
     const wchar *title = panel;
     if (!title) {
       title = wcsrchr(path, '/');
       title = title ? title + 1 : path;
     }
-    controlset *s = new(controlset);
+    s = new(controlset);
     s->pathname = wcsdup(path);
     s->boxtitle = wcsdup(title);
     s->ncontrols = s->ctrlsize = 0;
@@ -150,19 +150,17 @@ ctrl_new_set(controlbox *b, const wchar *path, const wchar *panel, const wchar *
     insert_controlset(b, index, s);
     index++;
   }
-
+  if(!title)return s;
   // Skip existing sets for the same path.
   while (index < b->nctrlsets && !wcscmp(b->ctrlsets[index]->pathname, path))
     index++;
-
-  controlset *s = new(controlset);
+  s = new(controlset);
   s->pathname = wcsdup(path);
-  s->boxtitle = title&&*title ? wcsdup(title) : null;
+  s->boxtitle = *title ? wcsdup(title) : null;
   s->ncolumns = 1;
   s->ncontrols = s->ctrlsize = 0;
   s->ctrls = null;
   insert_controlset(b, index, s);
-
   return s;
 }
 
@@ -188,6 +186,11 @@ static control *
 ctrl_new(controlset *s,int col, int type,wstring label,wstring tip, handler_fn handler, void *context)
 {
   control *c = new(control);
+  if (s->ncontrols >= s->ctrlsize) {
+    s->ctrlsize = s->ncontrols + 32;
+    s->ctrls = renewn(s->ctrls, s->ctrlsize);
+  }
+  s->ctrls[s->ncontrols++] = c;
  /*
   * Fill in the standard fields.
   */
@@ -200,12 +203,7 @@ ctrl_new(controlset *s,int col, int type,wstring label,wstring tip, handler_fn h
   c->tip   = tip   ? wcsdup(tip  ) : null;
   c->plat_ctrl = null;
   c->parent=s;
-  c->ind=s->ncontrols;
-  if (s->ncontrols >= s->ctrlsize) {
-    s->ctrlsize = s->ncontrols + 32;
-    s->ctrls = renewn(s->ctrls, s->ctrlsize);
-  }
-  s->ctrls[s->ncontrols++] = c;
+  c->ind=s->ncontrols-1;
   return c;
 }
 
@@ -240,6 +238,18 @@ ctrl_columns(controlset *s, int ncolumns, ...)
   return ctrl_columnsa(s,ncolumns,cols);
 }
 
+control *
+ctrl_inteditbox(controlset *s, int col, const wchar * label,const wchar * tip, int percentage,
+             handler_fn handler, void *context,int imin,int imax)
+{
+  control *c = ctrl_new(s,col, CTRL_INTEDITBOX, label,tip,handler, context);
+  c->editbox.percentwidth = percentage;
+  c->editbox.password = 0;
+  c->editbox.has_list = 0;
+  c->editbox.imin=imin;
+  c->editbox.imax=imax;
+  return c;
+}
 control *
 ctrl_editbox(controlset *s, int col, const wchar * label,const wchar * tip, int percentage,
              handler_fn handler, void *context)
@@ -365,6 +375,13 @@ ctrl_fontsel(controlset *s, int col, const wchar * label,const wchar * tip,
 }
 
 control *
+ctrl_filesel(controlset *s, int col, const wchar * label,const wchar * tip,
+             handler_fn handler, void *context)
+{
+  control *c = ctrl_new(s,col, CTRL_FILESELECT, label,tip,handler, context);
+  return c;
+}
+control *
 ctrl_checkbox(controlset *s, int col, const wchar * label,const wchar * tip,
               handler_fn handler, void *context)
 {
@@ -395,11 +412,10 @@ ctrl_free(control *ctrl)
   }
   delete(ctrl);
 }
-
 void
 dlg_stdradiobutton_handler(control *ctrl, int event)
 {
-  char *val_p = ctrl->context;
+  CTYPE*val_p = ctrl->context;
   if (event == EVENT_REFRESH) {
     int button;
     for (button = 0; button < ctrl->radio.nbuttons; button++) {
@@ -420,7 +436,7 @@ dlg_stdradiobutton_handler(control *ctrl, int event)
 void
 dlg_stdcheckbox_handler(control *ctrl, int event)
 {
-  bool *bp = ctrl->context;
+  CBOOL *bp = ctrl->context;
   if (event == EVENT_REFRESH)
     dlg_checkbox_set(ctrl, *bp);
   else if (event == EVENT_VALCHANGE)
@@ -436,7 +452,19 @@ dlg_stdfontsel_handler(control *ctrl, int event)
   else if (event == EVENT_VALCHANGE)
     dlg_fontsel_get(ctrl, fp);
 }
+void dlg_filesel_set(control *ctrl, wstring*fs);
+void dlg_filesel_get(control *ctrl, wstring*fs);
 
+void
+dlg_stdfilesel_handler(control *ctrl, int event)
+{
+  wstring *vp = ctrl->context;
+  if (event == EVENT_REFRESH)
+    dlg_filesel_set(ctrl,vp);
+  else if (event == EVENT_VALCHANGE){
+    dlg_filesel_get(ctrl,vp);
+  }
+}
 void
 dlg_stdwstringbox_handler(control *ctrl, int event)
 {

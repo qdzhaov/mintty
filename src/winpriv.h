@@ -116,8 +116,12 @@ typedef struct {
   colour xterm_colours[240];
   HIMC imc;        // the input method context
 }winvar;
+struct cursor_style{
+  char * name;
+  void * tag;
+};
 extern winvar wv;
-
+extern struct cursor_style cursorstyles[];
 extern int font_size;  // logical font size, as configured (< 0: pixel size)
 extern bool font_ambig_wide;
 extern int PADDING;
@@ -144,7 +148,6 @@ extern void win_flush_background(bool clearbg);
 extern void win_paint(void);
 
 extern void win_init_fonts(int size, bool allfonts);
-WPARAM win_set_font(HWND hwnd);//set font for gui,user do not release it;
 extern wstring win_get_font(uint findex);
 extern void win_change_font(uint findex, wstring fn);
 extern void win_font_cs_reconfig(bool font_changed);

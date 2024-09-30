@@ -59,7 +59,7 @@ winvar wv={0};
 extern LOGFONT lfont;
 char *minttypath=NULL;
 
-static HFONT wguifont=0, guifnt = 0;
+static HFONT wguifont=0;
 ATOM class_atom;
 SessDef sessdefs[]={
   {0,IDSS_DEF,0,0,0,0},
@@ -2434,26 +2434,24 @@ app_close()
    Mouse pointer style.
  */
 
-static struct {
-  void * tag;
-  char * name;
-} cursorstyles[] = {
-  {IDC_APPSTARTING, ("appstarting")},
-  {IDC_ARROW, ("arrow")},
-  {IDC_CROSS, ("cross")},
-  {IDC_HAND, ("hand")},
-  {IDC_HELP, ("help")},
-  {IDC_IBEAM, ("ibeam")},
-  {IDC_ICON, ("icon")},
-  {IDC_NO, ("no")},
-  {IDC_SIZE, ("size")},
-  {IDC_SIZEALL, ("sizeall")},
-  {IDC_SIZENESW, ("sizenesw")},
-  {IDC_SIZENS, ("sizens")},
-  {IDC_SIZENWSE, ("sizenwse")},
-  {IDC_SIZEWE, ("sizewe")},
-  {IDC_UPARROW, ("uparrow")},
-  {IDC_WAIT, ("wait")},
+struct cursor_style cursorstyles[] = {
+    {("appstarting"),IDC_APPSTARTING},
+    {("arrow"),IDC_ARROW},
+    {("cross"),IDC_CROSS},
+    {("hand"),IDC_HAND},
+    {("help"),IDC_HELP},
+    {("ibeam"),IDC_IBEAM},
+    {("icon"),IDC_ICON},
+    {("no"),IDC_NO},
+    {("size"),IDC_SIZE},
+    {("sizeall"),IDC_SIZEALL},
+    {("sizenesw"),IDC_SIZENESW},
+    {("sizens"),IDC_SIZENS},
+    {("sizenwse"),IDC_SIZENWSE},
+    {("sizewe"),IDC_SIZEWE},
+    {("uparrow"),IDC_UPARROW},
+    {("wait"),IDC_WAIT},
+    {0,0}
 };
 
 static HCURSOR cursors[2] = {0, 0};
@@ -2463,7 +2461,22 @@ win_get_cursor(bool appmouse)
 {
   return cursors[appmouse];
 }
+void set_cursor(bool appmouse,HCURSOR c){
+  if (!c)
+    c = LoadCursor(null, appmouse ? IDC_ARROW : IDC_IBEAM);
 
+  if (!IS_INTRESOURCE(cursors[appmouse]))
+    DestroyCursor(cursors[appmouse]);
+  cursors[appmouse] = c;
+  SetClassLongPtr(wv.wnd, GCLP_HCURSOR, (LONG_PTR)c);
+  SetCursor(c);
+}
+void
+set_cursor_stylet(bool appmouse, void* tag)
+{
+  HCURSOR  c = LoadCursor(null, tag);
+  set_cursor(appmouse,c);
+}
 void
 set_cursor_style(bool appmouse, const char * style)
 {
@@ -2483,27 +2496,21 @@ set_cursor_style(bool appmouse, const char * style)
       free(wpf);
     }
   }
-  if (!c)
-    for (uint i = 0; i < lengthof(cursorstyles); i++)
+  if (!c){
+    for (uint i = 0; cursorstyles[i].name; i++)
       if (0 == strcmp(style, cursorstyles[i].name)) {
         c = LoadCursor(null, cursorstyles[i].tag);
         break;
       }
-  if (!c)
-    c = LoadCursor(null, appmouse ? IDC_ARROW : IDC_IBEAM);
-
-  if (!IS_INTRESOURCE(cursors[appmouse]))
-    DestroyCursor(cursors[appmouse]);
-  cursors[appmouse] = c;
-  SetClassLongPtr(wv.wnd, GCLP_HCURSOR, (LONG_PTR)c);
-  SetCursor(c);
+  }
+  set_cursor(appmouse,c);
 }
 
 static void
 win_init_cursors()
 {
-  set_cursor_style(true, "arrow");
-  set_cursor_style(false,"ibeam");
+  set_cursor_stylet(true, IDC_ARROW);
+  set_cursor_stylet(false,IDC_IBEAM);
 }
 
 /*
@@ -2656,26 +2663,6 @@ void win_tog_border(){
 #define clear_fullscreen() printf("calling cl_fs %s:%d\n", __FUNCTION__, __LINE__), clear_fullscreen()
 #endif
 
-WPARAM win_set_font(HWND hwnd){//set font for gui,user do not release it;
-  static int cfsize=0;
-  int font_height;
-  int size = cfg.gui_font_size;
-  // dup'ed from win_init_fonts()
-  HDC dc = GetDC(hwnd);
-  font_height = size > 0 ? MulDiv(size, GetDeviceCaps(dc, LOGPIXELSY), 72) : size;
-  ReleaseDC(hwnd, dc);
-  if(cfsize!=font_height ||!guifnt){
-    cfsize=font_height;
-    if(guifnt)DeleteObject(guifnt);
-    guifnt = CreateFontW(font_height, 0, 0, 0, cfg.font.weight, 
-                      false, false, false,
-                      DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-                      DEFAULT_QUALITY, FIXED_PITCH | FF_DONTCARE,
-                      cfg.font.name);
-  }
-  SendMessage(hwnd, WM_SETFONT, (WPARAM)guifnt, MAKELPARAM(1, 1));
-  return (WPARAM)guifnt;
-}
 static LRESULT CALLBACK
 win_proc(HWND wnd, UINT message, WPARAM wp, LPARAM lp)
 {
@@ -5599,7 +5586,7 @@ main(int argc, const char *argv[])
 
   // Scale to background image aspect ratio if requested
   win_get_pixels(&wv.ini_height, &wv.ini_width, false);
-  if (*cfg.background == '%')
+  if (cfg.backgfile.type== '%')
     scale_to_image_ratio();
   // Adjust ConPTY support if requested
   if (cfg.conpty_support != -1) {
@@ -5693,7 +5680,7 @@ main(int argc, const char *argv[])
     printf("%08lX\n", (ulong)wv.wnd);
     fflush(stdout);
   }
-  win_set_font(wv.wnd);
+  //win_set_font(wv.wnd);
   show_win_status("init", wv.wnd);
 
   wv.is_init = true;

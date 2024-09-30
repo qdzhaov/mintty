@@ -114,5 +114,6 @@ void winctrl_init(winctrls *);
 void winctrl_cleanup(winctrls *);
 void winctrl_layout(winctrls *, ctrlpos *, controlset *, int *id);
 int winctrl_handle_command(HWND hwnd,UINT msg, WPARAM wParam, LPARAM lParam);
+WPARAM win_set_font(HWND hwnd);//set font for gui,user do not release it;
 
 #endif

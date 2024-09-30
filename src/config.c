@@ -39,7 +39,7 @@ static char theme_file[128]={0};
 #define HASHTS 257
 static inline int HASHS(const void*s){
   const unsigned char*p=(const unsigned char*)s;
-  if(*p==0)return 0;
+  if(p==0||*p==0)return 0;
   if(p[1]==0||p[2]==0) return ((*(unsigned short*)s)|0x2020)%(HASHTS);
   return ((*(unsigned int*)s)|0x20202020)%(HASHTS);
 }
@@ -58,32 +58,46 @@ typedef enum {
   OPT_SCRLBAR,    OPT_BORDER,     OPT_WINDOW,     OPT_HOLD,
   OPT_CHARWD,     OPT_EMOJIS,     OPT_COMPKEY,    OPT_EM_PLACE,
   //0x10
-  OPT_CPYHTML,    OPT_BOLD,       OPT_CMT,        OPT_ARR , 
-  OPT_INT,        OPT_INTP,       OPT_STR,        OPT_WSTR,       
+  OPT_CPYHTML,    OPT_BOLD,       OPT_BELL   ,    OPT_FLASH,
+  OPT_LOG    ,    OPT_SPBRK,      OPT_PCTRL,      OPT_ALEAD,
+  OPT_LIGS   ,    OPT_DPIA,       OPT_PRSC,       
+  OPT_CMT,        OPT_ARR ,       OPT_INT,        OPT_INTP,       
+  //0x20 
+  OPT_STR,        OPT_WSTR,       OPT_STRK,       OPT_WSTRK,      
   OPT_CLR,        OPT_CLRFG,      OPT_FONT,       OPT_STRS,
-  OPT_TYPE_MASK = 0x1F,
-  OPT_LG = 0x20,
-  OPT_KCR = 0x40,
+  OPT_BFILE,
+  OPT_TYPE_MASK = 0x3F,
+  OPT_LG = 0x40,
   OPT_THM  = 0x80,
 } opt_type;
 
 enum {
   OPF_H=0  ,OPF_PANE ,OPF_GRP  ,OPF_COL  ,
   OPF_LSTR ,OPF_LSTC ,OPF_CHK  ,OPF_ACLR ,
-  OPF_CLR  ,OPF_CLRFG,OPF_CLRS ,OPF_INT  ,
-  OPF_WSIZE,OPF_STR  ,OPF_THEME,OPF_TRANS,
-  OPF_FONT ,OPF_LCL  ,OPF_CHSET,OPF_TERM ,
-  OPF_BELL ,OPF_BELLF,OPF_PRINT,
-  OPF_END  ,OPF_MASK=0x1f,
+  OPF_CLR  ,OPF_CLRFG,OPF_INT  ,OPF_WSIZE,
+  OPF_STR  ,OPF_WSTR ,OPF_TRANS,OPF_FONT ,
+  OPF_BACKF,
+  OPF_THEME,OPF_LCL  ,OPF_CHSET,OPF_CURS ,
+  OPF_TERM ,OPF_BELL ,OPF_BELLF,OPF_PRINT,
+  OPF_END  ,OPF_MASK=0x3f,
 };
 #define offcfg(option) offsetof(config, option)
 typedef const struct {
-  string name;
-  ushort type;
-  ushort flag;
-  ushort column;
-  ushort offset;
-  string comment;
+  string name;//config name
+  ushort offset;//var offset of config
+  uchar type;//var type
+  uchar flag;//dialog type
+  union{
+    struct{
+      int   v0,v1;//v0<=int var<=v1
+    }i;
+    void *s;
+  };
+  uchar level; //
+  uchar column;//column 参数
+  uchar size;  //ratio of combo control
+  string label;//dialog label
+  string tip;//dialog label
 }cfg_option;
 #define CFGDEFT  DEFCFG
 static cfg_option options[]= {
@@ -237,6 +251,66 @@ static const opt_val * const opt_vals[] = {
     {__("as font & as colour"), 3},
     {__("xterm"), 0},
     {0, 0}
+  },
+  [OPT_BELL] = (opt_val[]) {
+    {__("simple beep"),   -1},
+    {__("no beep"),       0},
+    {__("Default Beep"),	1},
+    {__("Critical Stop"),	2},
+    {__("Question"),	    3},
+    {__("Exclamation"),	  4},
+    {__("Asterisk"),	    5},
+    {0, 0}
+  },
+  [OPT_FLASH] = (opt_val[]) {
+    {__("Flash Frame  ") , 1}, 
+    {__("Flash Border ") , 2}, 
+    {__("Flash Full   ") , 4}, 
+    {__("Flash Reverse") , 8},
+    {0, 0}
+  },
+  [OPT_LOG] = (opt_val[]) {
+    {__("No Log   ") , 0},
+    {__("Input Log") , 1}, 
+    {__("Output Log") , 2}, 
+    {__("I/O Log") , 3}, 
+    {0, 0}
+  },
+  [OPT_SPBRK] = (opt_val[]) {
+    {__("No Split Bracketed") , 0},
+    {__("Split no Alt Screen") , 1}, 
+    {__("Split Bracketed All") , 2}, 
+    {0, 0}
+  },
+  [OPT_PCTRL] = (opt_val[]) {
+    {__("No Print Controls") , 0},
+    {__("Print High Controls") , 1}, 
+    {__("Print All Controls") , 2}, 
+    {0, 0}
+  },
+  [OPT_ALEAD] = (opt_val[]) {
+    {__("No Auto Leading") , 0},
+    {__("Auto Leading 1") , 1}, 
+    {__("Auto Leading 2") , 2}, 
+    {0, 0}
+  },
+  [OPT_LIGS] = (opt_val[]) {
+    {__("No ligatures support") , 0},
+    {__("ligatures support 1") , 1}, 
+    {__("ligatures support 2") , 2}, 
+    {0, 0}
+  },
+  [OPT_DPIA] = (opt_val[]) {
+    {__("DPI Unaware") , 0},
+    {__("DPI Aware ver 1") , 1}, 
+    {__("DPI Aware ver 2") , 2}, 
+    {0, 0}
+  },
+  [OPT_PRSC] = (opt_val[]) {
+    {__("No Progress Scan") , 0},
+    {__("Progress Scan on current cursor line") , 1}, 
+    {__("Progress Scan on all line") , 2}, 
+    {0, 0}
   }
 };
 static void init_loptvals(){
@@ -375,11 +449,27 @@ static int set_opt(int type,void*val_p,const char*val_str,bool from_file){
         ((intpair *)val_p)->y = val;
       }
     }
-    when OPT_STR:
+    when OPT_STR:{
+      ((char *)val_str)[strcspn(val_str, "\r")] = 0;
+      strset(val_p, val_str);
+    }
+    when OPT_STRK:
         strset(val_p, val_str);
-    when OPT_STRS:
+    when OPT_STRS:{
+      ((char *)val_str)[strcspn(val_str, "\r")] = 0;
       strsadd(val_p,val_str);
+    }
     when OPT_WSTR: {
+      wchar * ws;
+      ((char *)val_str)[strcspn(val_str, "\r")] = 0;
+      if (from_file)
+        ws = cs__utforansitowcs(val_str);
+      else
+        ws = cs__mbstowcs(val_str);
+      wstrset(val_p, ws);
+      delete(ws);
+    }
+    when OPT_WSTRK: {
       wchar * ws;
       if (from_file)
         ws = cs__utforansitowcs(val_str);
@@ -416,6 +506,9 @@ static int set_opt(int type,void*val_p,const char*val_str,bool from_file){
         if(val>=0) p->isbold=(val>0);
       }
     }
+    when OPT_BFILE: {
+      backg_analyse(val_str,(bg_file*)val_p);
+    }
     when OPT_CMT: ;
     when OPT_ARR: ;
     otherwise: {
@@ -435,11 +528,11 @@ static void copy_opt(int type,void*dst_val_p ,void*src_val_p ){
         *(int *)dst_val_p = *(int *)src_val_p;
     when OPT_INTP:
         *(intpair *)dst_val_p = *(intpair *)src_val_p;
-    when OPT_STR:
+    when OPT_STR or OPT_STRK:
         strset(dst_val_p, *(string *)src_val_p);
     when OPT_STRS:
         strscpy(dst_val_p, src_val_p);
-    when OPT_WSTR:
+    when OPT_WSTR or OPT_WSTRK:
         wstrset(dst_val_p, *(wstring *)src_val_p);
     when OPT_CLR:
         *(colour *)dst_val_p = *(colour *)src_val_p;
@@ -452,6 +545,21 @@ static void copy_opt(int type,void*dst_val_p ,void*src_val_p ){
       pd->size=ps->size;
       pd->weight=ps->weight;
       pd->isbold=ps->isbold;
+    }
+    when OPT_BFILE: {
+      bg_file *pd=(bg_file*)dst_val_p;
+      bg_file *ps=(bg_file*)src_val_p;
+      pd->type=ps->type;
+      if(pd->type){
+        if(ps->fn){
+          wstrset(&pd->fn,ps->fn);
+        }else{
+          if(pd->fn)free((void*)pd->fn);
+          pd->fn=NULL;
+        }
+        pd->alpha=ps->alpha;
+        pd->update=1;
+      }
     }
     when OPT_CMT: ;
     when OPT_ARR: ;
@@ -468,7 +576,7 @@ static int ischg_opt(int type,const void*val_p,const void*new_val_p){
     when OPT_INTP:
         changed = ((((intpair *)val_p)->x != ((intpair *)new_val_p)->x)||
                    (((intpair *)val_p)->y != ((intpair *)new_val_p)->y));
-    when OPT_STR:
+    when OPT_STR or OPT_STRK:
         changed = strcmp(*(string *)val_p, *(string *)new_val_p);
     when OPT_STRS:{
       strings*p=(strings*)val_p;
@@ -483,7 +591,7 @@ static int ischg_opt(int type,const void*val_p,const void*new_val_p){
         }
       }else changed=1;
     }
-    when OPT_WSTR:
+    when OPT_WSTR or OPT_WSTRK:
         changed = wcscmp(*(wstring *)val_p, *(wstring *)new_val_p);
     when OPT_CLR:
         changed = (*(colour *)val_p != *(colour *)new_val_p);
@@ -496,6 +604,13 @@ static int ischg_opt(int type,const void*val_p,const void*new_val_p){
           pd->weight!=ps->weight||
           pd->isbold!=ps->isbold||
           wcscmp(pd->name, ps->name);
+    }
+    when OPT_BFILE: {
+      bg_file *pd=(bg_file*)val_p;
+      bg_file *ps=(bg_file*)new_val_p;
+      changed=pd->type!=ps->type||
+          pd->alpha!=ps->alpha||
+          wcscmp(pd->fn,ps->fn);
     }
     when OPT_CMT: ;
     when OPT_ARR: ;
@@ -512,7 +627,7 @@ static void printOptVar(FILE*file,const char*name,int type,const void*val_p){
         fprintf(file, "%i", *(int *)val_p);
     when OPT_INTP:
         fprintf(file, "%i,%i", ((intpair *)val_p)->x,((intpair *)val_p)->y);
-    when OPT_STR:
+    when OPT_STR or OPT_STRK:
         fprintf(file, "%s", *(string *)val_p);
     when OPT_STRS:{
       strings*p=(strings*)val_p;
@@ -521,7 +636,7 @@ static void printOptVar(FILE*file,const char*name,int type,const void*val_p){
         fprintf(file, "\n%s=%s",name, *(string *)val_p);
       }
     }
-    when OPT_WSTR: {
+    when OPT_WSTR or OPT_WSTRK: {
       char * s = cs__wcstoutf(*(wstring *)val_p);
       fprintf(file, "%s", s);
       delete(s);
@@ -536,9 +651,26 @@ static void printOptVar(FILE*file,const char*name,int type,const void*val_p){
       if (p.fg != p.bg)
         fprintf(file, ";%u,%u,%u", red(p.bg), green(p.bg), blue(p.bg));
     }
-    when OPT_FONT: 
+    when OPT_FONT:{ 
       font_spec *pd=(font_spec*)val_p;
       fprintf(file,"%ls,%d,%d,%d",pd->name,pd->size,pd->weight,pd->isbold);
+    }
+    when OPT_BFILE: {
+      bg_file *ps=(bg_file*)val_p;
+      if(ps->type){
+        if(ps->type=='='){
+          fprintf(file,"%c",ps->type);
+        }else{
+          if(ps->fn&&*ps->fn){
+            if(ps->alpha==255){
+              fprintf(file,"%c%ls",ps->type,ps->fn);
+            }else{
+              fprintf(file,"%c%ls,%d",ps->type,ps->fn,ps->alpha);
+            }
+          }
+        }
+      }
+    }
     when OPT_CMT: ;
     when OPT_ARR: ;
     otherwise: {
@@ -755,7 +887,6 @@ set_option(config * p,string name, string val_str, bool from_file)
   int i = find_option(from_file, name);
   if (i < 0) return i;
   uint type = options[i].type ;
-  if (!(type & OPT_KCR))((char *)val_str)[strcspn(val_str, "\r")] = 0;
   if(set_opt(type ,(void *)p + options[i].offset,val_str,from_file))return i;
   //__ %2$s: option name, %1$s: invalid value
   if (!wv.wnd)  // report errors only during initialisation
@@ -1474,11 +1605,6 @@ void
 load_scheme(string cs){
   load_schemer(&cfg,cs);
 }
-
-static control *cols_box=NULL, *rows_box=NULL, *locale_box=NULL, *charset_box=NULL;
-static control *transparency_valbox=NULL, *transparency_selbox=NULL;
-static control *font_sample=NULL, *font_list=NULL, *font_weights=NULL;
-
 void
 apply_config(bool save)
 {
@@ -1504,6 +1630,9 @@ apply_config(bool save)
     CLRFGSCPY(file_cfg.ansi_colours,cfg_colours);
   }else{
     *(char*)file_cfg.theme_file=0;
+  }
+  if(ischg_opt(OPT_BFILE,&cfg.backgfile,&new_cfg.backgfile)){
+    new_cfg.backgfile.update=1;
   }
   win_reconfig();  // copy_config(&cfg, &new_cfg);
   fix_config();
@@ -1888,13 +2017,13 @@ handle_file_resources(string pattern, str_fn fn_handler)
 
 
 static void
-current_size_handler(control *unused(ctrl), int event)
+current_size_handler(control *ctrl, int event)
 {
+  intpair* p = ctrl->context;
   if (event == EVENT_ACTION) {
-    new_cfg.winsize.x = term.cols;
-    new_cfg.winsize.y = term.rows;
-    dlg_refresh(cols_box);
-    dlg_refresh(rows_box);
+    p->x = term.cols;
+    p->y = term.rows;
+    dlg_refreshp(ctrl);
   }
 }
 
@@ -1932,6 +2061,8 @@ printer_handler(control *ctrl, int event)
   }
 }
 
+static control *locale_box=NULL, *charset_box=NULL;
+static control *transparency_valbox=NULL, *transparency_selbox=NULL;
 static void
 set_charset(string charset)
 {
@@ -2008,51 +2139,23 @@ charset_handler(control *ctrl, int event)
   }
 }
 
+
 static void
-lang_handler(control *ctrl, int event)
+cursor_handler(control *ctrl, int event)
 {
-  //__ UI localization disabled
-  const wstring NONE = _W("- None -");
-  //__ UI localization: use Windows desktop setting
-  const wstring WINLOC = _W("@ Windows language @");
-  //__ UI localization: use environment variable setting (LANGUAGE, LC_*)
-  const wstring LOCENV = _W("* Locale environm. *");
-  //__ UI localization: use mintty configuration setting (Text - Locale)
-  const wstring LOCALE = _W("= cfg. Text Locale =");
+  wstring *cs=(wstring*)ctrl->context;
   switch (event) {
-    when EVENT_REFRESH:
+    when EVENT_REFRESH:{
       dlg_listbox_clear(ctrl);
-      dlg_listbox_add_w(ctrl, NONE);
-      dlg_listbox_add_w(ctrl, WINLOC);
-      dlg_listbox_add_w(ctrl, LOCENV);
-      dlg_listbox_add_w(ctrl, LOCALE);
-      add_file_resources(ctrl, ("lang/*.po"), false);
-      if (strcmp(new_cfg.lang, ("")) == 0)
-        dlg_editbox_set_w(ctrl, NONE);
-      else if (strcmp(new_cfg.lang, ("@")) == 0)
-        dlg_editbox_set_w(ctrl, WINLOC);
-      else if (strcmp(new_cfg.lang, ("*")) == 0)
-        dlg_editbox_set_w(ctrl, LOCENV);
-      else if (strcmp(new_cfg.lang, ("=")) == 0)
-        dlg_editbox_set_w(ctrl, LOCALE);
-      else
-        dlg_editbox_set(ctrl, new_cfg.lang);
-    when EVENT_VALCHANGE or EVENT_SELCHANGE: {
-      int n = dlg_listbox_getcur(ctrl);
-      if (n == 0)
-        strset(&new_cfg.lang, (""));
-      else if (n == 1)
-        strset(&new_cfg.lang, ("@"));
-      else if (n == 2)
-        strset(&new_cfg.lang, ("*"));
-      else if (n == 3)
-        strset(&new_cfg.lang, ("="));
-      else
-        dlg_editbox_get(ctrl, &new_cfg.lang);
+      for (uint i = 0; cursorstyles[i].name; i++){
+        dlg_listbox_add(ctrl, cursorstyles[i].name);
+      }
+      dlg_editbox_set_w(ctrl, *cs);
     }
+    when EVENT_VALCHANGE or EVENT_SELCHANGE:
+      dlg_editbox_get_w(ctrl, cs);
   }
 }
-
 static void
 term_handler(control *ctrl, int event)
 {
@@ -2162,7 +2265,6 @@ bell_handler(control *ctrl, int event)
       closemuicache();
     when EVENT_VALCHANGE or EVENT_SELCHANGE: {
       new_cfg.bell_type = dlg_listbox_getcur(ctrl) - 1;
-
       win_bell(&new_cfg);
     }
   }
@@ -2173,32 +2275,31 @@ bellfile_handler(control *ctrl, int event)
 {
   const string NONE = ("◇ None (system sound) ◇");  // ♢◇
   const string CFG_NONE = ("");
-  string bell_file = new_cfg.bell_file[6];
+  string *cs=(string*)ctrl->context;
   if (event == EVENT_REFRESH) {
     dlg_listbox_clear(ctrl);
     dlg_listbox_add(ctrl, NONE);
     add_file_resources(ctrl, ("sounds/*.wav"), false);
     // strip std dir prefix...
-    dlg_editbox_set(ctrl, *bell_file ? bell_file : NONE);
+    dlg_editbox_set(ctrl, **cs? *cs: NONE);
   }
   else if (event == EVENT_VALCHANGE || event == EVENT_SELCHANGE) {
     if (dlg_listbox_getcur(ctrl) == 0)
-      strset(&bell_file, CFG_NONE);
+      strset(cs, CFG_NONE);
     else
-      dlg_editbox_get(ctrl, &bell_file);
+      dlg_editbox_get(ctrl, cs);
 
     // add std dir prefix?
-    new_cfg.bell_file[6] = bell_file;
     win_bell(&new_cfg);
   }
   else if (event == EVENT_DROP) {
     dlg_editbox_set_w(ctrl, dragndrop);
-    wstrset2a(&new_cfg.bell_file[6], dragndrop);
+    wstrset2a(cs, dragndrop);
     win_bell(&new_cfg);
   }
 }
 
-static control * theme = null;
+//static control * theme = null;
 static control * store_button = null;
 
 static void
@@ -2268,10 +2369,10 @@ download_scheme(const char * url)
   char * sch = null;
   // colour modifications, common for .itermcolors and .json (unused there)
   colour ansi_colours[16] = 
-    {(colour)-1, (colour)-1, (colour)-1, (colour)-1, 
-     (colour)-1, (colour)-1, (colour)-1, (colour)-1, 
-     (colour)-1, (colour)-1, (colour)-1, (colour)-1, 
-     (colour)-1, (colour)-1, (colour)-1, (colour)-1};
+  {(colour)-1, (colour)-1, (colour)-1, (colour)-1, 
+    (colour)-1, (colour)-1, (colour)-1, (colour)-1, 
+    (colour)-1, (colour)-1, (colour)-1, (colour)-1, 
+    (colour)-1, (colour)-1, (colour)-1, (colour)-1};
   colour fg_colour = (colour)-1, bg_colour = (colour)-1;
   colour bold_colour = (colour)-1, blink_colour = (colour)-1;
   colour cursor_colour = (colour)-1, sel_fg_colour = (colour)-1, sel_bg_colour = (colour)-1;
@@ -2374,9 +2475,9 @@ download_scheme(const char * url)
               key = &underl_colour;
             else if (0 == strcmp(entity, "Link Color"))
               key = &hover_colour;  // ?
-            //else if (0 == strcmp(entity, "Cursor Guide Color"))
-            //else if (0 == strcmp(entity, "Tab Color"))
-            //else if (0 == strcmp(entity, "Badge Color"))
+                                    //else if (0 == strcmp(entity, "Cursor Guide Color"))
+                                    //else if (0 == strcmp(entity, "Tab Color"))
+                                    //else if (0 == strcmp(entity, "Badge Color"))
             else if (sscanf(entity, "Ansi %d Color", &coli) == 1 && coli >= 0 && coli < 16) {
               key = &ansi_colours[coli];
             }
@@ -2394,11 +2495,11 @@ download_scheme(const char * url)
             int ival = val * 255.0 + 0.5;
             switch (component) {
               when 0:  // red
-                *key = (*key & 0xFFFF00) | ival;
+                  *key = (*key & 0xFFFF00) | ival;
               when 1:  // green
-                *key = (*key & 0xFF00FF) | ival << 8;
+                  *key = (*key & 0xFF00FF) | ival << 8;
               when 2:  // blue
-                *key = (*key & 0x00FFFF) | ival << 16;
+                  *key = (*key & 0x00FFFF) | ival << 16;
             }
           }
         }
@@ -2533,51 +2634,50 @@ download_scheme(const char * url)
         schapp("BoldMagenta");
         schapp("BoldCyan");
         schapp("BoldWhite");
-        goto scheme_return;
-      }
-      char * eq = linebuf;
-      while ((eq = strchr(++eq, '='))) {
-        int dum;
-        if (sscanf(eq, "= %d , %d , %d", &dum, &dum, &dum) == 3) {
-          char *cp = eq;
-          while (strchr("=0123456789, ", *cp))
-            cp++;
-          *cp++ = ';';
-          *cp = '\0';
-          cp = eq;
-          if (cp != linebuf)
-            cp--;
-          while (strchr("BCFGMRWYacdeghiklnorstuwy ", *cp)) {
-            eq = cp;
-            if (cp == linebuf)
-              break;
-            else
+        break;
+      }else{
+        char * eq = linebuf;
+        while ((eq = strchr(++eq, '='))) {
+          int dum;
+          if (sscanf(eq, "= %d , %d , %d", &dum, &dum, &dum) == 3) {
+            char *cp = eq;
+            while (strchr("=0123456789, ", *cp))
+              cp++;
+            *cp++ = ';';
+            *cp = '\0';
+            cp = eq;
+            if (cp != linebuf)
               cp--;
-          }
-          while (*eq == ' ')
-            eq++;
-          if (*eq != '=') {
-            // squeeze white space
-            char * src = eq;
-            char * dst = eq;
-            while (*src) {
-              if (*src != ' ' && *src != '\t')
-                *dst++ = *src;
-              src++;
+            while (strchr("BCFGMRWYacdeghiklnorstuwy ", *cp)) {
+              eq = cp;
+              if (cp == linebuf)
+                break;
+              else
+                cp--;
             }
-            *dst = '\0';
+            while (*eq == ' ')
+              eq++;
+            if (*eq != '=') {
+              // squeeze white space
+              char * src = eq;
+              char * dst = eq;
+              while (*src) {
+                if (*src != ' ' && *src != '\t')
+                  *dst++ = *src;
+                src++;
+              }
+              *dst = '\0';
 
-            int len = sch ? strlen(sch) : 0;
-            sch = renewn(sch, len + strlen(eq) + 1);
-            strcpy(&sch[len], eq);
+              int len = sch ? strlen(sch) : 0;
+              sch = renewn(sch, len + strlen(eq) + 1);
+              strcpy(&sch[len], eq);
+            }
+            break;
           }
-          break;
         }
       }
     }
   }
-
-scheme_return:
 
 #ifdef use_curl
   pclose(sf);
@@ -2750,6 +2850,42 @@ theme_handler(control *ctrl, int event)
   if(upd)InvalidateRect(GetParent((HWND)ctrl->widget),NULL,true);
   //if(upd)InvalidateRect((HWND)ctrl->widget,NULL,true);
 }
+static void
+backgfsel_handler(control *ctrl, int event)
+{
+  bg_file *bf=&new_cfg.backgfile;
+  control **cs;
+  cs=ctrl->parent->ctrls+ctrl->ind;
+  if(ctrl->type==CTRL_FILESELECT){ //0,1:2-8:9-10
+    dlg_stdfilesel_handler(ctrl,event);
+    if(event== EVENT_VALCHANGE){// EVENT_SELCHANGE: 
+      if(bf->fn&&bf->fn){
+        if(bf->type==0) bf->type='_';
+        if(bf->alpha==0) bf->alpha=255;
+      }else{
+        bf->type=0;
+      }
+    }
+  }else if(ctrl->type==CTRL_RADIO){
+    cs-=1;
+    dlg_stdradiobutton_handler(ctrl,event);
+    if(event== EVENT_VALCHANGE){// EVENT_SELCHANGE: 
+      if(bf->alpha==0) bf->alpha=255;
+      if(bf->type==0||bf->type=='='){
+        if(bf->fn){ free((void*)bf->fn);bf->fn=NULL; }
+      }
+    }
+  }else if(ctrl->type==CTRL_INTEDITBOX){
+    cs-=2;
+    dlg_stdintbox_handler(ctrl,event);
+  }
+  if(event== EVENT_VALCHANGE){// EVENT_SELCHANGE: 
+    dlg_stdfilesel_handler(cs[0],EVENT_REFRESH);
+    dlg_stdradiobutton_handler(cs[1],EVENT_REFRESH);
+    dlg_stdintbox_handler(cs[2],EVENT_REFRESH);
+  }
+}
+
 #define dont_debug_dragndrop
 static void
 theme_saver(control *ctrl, int event)
@@ -2789,69 +2925,10 @@ theme_saver(control *ctrl, int event)
 }
 
 static void
-scheme_saver(control *ctrl, int event)
-{
-  string theme_name = ( new_cfg.theme_file);
-  if (event == EVENT_REFRESH) {
-    enable_widget(ctrl,
-                  *new_cfg.colour_scheme && *theme_name
-                  && !strchr(theme_name, '/') && !strchr(theme_name, '\\')
-                 );
-  }
-  else if (event == EVENT_ACTION) {
-#ifdef debug_dragndrop
-    printf("%ls <- <%s>\n", new_cfg.theme_file, new_cfg.colour_scheme);
-#endif
-    if (*new_cfg.colour_scheme && *theme_name){
-      if (!strchr(theme_name, '/') && !strchr(theme_name, '\\')) {
-        char * sn = get_resource_file("themes", theme_name, true);
-        if (sn) {
-          // save colour_scheme to theme_file
-          FILE * thf = fopen(sn, "w");
-          delete(sn);
-          if (thf) {
-            char * sch = (char *)new_cfg.colour_scheme;
-            for (int i = 0; sch[i]; i++) {
-              if (sch[i] == ';')
-                sch[i] = '\n';
-            }
-            fprintf(thf, "%s", sch);
-            fclose(thf);
-
-            strset(&new_cfg.colour_scheme, "");
-            enable_widget(store_button, false);
-          }
-          else {
-            win_bell(&new_cfg);  // Cannot write theme file
-            win_show_warning(_("Cannot write theme file"));
-          }
-        }
-        else {
-          win_bell(&new_cfg);  // Cannot store theme file
-          win_show_warning(_("Cannot store theme file"));
-        }
-      }
-    }
-  }
-}
-
-static void
 bell_tester(control *unused(ctrl), int event)
 {
   if (event == EVENT_ACTION)
     win_bell(&new_cfg);
-}
-
-static void
-url_opener(control *ctrl, int event)
-{
-  if (event == EVENT_ACTION) {
-    wstring url = ctrl->context;
-    win_open(wcsdup(url), true);  // win_open frees its argument
-  }
-  else if (event == EVENT_DROP) {
-    theme_handler(theme, EVENT_DROP);
-  }
 }
 
 struct fontlist {
@@ -2865,20 +2942,6 @@ struct fontlist {
 static struct fontlist * fontlist = 0;
 static uint fontlistn = 0;
 
-static void
-clearfontlist()
-{
-  for (uint fi = 0; fi < fontlistn; fi++) {
-    delete(fontlist[fi].fn);
-    for (uint wi = 0; wi < fontlist[fi].weightsn; wi++) {
-      delete(fontlist[fi].weights[wi].style);
-    }
-    delete(fontlist[fi].weights);
-  }
-  fontlistn = 0;
-  delete(fontlist);
-  fontlist = 0;
-}
 
 /* Windows LOGFONT values
 	100	FW_THIN
@@ -2929,11 +2992,6 @@ static wstring weights[] = {
   W("Fat"),     	// 900
   W("Poster"),  	// 900
   W("Ultrablack"),	// 900
-};
-
-static string sizes[] = {
-  "8", "9", "10", "11", "12", "14", "16", "18", "20", "22", "24", "28",
-  "32", "36", "40", "44", "48", "56", "64", "72"
 };
 
 static void
@@ -3001,58 +3059,7 @@ enterfontlist(const wchar * fn, int weight, const wchar * style)
   }
 }
 
-static void
-display_font_sample()
-{
-  dlg_text_paint(font_sample);
-}
 
-static void
-font_weight_handler(control *ctrl, int event)
-{
-  uint fi = dlg_listbox_getcur(font_list);
-  if (event == EVENT_REFRESH) {
-    dlg_listbox_clear(ctrl);
-    if (fi < fontlistn) {
-      for (uint w = 0; w < fontlist[fi].weightsn; w++)
-        dlg_listbox_add_w(ctrl, fontlist[fi].weights[w].style);
-    }
-  }
-  else if (event == EVENT_VALCHANGE || event == EVENT_SELCHANGE) {
-    wstring wname = newn(wchar, 1);
-    dlg_editbox_get_w(ctrl, &wname);
-    int weight = FW_NORMAL;
-    for (uint wi = 0; wi < fontlist[fi].weightsn; wi++)
-      if (0 == wcscmp(wname, fontlist[fi].weights[wi].style)) {
-        weight = fontlist[fi].weights[wi].weight;
-        break;
-      }
-    delete(wname);
-    new_cfg.font.weight = weight;
-    new_cfg.font.isbold = weight >= FW_BOLD;
-    display_font_sample();
-  }
-}
-
-static void
-font_size_handler(control *ctrl, int event)
-{
-  if (event == EVENT_REFRESH) {
-    dlg_listbox_clear(ctrl);
-    for (uint i = 0; i < lengthof(sizes); i++)
-      dlg_listbox_add(ctrl, sizes[i]);
-    char size[12];
-    sprintf(size, "%d", new_cfg.font.size);
-    dlg_editbox_set(ctrl, size);
-  }
-  else if (event == EVENT_VALCHANGE || event == EVENT_SELCHANGE) {
-    string size = newn(char, 3);
-    dlg_editbox_get(ctrl, &size);
-    new_cfg.font.size = atoi(size);
-    delete(size);
-    display_font_sample();
-  }
-}
 
 struct data_fontenum {
   HDC dc;
@@ -3099,17 +3106,17 @@ fontenum(const ENUMLOGFONTW *lpelf, const NEWTEXTMETRICW *lpntm, DWORD fontType,
     }
 
     /**
-	Courier|
-	FreeMono|Medium
-	Inconsolata|Medium
-	Source Code Pro ExtraLight|ExtraLight
-	@BatangChe|Regular
-	Iosevka Term Slab Medium Obliqu|Regular
-	Lucida Sans Typewriter|Bold
-	TIFAX|Alpha
-	HanaMinA|Regular
-	DejaVu Sans Mono|Book
-     */
+       Courier|
+       FreeMono|Medium
+       Inconsolata|Medium
+       Source Code Pro ExtraLight|ExtraLight
+       @BatangChe|Regular
+       Iosevka Term Slab Medium Obliqu|Regular
+       Lucida Sans Typewriter|Bold
+       TIFAX|Alpha
+       HanaMinA|Regular
+       DejaVu Sans Mono|Book
+       */
     wchar * fn = wcsdup(lfp->lfFaceName);
     const wchar * st = tagsplit(fn, W("Oblique"));
     if ((st = tagsplit(fn, lpelf->elfStyle))) {
@@ -3160,94 +3167,8 @@ list_fonts(bool report)
   ReleaseDC(0, data.dc);
 }
 
-static void
-font_handler(control *ctrl, int event)
-{
-  if (event == EVENT_REFRESH) {
-    dlg_listbox_clear(ctrl);
-    clearfontlist();
 
-    list_fonts(false);
-    int weighti = (new_cfg.font.weight - 50) / 100;
-    if (weighti > 8)
-      weighti = 8;
-    else if (weighti < 0)
-      weighti = 0;
-    wchar * weight = wcsdup(weights[weighti]);
-    enterfontlist(wcsdup(new_cfg.font.name), new_cfg.font.weight, weight);
-    //sortfontlist();  // already insert-sorted above
 
-    for (uint i = 0; i < fontlistn; i++)
-      dlg_listbox_add_w(ctrl, fontlist[i].fn);
-
-    dlg_editbox_set_w(ctrl, new_cfg.font.name);
-    display_font_sample();
-  }
-  else if (event == EVENT_VALCHANGE || event == EVENT_SELCHANGE) {
-    //int n = dlg_listbox_getcur(ctrl);
-    dlg_editbox_get_w(ctrl, &new_cfg.font.name);
-    font_weight_handler(font_weights, EVENT_REFRESH);
-    display_font_sample();
-  }
-}
-
-static void
-modifier_handler(control *ctrl, int event)
-{
-  char *cp = ctrl->context;
-  int col = ctrl->column;
-  char mask = 1 << col;
-  //printf("mod %02X ev %d col %d <%s>\n", *cp, event, col, ctrl->label);
-  if (event == EVENT_REFRESH)
-    dlg_checkbox_set(ctrl, *cp & mask);
-  else if (event == EVENT_VALCHANGE)
-    *cp = (*cp & ~mask) | (dlg_checkbox_get(ctrl) << col);
-  //printf(" -> %02X\n", *cp);
-}
-
-static void
-emojis_handler(control *ctrl, int event)
-{
-  //__ emojis style
-  const string NONE = _("? None ?");  // ??
-  string emojis = NONE;
-  for (const opt_val * o = lopt_vals[OPT_EMOJIS]; o->name; o++) {
-    if (new_cfg.emojis == o->val) {
-      emojis = o->name;
-      break;
-    }
-  }
-
-  if (event == EVENT_REFRESH) {
-    dlg_listbox_clear(ctrl);
-    dlg_listbox_add(ctrl, NONE);
-    add_file_resources(ctrl, ("emojis/*"), true);
-    // strip std dir prefix...
-    dlg_editbox_set(ctrl, *emojis ? emojis : NONE);
-  }
-  else if (event == EVENT_VALCHANGE || event == EVENT_SELCHANGE) {
-    if (dlg_listbox_getcur(ctrl) == 0)
-      new_cfg.emojis = 0;
-    else {
-      new_cfg.emojis = 0;
-      emojis = newn(char, 1);
-      dlg_editbox_get(ctrl, &emojis);
-      for (const opt_val * o = lopt_vals[OPT_EMOJIS]; o->name; o++) {
-        if (!strcasecmp(emojis, o->name)) {
-          new_cfg.emojis = o->val;
-          break;
-        }
-      }
-      for (const opt_val * o = opt_vals[OPT_EMOJIS]; o->name; o++) {
-        if (!strcasecmp(emojis, o->name)) {
-          new_cfg.emojis = o->val;
-          break;
-        }
-      }
-      delete(emojis);
-    }
-  }
-}
 
 static void
 opt_handlern(control *ctrl, int event)
@@ -3275,104 +3196,17 @@ opt_handlern(control *ctrl, int event)
   }
 }
 static void
-opt_handler(control *ctrl, int event,int* popt, const opt_val * ovals)
+ansicolour_handler(control *ctrl, int event)
 {
-  switch (event) {
-    when EVENT_REFRESH:
-      dlg_listbox_clear(ctrl);
-      while (ovals->name) {
-        dlg_listbox_add(ctrl, _(ovals->name));
-        if (*popt == ovals->val)
-          dlg_editbox_set(ctrl, _(ovals->name));
-        ovals++;
-      }
-    when EVENT_VALCHANGE or EVENT_SELCHANGE: {
-      int i = 0;
-      while (ovals->name) {
-        if (dlg_listbox_getcur(ctrl) == i++)
-          *popt = ovals->val;
-        ovals++;
-      }
+  colour c = *(colour *)ctrl->context;
+  dlg_stdcolour_handler(ctrl, event);
+  if (event == EVENT_CALLBACK) {
+    colour cn = *(colour *)ctrl->context;
+    if(c!=cn){
+      InvalidateRect(ctrl->widget,NULL,1);
+      enable_widget(store_button,themechanged());
+      //InvalidateRect(GetParent(ctrl->widget),NULL,1);
     }
-  }
-}
-
-static void
-emoji_placement_handler(control *ctrl, int event)
-{
-  opt_handler(ctrl, event, &new_cfg.emoji_placement, lopt_vals[OPT_EM_PLACE]);
-}
-
-static void
-compose_key_handler(control *ctrl, int event)
-{
-  opt_handler(ctrl, event, &new_cfg.compose_key, lopt_vals[OPT_COMPKEY]);
-}
-
-static void
-smoothing_handler(control *ctrl, int event)
-{
-  opt_handler(ctrl, event, &new_cfg.font_smoothing, lopt_vals[OPT_FONTST]);
-}
-
-
-static int showbold;
-static void
-showbold_handler(control *ctrl, int event)
-{
-  showbold = new_cfg.bold_as_font | ((char)new_cfg.bold_as_colour) << 1;
-  opt_handler(ctrl, event, &showbold, lopt_vals[OPT_BOLD]);
-  new_cfg.bold_as_font = showbold & 1;
-  new_cfg.bold_as_colour = showbold & 2;
-}
-
-static int bold_like_xterm;
-
-static void
-checkbox_option_set(control *ctrl, bool checked)
-{
-  if (ctrl) {
-    bool *bp = ctrl->context;
-    *bp = checked;
-    dlg_checkbox_set(ctrl, checked);
-  }
-}
-
-void
-bold_handler(control *ctrl, int event)
-{
-  int*bp = ctrl->context;
-  static control * ctrl_bold_as_font = 0;
-  static control * ctrl_bold_as_colour = 0;
-  static control * ctrl_bold_like_xterm = 0;
-  if (event == EVENT_REFRESH) {
-    bold_like_xterm = !new_cfg.bold_as_font && !new_cfg.bold_as_colour;
-    dlg_checkbox_set(ctrl, *bp);
-    if (bp == &new_cfg.bold_as_font)
-      ctrl_bold_as_font = ctrl;
-    else if (bp == &new_cfg.bold_as_colour)
-      ctrl_bold_as_colour = ctrl;
-    else
-      ctrl_bold_like_xterm = ctrl;
-  }
-  else if (event == EVENT_VALCHANGE) {
-    *bp = dlg_checkbox_get(ctrl);
-    if (bp == &bold_like_xterm) {
-      if (*bp) {
-        checkbox_option_set(ctrl_bold_as_font, false);
-        checkbox_option_set(ctrl_bold_as_colour, false);
-      }
-      else {
-        //checkbox_option_set(ctrl_bold_as_font, false);
-        //checkbox_option_set(ctrl_bold_as_colour, true);
-        // disable switching off: restore "true"
-        checkbox_option_set(ctrl_bold_like_xterm, true);
-      }
-    }
-    else if (!new_cfg.bold_as_font && !new_cfg.bold_as_colour)
-      checkbox_option_set(ctrl_bold_like_xterm, true);
-    else
-      checkbox_option_set(ctrl_bold_like_xterm, false);
   }
 }
 
@@ -3420,572 +3254,33 @@ transparency_selhandler(control *ctrl, int event)
       transparency_valhandler(transparency_valbox, EVENT_REFRESH);
   }
 }
-#if 0
-static void
-transparency_slider(control *ctrl, int event)
-{
-  string dir = ctrl->context;
-  mod_keys mods = get_mods();
-  if (event == EVENT_ACTION) {
-    int step = *dir == '-' ? -4 : 4;
-    if (mods & MDK_SHIFT)
-      step *= 4;
-    else if (mods & MDK_CTRL)
-      step /= 4;
-    int transp = (uchar)new_cfg.transparency;
-    transp += step;
-    if (transp < 4)
-      transp = step > 0 ? 4 : 0;
-    else if (transp > 254)
-      transp = 254;
-    new_cfg.transparency = transp;
-    transparency_valhandler(transparency_valbox, EVENT_REFRESH);
-    // call the lower-level function for update, to avoid recursion
-    dlg_stdradiobutton_handler(transparency_selbox, EVENT_REFRESH);
-  }
+static char *backgtag="_%*+=";
+  //_:1 Scale image to term size
+  //%:2 Scale term to image ration
+  //*:3 use Image as titled texture
+  //+:4 Scale image to term size,keep ratio,then titles
+  //=:5 Use desktop background
+int backg_type(int c){
+  if(!c||c==' ')return 0;
+  char *r=strchr(backgtag,c);
+  if(!r)return '_';
+  return c;
 }
-#endif
-static void
-ansicolour_handler(control *ctrl, int event)
-{
-  colour c = *(colour *)ctrl->context;
-  dlg_stdcolour_handler(ctrl, event);
-  if (event == EVENT_CALLBACK) {
-    colour cn = *(colour *)ctrl->context;
-    if(c!=cn){
-      InvalidateRect(ctrl->widget,NULL,1);
-      enable_widget(store_button,themechanged());
-      //InvalidateRect(GetParent(ctrl->widget),NULL,1);
-    }
+void backg_analyse(string pbf,bg_file *backgfile){
+  backgfile->type=backg_type(*pbf);
+  backgfile->update=1;
+  if(backgfile->type==0)return;
+  if(backgfile->type)pbf++;
+  if(backgfile->fn)free((void*)backgfile->fn);
+  char*p=strrchr(pbf,',');
+  if(p){
+    *p=0; p++;
+    if (sscanf(p, "%u%c", &backgfile->alpha, &(char){0}) != 1)
+      backgfile->alpha = 255;
+  }else{
+    backgfile->alpha = 255;
   }
-}
-
-void
-setup_config_boxo(controlbox * b)
-{
-  controlset *s;
-  control *c;
-  copy_config("dialog", &new_cfg, &file_cfg);
-  if(*theme_file)CLRFGSCPY(new_cfg.ansi_colours,theme_colours );
-  /*
-   * The standard panel that appears at the bottom of all panels:
-   * Open, Cancel, Apply etc.
-   */
-  s = ctrl_new_set(b, W(""), W(""), W(""));
-  ctrl_columns(s, 5, 20, 20, 20, 20, 20);
-  c = ctrl_pushbutton(s,0, _W("About..."),0, about_handler, 0);
-  c = ctrl_pushbutton(s,2, _W("&Save"),0, ok_handler, 0);
-  c->button.isdefault = true;
-  c = ctrl_pushbutton(s,3, _W("&Cancel"),0, cancel_handler, 0);
-  c->button.iscancel = true;
-  c = ctrl_pushbutton(s,4, _W("&Apply"),0, apply_handler, 0);
-#ifdef __gettext
-  __W("I see");
-  __W("OK");
-#endif
-
-  /*
-   * The Looks panel.
-   */
-  s = ctrl_new_set(b, _W("Looks"), _W("Looks in Terminal"), _W("Colours"));
-  ctrl_columns(s, 3, 33, 33, 33);
-  ctrl_pushbutton( s,0, _W("&Foreground..."),0, dlg_stdcolour_handler, &new_cfg.colour.fg);
-  ctrl_pushbutton( s,1, _W("&Background..."),0, dlg_stdcolour_handler, &new_cfg.colour.bg);
-  ctrl_pushbutton( s,2, _W("&Cursor..."    ),0, dlg_stdcolour_handler, &new_cfg.cursor_colour);
-
-  ctrl_columns(s, 2, 70,30);
-  theme = ctrl_combobox( s,0, _W("&Theme"),0, 70, theme_handler, &new_cfg.theme_file);
-  store_button = ctrl_pushbutton(s,1, _W("T&heme Save"),0, theme_saver, 0) ;
-  //ctrl_label    ( s, 0, _W("Modify Ansi Color:"),0);
-  ctrl_columns(s, 9,15,10,10,10,10, 10,10,10,10);
-  ctrl_label    ( s,0, _W("Ansi:"),0);
-  ctrl_clrbutton( s,1,0, _W("Black"       ), ansicolour_handler, &new_cfg.ansi_colours[ 0]);
-  ctrl_clrbutton( s,2,0, _W("Red"         ), ansicolour_handler, &new_cfg.ansi_colours[ 1]);
-  ctrl_clrbutton( s,3,0, _W("Green"       ), ansicolour_handler, &new_cfg.ansi_colours[ 2]);
-  ctrl_clrbutton( s,4,0, _W("Yellow"      ), ansicolour_handler, &new_cfg.ansi_colours[ 3]);
-  ctrl_clrbutton( s,5,0, _W("Blue"        ), ansicolour_handler, &new_cfg.ansi_colours[ 4]);
-  ctrl_clrbutton( s,6,0, _W("Magenta"     ), ansicolour_handler, &new_cfg.ansi_colours[ 5]);
-  ctrl_clrbutton( s,7,0, _W("Cyan"        ), ansicolour_handler, &new_cfg.ansi_colours[ 6]);
-  ctrl_clrbutton( s,8,0, _W("White"       ), ansicolour_handler, &new_cfg.ansi_colours[ 7]);
-  ctrl_columns(s, 9,15,10,10,10,10, 10,10,10,10);
-  ctrl_label    ( s,0,  W(""),0);
-  ctrl_clrbutton( s,1,0, _W("BoldBlack"  ), ansicolour_handler, &new_cfg.ansi_colours[ 8]);
-  ctrl_clrbutton( s,2,0, _W("BoldRed"    ), ansicolour_handler, &new_cfg.ansi_colours[ 9]);
-  ctrl_clrbutton( s,3,0, _W("BoldGreen"  ), ansicolour_handler, &new_cfg.ansi_colours[10]);
-  ctrl_clrbutton( s,4,0, _W("BoldYellow" ), ansicolour_handler, &new_cfg.ansi_colours[11]);
-  ctrl_clrbutton( s,5,0, _W("BoldBlue"   ), ansicolour_handler, &new_cfg.ansi_colours[12]);
-  ctrl_clrbutton( s,6,0, _W("BoldMagenta"), ansicolour_handler, &new_cfg.ansi_colours[13]);
-  ctrl_clrbutton( s,7,0, _W("BoldCyan"   ), ansicolour_handler, &new_cfg.ansi_colours[14]);
-  ctrl_clrbutton( s,8,0, _W("BoldWhite"  ), ansicolour_handler, &new_cfg.ansi_colours[15]);
-  ctrl_columns(s, 2, 80, 20);
-  (void)url_opener;(void)scheme_saver;
-  //ctrl_pushbutton(s,0, _W("Color Scheme Designer"),0, url_opener, W("http://ciembor.github.io/4bit/")) ;
-  //store_button = ctrl_pushbutton(s,1, _W("Store"),0, scheme_saver, 0) ;
-
-  s = ctrl_new_set(b, _W("Looks"), null, _W("Transparency"));
-  bool with_glass = win_is_glass_available();
-  transparency_selbox = ctrl_radiobuttons( s,-1, null,0, 4 + with_glass,
-                                           transparency_selhandler, &new_cfg.transparency,
-                                           _W("&Off"), TR_OFF,
-                                           _W("&Low"), TR_LOW,
-                                           with_glass ? _W("&Med.") : _W("&Medium"), TR_MEDIUM,
-                                           _W("&High"), TR_HIGH,
-                                           with_glass ? _W("Gla&ss") : null, TR_GLASS,
-                                           null
-                                         );
-#ifdef support_blurred
-  ctrl_columns(s, 2, with_glass ? 80 : 75, with_glass ? 20 : 25);
-  ctrl_checkbox( s,0, _W("Opa&que when focused"),0, dlg_stdcheckbox_handler, &new_cfg.opaque_when_focused);
-  ctrl_checkbox( s,1, _W("Blu&r"),0, dlg_stdcheckbox_handler, &new_cfg.blurred);
-#else
-#ifdef no_transparency_pseudo_slider
-  ctrl_checkbox( s,-1, _W("Opa&que when focused"),0, dlg_stdcheckbox_handler, &new_cfg.opaque_when_focused);
-#else
-  ctrl_columns(s, 4, 64, 10, 16, 10);
-  ctrl_checkbox( s,0, _W("Opa&que when focused"),0, dlg_stdcheckbox_handler, &new_cfg.opaque_when_focused);
-  transparency_valbox = ctrl_editbox( s,2, 0,0, 100, transparency_valhandler, &new_cfg.transparency);
-  ctrl_pushbutton( s,1, _W("◄"),0, transparency_slider, "-");
-  ctrl_pushbutton( s,3, _W("►"),0, transparency_slider, "+");
-#endif
-#endif
-
-  s = ctrl_new_set(b, _W("Looks"), null, _W("Cursor"));
-  ctrl_radiobuttons( s,-1, null,0, 4,
-                     dlg_stdradiobutton_handler, &new_cfg.cursor_type,
-                     _W("Li&ne"), CUR_LINE,
-                     _W("Bloc&k"), CUR_BLOCK,
-#ifdef cursor_type_box
-                     _W("Bo&x"), CUR_BOX,
-#endif
-                     _W("&Underscore"), CUR_UNDERSCORE,
-                     null
-                   );
-  ctrl_checkbox( s,-1, _W("Blinkin&g"),0, dlg_stdcheckbox_handler, &new_cfg.cursor_blinks);
-
-  /*
-   * The Text panel.
-   */
-  s = ctrl_new_set(b, _W("Text"), _W("Text and Font properties"), _W("Font"));
-  if (cfg.fontmenu == 0) {  // use built-in inline font menu
-    ctrl_columns(s, 2, 70, 30);
-    font_list = ctrl_listbox( s,0, null,0, 4, 100, font_handler, 0);
-    font_weights = ctrl_listbox( s,1, _W("Font st&yle:"),0, 3, 100, font_weight_handler, 0);
-    ctrl_columns(s, 2, 70, 30);
-    ctrl_combobox( s,1, _W("&Size:"),0, 50, font_size_handler, 0);
-    font_sample = ctrl_pushbutton(s,0, null,0, apply_handler, 0);
-    // emoji style here, right after font?
-    if (strstr(cfg.old_options, "bold")) {
-      s = ctrl_new_set(b, _W("Text"), null, null);
-      ctrl_columns(s, 2, 50, 50);
-      ctrl_checkbox( s,0, _W("Sho&w bold as font"),0, dlg_stdcheckbox_handler, &new_cfg.bold_as_font);
-      ctrl_checkbox( s,1, _W("Show &bold as colour"),0, dlg_stdcheckbox_handler, &new_cfg.bold_as_colour);
-    }
-    else {
-      if (0 != strstr(cfg.old_options, "blinking")) {
-        s = ctrl_new_set(b, _W("Text"), null, _W("Show bold"));
-        ctrl_columns(s, 3, 35, 35, 30);
-        ctrl_checkbox( s,0, _W("as font"),0, bold_handler, &new_cfg.bold_as_font);
-        ctrl_checkbox( s,1, _W("as colour"),0, bold_handler, &new_cfg.bold_as_colour);
-        ctrl_checkbox( s,2, _W("xterm"),0, bold_handler, &bold_like_xterm);
-      }
-      else {
-
-        ctrl_columns(s, 1, 100);  // reset column stuff so we can rearrange them
-        ctrl_columns(s, 2, 50, 50);
-        ctrl_combobox( s,-1, _W("Show bold"),0,
-                       50, showbold_handler, 0);
-        ctrl_checkbox( s,-1, _W("&Allow blinking"),0,
-                       dlg_stdcheckbox_handler, &new_cfg.allow_blinking
-                     )->column = 0;
-        ctrl_checkbox( s,-1, _W("Show dim as font"),0,
-                       dlg_stdcheckbox_handler, &new_cfg.dim_as_font
-                     )->column = 1;
-      }
-    }
-  }
-  else {
-    ctrl_fontsel( s,-1, null,0, dlg_stdfontsel_handler, &new_cfg.font);
-
-    // emoji style here, right after font?
-
-    if (strstr(cfg.old_options, "bold")) {
-      s = ctrl_new_set(b, _W("Text"), null, null);
-      ctrl_columns(s, 2, 50, 50);
-      ctrl_radiobuttons( s,1, _W("Font smoothing"),0, 2,
-                         dlg_stdradiobutton_handler, &new_cfg.font_smoothing,
-                         _W("&Default"), FS_DEFAULT,
-                         _W("&None"), FS_NONE,
-                         _W("&Partial"), FS_PARTIAL,
-                         _W("&Full"), FS_FULL,
-                         null
-                       );
-
-      ctrl_checkbox( s,0, _W("Sho&w bold as font"),0, dlg_stdcheckbox_handler, &new_cfg.bold_as_font);
-      ctrl_checkbox( s,0, _W("Show &bold as colour"),0, dlg_stdcheckbox_handler, &new_cfg.bold_as_colour);
-      ctrl_checkbox( s,0, _W("&Allow blinking"),0, dlg_stdcheckbox_handler, &new_cfg.allow_blinking);
-    }
-    else {
-      if (0 != strstr(cfg.old_options, "blinking")) {
-        ctrl_radiobuttons( s,0, _W("Font smoothing"),0, 4,
-                           dlg_stdradiobutton_handler, &new_cfg.font_smoothing,
-                           _W("&Default"), FS_DEFAULT,
-                           _W("&None"), FS_NONE,
-                           _W("&Partial"), FS_PARTIAL,
-                           _W("&Full"), FS_FULL,
-                           null
-                         );
-
-        s = ctrl_new_set(b, _W("Text"), null, _W("Show bold"));
-        ctrl_columns(s, 3, 35, 35, 30);
-        ctrl_checkbox( s,0, _W("as font"),0, bold_handler, &new_cfg.bold_as_font);
-        ctrl_checkbox( s,1, _W("as colour"),0, bold_handler, &new_cfg.bold_as_colour);
-        ctrl_checkbox( s,2, _W("xterm"),0, bold_handler, &bold_like_xterm);
-      }
-      else {
-        ctrl_combobox( s,-1, _W("Font smoothing"),0, 50, smoothing_handler, 0);
-        s = ctrl_new_set(b, _W("Text"), null, null);
-        ctrl_combobox( s,-1, _W("Show bold"),0,
-                       50, showbold_handler, 0);
-
-        ctrl_columns(s, 2, 50, 50);
-        ctrl_checkbox( s,-1, _W("&Allow blinking"),0,
-                       dlg_stdcheckbox_handler, &new_cfg.allow_blinking
-                     )->column = 0;
-        ctrl_checkbox(s,-1,_W("Show dim as font"),0,
-                      dlg_stdcheckbox_handler, &new_cfg.dim_as_font
-                     )->column = 1;
-      }
-    }
-  }
-
-  s = ctrl_new_set(b, _W("Text"), null, null);
-  ctrl_columns(s, 2, 29, 71);
-  locale_box = ctrl_combobox( s,0, _W("&Locale"),0, 100, locale_handler, 0);
-  charset_box = ctrl_combobox( s,1, _W("&Character set"),0, 100, charset_handler, 0);
-
-  // emoji style here, after locale?
-  if (!strstr(cfg.old_options, "emoj")) {
-    ctrl_columns(s, 2, 50, 50);
-    s = ctrl_new_set(b, _W("Text"), null, _W("Emojis"));
-    if (cfg.fontmenu == 0 && !strstr(cfg.old_options, "bold")) {
-      ctrl_combobox( s,0, _W("Emojis"),0, 100, emojis_handler, 0);
-    } else {
-      ctrl_combobox( s,0, _W("Style"),0, 100, emojis_handler, 0);
-    }
-    ctrl_combobox( s,1, _W("Placement"),0, 100, emoji_placement_handler, 0);
-  }
-
-  /*
-   * The Keys panel.
-   */
-  s = ctrl_new_set(b, _W("Keys"), _W("Keyboard features"), null);
-  ctrl_columns(s, 2, 50, 50);
-  ctrl_checkbox( s,0, _W("&Backarrow sends ^H"),0, dlg_stdcheckbox_handler, &new_cfg.backspace_sends_bs);
-  ctrl_checkbox( s,1, _W("&Delete sends DEL"),0, dlg_stdcheckbox_handler, &new_cfg.delete_sends_del);
-  ctrl_checkbox( s,-1, _W("Ctrl+LeftAlt is Alt&Gr"),0, dlg_stdcheckbox_handler, &new_cfg.ctrl_alt_is_altgr);
-  ctrl_checkbox( s,-1, _W("AltGr is also Alt"),0, dlg_stdcheckbox_handler, &new_cfg.altgr_is_alt);
-  ctrl_checkbox( s,-1, _W("Caplock As Escape"),0, dlg_stdcheckbox_handler, &new_cfg.capmapesc);
-  ctrl_checkbox( s,-1, _W("&Esc/Enter reset IME to alphanumeric"),0, dlg_stdcheckbox_handler, &new_cfg.key_alpha_mode);
-  s = ctrl_new_set(b, _W("Keys"), null, _W("Shortcuts"));
-  ctrl_checkbox( s,-1, _W("Cop&y and Paste (Ctrl/Shift+Ins)"),0, dlg_stdcheckbox_handler, &new_cfg.clip_shortcuts);
-  ctrl_checkbox( s,-1, _W("&Menu and Full Screen (Alt+Space/Enter)"),0, dlg_stdcheckbox_handler, &new_cfg.window_shortcuts);
-  ctrl_checkbox( s,-1, _W("&Switch window (Ctrl+[Shift+]Tab)"),0, dlg_stdcheckbox_handler, &new_cfg.switch_shortcuts);
-  ctrl_checkbox( s,-1, _W("&Zoom (Ctrl+plus/minus/zero)"),0, dlg_stdcheckbox_handler, &new_cfg.zoom_shortcuts);
-  ctrl_checkbox( s,-1, _W("&Alt+Fn shortcuts"),0, dlg_stdcheckbox_handler, &new_cfg.alt_fn_shortcuts);
-  ctrl_checkbox( s,-1, _W("&Win+x shortcuts"),0, dlg_stdcheckbox_handler, &new_cfg.win_shortcuts);
-  ctrl_checkbox( s,-1, _W("&Ctrl+Shift+letter shortcuts"),0, dlg_stdcheckbox_handler, &new_cfg.ctrl_shift_shortcuts);
-
-  if (strstr(cfg.old_options, "composekey")) {
-    s = ctrl_new_set(b, _W("Keys"), null, _W("Compose key"));
-    ctrl_radiobuttons( s,-1, null,0, 4,
-                       dlg_stdradiobutton_handler, &new_cfg.compose_key,
-                       _W("&Shift"), MDK_SHIFT,
-                       _W("&Ctrl"), MDK_CTRL,
-                       _W("&Alt"), MDK_ALT,
-                       _W("&Off"), 0,
-                       null
-                     );
-  }
-  else {
-    s = ctrl_new_set(b, _W("Keys"), null, null);
-    ctrl_combobox(
-                  s,-1, _W("Compose key"),0, 50, compose_key_handler, 0);
-  }
-
-  /*
-   * The Mouse panel.
-   */
-  s = ctrl_new_set(b, _W("Mouse"), _W("Mouse functions"), null);
-  ctrl_columns(s, 2, 50, 50);
-  if (strstr(cfg.old_options, "sel")) {
-    //#define copy_as_html_checkbox
-    //#define copy_as_html_right
-#ifdef copy_as_html_checkbox
-    ctrl_checkbox( s,0, _W("Cop&y on select"),0, dlg_stdcheckbox_handler, &new_cfg.copy_on_select);
-    ctrl_checkbox( s,0, _W("Copy with TABs"),0, dlg_stdcheckbox_handler, &new_cfg.copy_tabs);
-    ctrl_checkbox( s,1, _W("Copy as &rich text"),0, dlg_stdcheckbox_handler, &new_cfg.copy_as_rtf);
-    ctrl_columns(s, 2, 50, 50);
-    ctrl_checkbox( s,1, _W("Copy as &HTML"),0, dlg_stdcheckbox_handler, &new_cfg.copy_as_html);
-#else
-#ifdef copy_as_html_right
-    ctrl_radiobuttons( s,1, _W("Copy as &HTML"),0, 2,
-                       dlg_stdradiobutton_handler, &new_cfg.copy_as_html,
-                       _W("&None"), 0,
-                       _W("&Partial"), 1,
-                       _W("&Default"), 2,
-                       _W("&Full"), 3,
-                       null
-                     );
-    ctrl_checkbox( s,0, _W("Cop&y on select"),0, dlg_stdcheckbox_handler, &new_cfg.copy_on_select);
-    ctrl_checkbox( s,0, _W("Copy with TABs"),0, dlg_stdcheckbox_handler, &new_cfg.copy_tabs);
-    ctrl_checkbox( s,0, _W("Copy as &rich text"),0, dlg_stdcheckbox_handler, &new_cfg.copy_as_rtf);
-#else
-    ctrl_checkbox( s,0, _W("Cop&y on select"),0, dlg_stdcheckbox_handler, &new_cfg.copy_on_select);
-    // no space for "Copy with TABs"
-    ctrl_checkbox( s,1, _W("Copy as &rich text"),0, dlg_stdcheckbox_handler, &new_cfg.copy_as_rtf);
-    ctrl_columns(s, 2, 100, 0);
-    ctrl_radiobuttons( s,-1, _W("Copy as &HTML"),0, 4,
-                       dlg_stdradiobutton_handler, &new_cfg.copy_as_html,
-                       _W("&None"), 0,
-                       _W("&Partial"), 1,
-                       _W("&Default"), 2,
-                       _W("&Full"), 3,
-                       null
-                     );
-#endif
-#endif
-  }
-  ctrl_checkbox( s,-1, _W("Clic&ks place command line cursor"),0, dlg_stdcheckbox_handler, &new_cfg.clicks_place_cursor);
-  ctrl_editbox( s,-1, _W("Delimiters:"), 0,70, dlg_stdstringbox_handler, &new_cfg.word_chars_excl );
-  ctrl_editbox( s,-1, _W("Word Characters:"), 0,70, dlg_stdstringbox_handler, &new_cfg.word_chars);
-
-  s = ctrl_new_set(b, _W("Mouse"), null, _W("Click actions"));
-  ctrl_radiobuttons( s,-1, _W("Right mouse button"),0, 4,
-                     dlg_stdradiobutton_handler, &new_cfg.right_click_action,
-                     _W("&Paste"), RC_PASTE,
-                     _W("E&xtend"), RC_EXTEND,
-                     _W("&Menu"), RC_MENU,
-                     _W("Ente&r"), RC_ENTER,
-                     null
-                   );
-  ctrl_radiobuttons( s,-1, _W("Middle mouse button"),0, 4,
-                     dlg_stdradiobutton_handler, &new_cfg.middle_click_action,
-                     _W("&Paste"), MC_PASTE,
-                     _W("E&xtend"), MC_EXTEND,
-                     _W("&Nothing"), MC_VOID,
-                     _W("Ente&r"), MC_ENTER,
-                     null
-                   );
-
-  s = ctrl_new_set(b, _W("Mouse"), null, _W("Application mouse mode"));
-  ctrl_radiobuttons( s,-1, _W("Default click target"),0, 4,
-                     dlg_stdradiobutton_handler, &new_cfg.clicks_target_app,
-                     _W("&Window"), false,
-                     _W("&Application"), true,
-                     null
-                   );
-#define appl_override_buttons
-#ifdef appl_override_buttons
-  ctrl_radiobuttons( s,-1, _W("Modifier for overriding default"),0, 5,
-                     dlg_stdradiobutton_handler, &new_cfg.click_target_mod,
-                     _W("&Shift"), MDK_SHIFT,
-                     _W("&Ctrl"), MDK_CTRL,
-                     _W("&Alt"), MDK_ALT,
-                     _W("&Win"), MDK_WIN,
-                     _W("&Off"), 0,
-                     null
-                   );
-#else
-#warning needs some coding
-  ctrl_label( s,-1, _W("Modifier for overriding default"),0);
-  ctrl_columns(s, 6, 20, 16, 16, 16, 16, 16);
-  ctrl_checkbox( s,0, _W("&Shift"),0, modifier_handler, &new_cfg.click_target_mod);
-  ctrl_checkbox( s,1, _W("&Alt"),0, modifier_handler, &new_cfg.click_target_mod);
-  ctrl_checkbox( s,2, _W("&Ctrl"),0, modifier_handler, &new_cfg.click_target_mod);
-  ctrl_checkbox( s,3, _W("&Win"),0, modifier_handler, &new_cfg.click_target_mod);
-  ctrl_checkbox( s,4, _W("&Sup"),0, modifier_handler, &new_cfg.click_target_mod);
-  ctrl_checkbox( s,5, _W("&Hyp"),0, modifier_handler, &new_cfg.click_target_mod);
-  ctrl_columns(s, 1, 100);  // reset column stuff so we can rearrange them
-#endif
-
-  if (!strstr(cfg.old_options, "sel")) {
-    /*
-     * The Selection and clipboard panel.
-     */
-    s = ctrl_new_set(b, _W("Selection"), _W("Selection and clipboard"), null);
-    ctrl_columns(s, 2, 100, 0);
-    ctrl_checkbox( s,-1, _W("Clear selection on input"),0, dlg_stdcheckbox_handler, &new_cfg.input_clears_selection);
-
-    s = ctrl_new_set(b, _W("Selection"), null, _W("Clipboard"));
-    ctrl_checkbox( s,0, _W("Cop&y on select"),0, dlg_stdcheckbox_handler, &new_cfg.copy_on_select);
-    ctrl_checkbox( s,0, _W("Copy with TABs"),0, dlg_stdcheckbox_handler, &new_cfg.copy_tabs);
-    ctrl_checkbox( s,0, _W("Copy as &rich text"),0,
-                   dlg_stdcheckbox_handler, &new_cfg.copy_as_rtf
-                 );
-#ifdef copy_as_html_right_block
-    // HTML selection as 2×2 block in right column, with previous:
-    ctrl_columns(s, 1, 100);  // reset column stuff so we can rearrange them
-    ctrl_columns(s, 2, 50, 50);
-    ctrl_radiobuttons( s,1, _W("Copy as &HTML"),0, 2,
-                       dlg_stdradiobutton_handler, &new_cfg.copy_as_html,
-                       _W("&None"), 0,
-                       _W("&Partial"), 1,
-                       _W("&Default"), 2,
-                       _W("&Full"), 3,
-                       null
-                     );
-#else
-    ctrl_columns(s, 2, 100, 0);
-    ctrl_radiobuttons( s,-1, _W("Copy as &HTML"),0, 4,
-                       dlg_stdradiobutton_handler, &new_cfg.copy_as_html,
-                       _W("&None"), 0,
-                       _W("&Partial"), 1,
-                       _W("&Default"), 2,
-                       _W("&Full"), 3,
-                       null
-                     );
-#endif
-
-    ctrl_columns(s, 2, 50, 50);
-    ctrl_checkbox( s,-1, _W("Trim space from selection"),0, dlg_stdcheckbox_handler, &new_cfg.trim_selection);
-#ifdef options_menu_allow_selection
-    ctrl_checkbox( s,-1, _W("Allow setting selection"),0, dlg_stdcheckbox_handler, &new_cfg.allow_set_selection);
-#endif
-
-    s = ctrl_new_set(b, _W("Selection"), null, _W("Window"));
-    ctrl_columns(s, 2, 100, 0);
-    // window-related
-    //__ Options - Selection: clock position of info popup for text size
-    ctrl_editbox( s,-1, _W("Show size while selecting (0..12)"), 0,15, dlg_stdintbox_handler, &new_cfg.selection_show_size);
-#define dont_config_suspbuf
-#ifdef config_suspbuf
-    ctrl_editbox( s,-1, _W("Suspend output while selecting"),0, 24, dlg_stdintbox_handler, &new_cfg.suspbuf_max);
-#endif
-  }
-
-  /*
-   * The Window panel.
-   */
-  s = ctrl_new_set(b, _W("Window"), _W("Window properties"), _W("Default size"));
-  ctrl_columns(s, 5, 35, 4, 28, 3, 30);
-  cols_box = ctrl_editbox( s,0, _W("Colu&mns"),0, 44, dlg_stdintbox_handler, &new_cfg.winsize.x);
-  rows_box = ctrl_editbox( s,2, _W("Ro&ws"),0, 55, dlg_stdintbox_handler, &new_cfg.winsize.y);
-  ctrl_pushbutton( s,4, _W("C&urrent size"),0, current_size_handler, 0);
-
-  ctrl_columns(s, 1, 100);
-  ctrl_checkbox(
-                //__ Options - Window:
-                s, 0,_W("Re&wrap on resize"),0,
-                dlg_stdcheckbox_handler, &new_cfg.rewrap_on_resize
-               );
-  s = ctrl_new_set(b, _W("Window"), null, null);
-  ctrl_columns(s, 2, 80, 20);
-  ctrl_editbox( s,0, _W("Scroll&back lines"),0, 50, dlg_stdintbox_handler, &new_cfg.scrollback_lines);
-  ctrl_radiobuttons( s,-1, _W("Scrollbar"),0, 4,
-                     dlg_stdradiobutton_handler, &new_cfg.scrollbar,
-                     _W("&Left"), -1,
-                     _W("&None"), 0,
-                     _W("&Right"), 1,
-                     null
-                   );
-#ifdef scroll_mod_buttons
-  ctrl_radiobuttons( s,-1, _W("Modifier for scrolling"),0, 5,
-                     dlg_stdradiobutton_handler, &new_cfg.scroll_mod,
-                     _W("&Shift"), MDK_SHIFT,
-                     _W("&Ctrl"), MDK_CTRL,
-                     _W("&Alt"), MDK_ALT,
-                     _W("&Win"), MDK_WIN,
-                     _W("&Off"), 0,
-                     null
-                   );
-#else
-  ctrl_columns(s, 1, 100);  // reset column stuff so we can rearrange them
-  ctrl_label( s,-1, _W("Modifier for scrolling"),0);
-  ctrl_columns(s, 6, 20, 16, 16, 16, 16, 16);
-  ctrl_checkbox( s,0, _W("&Shift"),0, modifier_handler, &new_cfg.scroll_mod);
-  ctrl_checkbox( s,1, _W("&Alt"),0, modifier_handler, &new_cfg.scroll_mod);
-  ctrl_checkbox( s,2, _W("&Ctrl"),0, modifier_handler, &new_cfg.scroll_mod);
-  ctrl_checkbox( s,3, _W("&Win"),0, modifier_handler, &new_cfg.scroll_mod);
-  ctrl_checkbox( s,4, _W("&Sup"),0, modifier_handler, &new_cfg.scroll_mod);
-  ctrl_checkbox( s,5, _W("&Hyp"),0, modifier_handler, &new_cfg.scroll_mod);
-#endif
-  ctrl_checkbox( s,-1, _W("&PgUp and PgDn scroll without modifier"),0, dlg_stdcheckbox_handler, &new_cfg.pgupdn_scroll);
-  ctrl_checkbox( s,-1, _W("&AllocConsole ,Some console programs need it."),0, dlg_stdcheckbox_handler, &new_cfg.allocconsole);
-
-  s = ctrl_new_set(b, _W("Window"), null, _W("UI language"));
-  ctrl_columns(s, 2, 60, 40);
-  ctrl_combobox( s,0, null,0, 100, lang_handler, 0);
-
-  /*
-   * The Terminal panel.
-   */
-  s = ctrl_new_set(b, _W("Terminal"), _W("Terminal features"), null);
-  ctrl_columns(s, 2, 50, 50);
-  ctrl_combobox( s,0, _W("&Type"),0, 100, term_handler, 0);
-  //__ Options - Terminal: answerback string for ^E request
-  ctrl_editbox( s,1, _W("&Answerback"),0, 100, dlg_stdstringbox_handler, &new_cfg.answerback);
-
-  s = ctrl_new_set(b, _W("Terminal"), null, _W("Bell"));
-  ctrl_columns(s, 2, 73, 27);
-  ctrl_combobox( s,0, null,0, 100, bell_handler, 0);
-  ctrl_pushbutton( s,1, _W("► &Play"),0, bell_tester, 0);
-  ctrl_columns(s, 1, 100);  // reset column stuff so we can rearrange them
-  ctrl_columns(s, 2, 100, 0);
-  ctrl_combobox( s,0, _W("&Wave"),0, 83, bellfile_handler, &new_cfg.bell_file[6]);
-  ctrl_columns(s, 1, 100);  // reset column stuff so we can rearrange them
-                            // balance column widths of the following 3 fields 
-                            // to accommodate different length of localized labels
-  int strwidth(wstring s0) {
-    int len = 0;
-    wchar * sp = (wchar *)s0;
-    while (*sp) {
-      if ((*sp >= 0xE3 && *sp <= 0xED) || 
-        (*sp == 0xF0 && *(sp + 1) >= 0xA0 && *(sp + 1) <= 0xBF))
-        // approx. CJK range
-        len += 4;
-      else if (strchr(" il.,'()!:;[]|", *sp))
-        len ++;
-      else if (*sp != '&' && (*sp & 0xC0) != 0x80)
-        len += 2;
-      sp++;
-    }
-    return len;
-  }
-  wstring lbl_flash = _W("&Flash");
-  wstring lbl_highl = _W("&Highlight in taskbar");
-  wstring lbl_popup = _W("&Popup");
-  int len = strwidth(lbl_flash) + strwidth(lbl_highl) + strwidth(lbl_popup);
-# define cbw 14
-  int l00_flash = (100 - 3 * cbw) * strwidth(lbl_flash) / len + cbw;
-  int l00_highl = (100 - 3 * cbw) * strwidth(lbl_highl) / len + cbw;
-  int l00_popup = (100 - 3 * cbw) * strwidth(lbl_popup) / len + cbw;
-  ctrl_columns(s, 3, l00_flash, l00_highl, l00_popup);
-  ctrl_checkbox( s,0, _W("&Flash"),0, dlg_stdcheckbox_handler, &new_cfg.bell_flash);
-  ctrl_checkbox( s,1, _W("&Highlight in taskbar"),0, dlg_stdcheckbox_handler, &new_cfg.bell_taskbar);
-  ctrl_checkbox( s,2, _W("&Popup"),0, dlg_stdcheckbox_handler, &new_cfg.bell_popup);
-
-  s = ctrl_new_set(b, _W("Terminal"), null, _W("Printer"));
-#ifdef use_multi_listbox_for_printers
-#warning left in here just to demonstrate the usage of ctrl_listbox
-  ctrl_listbox( s,-1, null,0, 4, 100, printer_handler, 0);
-#else
-  ctrl_combobox( s,-1, null,0, 100, printer_handler, 0);
-#endif
-  s = ctrl_new_set(b, _W("Terminal"), null, null);
-  //__ Options - Terminal:
-  ctrl_checkbox( s,-1, _W("Prompt about running processes on &close"),0, dlg_stdcheckbox_handler, &new_cfg.confirm_exit);
-  //__ Options - Terminal:
-  ctrl_checkbox( s,-1, _W("Status Line"),0, dlg_stdcheckbox_handler, &new_cfg.status_line);
-#if 0
- /*
-  * The Hotkeys panel.
-  * TODO:
-  */
-  s = ctrl_new_set(b, _W("Hotkey"), _W("hotkey define"), _W("hotkeys"));
-  ctrl_hotkey( s,-1, _W("&Ctrl"),0, modifier_handler, &new_cfg.scroll_mod);
-  ctrl_hotkey( s,-1, _W("&Ctrl"),0, modifier_handler, &new_cfg.scroll_mod);
-  ctrl_hotkey( s,-1, _W("&Ctrl"),0, modifier_handler, &new_cfg.scroll_mod);
-#endif
+  backgfile->fn= cs__mbstowcs(pbf);
 }
 void
 setup_config_box(controlbox * b)
@@ -4007,34 +3302,42 @@ setup_config_box(controlbox * b)
   c->button.iscancel = true;
   c = ctrl_pushbutton(s,4, _W("&Apply"),0, apply_handler, 0);
   char*p=(char*)&new_cfg;
-  wstring panel=NULL;
   int ic=-1,nc=0;
   int cols[MAXCOLS];
   cfg_option *co=options;
   for (; (co->name); co++) {
     char*pv=p+co->offset;
-    int nnc=co->column*10;
+    int nnc=co->size*10;
     if(co->flag == OPF_END)break;
-    if(nc&&co->flag>=OPF_COL){
-      ic++; if(ic>=nc){ic=-1;nc=0;}
+    if(co->level<cfg.optlevel)continue;
+    if(nc){
+      if(co->column){
+        ic++; if(ic>=nc){ic=0;}
+      }else{
+        ic=-1;
+      }
     }
-#define WCMT _W(co->comment)
+#define WCMT _W(co->label)
     switch(co->flag){
       when OPF_H:;
-      when OPF_PANE: panel=WCMT;
-      when OPF_GRP: s = ctrl_new_set(b,_W(co->name),panel,WCMT);
+      when OPF_PANE: ctrl_new_set(b,_W(co->name),WCMT,null);nc=0;
+      when OPF_GRP: s = ctrl_new_set(b,_W(co->name),null,WCMT);nc=0;
       when OPF_COL: {
         int j,mc=0,sc=0;
         cfg_option *cp=co+1;
         nc=co->column;
-        for(;cp->name;cp++){
-          if(cp->flag>=OPF_COL){
-            sc+=(cols[mc]=cp->column);
-            mc++;
-            if(mc>=nc)break;
+        int cw=0;
+        for(;cp->name&&mc<nc;cp++){
+          if(cp->flag==OPF_H)continue;
+          if(cp->column&&cp->flag!=OPF_COL){
+            sc+=(cols[mc]=cw=cp->column);mc++;
+          }else{
+            for(;mc<nc;mc++){
+              sc+=(cols[mc]=cw);
+            }
           }
         }
-        nc=mc;
+        if(!sc)sc=1;
         for(j=0;j<mc;j++)
           cols[j]=(cols[j]*100)/sc;
         ctrl_columnsa(s,nc,cols);
@@ -4065,57 +3368,74 @@ setup_config_box(controlbox * b)
         ctrl_columns(s,9,15,10,10,10,10,10,10,10,10);
         ctrl_label    (s,0,W(""),0);
         for(j=0;j<8;j++)
-          ctrl_clrbutton(s,j+1,0,_W(sn[8+j]),ansicolour_handler,&c[8+j]);
+          ctrl_clrbutton(s,j+1,_W(sn[8+j]),_W(sn[8+j]),ansicolour_handler,&c[8+j]);
       }
       when OPF_CLR:{
         ctrl_pushbutton(s,ic,WCMT,0,dlg_stdcolour_handler,pv);
       }
       when OPF_CLRFG:{
-        //TODO
-      }
-      when OPF_CLRS:{
-        //TODO
+        ctrl_pushbutton(s,ic,WCMT,0,dlg_stdcolour_handler,pv);
       }
       when OPF_INT  :{
-        ctrl_editbox(s,ic,WCMT,0,nnc,dlg_stdintbox_handler,pv);
+        ctrl_inteditbox(s,ic,WCMT,0,nnc,dlg_stdintbox_handler,pv,co->i.v0,co->i.v1);
       }
       when OPF_WSIZE:{
-        ctrl_pushbutton( s,4, _W("C&urrent size"),0, current_size_handler, pv);
+        ctrl_pushbutton( s,ic, _W("C&urrent size"),0, current_size_handler, pv);
       }
       when OPF_STR  :{
         ctrl_editbox(s,ic,WCMT,0,nnc,dlg_stdstringbox_handler,pv);
       }
-      when OPF_THEME:{
-        ctrl_columns(s, 2, 70,30);
-        theme = ctrl_combobox(s,0,WCMT,0,70,theme_handler,pv);
-        store_button = ctrl_pushbutton(s,1,_W("T&heme Save"),0,theme_saver,0) ;
+      when OPF_WSTR  :{
+        ctrl_editbox(s,ic,WCMT,0,nnc,dlg_stdwstringbox_handler,pv);
       }
       when OPF_TRANS:{
         transparency_selbox = ctrl_radiobuttonsa(s,ic,WCMT,0,transparency_selhandler,(int*)pv,opt_vals[co->type&OPT_TYPE_MASK]);
       }
       when OPF_FONT :{
-        ctrl_fontsel(s,ic,null,0,dlg_stdfontsel_handler,&new_cfg.font);
+        ctrl_fontsel(s,-1,WCMT,0,dlg_stdfontsel_handler,pv);
+      }
+      when OPF_BACKF:{
+        bg_file*bf=(bg_file*)pv;
+        ctrl_filesel(s,-1,WCMT,0,backgfsel_handler,&bf->fn);
+        ctrl_radiobuttons( s,-1, _W(""),0, 2,
+                           backgfsel_handler, &bf->type,
+                           _W("none"), 0,// ˜
+                           _W("Scale image to term size"), '_',//_
+                           _W("Scale term to image ration"), '%',//%
+                           _W("use Image as titled texture"), '*',//*
+                           _W("Scale image to term size,keep ratio,then titles"), '+',//+
+                           _W("Use desktop background"), '=',//=
+                           null
+                         );
+        ctrl_inteditbox(s,-1,_W("alpha"),0,80,backgfsel_handler,&bf->alpha,0,255);
+      }
+      when OPF_THEME:{
+        ctrl_columns(s, 2, 70,30);
+        ctrl_combobox(s,0,WCMT,0,70,theme_handler,pv);
+        store_button = ctrl_pushbutton(s,1,_W("T&heme Save"),0,theme_saver,0) ;
       }
       when OPF_LCL  :{
-        locale_box = ctrl_combobox(s,ic,WCMT,0,nnc,locale_handler,0);
+        locale_box = ctrl_combobox(s,ic,WCMT,0,nnc,locale_handler,pv);
       }
       when OPF_CHSET:{
-        charset_box = ctrl_combobox(s,ic,WCMT,0,nnc,charset_handler,0);
+        charset_box = ctrl_combobox(s,ic,WCMT,0,nnc,charset_handler,pv);
+      }
+      when OPF_CURS:{
+        ctrl_combobox(s,ic,WCMT,0,nnc,cursor_handler,pv);
       }
       when OPF_TERM :{
-        ctrl_combobox(s,ic,WCMT,0,nnc,term_handler,0);
+        ctrl_combobox(s,ic,WCMT,0,nnc,term_handler,pv);
       }
       when OPF_BELL :{
         ctrl_columns(s, 2, 73, 27);
         ctrl_combobox( s,0, null,0, 100, bell_handler, pv);
-        ctrl_pushbutton( s,1, _W("► &Play"),0, bell_tester, 0);
+        ctrl_pushbutton( s,1, _W("► &Play"),0, bell_tester, pv);
       }
       when OPF_BELLF:{
-        //ctrl_columns(s, 2, 100, 0);
         ctrl_combobox(s,ic,WCMT,0,nnc,bellfile_handler,pv);
       }
       when OPF_PRINT:{
-        ctrl_combobox( s,ic, WCMT,0, nnc, printer_handler, 0);
+        ctrl_combobox( s,ic, WCMT,0, nnc, printer_handler, pv);
       }
     }
   }

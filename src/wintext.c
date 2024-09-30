@@ -1881,14 +1881,8 @@ load_background_image_brush(HDC dc, wstring fn)
 
 #ifdef scale_to_aspect_ratio_asynchronously
       // keep aspect ratio of background image if requested
-      static wchar * prevbg = 0;
-      bool isnewbg = !prevbg || wcscmp(cfg.background, prevbg);
-      printf("isnewbg %d <%ls> <%ls>\n", isnewbg, cfg.background, prevbg);
-      if (ratio && isnewbg && abs((int)bw * h - (int)bh * w) > 5) {
-        if (prevbg)
-          delete(prevbg);
-        prevbg = wcsdup(cfg.background);
-
+      if (ratio && cfg.backgfile.update&& abs((int)bw * h - (int)bh * w) > 5) {
+        cfg.backgfile.update=0;
         int xh, xw;
         if (bw * h < bh * w) {
           xh = h;
@@ -2109,82 +2103,69 @@ get_bg_filename(void)
   tiled = false;
   ratio = false;
   wallp = false;
+  if(cfg.backgfile.type==0)return NULL;
   static wchar * wallpfn = 0;
 
-  wchar * bgfn = (wchar *)cfg.background;
-  if (*bgfn == '*') {
-    tiled = true;
-    bgfn++;
-  }
-  else if (*bgfn == '%') {
-    ratio = true;
-    bgfn++;
-  }
-  else if (*bgfn == '_') {
-    bgfn++;
-  }
+  wchar * bgfn = (wchar *)cfg.backgfile.fn;
+  switch(cfg.backgfile.type){
+    when '_':             ;//_,Scale image to term size, 
+    when '%': ratio = true;//%,Scale term to image ration, 
+    when '*': tiled = true;//*,use Image as titled texture, 
+    when '+': ;//+,Scale image to term size,keep ratio,then titles, 
+    when '=':{//= Use desktop background
 #if CYGWIN_VERSION_API_MINOR >= 74
-  else if (*bgfn == '=') {
-    wallp = true;
+      wallp = true;
+      if (!wallpfn)
+        wallpfn = newn(wchar, MAX_PATH + 1);
 
-    if (!wallpfn)
-      wallpfn = newn(wchar, MAX_PATH + 1);
-
-    void readregstr(HKEY key, wstring attribute, wchar * val, DWORD len) {
-      DWORD type;
-      int err = RegQueryValueExW(key, attribute, 0, &type, (void *)val, &len);
-      if (err ||
+      void readregstr(HKEY key, wstring attribute, wchar * val, DWORD len) {
+        DWORD type;
+        int err = RegQueryValueExW(key, attribute, 0, &type, (void *)val, &len);
+        if (err ||
           !(type == REG_SZ || type == REG_EXPAND_SZ || type == REG_MULTI_SZ)
-         )
-        *val = 0;
-    }
-
-    HKEY wpk = 0;
-    RegOpenKeyA(HKEY_CURRENT_USER, "Control Panel\\Desktop", &wpk);
-    if (wpk) {
-      readregstr(wpk, W("Wallpaper"), wallpfn, MAX_PATH);
-      wchar regval[22];
-      readregstr(wpk, W("TileWallpaper"), regval, lengthof(regval));
-      tiled = 0 == wcscmp(regval, W("1"));
-      readregstr(wpk, W("WallpaperStyle"), regval, lengthof(regval));
-      wallp_style = wcstol(regval, 0, 0);
-      //printf("wallpaper <%ls> tiled %d style %d\n", wallpfn, tiled, wallp_style);
-
-      if (tiled && !wallp_style) {
-        // can be used as brush directly
+          )
+          *val = 0;
       }
-      else {
-        // need to scale wallpaper later, when loading;
-        // not implemented, invalidate
-        *wallpfn = 0;
-        // possibly, according to docs, but apparently ignored, 
-        // also determine origin according to
-        // readregstr(wpk, W("WallpaperOriginX"), ...)
-        // readregstr(wpk, W("WallpaperOriginY"), ...)
+
+      HKEY wpk = 0;
+      RegOpenKeyA(HKEY_CURRENT_USER, "Control Panel\\Desktop", &wpk);
+      if (wpk) {
+        readregstr(wpk, W("Wallpaper"), wallpfn, MAX_PATH);
+        wchar regval[22];
+        readregstr(wpk, W("TileWallpaper"), regval, lengthof(regval));
+        tiled = 0 == wcscmp(regval, W("1"));
+        readregstr(wpk, W("WallpaperStyle"), regval, lengthof(regval));
+        wallp_style = wcstol(regval, 0, 0);
+        //printf("wallpaper <%ls> tiled %d style %d\n", wallpfn, tiled, wallp_style);
+
+        if (tiled && !wallp_style) {
+          // can be used as brush directly
+        }
+        else {
+          // need to scale wallpaper later, when loading;
+          // not implemented, invalidate
+          *wallpfn = 0;
+          // possibly, according to docs, but apparently ignored, 
+          // also determine origin according to
+          // readregstr(wpk, W("WallpaperOriginX"), ...)
+          // readregstr(wpk, W("WallpaperOriginY"), ...)
+        }
+        RegCloseKey(wpk);
       }
-      RegCloseKey(wpk);
-    }
-  }
 #else
-  (void)wallp_style;
+      (void)wallp_style;
 #endif
-
-  char * bf = cs__wcstombs(bgfn);
-  // try to extract an alpha value from file spec
-  char * salpha = strrchr(bf, ',');
-  if (salpha) {
-    *salpha = 0;
-    salpha++;
-    if (sscanf(salpha, "%u%c", &alpha, &(char){0}) != 1)
-      alpha = -1;
+    }
   }
-
+  alpha=cfg.backgfile.alpha;
+  char * bf = cs__wcstombs(cfg.backgfile.fn);
+  // try to extract an alpha value from file spec
   if (wallp)
     bgfn = wcsdup(wallpfn);
   else {
     // path transformations
     // for dynamic changes (OSC 11) they are already handled 
-    // before setting cfg.background in termout.c,
+    // before setting cfg.backgfile in termout.c,
     // but for static configuration (option Background) they 
     // need to be applied here as well
     if (0 == strncmp("~/", bf, 2)) {
@@ -2212,12 +2193,11 @@ get_bg_filename(void)
       bf = dewbf;
     }
 #endif
-
     bgfn = path_posix_to_win_w(bf);
   }
 
 #ifdef debug_gdiplus
-  printf("loading brush <%ls> <%s> <%ls>\n", cfg.background, bf, bgfn);
+  printf("loading brush <%ls> <%s> <%ls>\n", cfg.backgfile.fn, bf, bgfn);
 #endif
   delete(bf);
   return bgfn;
@@ -2250,6 +2230,7 @@ load_background_brush(HDC dc)
 
   wchar * bgfn = get_bg_filename();  // also set tiled and alpha
 
+  if(!bgfn )return;
   HBITMAP
   load_background_bitmap(wstring fn)
   {
@@ -2298,8 +2279,6 @@ load_background_brush(HDC dc)
     // this is now detected in win_paint by checking the brushes
     //else if (!bgbrush_bmp)
 #endif
-    //  // trigger proper win_paint behaviour
-    //  wstrset(&cfg.background, W(""));  // not the right approach (zooming)
   }
 #ifdef debug_gdiplus
   printf("loaded brush <%ls>: GDI %d GDI+ %d (tiled %d)\n", bgfn, !!bgbrush_bmp, !!bgbrush_img, tiled);
@@ -2334,8 +2313,7 @@ void
 scale_to_image_ratio()
 {
 #if CYGWIN_VERSION_API_MINOR >= 74
-  if (*cfg.background != '%')
-    return;
+  if (cfg.backgfile.type!= '%') return;
   wchar * bgfn = get_bg_filename();
 #ifdef debug_aspect_ratio
   printf("scale_to_image_ratio <%ls> ratio %d\n", bgfn, ratio);
@@ -2522,7 +2500,7 @@ text_out_start(HDC hdc, LPCWSTR psz, int cch, int *dxs)
     // to justify to monospace cell widths;
     // SSA_LINK is needed for Hangul and default-size CJK
     SSA_GLYPHS | SSA_FALLBACK | SSA_LINK, MAXLONG, 
-    cfg.ligatures > 1 ? &sctrl_lig : 0, 
+    cfg.ligatures  ? &sctrl_lig : 0, 
     NULL, dxs, NULL, NULL, &ssa);
   if (!SUCCEEDED(hr) && hr != USP_E_SCRIPT_NOT_IN_FONT)
     use_uniscribe = false;
@@ -3342,7 +3320,7 @@ win_text(int tx, int ty,wchar *text, int len, cattr attr, cattr *textattr, ushor
   }
 
  /* Graphic background: picture or texture */
-  if (*cfg.background && default_bg) {
+  if (cfg.backgfile.type&& default_bg) {
     RECT bgbox = box0;
 
     // extend into padding area
@@ -3673,7 +3651,7 @@ draw:;
 
  /* Now, really draw the text */
   // handle invisible and blinking attributes on image background
-  if (fg == bg && default_bg && *cfg.background)
+  if (fg == bg && default_bg && cfg.backgfile.type)
     goto skip_drawing;
 
   text_out_start(dc, text, len, dxs);
@@ -3737,7 +3715,7 @@ draw:;
       so it gets printed to the window repeatedly, which effectively 
       makes it visible from the first retry.
      */
-    if (!tx && !ty && *cfg.background && !default_bg)
+    if (!tx && !ty && cfg.backgfile.type && !default_bg)
       term_invalidate(0, 0, 0, 0);
   }
 

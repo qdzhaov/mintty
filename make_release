@@ -8,23 +8,24 @@ vcp(){
   cp $1 $reldir/mintty/$2/$3
 }
 set -v
+rm -f $reldir/mintty/share/man/*/*.gz
 vcp cygwin/minttyrc               etc
 vcp bin/mintty.exe                bin
 vcp tools/mintheme                bin
-vcp LICENSE                       share/doc/mintty
-vcp LICENSE.GPL                   share/doc/mintty 
-vcp LICENSE.Oxygen                share/doc/mintty
-vcp LICENSE.PuTTY                 share/doc/mintty
-vcp LICENSE.bundling              share/doc/mintty
-vcp cygwin/README                 share/doc/mintty
-vcp cygwin/setup.hint             share/doc/mintty
-vcp docs/mintty.1                 share/man/man1
-vcp tools/getemojis               share/mintty/emojis
-vcp icon/\*.ico                   share/mintty/icon
-vcp lang/\*.po                    share/mintty/lang
-vcp sounds/\*.wav                 share/mintty/sounds
-vcp themes/\*                     share/mintty/themes
-gzip -rf $reldir/mintty/share/man
+vcp LICENSE                       usr/share/doc/mintty
+vcp LICENSE.GPL                   usr/share/doc/mintty 
+vcp LICENSE.Oxygen                usr/share/doc/mintty
+vcp LICENSE.PuTTY                 usr/share/doc/mintty
+vcp LICENSE.bundling              usr/share/doc/mintty
+vcp cygwin/README                 usr/share/doc/mintty
+vcp cygwin/setup.hint             usr/share/doc/mintty
+vcp docs/mintty.1                 usr/share/man/man1
+vcp tools/getemojis               usr/share/mintty/emojis
+vcp icon/\*.ico                   usr/share/mintty/icon
+vcp lang/\*.po                    usr/share/mintty/lang
+vcp sounds/\*.wav                 usr/share/mintty/sounds
+vcp themes/\*                     usr/share/mintty/themes
+gzip -r $reldir/mintty/share/man
 strip $reldir/mintty/bin/mintty.exe
 cd $reldir
 rm -f mintty-$VER.zip

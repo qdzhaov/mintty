@@ -4,7 +4,7 @@
 // Licensed under the terms of the GNU General Public License v3 or later.
 
 #include "termpriv.h"
-#include "win.h"  // cfg.bidi
+#include "win.h"  
 
 
 #define newn_1(poi, type, count)	{poi = newn(type, count + 1); poi++;}

@@ -75,7 +75,6 @@ else
 BINDIR = $(BINFOLDER)/$(platform)
 NAME := mintty
 endif
-$(info make for $(TARGET) $(platform) )
 CPPFLAGS := -DTARGET=$(TARGET)
 ifdef VERSION_SUFFIX
 CPPFLAGS += -DVERSION_SUFFIX="$(VERSION_SUFFIX)"
@@ -101,6 +100,8 @@ CPPFLAGS +=$(DDBG)
 #############################################################################
 # compilation parameters
 
+t_srcs := $(wildcard *.t)
+h_srcs := $(wildcard *.h)
 c_srcs := $(wildcard *.c)
 rc_srcs := $(wildcard *.rc)
 objs := $(c_srcs:.c=.o) $(rc_srcs:.rc=.o)
@@ -113,7 +114,7 @@ ifeq ($(platform), mingw)
 	CFLAGS += -DMINGW
 	MWLIB =  -lwsock32
 endif
-$(info make for $(CFLAGS)  )
+$(info make for $(TARGET) $(platform) $(CFLAGS))
 ifneq ($(platform), msys)
   # ensure avoidance of trampolines (a gcc mechanism to implement 
   # some nested functions) as they cause some security software to choke
@@ -195,11 +196,13 @@ $(BINDIR)/%.o: %.rc %.h %.mft
 
 gitversion := $(shell ./mkvertag "$(srcversion)")
 
-appinfo.t:	stamp
+#appinfo.t:	stamp
 
-stamp:
-	echo "#define VERSION_STAMP \"$(gitversion)\"" > appinfo.n
-	cmp appinfo.n appinfo.t && rm -f appinfo.n || /bin/mv appinfo.n appinfo.t
+stamp:cdef.n appinfo.t
+
+appinfo.t:$(c_srcs) $(h_srcs) $(rc_srcs)
+	@echo "#define VERSION_STAMP \"$(gitversion)\"" > appinfo.n
+	@cmp appinfo.n appinfo.t && rm -f appinfo.n || /bin/mv appinfo.n appinfo.t
 
 exe := $(NAME).exe
 exe: $(exe)
@@ -276,6 +279,9 @@ WIDTH-A:	# UnicodeData.txt Blocks.txt EastAsianWidth.txt
 
 wide.t:	# UnicodeData.txt Blocks.txt EastAsianWidth.txt
 	sh ./mkwide
+cdef.n: configdef.h
+	gcc -DCFGDEFT=DEFVAR -P -E configdef.h|sed '/^ *$$/d'>cdef.n
+	cmp cdef.t cdef.n || /bin/cp cdef.n cdef.t
 
 scripts.t:	# Scripts.txt
 	sh ./mkscripts

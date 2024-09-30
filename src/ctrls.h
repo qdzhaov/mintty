@@ -3,8 +3,7 @@
 
 #include "config.h"
 #define MAXCOLS 20
-/*
- * This is the big union which defines a single control, of any type.
+/* This is the big union which defines a single control, of any type.
  * 
  * General principles:
  *  - _All_ pointers in this structure are expected to point to
@@ -17,19 +16,20 @@
 
 enum {
   CTRL_EDITBOX,    /* label plus edit box */
+  CTRL_INTEDITBOX, /* label plus edit box */
   CTRL_RADIO,      /* label plus radio buttons */
   CTRL_CHECKBOX,   /* checkbox (contains own label) */
   CTRL_BUTTON,     /* simple push button (no label) */
   CTRL_LISTBOX,    /* label plus list box */
   CTRL_COLUMNS,    /* divide window into columns */
   CTRL_FONTSELECT, /* label plus font selector */
+  CTRL_FILESELECT,
   CTRL_LABEL,      /* static text/label only */
   CTRL_CLRBUTTON,  /* color push button (no label) */
   CTRL_HOTKEY,     /* hotkey edit*/
 };
 
-/*
- * Each control has an `int' field specifying which columns it
+/* Each control has an `int' field specifying which columns it
  * occupies in a multi-column part of the dialog box. These macros
  * pack and unpack that field.
  * 
@@ -40,8 +40,7 @@ enum {
 #define COLUMN_START(field) ( (field) & 0xFFFF )
 #define COLUMN_SPAN(field) ( (((field) >> 16) & 0xFFFF) + 1 )
 
-/*
- * The number of event types is being deliberately kept small, on
+/* The number of event types is being deliberately kept small, on
  * the grounds that not all platforms might be able to report a
  * large number of subtle events. We have:
  *  - the special REFRESH event, called when a control's value needs setting
@@ -77,8 +76,7 @@ typedef void (* handler_fn)(control *, int event);
 
 struct control {
   int type;
-  /*
-   * Every control except CTRL_COLUMNS has _some_ sort of label.
+  /* Every control except CTRL_COLUMNS has _some_ sort of label.
    * By putting it in the `generic' union as well as everywhere else,
    * we avoid having to have an irritating switch statement when we
    * go through and deallocate all the memory in a config-box structure.
@@ -90,13 +88,11 @@ struct control {
    */
   const wchar * label;
   const wchar * tip;
-  /*
-   * Indicate which column(s) this control occupies. This can be unpacked
+  /* Indicate which column(s) this control occupies. This can be unpacked
    * into starting column and column span by the COLUMN macros above.
    */
   int column;
-  /*
-   * Most controls need to provide a function which gets called
+  /* Most controls need to provide a function which gets called
    * when that control's setting is changed,
    * or when the control's setting needs initialising.
    * 
@@ -108,41 +104,37 @@ struct control {
    * to read and write the actual control state.
    */
   handler_fn handler;
-  /*
-   * Identify a drag-and-drop target control by its widget ("Window") 
+  /* Identify a drag-and-drop target control by its widget ("Window") 
    * as due to the obscure wisdom of Windows design, drag-and-drop events 
    * are handled completely differently from other events and particularly 
    * do not provide a "Control identifier".
    */
   void * widget;
-  /*
-   * Almost all of the above functions will find it useful to
+  /* Almost all of the above functions will find it useful to
    * be able to store a piece of `void *' data.
    */
   void * context;
   struct _controlset*parent;
   int ind;
   union {
-    struct {
-      /*
-       * Percentage of the dialog-box width used by the edit box.
+    struct {//20
+      /* Percentage of the dialog-box width used by the edit box.
        * If this is set to 100, the label is on its own line;
        * otherwise the label is on the same line as the box itself.
        */
       int percentwidth;
       int password;       /* details of input are hidden */
-      /*
-       * A special case of the edit box is the combo box, which has
+      /* A special case of the edit box is the combo box, which has
        * a drop-down list built in. (Note that a _non_-editable
        * drop-down list is done as a special case of a list box.)
        */
       int has_list;
+      /* for int val*/
+      int imin,imax;
     } editbox;
-    struct {
-      /*
-       * There are separate fields for `ncolumns' and `nbuttons'
+    struct { //24
+      /* There are separate fields for `ncolumns' and `nbuttons'
        * for several reasons.
-       * 
        * Firstly, we sometimes want the last of a set of buttons
        * to have a longer label than the rest; we achieve this by
        * setting `ncolumns' higher than `nbuttons', and the
@@ -155,7 +147,6 @@ struct control {
        * but actually it's reasonably common for the sort of
        * three-way control we get a lot of:
        * `yes' versus `no' versus `some more complex way to decide'.
-       * 
        * Secondly, setting `nbuttons' higher than `ncolumns' lets us
        * have more than one line of radio buttons for a single setting.
        * A very important special case of this is setting `ncolumns' to 1,
@@ -163,46 +154,39 @@ struct control {
        */
       int ncolumns;
       int nbuttons;
-      /*
-       * This points to a dynamically allocated array of `char *' pointers,
+      /* This points to a dynamically allocated array of `char *' pointers,
        * each of which points to a dynamically allocated string.
        */
       wstring * labels;     /* `nbuttons' button labels */
-      /*
-       * This points to a dynamically allocated array,
+      /* This points to a dynamically allocated array,
        * with the value corresponding to each button.
        */
       int * vals;       /* `nbuttons' entries; may be null */
     } radio;
-    struct {
-      /*
-       * At least Windows has the concept of a `default push button',
+    struct {//8
+      /* At least Windows has the concept of a `default push button',
        * which gets implicitly pressed when you hit.
        * Return even if it doesn't have the input focus.
        */
       int isdefault;
-      /*
-       * Also, the reverse of this: a default cancel-type button,
+      /* Also, the reverse of this: a default cancel-type button,
        * which is implicitly pressed when you hit Escape.
        */
       int iscancel;
     } button;
-    struct {
-      /*
-       * Height of the list box, in approximate number of lines.
+    struct {//20
+      /* Height of the list box, in approximate number of lines.
        * If this is zero, the list is a drop-down list.
        */
       int height;       /* height in lines */
-      /*
-       * Percentage of the dialog-box width used by the list box.
+      /* Percentage of the dialog-box width used by the list box.
        * If this is set to 100, the label is on its own line;
        * otherwise the label is on the same line as the box itself.
        * Setting this to anything other than 100 is not guaranteed
        * to work on a _non_-drop-down list, so don't try it!
        */
       int percentwidth;
-      /*
-       * Some list boxes contain strings that contain tab characters.
+      /* Some list boxes contain strings that contain tab characters.
        * If `ncols' is greater than 0, then `percentages' is expected
        * to be non-zero and to contain the respective widths of
        * `ncols' columns, which together will exactly fit the width 
@@ -211,13 +195,11 @@ struct control {
       int ncols;  /* number of columns */
       int * percentages;   /* % width of each column */
     } listbox;
-
-    struct {
+    struct {//12
       /* In this variant, `label' MUST be null. */
       int ncols;                /* number of columns */
       int * percentages;        /* % width of each column */
-      /*
-       * Every time this control type appears, exactly one of `ncols'
+      /* Every time this control type appears, exactly one of `ncols'
        * and the previous number of columns MUST be one.
        * Attempting to allow a seamless transition from a four-column
        * to a five-column layout, for example, would be way more
@@ -236,8 +218,7 @@ struct control {
 
 #undef STANDARD_PREFIX
 
-/*
- * `controlset' is a container holding an array of `control' structures,
+/* `controlset' is a container holding an array of `control' structures,
  * together with a panel name and a title for the whole set.
  * In Windows and any similar-looking GUI, each `controlset'
  * in the config will be a container box within a panel.
@@ -255,8 +236,7 @@ typedef struct {
   string name;
   int val;
 } opt_val;
-/*
- * This is the container structure which holds a complete set of
+/* This is the container structure which holds a complete set of
  * controls.
  */
 typedef struct {
@@ -271,9 +251,8 @@ typedef struct {
 extern controlbox * ctrl_new_box(void);
 extern void ctrl_free_box(controlbox *);
 
-/*
- * Standard functions used for populating a controlbox structure.
- */
+/* Standard functions used for populating a controlbox structure.
+*/
 
 /* Create a controlset. */
 extern controlset * ctrl_new_set(controlbox *, const wchar * path, 
@@ -282,8 +261,7 @@ extern void ctrl_free_set(controlset *);
 
 extern void ctrl_free(control *);
 
-/*
- * This function works like `malloc', but the memory it returns
+/* This function works like `malloc', but the memory it returns
  * will be automatically freed when the controlbox is freed.
  * Note that a controlbox is a dialog-box _template_, not an instance,
  * and so data allocated through this function is better not used
@@ -292,8 +270,7 @@ extern void ctrl_free(control *);
  */
 extern void * ctrl_alloc(controlbox *, size_t size);
 
-/*
- * Individual routines to create `control' structures in a controlset.
+/* Individual routines to create `control' structures in a controlset.
  * 
  * Most of these routines allow the most common fields to be set directly,
  * and put default values in the rest. Each one returns a pointer
@@ -305,49 +282,52 @@ extern control * ctrl_columns(controlset *, int ncolumns, ...);
 extern control * ctrl_columnsa(controlset *s, int ncolumns,int *cols);
 
 extern control * ctrl_label(controlset *, int col, const wchar * label,const wchar * tip);
+extern control * ctrl_inteditbox(controlset *, int col, const wchar * label,const wchar * tip, int percentage,
+                              handler_fn handler, void * context,int imin,int imax);
 extern control * ctrl_editbox(controlset *, int col, const wchar * label,const wchar * tip, int percentage,
                               handler_fn handler, void * context);
 extern control * ctrl_combobox(controlset *, int col, const wchar * label,const wchar * tip, int percentage,
                                handler_fn handler, void * context);
 extern control * ctrl_listbox(controlset *, int col, const wchar * label,const wchar * tip, int lines, int percentage,
                               handler_fn handler, void * context);
-/*
- * `ncolumns' is followed by (alternately) radio button titles and integers,
+/* `ncolumns' is followed by (alternately) radio button titles and integers,
  * until a null in place of a title string is seen.
  */
 extern control * ctrl_radiobuttonsa(controlset *s, int col, const wchar * label,const wchar * tip, 
-                  handler_fn handler,int*context, const opt_val *pov);
+                                    handler_fn handler,int*context, const opt_val *pov);
 extern control * ctrl_radiobuttons(controlset *, int col, const wchar * label,const wchar * tip, int ncolumns,
                                    handler_fn handler, int * context, ...);
 
 extern control * ctrl_pushbutton(controlset *, int col, const wchar * label,const wchar * tip,
                                  handler_fn handler, void * context);
 extern control * ctrl_clrbutton(controlset *, int col, const wchar * label,const wchar * tip,
-                                 handler_fn handler, void * context);
+                                handler_fn handler, void * context);
 extern control * ctrl_droplist(controlset *, int col, const wchar * label,const wchar * tip, int percentage,
                                handler_fn handler, void * context);
 extern control * ctrl_fontsel(controlset *, int col, const wchar * label,const wchar * tip,
                               handler_fn handler, void * context);
+extern control * ctrl_filesel(controlset *s, int col, const wchar * label,const wchar * tip,
+             handler_fn handler, void *context);
 extern control * ctrl_checkbox(controlset *, int col, const wchar * label,const wchar * tip,
                                handler_fn handler, void * context);
 extern control * ctrl_hotkey(controlset *, int col, const wchar * label,const wchar * tip,
-                               handler_fn handler, void * context);
+                             handler_fn handler, void * context);
 
-/*
- * Standard handler routines to cover most of the common cases in
+/* Standard handler routines to cover most of the common cases in
  * the config box.
  */
 
 extern void dlg_stdcheckbox_handler(control *, int event);
 extern void dlg_stdstringbox_handler(control *, int event);
+extern void dlg_stdwstringbox_handler(control *, int event);
 extern void dlg_stwdstringbox_handler(control *, int event);
 extern void dlg_stdintbox_handler(control *, int event);
 extern void dlg_stdradiobutton_handler(control *, int event);
 extern void dlg_stdfontsel_handler(control *, int event);
+extern void dlg_stdfilesel_handler(control *ctrl, int event);
 extern void dlg_stdcolour_handler(control *, int event);
 
-/*
- * Routines the platform-independent dialog code can call to read
+/* Routines the platform-independent dialog code can call to read
  * and write the values of controls.
  */
 extern void dlg_radiobutton_set(control *, int whichbutton);
@@ -367,18 +347,15 @@ extern void dlg_fontsel_set(control *, font_spec *);
 extern void dlg_fontsel_get(control *, font_spec *);
 /* Special for font sample */
 extern void dlg_text_paint(control *ctrl);
-/*
- * Set input focus into a particular control.
- */
+/* Set input focus into a particular control.
+*/
 extern void dlg_set_focus(control *);
-/*
- * This function signals to the front end that the dialog's
+/* This function signals to the front end that the dialog's
  * processing is completed.
  */
 extern void dlg_end(void);
 
-/*
- * Routines to manage a (per-platform) colour selector.
+/* Routines to manage a (per-platform) colour selector.
  * dlg_coloursel_start() is called in an event handler, and
  * schedules the running of a colour selector after the event
  * handler returns. The colour selector will send EVENT_CALLBACK to
@@ -393,8 +370,7 @@ extern void dlg_end(void);
 extern void dlg_coloursel_start(colour);
 extern int dlg_coloursel_results(colour *);
 
-/*
- * This routine is used by the platform-independent code to
+/* This routine is used by the platform-independent code to
  * indicate that the value of a particular control is likely to
  * have changed. It triggers a call of the handler for that control
  * with `event' set to EVENT_REFRESH.
@@ -403,13 +379,11 @@ extern int dlg_coloursel_results(colour *);
  * (for loading or saving entire sets of settings).
  */
 extern void dlg_refresh(control *);
+extern void dlg_refreshp(control *);
 
-/*
- * Standard helper functions for reading a controlbox structure.
- */
+/* Standard helper functions for reading a controlbox structure.  */
 
-/*
- * Find the index of next controlset in a controlbox for a given
+/* Find the index of next controlset in a controlbox for a given
  * path, or -1 if no such controlset exists. If -1 is passed as
  * input, finds the first. Intended usage is something like
  * 

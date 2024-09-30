@@ -706,8 +706,8 @@ win_copy_as(const wchar *data, cattr *cattrs, int len, char what)
       MultiByteToWideChar(CP_ACP, MB_ERR_INVALID_CHARS,
                           (char[]){i}, 1, unitab + i, 1);
 
-    wstring cfgfont = *cfg.copy_as_rtf_font ? cfg.copy_as_rtf_font : cfg.font.name;
-    int cfgsize = cfg.copy_as_rtf_font_size ? cfg.copy_as_rtf_font_size : cfg.font.size;
+    wstring cfgfont = *cfg.rtf_font.name ? cfg.rtf_font.name : cfg.font.name;
+    int cfgsize = cfg.rtf_font.size ? cfg.rtf_font.size : cfg.font.size;
     char * rtffontname = newn(char, wcslen(cfgfont) * 9 + 1);
     char * rtffnpoi = rtffontname;
     for (uint i = 0; i < wcslen(cfgfont); i++)

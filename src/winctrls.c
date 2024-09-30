@@ -18,12 +18,11 @@
 #include <commdlg.h>
 #include <commctrl.h>  // Subclass
 
+static HFONT  guifnt = 0;
 
 /*
  * winctrls.c: routines to self-manage the controls in a dialog box.
  */
-
-int win_dialog_sc(int iv);
 #define SC(a) win_dialog_sc(a)
 #define GAPBETWEEN    SC(3)
 #define GAPBETWEENV   SC(5)
@@ -32,7 +31,7 @@ int win_dialog_sc(int iv);
 #define GAPYBOX       SC(2)
 
 #define STATICHEIGHT   SC(12)
-#define TITLEHEIGHT    SC(15)
+#define TITLEHEIGHT    SC(8)
 #define CHECKBOXHEIGHT SC(12)
 #define RADIOHEIGHT    SC(12)
 #define EDITHEIGHT     SC(15)
@@ -41,6 +40,7 @@ int win_dialog_sc(int iv);
 #define COMBOHEIGHT    SC(15)
 #define PUSHBTNHEIGHT  SC(18)
 #define PROGBARHEIGHT  SC(18)
+int win_dialog_sc(int iv);
 
 static HFONT _diafont = 0;
 static int diafontsize = 0;
@@ -48,9 +48,9 @@ static int diafontsize = 0;
 static void
 calc_diafontsize(void)
 {
-  cfg.options_fontsize = cfg.options_fontsize ?: DIALOG_FONTSIZE;
+  cfg.opt_font.size = cfg.opt_font.size ?: DIALOG_FONTSIZE;
 
-  int fontsize = - MulDiv(cfg.options_fontsize, dpi, 72);
+  int fontsize = - MulDiv(cfg.opt_font.size, dpi, 72);
   if (fontsize != diafontsize && _diafont) {
     DeleteObject(_diafont);
     _diafont = 0;
@@ -58,12 +58,33 @@ calc_diafontsize(void)
   diafontsize = fontsize;
 }
 
+WPARAM win_set_font(HWND hwnd){//set font for gui,user do not release it;
+  static int cfsize=0;
+  int font_height;
+  //int size = cfg.gui_font_size;
+  int size= cfg.opt_font.size ?: DIALOG_FONTSIZE;
+  // dup'ed from win_init_fonts()
+  HDC dc = GetDC(hwnd);
+  font_height = size > 0 ? MulDiv(size, GetDeviceCaps(dc, LOGPIXELSY), 72) : size;
+  ReleaseDC(hwnd, dc);
+  if(cfsize!=font_height ||!guifnt){
+    cfsize=font_height;
+    if(guifnt)DeleteObject(guifnt);
+    guifnt = CreateFontW(font_height, 0, 0, 0, cfg.font.weight, 
+                      false, false, false,
+                      DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+                      DEFAULT_QUALITY, FIXED_PITCH | FF_DONTCARE,
+                      cfg.font.name);
+  }
+  SendMessage(hwnd, WM_SETFONT, (WPARAM)guifnt, MAKELPARAM(1, 1));
+  return (WPARAM)guifnt;
+}
 int
 scale_dialog(int x)
 {
   calc_diafontsize();
 
-  return MulDiv(x, cfg.options_fontsize, DIALOG_FONTSIZE);
+  return MulDiv(x, cfg.opt_font.size, DIALOG_FONTSIZE);
   // scale by another * 1.2 for Comic Sans MS ...?
 }
 
@@ -72,13 +93,13 @@ diafont(void)
 {
   calc_diafontsize();
 
-  if (!_diafont && (*cfg.options_font || cfg.options_fontsize != DIALOG_FONTSIZE))
+  if (!_diafont && (*cfg.opt_font.name || cfg.opt_font.size != DIALOG_FONTSIZE))
     _diafont = CreateFontW(
                  diafontsize, 0, 0, 0,
                  400, false, false, false,
                  DEFAULT_CHARSET, OUT_DEFAULT_PRECIS,
                  CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, 0,
-                 *cfg.options_font ? cfg.options_font : W(DIALOG_FONT)
+                 *cfg.opt_font.name ? cfg.opt_font.name : W(DIALOG_FONT)
                );
   return (WPARAM)_diafont;
 }
@@ -169,12 +190,16 @@ doctl(control * ctrl,
 #endif
 
  /*
-  109G* We can pass in cp->wnd == null, to indicate a dry run
+  * We can pass in cp->wnd == null, to indicate a dry run
   * without creating any actual controls.
   */
   if (cp->wnd) {
     // avoid changing text with SendMessageW(ctl, WM_SETTEXT, ...) 
     // as this produces large text artefacts
+
+
+
+
     ctl =
         CreateWindowExW(exstyle, class, text, wstyle,
                         r.left, r.top, r.right, r.bottom,
@@ -325,6 +350,7 @@ radioline_common(control * ctrl,ctrlpos * cp, const wchar * text, int id, int lb
   int group;
   int i=0;
   int j;
+
   if (text&&(*text)) {
     r.left = GAPBETWEEN;
     r.top = cp->ypos;
@@ -461,6 +487,34 @@ staticbtn(control * ctrl,ctrlpos * cp, const wchar * stext, int sid, const wchar
   cp->ypos += height + GAPBETWEENV;
 }
 
+static void
+editboxbtn(control * ctrl,ctrlpos * cp, const wchar * stext, int sid, const wchar *btext, int bid)
+{
+  const int height =
+    (PUSHBTNHEIGHT > EDITHEIGHT ? PUSHBTNHEIGHT : EDITHEIGHT);
+  RECT r;
+  int lwid, rwid, rpos;
+
+  rpos = GAPBETWEEN + 7 * (cp->width + GAPBETWEEN) / 8;
+  lwid = rpos - 2 * GAPBETWEEN;
+  rwid = cp->width + GAPBETWEEN - rpos;
+
+  r.left = GAPBETWEEN;
+  r.top = cp->ypos + (height - EDITHEIGHT ) / 2 - 1;
+  r.right = lwid;
+  r.bottom = EDITHEIGHT ;
+  doctl(ctrl, cp, r, W("EDIT")  , WS_CHILD | WS_VISIBLE | WS_TABSTOP | ES_AUTOHSCROLL , WS_EX_CLIENTEDGE, stext, sid);
+
+  r.left = rpos;
+  r.top = cp->ypos + (height - PUSHBTNHEIGHT) / 2 - 1;
+  r.right = rwid;
+  r.bottom = PUSHBTNHEIGHT;
+  doctl(ctrl, cp, r, W("BUTTON"),
+        BS_NOTIFY | WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_PUSHBUTTON, 0,
+        btext, bid);
+
+  cp->ypos += height + GAPBETWEENV;
+}
 /*
  * A simple push button.
  */
@@ -474,8 +528,8 @@ button(control * ctrl, ctrlpos * cp, const wchar *btext, int bid, int bclr, int 
   r.right = cp->width;
   r.bottom = PUSHBTNHEIGHT;
 
- /* Q67655: the _dialog box_ must know which button is default
-  * as well as the button itself knowing */
+  /* Q67655: the _dialog box_ must know which button is default
+   * as well as the button itself knowing */
   if (defbtn && cp->wnd)
     SendMessage(cp->wnd, DM_SETDEFID, bid, 0);
 
@@ -496,8 +550,8 @@ clrbutton(control * ctrl, ctrlpos * cp, const wchar *btext, int bid, int bclr, i
   r.right = cp->width+GAPBETWEEN/2;
   r.bottom = STATICHEIGHT ;
 
- /* Q67655: the _dialog box_ must know which button is default
-  * as well as the button itself knowing */
+  /* Q67655: the _dialog box_ must know which button is default
+   * as well as the button itself knowing */
   if (defbtn && cp->wnd)
     SendMessage(cp->wnd, DM_SETDEFID, bid, 0);
 
@@ -747,7 +801,6 @@ new_winctrl(int base_id, void *data)
   c->data = data;
   return c;
 }
-
 void
 winctrl_layout(winctrls *wc, ctrlpos *cp, controlset *s, int *id)
 {
@@ -765,14 +818,14 @@ winctrl_layout(winctrls *wc, ctrlpos *cp, controlset *s, int *id)
   printf("winctrl_layout cols %d nctl %d titl %ls path %ls\n", s->ncolumns, s->ncontrols, s->boxtitle, s->pathname);
 #endif
   if (!s->ncolumns) {
-   /* Draw a title of an Options dialog panel. */
+    /* Draw a title of an Options dialog panel. */
     winctrl *c = new_winctrl(base_id, wcsdup(s->boxtitle));
     winctrl_add(wc, c);
     paneltitle(NULL,cp, base_id);
     base_id++;
   }
   else if (*s->pathname) {
-   /* Start a containing box. */
+    /* Start a containing box. */
     winctrl *c = new_winctrl(base_id, null);
     winctrl_add(wc, c);
     beginbox(cp, s->boxtitle, base_id);
@@ -780,24 +833,24 @@ winctrl_layout(winctrls *wc, ctrlpos *cp, controlset *s, int *id)
   }
 
 
- /* Initially we have just one column. */
+  /* Initially we have just one column. */
   ncols = 1;
   columns[0] = *cp;     /* structure copy */
 
- /* Loop over each control in the controlset. */
+  /* Loop over each control in the controlset. */
   for (int i = 0; i < s->ncontrols; i++) {
     control *ctrl = s->ctrls[i];
 
-   /*
-    * Generic processing that pertains to all control types.
-    * At the end of this if statement, we'll have produced
-    * `ctrl' (a pointer to the control we have to create, or
-    * think about creating, in this iteration of the loop),
-    * `pos' (a suitable ctrlpos with which to position it), and
-    * `c' (a winctrl structure to receive details of the dialog IDs).
-    * Or we'll have done a `continue', if it was CTRL_COLUMNS 
-    * and doesn't require any control creation at all.
-    */
+    /*
+     * Generic processing that pertains to all control types.
+     * At the end of this if statement, we'll have produced
+     * `ctrl' (a pointer to the control we have to create, or
+     * think about creating, in this iteration of the loop),
+     * `pos' (a suitable ctrlpos with which to position it), and
+     * `c' (a winctrl structure to receive details of the dialog IDs).
+     * Or we'll have done a `continue', if it was CTRL_COLUMNS 
+     * and doesn't require any control creation at all.
+     */
     if (ctrl->type == CTRL_COLUMNS) {
       //assert((ctrl->columns.ncols == 1) ^ (ncols == 1));
       if(ncols>1){
@@ -811,9 +864,9 @@ winctrl_layout(winctrls *wc, ctrlpos *cp, controlset *s, int *id)
         columns[0].ypos = maxy;
       }
       if (ctrl->columns.ncols > 1) {
-       /*
-        * We're splitting into multiple columns.
-        */
+        /*
+         * We're splitting into multiple columns.
+         */
         int lpercent, rpercent, lx, rx, i;
 
         ncols = ctrl->columns.ncols;
@@ -825,22 +878,21 @@ winctrl_layout(winctrls *wc, ctrlpos *cp, controlset *s, int *id)
         for (i = 0; i < ncols; i++) {
           rpercent = lpercent + ctrl->columns.percentages[i];
           lx =
-            columns[i].xoff + lpercent * (columns[i].width + GAPBETWEEN) / 100;
+              columns[i].xoff + lpercent * (columns[i].width + GAPBETWEEN) / 100;
           rx =
-            columns[i].xoff + rpercent * (columns[i].width + GAPBETWEEN) / 100;
+              columns[i].xoff + rpercent * (columns[i].width + GAPBETWEEN) / 100;
           columns[i].xoff = lx;
           columns[i].width = rx - lx - GAPBETWEEN;
           lpercent = rpercent;
         }
       }
       continue;
-    }
-    else {
-     /*
-      * If it wasn't one of those, it's a genuine control;
-      * so we'll have to compute a position for it now, by
-      * checking its column span.
-      */
+    } else {
+      /*
+       * If it wasn't one of those, it's a genuine control;
+       * so we'll have to compute a position for it now, by
+       * checking its column span.
+       */
       int col;
 
       colstart = COLUMN_START(ctrl->column);
@@ -848,26 +900,26 @@ winctrl_layout(winctrls *wc, ctrlpos *cp, controlset *s, int *id)
 
       pos = columns[colstart];  /* structure copy */
       pos.width =
-        columns[colstart + colspan - 1].width +
-        (columns[colstart + colspan - 1].xoff - columns[colstart].xoff);
+          columns[colstart + colspan - 1].width +
+          (columns[colstart + colspan - 1].xoff - columns[colstart].xoff);
 
       for (col = colstart; col < colstart + colspan; col++)
         if (pos.ypos < columns[col].ypos)
           pos.ypos = columns[col].ypos;
     }
 
-   /* Most controls don't need anything in c->data. */
+    /* Most controls don't need anything in c->data. */
     data = null;
 
-   /* Almost all controls start at base_id. */
+    /* Almost all controls start at base_id. */
     actual_base_id = base_id;
 
-   /*
-    * Now we're ready to actually create the control, by
-    * switching on its type.
-    */
+    /*
+     * Now we're ready to actually create the control, by
+     * switching on its type.
+     */
     switch (ctrl->type) {
-      when CTRL_EDITBOX: {
+      when CTRL_EDITBOX or CTRL_INTEDITBOX : {
         num_ids = 2;    /* static, edit */
         if (ctrl->editbox.percentwidth == 100) {
           if (ctrl->editbox.has_list)
@@ -883,7 +935,7 @@ winctrl_layout(winctrls *wc, ctrlpos *cp, controlset *s, int *id)
           }
           else {
             (ctrl->editbox.password ? staticpassedit : staticedit)
-              (ctrl,&pos, ctrl->label, base_id, base_id + 1, ctrl->editbox.percentwidth);
+                (ctrl,&pos, ctrl->label, base_id, base_id + 1, ctrl->editbox.percentwidth);
           }
         }
       }
@@ -922,7 +974,7 @@ winctrl_layout(winctrls *wc, ctrlpos *cp, controlset *s, int *id)
       when CTRL_LISTBOX: {
         num_ids = 2;
         if (ctrl->listbox.height == 0) {
-         /* Drop-down list. */
+          /* Drop-down list. */
           if (ctrl->listbox.percentwidth == 100)
             staticddlbig(ctrl,&pos, ctrl->label, base_id, base_id + 1);
           else
@@ -930,17 +982,17 @@ winctrl_layout(winctrls *wc, ctrlpos *cp, controlset *s, int *id)
                       ctrl->listbox.percentwidth);
         }
         else {
-         /* Ordinary list. */
+          /* Ordinary list. */
           listbox(ctrl, &pos, ctrl->label, base_id, base_id + 1, ctrl->listbox.height);
         }
         if (ctrl->listbox.ncols) {
-         /*
-          * This method of getting the box width is a bit of
-          * a hack; we'd do better to try to retrieve the
-          * actual width in dialog units from doctl() just
-          * before MapDialogRect. But that's going to be no
-          * fun, and this should be good enough accuracy.
-          */
+          /*
+           * This method of getting the box width is a bit of
+           * a hack; we'd do better to try to retrieve the
+           * actual width in dialog units from doctl() just
+           * before MapDialogRect. But that's going to be no
+           * fun, and this should be good enough accuracy.
+           */
           int width = cp->width * ctrl->listbox.percentwidth;
           int tabarray[ctrl->listbox.ncols - 1];
           int percent = 0;
@@ -953,12 +1005,14 @@ winctrl_layout(winctrls *wc, ctrlpos *cp, controlset *s, int *id)
         }
       }
       when CTRL_LABEL:
-        num_ids = 1;
-        staticlabel(ctrl,&pos, ctrl->label, base_id);
+          num_ids = 1;
+      staticlabel(ctrl,&pos, ctrl->label, base_id);
       when CTRL_FONTSELECT: {
         num_ids = 3;
         //__ Options - Text: font chooser activation button
-        staticbtn(ctrl,&pos, W(""), base_id + 1, _W("&Select..."), base_id + 2);
+        wchar buf[32];
+        swprintf(buf,32,W("%ls..."),ctrl->label);
+        staticbtn(ctrl,&pos, W(""), base_id + 1, buf, base_id + 2);
         data = new(font_spec);
 
         wchar * fontinfo = fontpropinfo();
@@ -968,15 +1022,19 @@ winctrl_layout(winctrls *wc, ctrlpos *cp, controlset *s, int *id)
           free(fontinfo);
         }
       }
+      when CTRL_FILESELECT: {
+        num_ids = 2;    /* static, edit */
+        editboxbtn(ctrl,&pos, *(wstring*)ctrl->context, base_id , ctrl->label, base_id + 1);
+      }
       otherwise:
-        assert(!"Can't happen");
-        num_ids = 0;    /* placate gcc */
+      assert(!"Can't happen");
+      num_ids = 0;    /* placate gcc */
     }
 
-   /*
-    * Create a `winctrl' for this control, and advance
-    * the dialog ID counter, if it's actually been created
-    */
+    /*
+     * Create a `winctrl' for this control, and advance
+     * the dialog ID counter, if it's actually been created
+     */
     if (pos.wnd) {
       winctrl *c = new(winctrl);
       c->next = null;
@@ -990,20 +1048,20 @@ winctrl_layout(winctrls *wc, ctrlpos *cp, controlset *s, int *id)
     }
 
     if (colstart >= 0) {
-     /*
-      * Update the ypos in all columns crossed by this control.
-      */
+      /*
+       * Update the ypos in all columns crossed by this control.
+       */
       int i;
       for (i = colstart; i < colstart + colspan; i++)
         columns[i].ypos = pos.ypos;
     }
   }
 
- /*
-  * We've now finished laying out the controls; so now update
-  * the ctrlpos and control ID that were passed in, terminate
-  * any containing box, and return.
-  */
+  /*
+   * We've now finished laying out the controls; so now update
+   * the ctrlpos and control ID that were passed in, terminate
+   * any containing box, and return.
+   */
   for (int i = 0; i < ncols; i++)
     if (cp->ypos < columns[i].ypos)
       cp->ypos = columns[i].ypos;
@@ -1638,9 +1696,9 @@ select_font(winctrl *c)
   font_spec fs = *(font_spec *) c->data;
   LOGFONTW lf;
   HDC dc = GetDC(wv.wnd);
- /* We could have the idea to consider `dpi` here, like for MulDiv in 
-  * win_init_fonts, but that's wrong.
-  */
+  /* We could have the idea to consider `dpi` here, like for MulDiv in 
+   * win_init_fonts, but that's wrong.
+   */
   lf.lfHeight = -MulDiv(fs.size, GetDeviceCaps(dc, LOGPIXELSY), 72);
   trace_fontsel(("Choose size (%d) %d -> lfHeight %ld\n", cfg.font.size, fs.size, (long int)lf.lfHeight));
   ReleaseDC(0, dc);
@@ -1706,6 +1764,31 @@ select_font(winctrl *c)
   }
 }
 
+static void
+select_file(winctrl *c){
+	control * ctrl=c->ctrl;
+	if(!ctrl)return;
+	wstring*val_p=ctrl->context;
+	OPENFILENAMEW ofn;
+	WCHAR szOpenFileName[MAX_PATH] = { 0 };
+  if(*val_p) wcscpy(szOpenFileName,*val_p);
+	ZeroMemory(&ofn, sizeof(ofn));
+	ofn.lStructSize = sizeof(ofn);
+	ofn.hwndOwner = dlg.ctlwnd;
+	ofn.lpstrFile = szOpenFileName;
+	ofn.nMaxFile = sizeof(szOpenFileName);
+	ofn.lpstrFile[0] = W('\0');
+	ofn.lpstrFilter = W("All\0*.*\0.png\0*.png\0.jpq\0*.jpg\0\0");
+	ofn.nFilterIndex = 1;
+	ofn.lpstrTitle = ctrl->label;
+	ofn.Flags = OFN_FILEMUSTEXIST |  OFN_EXPLORER;
+	if (!GetOpenFileNameW(&ofn)) {
+		return ;
+	}
+  SetDlgItemTextW(dlg.ctlwnd, c->base_id, szOpenFileName);
+  wstrset(val_p,szOpenFileName);
+  c->ctrl->handler(c->ctrl, EVENT_VALCHANGE);
+}
 void
 dlg_text_paint(control *ctrl)
 {
@@ -1753,9 +1836,9 @@ winctrl_handle_command(HWND hwnd,UINT msg, WPARAM wParam, LPARAM lParam)
   control *ctrl;
   int i, id, ret,cid=LOWORD(wParam);
   (void)hwnd;
- /*
-  * Look up the control ID in our data.
-  */
+  /*
+   * Look up the control ID in our data.
+   */
   c = null;
   for (i = 0; i < dlg.nctrltrees; i++) {
     c = winctrl_findbyid(dlg.controltrees[i], cid);
@@ -1768,32 +1851,21 @@ winctrl_handle_command(HWND hwnd,UINT msg, WPARAM wParam, LPARAM lParam)
   id = cid - c->base_id;
 
   if (msg == WM_DRAWITEM) {
-   /*
-    * Owner-draw request for a panel title.
-    */
-    if(c->ctrl==NULL){ //must confirm it is paneltitle.assume ctrl=NULL NOW
+    /* * Owner-draw request for a panel title.  */
+    if(ctrl==NULL){//must confirm it is paneltitle.assume ctrl=NULL NOW
       LPDRAWITEMSTRUCT di = (LPDRAWITEMSTRUCT) lParam;
       HDC dc = di->hDC;
       RECT r = di->rcItem;
       SIZE s;
-
+      wstring text;
+      text = (wstring) c->data;
       SetMapMode(dc, MM_TEXT);   /* ensure logical units == pixels */
-
-      GetTextExtentPoint32A(dc, (char *) c->data, strlen((char *) c->data), &s);
-      DrawEdge(dc, &r, EDGE_ETCHED, BF_ADJUST | BF_RECT);
-      string text = (string) c->data;
-      if (nonascii(text)) {
-        // assuming that the panel title is stored in UTF-8,
-        // transform it for proper Windows display
-        wchar * us = cs__utftowcs(text);
-        TextOutW(dc, r.left + (r.right - r.left - s.cx) / 2,
-                 r.top + (r.bottom - r.top - s.cy) / 2, us, wcslen(us));
-        free(us);
-      }
-      else
-        TextOutA(dc, r.left + (r.right - r.left - s.cx) / 2,
-                 r.top + (r.bottom - r.top - s.cy) / 2, text, strlen(text));
-
+      GetTextExtentPoint32W(dc, text, wcslen(text), &s);
+      //DrawEdge(dc, &r, EDGE_ETCHED, BF_ADJUST | BF_RECT);
+      // assuming that the panel title is stored in UTF-8,
+      // transform it for proper Windows display
+      TextOutW(dc, r.left + (r.right - r.left - s.cx) / 2,
+               r.top + (r.bottom - r.top - s.cy) / 2, text, wcslen(text));
       return true;
     } else{
       if(ctrl->type==CTRL_CLRBUTTON){
@@ -1810,19 +1882,19 @@ winctrl_handle_command(HWND hwnd,UINT msg, WPARAM wParam, LPARAM lParam)
   if (!ctrl || !ctrl->handler)
     return 0;   /* nothing we can do here */
 
- /*
-  * From here on we do not issue `return' statements until the
-  * very end of the dialog box: any event handler is entitled to
-  * ask for a colour selector, so we _must_ always allow control
-  * to reach the end of this switch statement so that the
-  * subsequent code can test dlg.coloursel_wanted().
-  */
+  /*
+   * From here on we do not issue `return' statements until the
+   * very end of the dialog box: any event handler is entitled to
+   * ask for a colour selector, so we _must_ always allow control
+   * to reach the end of this switch statement so that the
+   * subsequent code can test dlg.coloursel_wanted().
+   */
   ret = 0;
   dlg.coloursel_wanted = false;
 
- /*
-  * Now switch on the control type and the message.
-  */
+  /*
+   * Now switch on the control type and the message.
+   */
   if (msg == WM_COMMAND) {
     WORD note = HIWORD(wParam);
     switch (ctrl->type) {
@@ -1876,6 +1948,15 @@ winctrl_handle_command(HWND hwnd,UINT msg, WPARAM wParam, LPARAM lParam)
               select_font(c);
           }
         }
+      when CTRL_FILESELECT:
+        if (id == 1) {
+          switch (note) {
+            when BN_SETFOCUS or BN_KILLFOCUS:
+              winctrl_set_focus(ctrl, note == BN_SETFOCUS);
+            when BN_CLICKED or BN_DOUBLECLICKED:
+              select_file(c);
+          }
+        }
       when CTRL_LISTBOX:
         if (ctrl->listbox.height != 0 &&
             (note == LBN_SETFOCUS || note == LBN_KILLFOCUS))
@@ -1891,7 +1972,7 @@ winctrl_handle_command(HWND hwnd,UINT msg, WPARAM wParam, LPARAM lParam)
         }
         else if (note == LBN_SELCHANGE)
           ctrl->handler(ctrl, EVENT_SELCHANGE);
-      when CTRL_EDITBOX:
+      when CTRL_EDITBOX or CTRL_INTEDITBOX :
         if (ctrl->editbox.has_list) {
           switch (note) {
             when CBN_SETFOCUS:
@@ -1928,10 +2009,10 @@ winctrl_handle_command(HWND hwnd,UINT msg, WPARAM wParam, LPARAM lParam)
     }
   }
 
- /*
-  * If the above event handler has asked for a colour selector,
-  * now is the time to generate one.
-  */
+  /*
+   * If the above event handler has asked for a colour selector,
+   * now is the time to generate one.
+   */
   if (dlg.coloursel_wanted) {
     static CHOOSECOLOR cc;
     static DWORD custom[16] = { 0 };    /* zero initialisers */
@@ -1963,7 +2044,7 @@ dlg_radiobutton_set(control *ctrl, int whichbutton)
   winctrl *c = ctrl->plat_ctrl;
   if (c) {  // can be null (leaving the dialog with ESC from another control)
     assert(c && c->ctrl->type == CTRL_RADIO);
-    CheckRadioButton(dlg.wnd, c->base_id + 1,
+    CheckRadioButton(dlg.ctlwnd, c->base_id + 1,
                      c->base_id + c->ctrl->radio.nbuttons,
                      c->base_id + 1 + whichbutton);
   }
@@ -2010,7 +2091,7 @@ dlg_editbox_set(control *ctrl, string text)
   }
 
   winctrl *c = ctrl->plat_ctrl;
-  assert(c && c->ctrl->type == CTRL_EDITBOX);
+  assert(c && (c->ctrl->type == CTRL_EDITBOX ||c->ctrl->type == CTRL_INTEDITBOX));
   SetDlgItemTextA(dlg.ctlwnd, c->base_id + 1, text);
 }
 
@@ -2019,7 +2100,7 @@ dlg_editbox_set_w(control *ctrl, wstring text)
 {
   winctrl *c = ctrl->plat_ctrl;
   assert(c &&
-         (c->ctrl->type == CTRL_EDITBOX
+         (c->ctrl->type == CTRL_EDITBOX||c->ctrl->type == CTRL_INTEDITBOX
          ||c->ctrl->type == CTRL_LISTBOX));
   if (c->ctrl->type != CTRL_LISTBOX) {
     SetDlgItemTextW(dlg.ctlwnd, c->base_id + 1, text);
@@ -2050,7 +2131,7 @@ dlg_editbox_get(control *ctrl, string *text_p)
 {
   winctrl *c = ctrl->plat_ctrl;
   assert(c &&
-         (c->ctrl->type == CTRL_EDITBOX
+         (c->ctrl->type == CTRL_EDITBOX||c->ctrl->type == CTRL_INTEDITBOX
          ||c->ctrl->type == CTRL_LISTBOX));
   HWND wnd = GetDlgItem(dlg.ctlwnd, c->base_id + 1);
   int size = GetWindowTextLength(wnd) + 1;
@@ -2065,7 +2146,7 @@ dlg_editbox_get_w(control *ctrl, wstring *text_p)
 {
   winctrl *c = ctrl->plat_ctrl;
   assert(c &&
-         (c->ctrl->type == CTRL_EDITBOX
+         (c->ctrl->type == CTRL_EDITBOX||c->ctrl->type == CTRL_INTEDITBOX
          ||c->ctrl->type == CTRL_LISTBOX));
   HWND wnd = GetDlgItem(dlg.ctlwnd, c->base_id + 1);
   wchar *text = (wchar *)*text_p;
@@ -2099,7 +2180,7 @@ dlg_listbox_clear(control *ctrl)
   int msg;
   assert(c &&
          (c->ctrl->type == CTRL_LISTBOX ||
-          (c->ctrl->type == CTRL_EDITBOX &&
+          ((c->ctrl->type == CTRL_EDITBOX ||c->ctrl->type == CTRL_INTEDITBOX)&&
            c->ctrl->editbox.has_list)));
   msg = (c->ctrl->type == CTRL_LISTBOX &&
          c->ctrl->listbox.height != 0 ? LB_RESETCONTENT : CB_RESETCONTENT);
@@ -2121,7 +2202,7 @@ dlg_listbox_add(control *ctrl, string text)
   int msg;
   assert(c &&
          (c->ctrl->type == CTRL_LISTBOX ||
-          (c->ctrl->type == CTRL_EDITBOX &&
+          ((c->ctrl->type == CTRL_EDITBOX ||c->ctrl->type == CTRL_INTEDITBOX)&&
            c->ctrl->editbox.has_list)));
   msg = (c->ctrl->type == CTRL_LISTBOX &&
          c->ctrl->listbox.height != 0 ? LB_ADDSTRING : CB_ADDSTRING);
@@ -2135,7 +2216,7 @@ dlg_listbox_add_w(control *ctrl, wstring text)
   int msg;
   assert(c &&
          (c->ctrl->type == CTRL_LISTBOX ||
-          (c->ctrl->type == CTRL_EDITBOX &&
+          ((c->ctrl->type == CTRL_EDITBOX ||c->ctrl->type == CTRL_INTEDITBOX)&&
            c->ctrl->editbox.has_list)));
   msg = (c->ctrl->type == CTRL_LISTBOX &&
          c->ctrl->listbox.height != 0 ? LB_ADDSTRING : CB_ADDSTRING);
@@ -2148,7 +2229,7 @@ dlg_listbox_getcur(control *ctrl)
   winctrl *c = ctrl->plat_ctrl;
   assert(c &&
          (c->ctrl->type == CTRL_LISTBOX ||
-          (c->ctrl->type == CTRL_EDITBOX &&
+          ((c->ctrl->type == CTRL_EDITBOX ||c->ctrl->type == CTRL_INTEDITBOX)&&
            c->ctrl->editbox.has_list)));
   int idx;
   if (c->ctrl->type == CTRL_LISTBOX)
@@ -2212,6 +2293,22 @@ dlg_fontsel_get(control *ctrl, font_spec *fs)
   trace_fontsel(("fontsel_get <%ls>\n", ((font_spec*)c->data)->name));
   *fs = *(font_spec *) c->data;  /* structure copy */
 }
+void
+dlg_filesel_set(control *ctrl, wstring*fs)
+{
+  winctrl *c = ctrl->plat_ctrl;
+  assert(c && c->ctrl->type == CTRL_FILESELECT);
+  SetDlgItemTextW(dlg.ctlwnd, c->base_id, *fs);
+}
+void
+dlg_filesel_get(control *ctrl, wstring*fs)
+{
+  winctrl *c = ctrl->plat_ctrl;
+  assert(c && c->ctrl->type == CTRL_FILESELECT);
+  wchar buf[MAX_PATH];
+  GetDlgItemTextW(dlg.ctlwnd, c->base_id, buf,MAX_PATH);
+  wstrset(fs,buf);
+}
 
 void
 dlg_set_focus(control *ctrl)
@@ -2219,8 +2316,9 @@ dlg_set_focus(control *ctrl)
   winctrl *c = ctrl->plat_ctrl;
   int id;
   switch (ctrl->type) {
-    when CTRL_EDITBOX or CTRL_LISTBOX: id = c->base_id + 1;
+    when CTRL_EDITBOX or CTRL_INTEDITBOX or CTRL_LISTBOX: id = c->base_id + 1;
     when CTRL_FONTSELECT: id = c->base_id + 2;
+    when CTRL_FILESELECT: id = c->base_id + 1;
     when CTRL_RADIO:
       id = c->base_id + ctrl->radio.nbuttons;
       while (id > 1 && IsDlgButtonChecked(dlg.ctlwnd, id))
@@ -2244,6 +2342,17 @@ dlg_end(void)
   dlg.ended = true;
 }
 
+void
+dlg_refreshp(control*ctrl){
+  int i;
+  if(!ctrl)return;
+  controlset*cs=ctrl->parent; 
+  for(i=0;i<cs->ncontrols;i++){
+    control *c=cs->ctrls[i];
+    if (c->handler != null)
+      c->handler(c, EVENT_REFRESH);
+  } 
+}
 void
 dlg_refresh(control *ctrl)
 {
@@ -2294,3 +2403,4 @@ windlg_add_tree(winctrls * wc)
   assert(dlg.nctrltrees < (int) lengthof(dlg.controltrees));
   dlg.controltrees[dlg.nctrltrees++] = wc;
 }
+

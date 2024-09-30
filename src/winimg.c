@@ -801,7 +801,7 @@ winimgs_paint(void)
           }
           int ibot = max(0, top * wv.cell_height + iheight) + OFFSET + PADDING;
           // fill either background image or colour
-          if (*cfg.background) {
+          if (cfg.backgfile.type) {
             fill_background(dc, &(RECT){xlft + iwidth, ytop, xrgt, ibot});
             fill_background(dc, &(RECT){xlft, ibot, xrgt, ybot});
           }
@@ -832,7 +832,7 @@ winimgs_paint(void)
             HDC hdc = CreateCompatibleDC(dc);
             HBITMAP hbm = CreateCompatibleBitmap(dc, xrgt, ybot);
             (void)SelectObject(hdc, hbm);
-            if (*cfg.background)
+            if (cfg.backgfile.type)
               fill_background(hdc, &(RECT){0, 0, xrgt, ybot});
             else {
               colour bg = wv.colours[term.rvideo ? FG_COLOUR_I : BG_COLOUR_I];
