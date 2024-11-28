@@ -42,7 +42,7 @@ clean:
 
 #############################################################################
 
-DIST := release
+DIST := rel
 TARUSER := --owner=root --group=root --owner=mintty --group=cygwin
 REL := 1
 arch := $(shell uname -m)
@@ -60,6 +60,7 @@ gitversion=$(shell src/mkvertag)
 
 ver:
 	echo $(version) > VERSION
+	cd src; $(MAKE) releasever
 
 checkver:
 	echo checking same version in changelog, source, and git
@@ -73,9 +74,18 @@ tag:
 committed:
 	if git status -suno | sed -e "s,^..,," | grep .; then false; fi
 
+hint=\e[42;30m
+norm=\e[m
+
 $(DIST):
 	mkdir -p $(DIST)
+
 release: $(DIST) check-x11 cop check _ ver
+	@echo -e "$(hint)Now: git commit -a; make tag;$(norm)"
+	@echo -e "$(hint)Then: make pkg and git push; git push --tags;$(norm)"
+	@echo -e "$(hint)Last: make upload; make ann; mail cygwin-announce$(norm)"
+	@echo -e "$(hint)Also: github release$(norm)"
+
 checkrelease: committed tag checkver tar
 cygport := $(name_ver)-$(REL).cygport
 pkg: release checkrelease srcpkg binpkg binver

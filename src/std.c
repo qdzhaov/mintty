@@ -261,7 +261,7 @@ argz_stringify(char *argz, size_t argz_len, int sep)
  *                for Cygwin alone.
  */
 
-#include <fcntl.h>
+//G #include <fcntl.h>
 #include <termios.h>
 #include <sys/ioctl.h>
 
@@ -273,24 +273,18 @@ login_tty(int fd)
   char *fdname;
   int newfd;
 
-  if (setsid () == -1)
-    return -1;
-  if ((fdname = ttyname(fd)))
-    {
-      if (fd != STDIN_FILENO)
-        close(STDIN_FILENO);
-      if (fd != STDOUT_FILENO)
-        close(STDOUT_FILENO);
-      if (fd != STDERR_FILENO)
-        close(STDERR_FILENO);
-      newfd = open(fdname, O_RDWR);
-      close(newfd);
-    }
+  if (setsid () == -1) return -1;
+  if ((fdname = ttyname(fd))) {
+    if (fd != STDIN_FILENO) close(STDIN_FILENO);
+    if (fd != STDOUT_FILENO) close(STDOUT_FILENO);
+    if (fd != STDERR_FILENO) close(STDERR_FILENO);
+    newfd = open(fdname, O_RDWR);
+    close(newfd);
+  }
   dup2 (fd, STDIN_FILENO);
   dup2 (fd, STDOUT_FILENO);
   dup2 (fd, STDERR_FILENO);
-  if (fd > 2)
-    close(fd);
+  if (fd > 2) close(fd);
   return 0;
 }
 

@@ -458,9 +458,9 @@ tek_move_by(int dy, int dx)
   tek_paint();  // Smooth GIN mode crosshair cursor movement.
 }
 
-#include <windows.h>
-#include "winpriv.h"
-#include "child.h"
+//G #include <windows.h>
+//G #include "winpriv.h"
+//G #include "child.h"
 
 void
 tek_move_to(int y, int x)

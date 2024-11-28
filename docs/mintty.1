@@ -317,6 +317,8 @@ With value "P", mintty reports the cygwin PID and the Windows PID
 of the mintty process (i.e. running the terminal).
 .br
 With value "w", mintty reports its Windows window id.
+.br
+With value "R", mintty reports the available printers.
 
 Note also the invocation \fIMINTTY_DEBUG=C mintty ...\fP; it will list 
 all config files loaded by mintty and whether they are also considered 
@@ -771,6 +773,9 @@ via extended context menu or title bar menu.)
 It is recommended to also set \fBSessionGeomSync=3\fP or higher to 
 achieve a tabbed window behaviour.
 
+The tabbar can be reordered with user-definable functions tab\-(left|right) 
+or interactively via drag-and-drop on the tabs.
+
 .SS Horizontal scrolling of terminal view and horizontal scrollbar
 
 Mintty provides an optional horizontal scrollbar, which can be enabled 
@@ -887,6 +892,12 @@ It can be assigned to a modifier key in the Options menu, section Keys,
 or to the CapsLock key.
 The Compose key function can also be assigned to another key combination 
 using user-definable function \fBcompose\fP in setting \fBKeyFunctions\fP.
+
+Details: Mintty extracts a list of compose key combinations from the 
+current X11 cygwin package, file 
+/usr/share/X11/locale/en_US.UTF-8/Compose, where "Multi_key" 
+combinations can be resolved using key name definitions from 
+/usr/include/X11/keysymdef.h. For the X11 version used, see the wiki.
 
 .SS Keyboard shortcuts
 
@@ -4286,7 +4297,46 @@ can be configured.
 \fBTabForegroundColour\fP=\fI\fP
 .en
 \fBTabBackgroundColour\fP=\fI\fP
+. add space between ./ul and .SH
+
 ./ul
+
+.SH ENVIRONMENT
+
+Mintty uses a couple of environment variables mainly to steer Alt+F2 window 
+cloning. Some variable are also useful for explicit control or information:
+
+.TQ
+.B MINTTY_MONITOR
+Select monitor for a new terminal session started from the shell.
+Monitor numbers and their coordinates within the Windows multi-monitor 
+address space can be listed with \fBmintty -Rm\fP.
+
+.TQ
+.B MINTTY_SHORTCUT
+Filename of a desktop shortcut from which mintty was started.
+
+.TQ
+.B MINTTY_DEBUG
+C will list usage of config files;
+o, x, h enable interaction debugging for the Options dialog.
+
+.TQ
+.B Process spawning
+Variables that pass information about terminal environment and contents 
+to external programs launched from mintty, e.g. as configured with 
+user-defined \`\`-embedded command (via KeyFunctions), via CtxMenuFunctions 
+or from user-defined menu entries, as described above:
+MINTTY_SELECT, MINTTY_BUFFER, MINTTY_SCREEN, MINTTY_OUTPUT, 
+MINTTY_TITLE, MINTTY_PID, MINTTY_PROG, MINTTY_CWD
+
+.TQ
+.B New window placement
+Variables that pass placement information when launching new terminal 
+sessions, for example with Alt+F2:
+MINTTY_MONITOR, MINTTY_ROWS, MINTTY_COLS, MINTTY_MAXIMIZE, 
+MINTTY_X, MINTTY_Y, MINTTY_DX, MINTTY_DY, 
+MINTTY_ICON, MINTTY_TABBAR, MINTTY_CLASS, MINTTY_PWD
 
 .SH SCOPE AND LIMITATIONS
 

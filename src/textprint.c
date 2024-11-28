@@ -1,7 +1,7 @@
 #include "print.h"
-#include "charset.h"
-#include "winpriv.h"  // win_prefix_title, win_unprefix_title
-#include <fcntl.h>
+//G #include "charset.h"
+//G #include "winpriv.h"  // win_prefix_title, win_unprefix_title
+//G #include <fcntl.h>
 #include <pwd.h>
 
 

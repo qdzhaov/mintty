@@ -10,15 +10,16 @@ FILE * mtlog = 0;
 //#define debug_hook
 char * mintty_debug;
 #define dont_debug_resize
-#include "winpriv.h"
+//G #include "winpriv.h"
 #include "winsearch.h"
 #include "winimg.h"
 #include "jumplist.h"
 #include "term.h"
 #include "appinfo.h"
-#include "child.h"
-#include "charset.h"
+//G #include "child.h"
+//G #include "charset.h"
 #include "tek.h"
+#include "print.h"  // list_printers
 
 #include <locale.h>
 #include <getopt.h>
@@ -32,7 +33,7 @@ typedef UINT_PTR uintptr_t;
 #include <math.h>
 
 #ifdef __CYGWIN__
-#include <sys/cygwin.h>  // cygwin_internal
+//G #include <sys/cygwin.h>  // cygwin_internal
 #endif
 
 #if CYGWIN_VERSION_DLL_MAJOR >= 1007
@@ -41,7 +42,7 @@ typedef UINT_PTR uintptr_t;
 #endif
 
 #include <sys/stat.h>
-#include <fcntl.h>  // open flags
+//G #include <fcntl.h>  // open flags
 #include <sys/utsname.h>
 
 #include "wintools.h"
@@ -76,9 +77,6 @@ SessDef main_sd={0};
 SessDef cursd={0};
 static bool invoked_from_shortcut = false;
 static bool invoked_with_appid = false;
-static uint hotkey = 0;
-static mod_keys hotkey_mods = 0;
-static HHOOK kb_hook = 0;
 
 //filled by win_adjust_borders:
 //static int term_width, term_height;
@@ -105,16 +103,14 @@ mtime(void)
   return time(0);
 #endif
 }
-
 void ErrMsg(uint err,char *tag){
   if(err){
     int wmlen = 1024;  // size of heap-allocated array
     char winmsg[wmlen];  // constant and < 1273 or 1705 => issue #530
-    FormatMessage( FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_MAX_WIDTH_MASK, 0, err, 0, winmsg, wmlen, 0);
+    FormatMessageA( FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_MAX_WIDTH_MASK, 0, err, 0, winmsg, wmlen, 0);
     printf("%s %s\n", tag, winmsg);
   }
 }
-
 #define dont_debug_dir
 
 #ifdef debug_dir
@@ -173,7 +169,6 @@ set_dpi_auto_scaling(bool on)
   }
 #endif
 }
-
 bool
 waccess(wstring fn, int amode)
 {
@@ -182,11 +177,9 @@ waccess(wstring fn, int amode)
   delete(f);
   return ok;
 }
-
 void
 win_set_timer(void (*cb)(void), uint ticks)
 { SetTimer(wv.wnd, (UINT_PTR)cb, ticks, null); }
-
 void
 win_keep_screen_on(bool on)
 {
@@ -242,7 +235,6 @@ win_sys_style(bool focus)
   (void)focus;
 #endif
 }
-
 colour
 win_get_sys_colour(int colid)
 {
@@ -255,10 +247,8 @@ win_get_sys_colour(int colid)
       return col;
     }
   }
-
   return GetSysColor(colid);
 }
-
 /*
    Application scrollbar.
  */
@@ -297,7 +287,6 @@ win_set_scrollview(int pos, int len, int height)
     );
   }
 }
-
 /*
    Window title functions.
  */
@@ -324,18 +313,11 @@ win_set_icon(const char * s, int icon_index)
     free(iconpath);
   }
 }
-
 // support tabbar
 #define dont_debug_sessions 1
 /*  Virtual Tabs
  */
 #define dont_debug_tabs
-void
-win_switch(bool back, bool alternate)
-{
-  (void)alternate;
-  win_tab_change(back?-1:1);
-}
 
 static void
 win_gotab(uint n)
@@ -343,7 +325,6 @@ win_gotab(uint n)
   win_tab_go(n);
 }
 void update_tab_titles(){
-
 }
 void
 win_set_title(const wchar*title)
@@ -359,7 +340,6 @@ static int padlen = -1;
       iconlabelpad = 0;
     }
   }
-
   if (cfg.title_settable) {
     // check current title to suppress unnecessary update_tab_titles()
     int len = GetWindowTextLengthW(wv.wnd);
@@ -379,7 +359,6 @@ static int padlen = -1;
     }
   }
 }
-
 void
 win_copy_title(void)
 {
@@ -389,7 +368,6 @@ win_copy_title(void)
   strip_title(title);
   win_copy(title, 0, wcslen(title) + 1);
 }
-
 char *
 win_get_title(void)
 {
@@ -399,7 +377,6 @@ win_get_title(void)
   strip_title(title);
   return cs__wcstombs(title);
 }
-
 void
 win_prefix_title(const wstring prefix)
 {
@@ -413,7 +390,6 @@ win_prefix_title(const wstring prefix)
   // "[Printing...] " or "TERMINATED"
   update_tab_titles();
 }
-
 void
 win_unprefix_title(const wstring prefix)
 {
@@ -428,7 +404,6 @@ win_unprefix_title(const wstring prefix)
     update_tab_titles();
   }
 }
-
 /*  Monitor-related window functions
  */
 
@@ -440,7 +415,6 @@ win_launch(int n)
   int moni = search_monitors(&x, &y, mon, true, 0);
   child_launch(&term,n, &main_sd, moni);
 }
-
 static void
 get_my_monitor_info(MONITORINFO *mip)
 {
@@ -448,7 +422,6 @@ get_my_monitor_info(MONITORINFO *mip)
   mip->cbSize = sizeof(MONITORINFO);
   GetMonitorInfo(mon, mip);
 }
-
 static void
 get_monitor_info(int moni, MONITORINFO *mip)
 {
@@ -469,14 +442,12 @@ get_monitor_info(int moni, MONITORINFO *mip)
 
     return --(pdata->moni) > 0;
   }
-
   struct data_get_monitor_info data = {
     .moni = moni,
     .mip = mip
   };
   EnumDisplayMonitors(0, 0, monitor_enum, (LPARAM)&data);
 }
-
 #define dont_debug_display_monitors_mockup
 #define dont_debug_display_monitors
 
@@ -503,21 +474,29 @@ static long current_monitor = 1 - 1;  // assumption for MonitorFromWindow
      returns number of monitors;
        stores smallest width/height of all monitors
        stores info of current monitor
+       used by user function new-key
    search_monitors(&x, &y, 0, true, &moninfo)
      returns number of monitors;
        stores smallest width/height of all monitors
        stores info of primary monitor
+       used by user function new-key
    search_monitors(&x, &y, mon, false/true, 0)
      returns index of given monitor (0/primary if not found)
+       used by user function new-key (true)
+       used by function win_launch (true), IDM_SESSIONCOMMAND, launcher
+       used by IDM_NEW*, IDM_TAB* (true)
    search_monitors(&x, &y, 0, false, 0)
      returns number of monitors;
        stores virtual screen size
+       used by CSI 15/19 t Report screen size
    search_monitors(&x, &y, 0, 2, &moninfo)
      returns number of monitors;
        stores virtual screen top left corner
        stores virtual screen size
+       used by function win_get_scrpos, save_win_pos, win_maximise
    search_monitors(&x, &y, 0, true, 0)
      prints information about all monitors
+       used by option -Rm
  */
 int
 search_monitors(int * minx, int * miny, HMONITOR lookup_mon, int get_primary, MONITORINFO *mip)
@@ -539,7 +518,6 @@ search_monitors(int * minx, int * miny, HMONITOR lookup_mon, int get_primary, MO
     }
     return TRUE;
   }
-
   BOOL GetMonitorInfo(HMONITOR hMonitor, LPMONITORINFO lpmi)
   {
     long moni = (long)hMonitor - 1;
@@ -550,7 +528,6 @@ search_monitors(int * minx, int * miny, HMONITOR lookup_mon, int get_primary, MO
       lpmi->dwFlags = MONITORINFOF_PRIMARY;
     return TRUE;
   }
-
   HMONITOR MonitorFromWindow(HWND hwnd, DWORD dwFlags)
   {
     (void)hwnd, (void)dwFlags;
@@ -572,6 +549,7 @@ search_monitors(int * minx, int * miny, HMONITOR lookup_mon, int get_primary, MO
   struct data_search_monitors data = {
     .moni = 0,
     .moni_found = 0,
+    .lookup_mon = lookup_mon,
     .minx = minx,
     .miny = miny,
     .vscr = (RECT){0, 0, 0, 0},
@@ -587,19 +565,23 @@ search_monitors(int * minx, int * miny, HMONITOR lookup_mon, int get_primary, MO
   data.print_monitors = !lookup_mon;
 #endif
 
+  /*
+     Enumerate monitors for various use cases 
+     (see invocation descriptions of search_monitors above);
+     this code is obscure and needs revision
+   */
   BOOL CALLBACK
   monitor_enum(HMONITOR hMonitor, HDC hdcMonitor, LPRECT monp, LPARAM dwData)
   {
     struct data_search_monitors *data = (struct data_search_monitors *)dwData;
     (void)hdcMonitor, (void)monp;
 
-    (data->moni) ++;
+    data->moni ++;
     if (hMonitor == data->lookup_mon) {
       // looking for index of specific monitor
       data->moni_found = data->moni;
       return FALSE;
     }
-
     MONITORINFO mi;
     mi.cbSize = sizeof(MONITORINFO);
     GetMonitorInfo(hMonitor, &mi);
@@ -608,7 +590,6 @@ search_monitors(int * minx, int * miny, HMONITOR lookup_mon, int get_primary, MO
       data->moni_found = data->moni;  // fallback to be overridden by monitor found later
       data->refmon = hMonitor;
     }
-
     // determining smallest monitor width and height
     RECT fr = mi.rcMonitor;
     if (*(data->minx) == 0 || *(data->minx) > fr.right - fr.left)
@@ -624,7 +605,7 @@ search_monitors(int * minx, int * miny, HMONITOR lookup_mon, int get_primary, MO
       uint x, dpi = 0;
       if (pGetDpiForMonitor)
         pGetDpiForMonitor(hMonitor, 0, &x, &dpi);  // MDT_EFFECTIVE_DPI
-      printf("Monitor %d %s %s (%3d dpi) w,h %4d,%4d (%4d,%4d...%4d,%4d)\n", 
+      printf("Monitor %d %s %s (%3d dpi) w,h %4d,%4d (l %4d,t %4d .. r %4d,b %4d)\n", 
              data->moni,
              hMonitor == data->curmon ? "current" : "       ",
              mi.dwFlags & MONITORINFOF_PRIMARY ? "primary" : "       ",
@@ -632,10 +613,8 @@ search_monitors(int * minx, int * miny, HMONITOR lookup_mon, int get_primary, MO
              (int)(fr.right - fr.left), (int)(fr.bottom - fr.top),
              (int)fr.left, (int)fr.top, (int)fr.right, (int)fr.bottom);
     }
-
     return TRUE;
   }
-
   EnumDisplayMonitors(0, 0, monitor_enum, (LPARAM)&data);
 
   if (!lookup_mon && !mip && !get_primary) {
@@ -643,7 +622,7 @@ search_monitors(int * minx, int * miny, HMONITOR lookup_mon, int get_primary, MO
     *miny = data.vscr.bottom - data.vscr.top;
     return data.moni;
   }
-  else if (lookup_mon) {
+  else if (data.lookup_mon) {
     return data.moni_found;
   }
   else if (mip) {
@@ -661,7 +640,6 @@ search_monitors(int * minx, int * miny, HMONITOR lookup_mon, int get_primary, MO
   else
     return data.moni;  // number of monitors printed
 }
-
 /* Horizontal scrolling.
 	|1234	...	 56789|	terminal width
 	     |	...	|	view
@@ -683,7 +661,6 @@ horclip(void)
   else
     return _horclip * wv.cell_width;
 }
-
 int
 horsqueeze(void)
 {
@@ -699,7 +676,6 @@ horsqueeze(void)
 
   return _horcols * wv.cell_width;
 }
-
 static int
 horex(char tag)
 {
@@ -713,7 +689,6 @@ horex(char tag)
   else
     return 0;
 }
-
 #ifdef async_horflush
 
 static void
@@ -742,13 +717,11 @@ do_horflush(void)
   // update scrollbar display
   SendMessage(wv.wnd, WM_NCACTIVATE, GetActiveWindow() == wnd, 0);
 }
-
 static void
 horflush(void)
 {
   SendMessage(wv.wnd, WM_USER, 0, WIN_HORFLUSH);
 }
-
 #else
 
 static void
@@ -777,7 +750,6 @@ horflush(void)
   // update scrollbar display
   SendMessage(wv.wnd, WM_NCACTIVATE, GetActiveWindow() == wv.wnd, 0);
 }
-
 #endif
 
 void
@@ -790,7 +762,6 @@ horscroll(int cells)
   //printf("horscroll %d -> clip %d cols %d\n", cells, _horclip, _horcols);
   horflush();
 }
-
 void
 horscrollto(int clip)
 {
@@ -804,7 +775,6 @@ horscrollto(int clip)
   //printf("horscrollto %d%% -> clip %d cols %d\n", clip, _horclip, _horcols);
   horflush();
 }
-
 static void win_fix_position(bool);
 
 #ifdef try_to_hook_resizing
@@ -830,17 +800,6 @@ horsizing(int cells, bool from_right)
   }
   //printf("horsizing    -> clip %d cols %d\n", _horclip, _horcols);
 
-#if 0
-  // a failed first attempt to adjust the hor. scrollbar dynamically,
-  // apparently without impact now; leaving to document obscureness...
-  if (!!_horcols ^ !!prev_horcols) {
-    if (_horcols)
-      extra_height += GetSystemMetrics(SM_CXHSCROLL);
-    else
-      extra_height -= GetSystemMetrics(SM_CXHSCROLL);
-  }
-#endif
-
   if (_horcols != prev_horcols) {
 #ifdef try_to_hook_resizing
     hor_resizing = true;
@@ -858,7 +817,6 @@ horsizing(int cells, bool from_right)
   horflush();
   win_fix_position(false);
 }
-
 /*
    Window manipulation functions.
  */
@@ -878,7 +836,6 @@ win_set_iconic(bool iconic)
      - remember/preset maximize/fullscreen while minimize (xterm)
    */
 }
-
 /* Move the window in response to a server-side request.
  */
 void
@@ -888,7 +845,6 @@ win_set_pos(int x, int y)
   if (!IsZoomed(wv.wnd))
     SetWindowPos(wv.wnd, null, x, y, 0, 0, SWP_NOACTIVATE | SWP_NOSIZE | SWP_NOZORDER);
 }
-
 /* Move the window to the top or bottom of the z-order in response
  * to a server-side request.
  */
@@ -902,7 +858,6 @@ win_set_zorder(bool top)
   SetWindowPos(wv.wnd, top ? HWND_NOTOPMOST : HWND_BOTTOM, 0, 0, 0, 0,
                SWP_NOMOVE | SWP_NOSIZE);
 }
-
 void
 win_toggle_on_top(void)
 {
@@ -910,13 +865,11 @@ win_toggle_on_top(void)
   SetWindowPos(wv.wnd, wv.win_is_always_on_top ? HWND_TOPMOST : HWND_NOTOPMOST,
                0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
 }
-
 bool
 win_is_iconic(void)
 {
   return IsIconic(wv.wnd);
 }
-
 static void
 win_get_pos(int *xp, int *yp)
 {
@@ -925,7 +878,6 @@ win_get_pos(int *xp, int *yp)
   *xp = r.left;
   *yp = r.top;
 }
-
 void
 win_get_scrpos(int *xp, int *yp, bool with_borders)
 {
@@ -944,7 +896,6 @@ win_get_scrpos(int *xp, int *yp, bool with_borders)
     *yp += GetSystemMetrics(SM_CYSIZEFRAME) + GetSystemMetrics(SM_CYCAPTION) + OFFSET + PADDING;
   }
 }
-
 static int
 win_has_scrollbar(void)
 {
@@ -959,7 +910,6 @@ win_has_scrollbar(void)
   else
     return 0;
 }
-
 void
 win_get_pixels(int *height_p, int *width_p, bool with_borders)
 {
@@ -985,7 +935,6 @@ win_get_pixels(int *height_p, int *width_p, bool with_borders)
              ;
   }
 }
-
 void
 term_save_image(bool do_open)
 {
@@ -1011,11 +960,9 @@ term_save_image(bool do_open)
     free(copyfn);
     ReleaseDC(wv.wnd, dc);
   }
-
   if (do_open)
     win_open(browse, false);  // win_open frees its argument
 }
-
 void
 win_get_screen_chars(int *rows_p, int *cols_p)
 {
@@ -1025,7 +972,6 @@ win_get_screen_chars(int *rows_p, int *cols_p)
   *rows_p = (fr.bottom - fr.top - 2 * PADDING - OFFSET) / wv.cell_height- term.st_rows;
   *cols_p = (fr.right - fr.left - 2 * PADDING) / wv.cell_width;
 }
-
 static void
 win_fix_position(bool scrollbar)
 {
@@ -1064,7 +1010,6 @@ win_fix_position(bool scrollbar)
   SetWindowPos(wv.wnd, 0, wr.left, wr.top, 0, 0,
                SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
 }
-
 static void
 win_set_pixels_zoom(int height, int width)
 {
@@ -1084,7 +1029,6 @@ win_set_pixels_zoom(int height, int width)
   if (wv.is_init)  // don't spoil negative position (#1123)
     win_fix_position(false);
 }
-
 bool
 win_is_glass_available(void)
 {
@@ -1096,7 +1040,6 @@ win_is_glass_available(void)
 #endif
   return result;
 }
-
 static void
 win_update_blur(bool opaque)
 {
@@ -1128,7 +1071,6 @@ win_update_blur(bool opaque)
     pDwmEnableBlurBehindWindow(wv.wnd, &bb);
   }
 }
-
 static LONG up_borderstyle(LONG style){
   style &= ~(WS_CAPTION | WS_BORDER | WS_THICKFRAME);
   switch(cfg.border_style){
@@ -1146,7 +1088,6 @@ void  win_update_border(){
                SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED
                | SWP_NOACTIVATE);
 }
-
 #define dont_debug_win_status
 
 #ifdef debug_win_status
@@ -1176,7 +1117,6 @@ show_win_status(char * tag, HWND wnd)
   bool tooled = GetWindowLong(wnd, GWL_EXSTYLE) & WS_EX_TOOLWINDOW;
   printf("%s[%d:%p] tooled %d layered %d attr %d hidden %d\n", tag, getpid(), wnd, tooled, layered, b, hidden);
 }
-
 #else
 #define show_win_status(tag, wnd)	
 #endif
@@ -1203,7 +1143,6 @@ make_fullscreen(void)
   SetWindowPos(wv.wnd, HWND_TOP, fr.left, fr.top,
                fr.right - fr.left, fr.bottom - fr.top, SWP_FRAMECHANGED | SWP_NOACTIVATE | SWP_NOZORDER);
 }
-
 /* Clear the full-screen attributes.
  */
 static void
@@ -1215,7 +1154,6 @@ clear_fullscreen(void)
  /* Reinstate the window furniture. */
   win_update_border();
 }
-
 #ifdef debug_clear_fullscreen
 
 #define clear_fullscreen() printf("calling cl_fs %s:%d\n", __FUNCTION__, __LINE__), clear_fullscreen()
@@ -1260,7 +1198,6 @@ win_set_geom(int y, int x, int height, int width)
                term_width, term_height,
                SWP_NOACTIVATE | SWP_NOCOPYBITS | SWP_NOZORDER);
 }
-
 static void
 win_set_chars_zoom(int rows, int cols)
 {
@@ -1280,7 +1217,6 @@ win_set_chars_zoom(int rows, int cols)
   }
   trace_winsize("win_set_chars > win_fix_position");
 }
-
 static void
 win_set_chars_keep_fullscreen(int rows, int cols)
 {
@@ -1291,7 +1227,6 @@ win_set_chars_keep_fullscreen(int rows, int cols)
   if (was_fullscreen)
     make_fullscreen();
 }
-
 void
 win_set_pixels(int height, int width)
 {
@@ -1299,7 +1234,6 @@ win_set_pixels(int height, int width)
   wv.default_size_token = true;
   win_set_pixels_zoom(height, width);
 }
-
 void
 win_set_chars(int rows, int cols)
 {
@@ -1307,7 +1241,6 @@ win_set_chars(int rows, int cols)
   wv.default_size_token = true;
   win_set_chars_zoom(rows, cols);
 }
-
 // allow font zooming if called below
 #define win_set_pixels(height, width) win_set_pixels_zoom(height, width)
 #define win_set_chars(rows, cols) win_set_chars_zoom(rows, cols)
@@ -1320,7 +1253,6 @@ win_set_chars(int rows, int cols)
 // Clockwork
 int get_tick_count(void) { return GetTickCount(); }
 int cursor_blink_ticks(void) { return GetCaretBlinkTime(); }
-
 static void
 flash_taskbar(bool enable)
 {
@@ -1336,7 +1268,6 @@ flash_taskbar(bool enable)
     enabled = enable;
   }
 }
-
 static void
 flash_border()
 {
@@ -1349,7 +1280,6 @@ flash_border()
     .dwTimeout = 0
   });
 }
-
 /* Play sound.
  */
 void
@@ -1363,7 +1293,6 @@ win_sound(const char * sound_name, uint options)
     PlaySoundW(NULL, NULL, options);
     return;
   }
-
   if (*sound_name == '_') {  // play a Windows system sound
 static struct {
   UINT type; char * name;
@@ -1391,7 +1320,6 @@ static struct {
       }
     return;
   }
-
   wchar * sound_file = 0;
   if (strchr(sound_name, '/') || strchr(sound_name, '\\')) {
     char * soundfn = guardpath(sound_name, 1);
@@ -1416,13 +1344,11 @@ static struct {
       free(sf);
     }
   }
-
   if (sound_file ){
     PlaySoundW(sound_file, NULL, options);
     free(sound_file);
   }
 }
-
 /* Beep with audio output library libao, for DECPS.
  */
 static void * libao = 0;
@@ -1498,7 +1424,6 @@ aolib_start(void)
 
   return ao_device;
 }
-
 static void
 aolib_stop(void)
 {
@@ -1509,7 +1434,6 @@ aolib_stop(void)
     libao = 0;
   }
 }
-
 static void
 aolib_beep(uint tone, float vol, float freq, uint ms)
 {
@@ -1555,10 +1479,8 @@ aolib_beep(uint tone, float vol, float freq, uint ms)
     buffer[4 * i] = buffer[4 * i + 2] = isample & 0xFF;
     buffer[4 * i + 1] = buffer[4 * i + 3] = (isample >> 8) & 0xFF;
   }
-
   ao_play(ao_device, buffer, buf_size);
 }
-
 /* Beep for DECPS.
  */
 void
@@ -1607,7 +1529,6 @@ win_beep(uint tone, float vol, float freq, uint ms)
       exit(0);
     }
   }
-
 #ifdef ascii_beeper_pipe
 static FILE * bf = 0;
   if (!bf)
@@ -1619,7 +1540,6 @@ static FILE * bf = 0;
 
   write(fd[1], &params, sizeof(params));
 }
-
 /* Bell.
  */
 static void
@@ -1664,7 +1584,6 @@ do_win_bell(config * conf, bool margin_bell)
       when 3: set_bells("3425678");
       when 2: set_bells("2345678");
     }
-
     bool free_bell_name = false;
     if (bell_name && *bell_name) {
       if (strchr(bell_name, '/') || strchr(bell_name, '\\')) {
@@ -1696,8 +1615,7 @@ do_win_bell(config * conf, bool margin_bell)
           bell_name = null;
       }
     }
-
-    if (bell_name && *bell_name && PlaySound(bell_name, NULL, SND_ASYNC | SND_FILENAME)) {
+    if (bell_name && *bell_name && PlaySoundA(bell_name, NULL, SND_ASYNC | SND_FILENAME)) {
       // played
     }
     else if (bellstate->vol <= 1) {
@@ -1719,7 +1637,6 @@ do_win_bell(config * conf, bool margin_bell)
     if (free_bell_name)
       free((void*)bell_name);
   }
-
   if (cfg.bell_flash_style & FLASH_FRAME)
     flash_border();
   if (term.bell_taskbar && (!term.has_focus || win_is_iconic()))
@@ -1727,26 +1644,22 @@ do_win_bell(config * conf, bool margin_bell)
   if (term.bell_popup)
     win_set_zorder(true);
 }
-
 void
 win_bell(config * conf)
 {
   do_win_bell(conf, false);
 }
-
 void
 win_margin_bell(config * conf)
 {
   do_win_bell(conf, true);
 }
-
 void
 win_invalidate_all(bool clearbg)
 {
   InvalidateRect(wv.wnd, null, true);
   win_flush_background(clearbg);
 }
-
 #ifdef debug_dpi
 static void
 print_system_metrics(int dpi, string tag)
@@ -1759,8 +1672,9 @@ print_system_metrics(int dpi, string tag)
          "        frame  %d/%d %d/%d size %d/%d %d/%d\n"
          "        padded %d/%d\n"
          "        caption %d/%d\n"
-         "        scrollbar %d/%d\n",
-         dpi, tag,
+         "        scrollbar %d/%d\n"
+         "        drag %d/%d\n"
+         , dpi, tag,
          GetSystemMetrics(SM_CXBORDER), pGetSystemMetricsForDpi(SM_CXBORDER, dpi),
          GetSystemMetrics(SM_CYBORDER), pGetSystemMetricsForDpi(SM_CYBORDER, dpi),
          GetSystemMetrics(SM_CXEDGE), pGetSystemMetricsForDpi(SM_CXEDGE, dpi),
@@ -1771,7 +1685,8 @@ print_system_metrics(int dpi, string tag)
          GetSystemMetrics(SM_CYSIZEFRAME), pGetSystemMetricsForDpi(SM_CYSIZEFRAME, dpi),
          GetSystemMetrics(SM_CXPADDEDBORDER), pGetSystemMetricsForDpi(SM_CXPADDEDBORDER, dpi),
          GetSystemMetrics(SM_CYCAPTION), pGetSystemMetricsForDpi(SM_CYCAPTION, dpi),
-         GetSystemMetrics(SM_CXVSCROLL), pGetSystemMetricsForDpi(SM_CXVSCROLL, dpi)
+         GetSystemMetrics(SM_CXVSCROLL), pGetSystemMetricsForDpi(SM_CXVSCROLL, dpi),
+         GetSystemMetrics(SM_CXDRAG), pGetSystemMetricsForDpi(SM_CXDRAG, dpi)
          );
 }
 #endif
@@ -1814,7 +1729,6 @@ win_adjust_borders(int t_width, int t_height)
   wv.norm_extra_width = wv.extra_width;
   wv.norm_extra_height = wv.extra_height;
 }
-
 static void
 do_win_adapt_term_size(bool sync_size_with_font, bool scale_font_with_size, bool quick_reflow)
 {
@@ -1858,7 +1772,6 @@ do_win_adapt_term_size(bool sync_size_with_font, bool scale_font_with_size, bool
     win_invalidate_all(false);
     return;
   }
-
  /* Current window sizes ... */
   RECT cr, wr;
   GetClientRect(wv.wnd, &cr);
@@ -1881,7 +1794,6 @@ do_win_adapt_term_size(bool sync_size_with_font, bool scale_font_with_size, bool
   if (!sync_size_with_font && win_search_visible()) {
     term_height -= SEARCHBAR_HEIGHT;
   }
-
   if (scale_font_with_size && term.cols != 0 && term.rows != 0) {
     // calc preliminary size (without font scaling), as below
     // should use term_height rather than rows; calc and store in term_resize
@@ -1917,7 +1829,6 @@ do_win_adapt_term_size(bool sync_size_with_font, bool scale_font_with_size, bool
     if (font_size1 != font_size)
       win_set_font_size(font_size1, false);
   }
-
   // adjust by horsqueeze() but not by horex() here
   int cols = max(1, (term_width + horsqueeze()) / wv.cell_width);
   int rows = max(1, term_height / wv.cell_height - term.st_rows);
@@ -1938,7 +1849,6 @@ do_win_adapt_term_size(bool sync_size_with_font, bool scale_font_with_size, bool
     struct winsize ws = {rows, cols, cols * wv.cell_width, rows * wv.cell_height};
     child_resize(&term,&ws);
   }
-
   win_invalidate_all(false);
 
   win_update_search();
@@ -1973,13 +1883,11 @@ do_win_adapt_term_size(bool sync_size_with_font, bool scale_font_with_size, bool
     }
   }
 }
-
 void
 win_adapt_term_size(bool sync_size_with_font, bool scale_font_with_size)
 {
   do_win_adapt_term_size(sync_size_with_font, scale_font_with_size, false);
 }
-
 /* Maximise or restore the window in response to a server-side request.
  * Argument value of 2 means go fullscreen.
  */
@@ -1992,17 +1900,20 @@ win_maximise(int max)
   if (max == -2) // toggle full screen
     max = wv.win_is_fullscreen ? 0 : 2;
 
+#ifdef broken_fix_for_normal_position_resilience
   static short normal_rows = 0;
   static short normal_cols = 0;
   static int normal_y, normal_x;
   static uint normal_dpi;
+#endif
   void save_win_pos(void) {
+#ifdef broken_fix_for_normal_position_resilience
     normal_rows = term.rows;
     normal_cols = term.cols;
     win_get_scrpos(&normal_x, &normal_y, false);
     normal_dpi = dpi;
+#endif
   }
-
   /* for some weird reason, changes to avoid ShowWindow in commit 113286
      make initial interactive fullscreen or win-max toggle fail;
      mysteriously, requesting the WindowPlacement apparently fixes this
@@ -2012,7 +1923,6 @@ win_maximise(int max)
     pl.length = sizeof(WINDOWPLACEMENT);
     GetWindowPlacement(wv.wnd, &pl);
   }
-
   /* avoid ShowWindow (or SetWindowPlacement) esp. with SW_MAXIMIZE
      so we can prevent the window from also being activated
    */
@@ -2050,6 +1960,8 @@ win_maximise(int max)
       SetWindowPos(wv.wnd, null, fr.left, fr.top,
                    fr.right - fr.left, fr.bottom - fr.top,
                    SWP_FRAMECHANGED | SWP_NOACTIVATE | SWP_NOZORDER);
+#ifdef broken_fix_for_normal_position_resilience
+#warning this would not keep window on same monitor after 2× Alt+F11
       // after screen size changes or DPI changes, the previous size 
       // is no longer remembered in rcNormalPosition 
       // (maybe it got cleared after multiple induced window operations),
@@ -2060,7 +1972,7 @@ win_maximise(int max)
         (void)normal_dpi;
         win_fix_position(false);
       }
-
+#endif
       wv.win_is_fullscreen = false;
     }else if (max == 2 && !wv.win_is_fullscreen)  // max -> fullscreen
       make_fullscreen();
@@ -2116,17 +2028,14 @@ win_maximise(int max)
                  SWP_FRAMECHANGED | SWP_NOACTIVATE | SWP_NOZORDER);
   }
 }
-
 /* Go back to configured window size.
  */
-static void
-default_size(void)
+void default_size(void)
 {
   if (IsZoomed(wv.wnd))
     ShowWindow(wv.wnd, SW_RESTORE);
   win_set_chars(cfg.winsize.y, cfg.winsize.x);
 }
-
 void
 win_update_transparency(int trans, bool opaque)
 {
@@ -2164,11 +2073,9 @@ win_update_transparency(int trans, bool opaque)
       SetLayeredWindowAttributes(wv.wnd, 0, 255 - (uchar)trans, LWA_ALPHA);
     }
   }
-
   win_update_blur(opaque);
   win_update_glass(opaque);
 }
-
 void
 win_update_scrollbar(bool inner)
 {
@@ -2181,7 +2088,6 @@ win_update_scrollbar(bool inner)
     //printf("enforce application scrollbar %d->%d->%d\n", scrollbar, cfg.scrollbar, cfg.scrollbar ?: 1);
     scrollbar = cfg.scrollbar ?: 1;
   }
-
   LONG style = GetWindowLong(wv.wnd, GWL_STYLE);
   bool had_scrollbar = style & WS_VSCROLL;
   SetWindowLong(wv.wnd, GWL_STYLE,
@@ -2212,7 +2118,6 @@ win_update_scrollbar(bool inner)
                  SWP_NOACTIVATE | SWP_NOMOVE |
                  SWP_NOZORDER | SWP_FRAMECHANGED);
   }
-
   // confine to screen borders, except in full size (#1126)
   if (!(wv.win_is_fullscreen || IsZoomed(wv.wnd)))
     if (wv.is_init)  // don't spoil negative position (#1123)
@@ -2220,7 +2125,6 @@ win_update_scrollbar(bool inner)
         if (scrollbar && !had_scrollbar)  // only if adding outer scrollbar
           win_fix_position(true);
 }
-
 void
 win_font_cs_reconfig(bool font_changed)
 {
@@ -2234,7 +2138,6 @@ win_font_cs_reconfig(bool font_changed)
   else if (term.report_ambig_width && old_ambig_wide != cs_ambig_wide)
     child_write(&term,cs_ambig_wide ? "\e[2W" : "\e[1W", 4);
 }
-
 static void
 font_cs_reconfig(bool font_changed)
 {
@@ -2253,7 +2156,6 @@ font_cs_reconfig(bool font_changed)
 
   win_font_cs_reconfig(font_changed);
 }
-
 void
 win_reconfig(void)
 {
@@ -2288,10 +2190,8 @@ win_reconfig(void)
     clear_emoji_data();
     win_invalidate_all(false);
   }
-
   font_cs_reconfig(font_changed);
 }
-
 static bool
 confirm_exit(void)
 {
@@ -2386,7 +2286,6 @@ confirm_exit(void)
   // Treat failure to show the dialog as confirmation.
   return !ret || ret == IDOK;
 }
-
 static bool
 confirm_reset(void)
 {
@@ -2399,12 +2298,10 @@ confirm_reset(void)
   // Treat failure to show the dialog as confirmation.
   return !ret || ret == IDOK;
 }
-
 void win_close() { 
   if (!cfg.confirm_exit || confirm_exit())
     child_terminate(&term); 
 }
-
 void
 app_close()
 {
@@ -2425,11 +2322,9 @@ app_close()
       free(fg_prog);
     }
   }
-
   if (!cfg.confirm_exit || confirm_exit())
     child_kill((GetKeyState(VK_SHIFT) & 0x80) != 0);
 }
-
 /*
    Mouse pointer style.
  */
@@ -2505,14 +2400,12 @@ set_cursor_style(bool appmouse, const char * style)
   }
   set_cursor(appmouse,c);
 }
-
 static void
 win_init_cursors()
 {
   set_cursor_stylet(true, IDC_ARROW);
   set_cursor_stylet(false,IDC_IBEAM);
 }
-
 /*
    Diagnostic functions.
  */
@@ -2529,13 +2422,11 @@ show_message(const char * msg, UINT type)
   }
   delete(outmsg);
 }
-
 void
 show_info(const char * msg)
 {
   show_message(msg, MB_OK);
 }
-
 static char *
 opterror_msg(string msg, bool utf8params, string p1, string p2)
 {
@@ -2566,7 +2457,6 @@ opterror_msg(string msg, bool utf8params, string p1, string p2)
   else
     return null;
 }
-
 bool
 print_opterror(FILE * stream, string msg, bool utf8params, string p1, string p2)
 {
@@ -2582,13 +2472,11 @@ print_opterror(FILE * stream, string msg, bool utf8params, string p1, string p2)
   }
   return ok;
 }
-
 static void
 print_error(string msg)
 {
   print_opterror(stderr, msg, true, "", "");
 }
-
 static void
 option_error(const char * msg, const char * option, int err)
 {
@@ -2605,7 +2493,6 @@ option_error(const char * msg, const char * option, int err)
   show_message(fullmsg, MB_ICONWARNING);
   exit(1);
 }
-
 static void
 show_iconwarn(const wchar * winmsg)
 {
@@ -2629,7 +2516,6 @@ show_iconwarn(const wchar * winmsg)
   else
     show_message(msg, MB_ICONWARNING);
 }
-
 /*
    Message handling.
  */
@@ -2642,7 +2528,7 @@ show_iconwarn(const wchar * winmsg)
 #define dont_debug_minor_messages
 #define dont_debug_hook
 
-static void win_global_keyboard_hook(bool on,bool autooff);
+void win_global_keyboard_hook(bool on,bool autooff);
 
 void win_tog_partline(){
   term.usepartline=!term.usepartline; 
@@ -2658,15 +2544,10 @@ void win_tog_border(){
   if(cfg.border_style>BORDER_VOID)cfg.border_style=BORDER_NORMAL;
   win_update_border();
 }
-
 #ifdef debug_clear_fullscreen
 #define clear_fullscreen() printf("calling cl_fs %s:%d\n", __FUNCTION__, __LINE__), clear_fullscreen()
 #endif
 
-static LRESULT CALLBACK
-win_proc(HWND wnd, UINT message, WPARAM wp, LPARAM lp)
-{
-  win_tab_actv();
 #ifdef debug_messages
   static struct {
     uint wm_;
@@ -2674,12 +2555,19 @@ win_proc(HWND wnd, UINT message, WPARAM wp, LPARAM lp)
   } wm_names[] = {
 #include "_wm.t"
   };
+#endif
+static LRESULT CALLBACK
+win_proc(HWND wnd, UINT message, WPARAM wp, LPARAM lp)
+{
+  win_tab_actv();
+#ifdef debug_messages
   char * wm_name = "WM_?";
-  for (uint i = 0; i < lengthof(wm_names); i++)
+  for (uint i = 0; i < lengthof(wm_names); i++){
     if (message == wm_names[i].wm_ && !strstr(wm_names[i].wm_name, "FIRST")) {
       wm_name = wm_names[i].wm_name;
       break;
     }
+  }
   if ((message != WM_KEYDOWN || !(lp & 0x40000000))
     && message != WM_TIMER && message != WM_NCHITTEST
 # ifndef debug_mouse_messages
@@ -2689,7 +2577,7 @@ win_proc(HWND wnd, UINT message, WPARAM wp, LPARAM lp)
 # ifndef debug_minor_messages
       && !strstr(wm_name, "_GET") && !strstr(wm_name, "_IME")
 # endif
-    )
+    ){
 # ifdef debug_only_sizepos_messages
     if (strstr(wm_name, "POSCH") || strstr(wm_name, "SIZ"))
 # endif
@@ -2700,39 +2588,38 @@ win_proc(HWND wnd, UINT message, WPARAM wp, LPARAM lp)
         if (strstr(wm_name, "MOUSE") || strstr(wm_name, "BUTTON") || strstr(wm_name, "CURSOR") || strstr(wm_name, "KEY"))
 # endif
           printf("[%d]->%8p %04X %s (%08X %08X)\n", (int)time(0), wnd, message, wm_name, (unsigned)wp, (unsigned)lp);
+  }
 #endif
-
   switch (message) {
-    when WM_NCCREATE:
-        if (cfg.handle_dpichanged && pEnableNonClientDpiScaling) {
-          //CREATESTRUCT * csp = (CREATESTRUCT *)lp;
-          wv.resizing = true;
-          BOOL res = pEnableNonClientDpiScaling(wnd);
-          wv.resizing = false;
-          (void)res;
+    when WM_NCCREATE:{
+      if (cfg.handle_dpichanged && pEnableNonClientDpiScaling) {
+        //CREATESTRUCT * csp = (CREATESTRUCT *)lp;
+        wv.resizing = true;
+        BOOL res = pEnableNonClientDpiScaling(wnd);
+        wv.resizing = false;
+        (void)res;
 #ifdef debug_dpi
-          uint err=GetLastError();
-          int wmlen = 1024;  // size of heap-allocated array
-          char winmsg[wmlen];  // constant and < 1273 or 1705 => issue #530
-          FormatMessageW( FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_MAX_WIDTH_MASK, 0, err, 0, winmsg, wmlen, 0);
-          printf("NC:EnableNonClientDpiScaling: %d %ls\n", !!res, winmsg);
+        uint err=GetLastError();
+        int wmlen = 1024;  // size of heap-allocated array
+        char winmsg[wmlen];  // constant and < 1273 or 1705 => issue #530
+        FormatMessageW( FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_MAX_WIDTH_MASK, 0, err, 0, winmsg, wmlen, 0);
+        printf("NC:EnableNonClientDpiScaling: %d %ls\n", !!res, winmsg);
 #endif
-          return 1;
-        }
-
-    when WM_TIMER: {
+        return 1;
+      }
+    }
+    when WM_TIMER:{ 
       KillTimer(wnd, wp);
       void_fn cb = (void_fn)wp;
       cb();
       return 0;
     }
-
-    when WM_CLOSE:
-        app_close();
-    return 0;
-
+    when WM_CLOSE:{
+      app_close();
+      return 0;
+    }
 #ifdef show_icon_via_callback
-    when WM_MEASUREITEM: {
+    when WM_MEASUREITEM:{ 
       MEASUREITEMSTRUCT* lpmis = (MEASUREITEMSTRUCT*)lp;
       if (lpmis) {
         lpmis->itemWidth += 2;
@@ -2740,9 +2627,8 @@ win_proc(HWND wnd, UINT message, WPARAM wp, LPARAM lp)
           lpmis->itemHeight = 16;
       }
     }
-
     //https://www.nanoant.com/programming/themed-menus-icons-a-complete-vista-xp-solution
-    when WM_DRAWITEM: {
+    when WM_DRAWITEM:{ 
 # ifdef debug_drawicon
       printf("WM_DRAWITEM\n");
 # endif
@@ -2763,47 +2649,47 @@ win_proc(HWND wnd, UINT message, WPARAM wp, LPARAM lp)
     }
 #endif
 
-    when WM_USER:  // reposition and resize
+    when WM_USER:{  // reposition and resize
 #ifdef debug_tabs
-        printf("[%8p] WM_USER %d,%d %d,%d\n", wnd, (INT16)LOWORD(lp), (INT16)HIWORD(lp), LOWORD(wp), HIWORD(wp));
+      printf("[%8p] WM_USER %d,%d %d,%d\n", wnd, (INT16)LOWORD(lp), (INT16)HIWORD(lp), LOWORD(wp), HIWORD(wp));
 #endif
-    wv.wm_user = true;
+      wv.wm_user = true;
 #ifdef async_horflush
-    if (!wp && lp == WIN_HORFLUSH) {
-      do_horflush();
-    }
-    else
-#endif
-      if (!wp && lp == WIN_TOP) { // Ctrl+Alt or session switcher
-                                  // these do not work:
-                                  // BringWindowToTop(wnd);
-                                  // SetForegroundWindow(wnd);
-                                  // SetActiveWindow(wnd);
-
-                                  // this would work, kind of, 
-                                  // but blocks previous window from raising on next click:
-        SetWindowPos(wnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-        SetWindowPos(wnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-
-        ShowWindow(wnd, SW_RESTORE);
+      if (!wp && lp == WIN_HORFLUSH) {
+        do_horflush();
       }
+      else
+#endif
+        if (!wp && lp == WIN_TOP) { // Ctrl+Alt or session switcher
+                                    // these do not work:
+                                    // BringWindowToTop(wnd);
+                                    // SetForegroundWindow(wnd);
+                                    // SetActiveWindow(wnd);
+
+                                    // this would work, kind of, 
+                                    // but blocks previous window from raising on next click:
+          SetWindowPos(wnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+          SetWindowPos(wnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+
+          ShowWindow(wnd, SW_RESTORE);
+        }
 #ifdef sanitize_min_restore_via_sync
-      else if (!wp && lp == WIN_RESTORE) {
-        //printf("[%p] WIN_RESTORE\n", wnd);
-        //ShowWindow(wnd, SW_RESTORE);  // only if we used SW_MINIMIZE
-        ShowWindow(wnd, SW_SHOWNA);
-      }
+        else if (!wp && lp == WIN_RESTORE) {
+          //printf("[%p] WIN_RESTORE\n", wnd);
+          //ShowWindow(wnd, SW_RESTORE);  // only if we used SW_MINIMIZE
+          ShowWindow(wnd, SW_SHOWNA);
+        }
 #endif
-      else if (!wp && lp == WIN_TITLE) {
-        //refresh_tab_titles(false);
-        //win_update_tabbar();
-      }
+        else if (!wp && lp == WIN_TITLE) {
+          //refresh_tab_titles(false);
+          //win_update_tabbar();
+        }
 #ifdef debug_tabs
-    printf("[%8p] WM_USER end\n", wnd);
+      printf("[%8p] WM_USER end\n", wnd);
 #endif
-    wv.wm_user = false;
-
-    when WM_COMMAND or WM_SYSCOMMAND: {
+      wv.wm_user = false;
+    }
+    when WM_COMMAND or WM_SYSCOMMAND:{ 
 # if defined(debug_messages) || defined(debug_tabs)
       static struct {
         uint idm_;
@@ -2929,93 +2815,92 @@ win_proc(HWND wnd, UINT message, WPARAM wp, LPARAM lp)
           }
 #ifdef sanitize_min_restore_via_sync
 #ifdef IDM_RESTORE
-        when IDM_RESTORE: {
-          focus_inhibit = true;
-          //printf("[%p] IDM_RESTORE restoring %d focus_here %d\n", wnd, restoring, focus_here);
-          //ShowWindow(wnd, SW_RESTORE);  // only if we used SW_MINIMIZE
-          ShowWindow(wnd, SW_SHOWNA);
-          //printf("[%p] IDM_RESTORE >restore focus_here %d\n", wnd, focus_here);
-        }
+          when IDM_RESTORE: {
+            focus_inhibit = true;
+            //printf("[%p] IDM_RESTORE restoring %d focus_here %d\n", wnd, restoring, focus_here);
+            //ShowWindow(wnd, SW_RESTORE);  // only if we used SW_MINIMIZE
+            ShowWindow(wnd, SW_SHOWNA);
+            //printf("[%p] IDM_RESTORE >restore focus_here %d\n", wnd, focus_here);
+          }
 #endif
 #ifdef IDM_FOCUS
-        when IDM_FOCUS: {
-          //printf("[%p] IDM_FOCUS restoring %d focus_here %d\n", wnd, restoring, focus_here);
-          // set focus to raised tab 
-          // after having restored other tab windows of a tab set
-          //BringWindowToTop(wnd);
-          //SetForegroundWindow(wnd);
-          SetActiveWindow(wnd);
-          SetFocus(wnd);
+          when IDM_FOCUS: {
+            //printf("[%p] IDM_FOCUS restoring %d focus_here %d\n", wnd, restoring, focus_here);
+            // set focus to raised tab 
+            // after having restored other tab windows of a tab set
+            //BringWindowToTop(wnd);
+            //SetForegroundWindow(wnd);
+            SetActiveWindow(wnd);
+            SetFocus(wnd);
+          }
+#endif
+#endif
         }
-#endif
-#endif
+    }
+    when WM_APP:{
+        update_available_version(wp);
+    }
+    when WM_VSCROLL:{
+      //printf("WM_VSCROLL %d\n", LOWORD(wp));
+      if (!term.app_scrollbar)
+        switch (LOWORD(wp)) {
+          when SB_LINEUP:   term_scroll(0, -1);
+          when SB_LINEDOWN: term_scroll(0, +1);
+          when SB_PAGEUP:   term_scroll(0, -max(1, term.rows - 1));
+          when SB_PAGEDOWN: term_scroll(0, +max(1, term.rows - 1));
+          when SB_THUMBPOSITION or SB_THUMBTRACK: {
+            //term_scroll(1, HIWORD(wp));
+            SCROLLINFO info;
+            info.cbSize = sizeof(SCROLLINFO);
+            info.fMask = SIF_TRACKPOS;
+            GetScrollInfo(wnd, SB_VERT, &info);
+            term_scroll(1, info.nTrackPos);
+          }
+          when SB_TOP:      term_scroll(+1, 0);
+          when SB_BOTTOM:   term_scroll(-1, 0);
+          //when SB_ENDSCROLL: ;
+          // these two may be used by mintty keyboard shortcuts (not by Windows)
+          when SB_PRIOR:    term_scroll(SB_PRIOR, 0);
+          when SB_NEXT:     term_scroll(SB_NEXT, 0);
+        }
+      else {
+        switch (LOWORD(wp)) {
+          when SB_LINEUP:
+              //win_key_down(VK_UP, 1);
+              win_csi_seq("65", "#e");
+          when SB_LINEDOWN:
+              //win_key_down(VK_DOWN, 1);
+              win_csi_seq("66", "#e");
+          when SB_PAGEUP:
+              //win_key_down(VK_PRIOR, 1);
+              win_csi_seq("5", "#e");
+          when SB_PAGEDOWN:
+              //win_key_down(VK_NEXT, 1);
+              win_csi_seq("6", "#e");
+          when SB_TOP:
+              child_printf(&term,"\e[0#d");
+          when SB_BOTTOM:
+              child_printf(&term,"\e[%u#d", scroll_len);
+          when SB_THUMBPOSITION or SB_THUMBTRACK: {
+            SCROLLINFO info;
+            info.cbSize = sizeof(SCROLLINFO);
+            info.fMask = SIF_TRACKPOS;
+            GetScrollInfo(wnd, SB_VERT, &info);
+            child_printf(&term,"\e[%u#d", info.nTrackPos);
+          }
+        }
+        // while holding the mouse button on the scrollbar (e.g. dragging), 
+        // messages are not dispatched to the application;
+        // so in order to make any response effective on the screen, 
+        // we need to call the child_proc function here;
+        // additional delay avoids incomplete delivery of such echo (#1033),
+        // 1ms is not sufficient
+        usleep(5555);
+        win_tab_push(NULL);
+        child_proc();
+        win_tab_pop();
       }
     }
-
-    when WM_APP:
-        update_available_version(wp);
-
-    when WM_VSCROLL:
-        //printf("WM_VSCROLL %d\n", LOWORD(wp));
-        if (!term.app_scrollbar)
-          switch (LOWORD(wp)) {
-            when SB_LINEUP:   term_scroll(0, -1);
-            when SB_LINEDOWN: term_scroll(0, +1);
-            when SB_PAGEUP:   term_scroll(0, -max(1, term.rows - 1));
-            when SB_PAGEDOWN: term_scroll(0, +max(1, term.rows - 1));
-            when SB_THUMBPOSITION or SB_THUMBTRACK: {
-              //term_scroll(1, HIWORD(wp));
-              SCROLLINFO info;
-              info.cbSize = sizeof(SCROLLINFO);
-              info.fMask = SIF_TRACKPOS;
-              GetScrollInfo(wnd, SB_VERT, &info);
-              term_scroll(1, info.nTrackPos);
-            }
-            when SB_TOP:      term_scroll(+1, 0);
-            when SB_BOTTOM:   term_scroll(-1, 0);
-            //when SB_ENDSCROLL: ;
-            // these two may be used by mintty keyboard shortcuts (not by Windows)
-            when SB_PRIOR:    term_scroll(SB_PRIOR, 0);
-            when SB_NEXT:     term_scroll(SB_NEXT, 0);
-          }
-        else {
-          switch (LOWORD(wp)) {
-            when SB_LINEUP:
-                //win_key_down(VK_UP, 1);
-                win_csi_seq("65", "#e");
-            when SB_LINEDOWN:
-                //win_key_down(VK_DOWN, 1);
-                win_csi_seq("66", "#e");
-            when SB_PAGEUP:
-                //win_key_down(VK_PRIOR, 1);
-                win_csi_seq("5", "#e");
-            when SB_PAGEDOWN:
-                //win_key_down(VK_NEXT, 1);
-                win_csi_seq("6", "#e");
-            when SB_TOP:
-                child_printf(&term,"\e[0#d");
-            when SB_BOTTOM:
-                child_printf(&term,"\e[%u#d", scroll_len);
-            when SB_THUMBPOSITION or SB_THUMBTRACK: {
-              SCROLLINFO info;
-              info.cbSize = sizeof(SCROLLINFO);
-              info.fMask = SIF_TRACKPOS;
-              GetScrollInfo(wnd, SB_VERT, &info);
-              child_printf(&term,"\e[%u#d", info.nTrackPos);
-            }
-          }
-          // while holding the mouse button on the scrollbar (e.g. dragging), 
-          // messages are not dispatched to the application;
-          // so in order to make any response effective on the screen, 
-          // we need to call the child_proc function here;
-          // additional delay avoids incomplete delivery of such echo (#1033),
-          // 1ms is not sufficient
-          usleep(5555);
-          win_tab_push(NULL);
-          child_proc();
-          win_tab_pop();
-        }
-
     when WM_HSCROLL: {
       // Note: the resize features attached to 
       // Ctrl/Alt+ clicks on the horizontal scrollbar arrows/empty areas
@@ -3030,42 +2915,46 @@ win_proc(HWND wnd, UINT message, WPARAM wp, LPARAM lp)
       mod_keys mods = get_mods();
       //printf("SB_%d %X\n", LOWORD(wp), mods);
       switch (LOWORD(wp)) {
-        when SB_LINELEFT:
+        when SB_LINELEFT:{
 #ifdef resize_view_via_horizontal_scrollbar
-            if (mods & (MDK_SHIFT | MDK_ALT))
-              horsizing(1, true);
-            else if (mods & MDK_CTRL)
-              horsizing(-1, true);
-            else
+          if (mods & (MDK_SHIFT | MDK_ALT))
+            horsizing(1, true);
+          else if (mods & MDK_CTRL)
+            horsizing(-1, true);
+          else
 #endif
-              horscroll(-1);
-        when SB_LINERIGHT:
+            horscroll(-1);
+        }
+        when SB_LINERIGHT:{
 #ifdef resize_view_via_horizontal_scrollbar
-            if (mods & (MDK_SHIFT | MDK_ALT))
-              horsizing(1, false);
-            else if (mods & MDK_CTRL)
-              horsizing(-1, false);
-            else
+          if (mods & (MDK_SHIFT | MDK_ALT))
+            horsizing(1, false);
+          else if (mods & MDK_CTRL)
+            horsizing(-1, false);
+          else
 #endif
-              horscroll(1);
-        when SB_PAGELEFT:
+            horscroll(1);
+        }
+        when SB_PAGELEFT:{
 #ifdef resize_view_via_horizontal_scrollbar
-            if (mods & (MDK_SHIFT | MDK_ALT))
-              horsizing(term.cols / 10, true);
-            else if (mods & MDK_CTRL)
-              horsizing(-term.cols / 10, true);
-            else
+          if (mods & (MDK_SHIFT | MDK_ALT))
+            horsizing(term.cols / 10, true);
+          else if (mods & MDK_CTRL)
+            horsizing(-term.cols / 10, true);
+          else
 #endif
-              horscroll(-term.cols / 10);
-        when SB_PAGERIGHT:
+            horscroll(-term.cols / 10);
+        }
+        when SB_PAGERIGHT:{
 #ifdef resize_view_via_horizontal_scrollbar
-            if (mods & (MDK_SHIFT | MDK_ALT))
-              horsizing(term.cols / 10, false);
-            else if (mods & MDK_CTRL)
-              horsizing(-term.cols / 10, false);
-            else
+          if (mods & (MDK_SHIFT | MDK_ALT))
+            horsizing(term.cols / 10, false);
+          else if (mods & MDK_CTRL)
+            horsizing(-term.cols / 10, false);
+          else
 #endif
-              horscroll(term.cols / 10);
+            horscroll(term.cols / 10);
+        }
         when SB_THUMBPOSITION or SB_THUMBTRACK: {
           //SCROLLINFO info;
           //info.cbSize = sizeof(SCROLLINFO);
@@ -3080,7 +2969,6 @@ win_proc(HWND wnd, UINT message, WPARAM wp, LPARAM lp)
       }
       return 0;
     }
-
 #ifndef WM_MOUSEHWHEEL
 #define WM_MOUSEHWHEEL 0x020E
 #endif
@@ -3118,278 +3006,278 @@ win_proc(HWND wnd, UINT message, WPARAM wp, LPARAM lp)
         }
       }
     }
-
     when WM_MOUSEMOVE: win_mouse_move(false, lp);
     when WM_NCMOUSEMOVE: win_mouse_move(true, screentoclient(wnd, lp));
     when WM_LBUTTONDOWN: win_mouse_click(MBT_LEFT, lp);
     when WM_RBUTTONDOWN: win_mouse_click(MBT_RIGHT, lp);
     when WM_MBUTTONDOWN: win_mouse_click(MBT_MIDDLE, lp);
-    when WM_XBUTTONDOWN:
-        switch (HIWORD(wp)) {
-          when XBUTTON1: win_mouse_click(MBT_4, lp);
-          when XBUTTON2: win_mouse_click(MBT_5, lp);
-        }
+    when WM_XBUTTONDOWN:{
+      switch (HIWORD(wp)) {
+        when XBUTTON1: win_mouse_click(MBT_4, lp);
+        when XBUTTON2: win_mouse_click(MBT_5, lp);
+      }
+    }
     when WM_LBUTTONUP: win_mouse_release(MBT_LEFT, lp);
     when WM_RBUTTONUP: win_mouse_release(MBT_RIGHT, lp);
     when WM_MBUTTONUP: win_mouse_release(MBT_MIDDLE, lp);
-    when WM_XBUTTONUP:
+    when WM_XBUTTONUP:{
+      switch (HIWORD(wp)) {
+        when XBUTTON1: win_mouse_release(MBT_4, lp);
+        when XBUTTON2: win_mouse_release(MBT_5, lp);
+      }
+    }
+    when WM_NCLBUTTONDOWN or WM_NCLBUTTONDBLCLK:{
+      if (in_client_area(wnd, lp)) {
+        // clicked within "client area";
+        // Windows sends the NC message nonetheless when Ctrl+Alt is held
+        if (win_mouse_click(MBT_LEFT, screentoclient(wnd, lp)))
+          return 0;
+      } else if (wp == HTCAPTION && get_mods() == MDK_CTRL) {
+        if (win_title_menu(true))
+          return 0;
+      }
+    }
+    when WM_NCRBUTTONDOWN or WM_NCRBUTTONDBLCLK:{
+      if (in_client_area(wnd, lp)) {
+        // clicked within "client area";
+        // Windows sends the NC message nonetheless when Ctrl+Alt is held
+        if (win_mouse_click(MBT_RIGHT, screentoclient(wnd, lp)))
+          return 0;
+      } else if (wp == HTCAPTION && ( get_mods() == MDK_CTRL)) {
+        if (win_title_menu(false))
+          return 0;
+      }
+    }
+    when WM_NCMBUTTONDOWN or WM_NCMBUTTONDBLCLK:{
+      if (in_client_area(wnd, lp)) {
+        if (win_mouse_click(MBT_MIDDLE, screentoclient(wnd, lp)))
+          return 0;
+      }
+    }
+    when WM_NCXBUTTONDOWN or WM_NCXBUTTONDBLCLK:{
+      if (in_client_area(wnd, lp))
         switch (HIWORD(wp)) {
-          when XBUTTON1: win_mouse_release(MBT_4, lp);
-          when XBUTTON2: win_mouse_release(MBT_5, lp);
-        }
-    when WM_NCLBUTTONDOWN or WM_NCLBUTTONDBLCLK:
-        if (in_client_area(wnd, lp)) {
-          // clicked within "client area";
-          // Windows sends the NC message nonetheless when Ctrl+Alt is held
-          if (win_mouse_click(MBT_LEFT, screentoclient(wnd, lp)))
-            return 0;
-        }
-        else
-          if (wp == HTCAPTION && get_mods() == MDK_CTRL) {
-            if (win_title_menu(true))
+          when XBUTTON1: if (win_mouse_click(MBT_4, screentoclient(wnd, lp)))
               return 0;
-          }
-    when WM_NCRBUTTONDOWN or WM_NCRBUTTONDBLCLK:
-        if (in_client_area(wnd, lp)) {
-          // clicked within "client area";
-          // Windows sends the NC message nonetheless when Ctrl+Alt is held
-          if (win_mouse_click(MBT_RIGHT, screentoclient(wnd, lp)))
-            return 0;
-        }
-        else
-          if (wp == HTCAPTION && ( get_mods() == MDK_CTRL)) {
-            if (win_title_menu(false))
+          when XBUTTON2: if (win_mouse_click(MBT_5, screentoclient(wnd, lp)))
               return 0;
-          }
-    when WM_NCMBUTTONDOWN or WM_NCMBUTTONDBLCLK:
-        if (in_client_area(wnd, lp)) {
-          if (win_mouse_click(MBT_MIDDLE, screentoclient(wnd, lp)))
-            return 0;
         }
-    when WM_NCXBUTTONDOWN or WM_NCXBUTTONDBLCLK:
-        if (in_client_area(wnd, lp))
-          switch (HIWORD(wp)) {
-            when XBUTTON1: if (win_mouse_click(MBT_4, screentoclient(wnd, lp)))
-                return 0;
-            when XBUTTON2: if (win_mouse_click(MBT_5, screentoclient(wnd, lp)))
-                return 0;
-          }
-    when WM_NCLBUTTONUP:
-        if (in_client_area(wnd, lp)) {
-          win_mouse_release(MBT_LEFT, screentoclient(wnd, lp));
+    }
+    when WM_NCLBUTTONUP:{
+      if (in_client_area(wnd, lp)) {
+        win_mouse_release(MBT_LEFT, screentoclient(wnd, lp));
+        return 0;
+      }
+    }
+    when WM_NCRBUTTONUP:{
+      if (in_client_area(wnd, lp)) {
+        win_mouse_release(MBT_RIGHT, screentoclient(wnd, lp));
+        return 0;
+      }
+    }
+    when WM_NCMBUTTONUP:{
+      if (in_client_area(wnd, lp)) {
+        win_mouse_release(MBT_MIDDLE, screentoclient(wnd, lp));
+        return 0;
+      }
+    }
+    when WM_NCXBUTTONUP:{
+      if (in_client_area(wnd, lp))
+        switch (HIWORD(wp)) {
+          when XBUTTON1: win_mouse_release(MBT_4, screentoclient(wnd, lp));
+          return 0;
+          when XBUTTON2: win_mouse_release(MBT_5, screentoclient(wnd, lp));
           return 0;
         }
-    when WM_NCRBUTTONUP:
-        if (in_client_area(wnd, lp)) {
-          win_mouse_release(MBT_RIGHT, screentoclient(wnd, lp));
-          return 0;
-        }
-    when WM_NCMBUTTONUP:
-        if (in_client_area(wnd, lp)) {
-          win_mouse_release(MBT_MIDDLE, screentoclient(wnd, lp));
-          return 0;
-        }
-    when WM_NCXBUTTONUP:
-        if (in_client_area(wnd, lp))
-          switch (HIWORD(wp)) {
-            when XBUTTON1: win_mouse_release(MBT_4, screentoclient(wnd, lp));
-            return 0;
-            when XBUTTON2: win_mouse_release(MBT_5, screentoclient(wnd, lp));
-            return 0;
-          }
-
-    when WM_KEYDOWN or WM_SYSKEYDOWN:
-        //printf("[%ld] WM_KEY %02X\n", mtime(), (int)wp);
-        if(wp==wv.pressedkey){ wv.pressedkey=-1; return 0; }
-    if (win_key_down(wp, lp))
+    }
+    when WM_KEYDOWN or WM_SYSKEYDOWN:{
+      //printf("[%ld] WM_KEY %02X\n", mtime(), (int)wp);
+      if(wp==wv.pressedkey){ wv.pressedkey=-1; return 0; }
+      if (win_key_down(wp, lp))
+        return 0;
+    }
+    when WM_KEYUP or WM_SYSKEYUP:{
+      if (win_key_up(wp, lp)) return 0;
+    }
+    when WM_CHAR or WM_SYSCHAR:{
+      provide_input(wp);
+      child_sendw(&term,&(wchar){wp}, 1);
       return 0;
-
-    when WM_KEYUP or WM_SYSKEYUP:
-        if (win_key_up(wp, lp))
-          return 0;
-
-    when WM_CHAR or WM_SYSCHAR:
+    }
+    when WM_UNICHAR:{
+      if (wp == UNICODE_NOCHAR) return true;
+      else if (wp > 0xFFFF) {
+        provide_input(0xFFFF);
+        child_sendw(&term,(wchar[]){high_surrogate(wp), low_surrogate(wp)}, 2);
+        return false;
+      } else {
         provide_input(wp);
-    child_sendw(&term,&(wchar){wp}, 1);
-    return 0;
-
-    when WM_UNICHAR:
-        if (wp == UNICODE_NOCHAR)
-          return true;
-        else if (wp > 0xFFFF) {
-          provide_input(0xFFFF);
-          child_sendw(&term,(wchar[]){high_surrogate(wp), low_surrogate(wp)}, 2);
-          return false;
-        }
-        else {
-          provide_input(wp);
-          child_sendw(&term,&(wchar){wp}, 1);
-          return false;
-        }
-
-    when WM_MENUCHAR:
-        // this is sent after leaving the system menu with ESC 
-        // and typing a key; insert the key and prevent the beep
-        provide_input(wp);
-    child_sendw(&term,&(wchar){wp}, 1);
-    return MNC_CLOSE << 16;
-
+        child_sendw(&term,&(wchar){wp}, 1);
+        return false;
+      }
+    }
+    when WM_MENUCHAR:{
+      // this is sent after leaving the system menu with ESC 
+      // and typing a key; insert the key and prevent the beep
+      provide_input(wp);
+      child_sendw(&term,&(wchar){wp}, 1);
+      return MNC_CLOSE << 16;
+    }
 #ifndef WM_CLIPBOARDUPDATE
 #define WM_CLIPBOARDUPDATE 0x031D
 #endif
     // Try to clear selection when clipboard content is updated (#742)
-    when WM_CLIPBOARDUPDATE:
-        if (wv.clipboard_token)
-          wv.clipboard_token = false;
-        else {
-          term.selected = false;
-          win_update(false);
-        }
-    return 0;
-
+    when WM_CLIPBOARDUPDATE:{
+      if (wv.clipboard_token)
+        wv.clipboard_token = false;
+      else {
+        term.selected = false;
+        win_update(false);
+      }
+      return 0;
+    }
 #ifdef catch_lang_change
-    // this is rubbish; only the initial change would be captured anyway;
-    // if (Shift-)Control-digit is mapped as a keyboard switch shortcut 
-    // on Windows level, it is intentionally overridden and does not 
-    // need to be re-tweaked here
-    when WM_INPUTLANGCHANGEREQUEST:  // catch Shift-Control-0 (#233)
-                                     // guard win_key_down with key state in order to avoid key '0' floods
-                                     // as generated by non-key language change events (#472)
-        if ((GetKeyState(VK_SHIFT) & 0x80) && (GetKeyState(VK_CONTROL) & 0x80))
-          if (win_key_down('0', 0x000B0001))
-            return 0;
+      // this is rubbish; only the initial change would be captured anyway;
+      // if (Shift-)Control-digit is mapped as a keyboard switch shortcut 
+      // on Windows level, it is intentionally overridden and does not 
+      // need to be re-tweaked here
+    when WM_INPUTLANGCHANGEREQUEST:{  // catch Shift-Control-0 (#233)
+                                      // guard win_key_down with key state in order to avoid key '0' floods
+                                      // as generated by non-key language change events (#472)
+      if ((GetKeyState(VK_SHIFT) & 0x80) && (GetKeyState(VK_CONTROL) & 0x80))
+        if (win_key_down('0', 0x000B0001)) return 0;
+    }
 #endif
 
-    when WM_INPUTLANGCHANGE:
-        win_set_ime_open(ImmIsIME(GetKeyboardLayout(0)) && ImmGetOpenStatus(wv.imc));
-
-    when WM_IME_NOTIFY:
-        if (wp == IMN_SETOPENSTATUS)
-          win_set_ime_open(ImmGetOpenStatus(wv.imc));
-
-    when WM_IME_STARTCOMPOSITION:
-        ImmSetCompositionFont(wv.imc, &lfont);
-
-    when WM_IME_COMPOSITION:
-        if (lp & GCS_RESULTSTR) {
-          LONG len = ImmGetCompositionStringW(wv.imc, GCS_RESULTSTR, null, 0);
-          if (len > 0) {
-            wchar buf[(len + 1) / 2];
-            ImmGetCompositionStringW(wv.imc, GCS_RESULTSTR, buf, len);
-            provide_input(*buf);
-            child_sendw(&term,buf, len / 2);
-          }
-          return 1;
-        }
-
-    when WM_THEMECHANGED or WM_WININICHANGE or WM_SYSCOLORCHANGE:
-        // Size of window border (border, title bar, scrollbar) changed by:
-        //   Personalization of window geometry (e.g. Title Bar Size)
-        //     -> Windows sends WM_SYSCOLORCHANGE
-        //   Performance Option "Use visual styles on windows and borders"
-        //     -> Windows sends WM_THEMECHANGED and WM_SYSCOLORCHANGE
-        // and in both case a couple of WM_WININICHANGE
-
-        win_adjust_borders(wv.cell_width * cfg.winsize.x, wv.cell_height * (cfg.winsize.y + term.st_rows));
-    RedrawWindow(wnd, null, null, 
-                 RDW_FRAME | RDW_INVALIDATE |
-                 RDW_UPDATENOW | RDW_ALLCHILDREN);
-    win_update_search();
-    // support tabbar
-    // win_update_tabbar();
-    // update dark mode
-    if (message == WM_WININICHANGE) {
-      // SetWindowTheme will cause an asynchronous WM_THEMECHANGED message,
-      // so guard it by WM_WININICHANGE;
-      // this will switch from Light to Dark mode immediately but not back!
-      //win_dark_mode(wnd);
+    when WM_INPUTLANGCHANGE:{
+      win_set_ime_open(ImmIsIME(GetKeyboardLayout(0)) && ImmGetOpenStatus(wv.imc));
     }
+    when WM_IME_NOTIFY:{
+      if (wp == IMN_SETOPENSTATUS)
+        win_set_ime_open(ImmGetOpenStatus(wv.imc));
+    }
+    when WM_IME_STARTCOMPOSITION:{
+      ImmSetCompositionFont(wv.imc, &lfont);
+    }
+    when WM_IME_COMPOSITION:{
+      if (lp & GCS_RESULTSTR) {
+        LONG len = ImmGetCompositionStringW(wv.imc, GCS_RESULTSTR, null, 0);
+        if (len > 0) {
+          wchar buf[(len + 1) / 2];
+          ImmGetCompositionStringW(wv.imc, GCS_RESULTSTR, buf, len);
+          provide_input(*buf);
+          child_sendw(&term,buf, len / 2);
+        }
+        return 1;
+      }
+    }
+    when WM_THEMECHANGED or WM_WININICHANGE or WM_SYSCOLORCHANGE:{
+      // Size of window border (border, title bar, scrollbar) changed by:
+      //   Personalization of window geometry (e.g. Title Bar Size)
+      //     -> Windows sends WM_SYSCOLORCHANGE
+      //   Performance Option "Use visual styles on windows and borders"
+      //     -> Windows sends WM_THEMECHANGED and WM_SYSCOLORCHANGE
+      // and in both case a couple of WM_WININICHANGE
 
-    when WM_FONTCHANGE:
-        font_cs_reconfig(true);
-
-    when WM_PAINT:
-        win_paint();
+      win_adjust_borders(wv.cell_width * cfg.winsize.x, wv.cell_height * (cfg.winsize.y + term.st_rows));
+      RedrawWindow(wnd, null, null, 
+                   RDW_FRAME | RDW_INVALIDATE |
+                   RDW_UPDATENOW | RDW_ALLCHILDREN);
+      win_update_search();
+      // support tabbar
+      // win_update_tabbar();
+      // update dark mode
+      if (message == WM_WININICHANGE) {
+        // SetWindowTheme will cause an asynchronous WM_THEMECHANGED message,
+        // so guard it by WM_WININICHANGE;
+        // this will switch from Light to Dark mode immediately but not back!
+        //win_dark_mode(wnd);
+      }
+    }
+    when WM_FONTCHANGE:{
+      font_cs_reconfig(true);
+    }
+    when WM_PAINT:{
+      win_paint();
 
 #ifdef handle_default_size_asynchronously
-    if (wv.default_size_token) {
-      default_size();
-      wv.default_size_token = false;
-    }
+      if (wv.default_size_token) {
+        default_size();
+        wv.default_size_token = false;
+      }
 #endif
-
-    return 0;
-
-    when WM_MOUSEACTIVATE:
-        // prevent accidental selection on activation (#717)
-        if (LOWORD(lp) == HTCLIENT && HIWORD(lp) == WM_LBUTTONDOWN)
-          if (!getenv("ConEmuPID"))
+      return 0;
+    }
+    when WM_MOUSEACTIVATE:{
+      // prevent accidental selection on activation (#717)
+      if (LOWORD(lp) == HTCLIENT && HIWORD(lp) == WM_LBUTTONDOWN)
+        if (!getenv("ConEmuPID"))
 #ifdef suppress_click_on_focus_at_message_level
 #warning this would also obstruct mouse function in the search bar
-            // ignore focus click
-            return MA_ACTIVATEANDEAT;
+          // ignore focus click
+          return MA_ACTIVATEANDEAT;
 #else
-    // support selective mouse click suppression
-    wv.click_focus_token = true;
+      // support selective mouse click suppression
+      wv.click_focus_token = true;
 #endif
-
-    when WM_ACTIVATE:
-        if ((wp & 0xF) == WA_INACTIVE) {
-          term_set_focus(false, true);
-          win_global_keyboard_hook(1,1);
-        } else {
-          flash_taskbar(false);  /* stop */
-          term_set_focus(true, true);
-          win_global_keyboard_hook(1,0);
-        }
-    win_update_transparency(cfg.transparency, cfg.opaque_when_focused);
-    win_key_reset();
+    }
+    when WM_ACTIVATE:{
+      if ((wp & 0xF) == WA_INACTIVE) {
+        term_set_focus(false, true);
+        win_global_keyboard_hook(1,1);
+      } else {
+        flash_taskbar(false);  /* stop */
+        term_set_focus(true, true);
+        win_global_keyboard_hook(1,0);
+      }
+      win_update_transparency(cfg.transparency, cfg.opaque_when_focused);
+      win_key_reset();
 #ifdef adapt_term_size_on_activate
-    // support tabbar?
-    // this was included in the original patch but its purpose is unclear
-    // and it causes some flickering
-    win_adapt_term_size(false, false);
+      // support tabbar?
+      // this was included in the original patch but its purpose is unclear
+      // and it causes some flickering
+      win_adapt_term_size(false, false);
 #endif
-
-    when WM_SETFOCUS:
-        trace_resize(("# WM_SETFOCUS VK_SHIFT %02X\n", (uchar)GetKeyState(VK_SHIFT)));
-    term_set_focus(true, false);
-    win_sys_style(true);
-    CreateCaret(wnd, caretbm, 0, 0);
-    win_update(false);
-    ShowCaret(wnd);
-    wv.zoom_token = -4;
-
-    when WM_KILLFOCUS:
-        win_show_mouse();
-    term_set_focus(false, false);
-    win_sys_style(false);
-    win_hide_tip();
-    DestroyCaret();
-    win_update(false);
-
-    when WM_INITMENU:
-        // win_update_menus is already called before calling TrackPopupMenu
-        // which is supposed to initiate this message;
-        // however, if we skip the call here, the "New" item will 
-        // not be initialised !?!
-        win_update_menus(true);
-    return 0;
-
-    when WM_MOVING:
-        trace_resize(("# WM_MOVING VK_SHIFT %02X\n", (uchar)GetKeyState(VK_SHIFT)));
-    win_hide_tip();
-    wv.zoom_token = -4;
-    wv.moving = true;
-
-    when WM_ENTERSIZEMOVE:
-        trace_resize(("# WM_ENTERSIZEMOVE VK_SHIFT %02X\n", (uchar)GetKeyState(VK_SHIFT)));
-    wv.resizing = true;
+    }
+    when WM_SETFOCUS:{
+      trace_resize(("# WM_SETFOCUS VK_SHIFT %02X\n", (uchar)GetKeyState(VK_SHIFT)));
+      term_set_focus(true, false);
+      win_sys_style(true);
+      CreateCaret(wnd, caretbm, 0, 0);
+      win_update(false);
+      ShowCaret(wnd);
+      wv.zoom_token = -4;
+    }
+    when WM_KILLFOCUS:{
+      win_show_mouse();
+      term_set_focus(false, false);
+      win_sys_style(false);
+      win_hide_tip();
+      DestroyCaret();
+      win_update(false);
+    }
+    when WM_INITMENU:{
+      // win_update_menus is already called before calling TrackPopupMenu
+      // which is supposed to initiate this message;
+      // however, if we skip the call here, the "New" item will 
+      // not be initialised !?!
+      win_update_menus(true);
+      return 0;
+    }
+    when WM_MOVING:{
+      trace_resize(("# WM_MOVING VK_SHIFT %02X\n", (uchar)GetKeyState(VK_SHIFT)));
+      win_hide_tip();
+      wv.zoom_token = -4;
+      wv.moving = true;
+    }
+    when WM_ENTERSIZEMOVE:{
+      trace_resize(("# WM_ENTERSIZEMOVE VK_SHIFT %02X\n", (uchar)GetKeyState(VK_SHIFT)));
+      wv.resizing = true;
 #ifdef resize_view_via_drag_border
-    static int olddelta;
-    olddelta = 0;
+      static int olddelta;
+      olddelta = 0;
 #endif
-
+    }
     when WM_SIZING: {  // mouse-drag window resizing
       trace_resize(("# WM_SIZING (resizing %d) VK_SHIFT %02X\n", wv.resizing, (uchar)GetKeyState(VK_SHIFT)));
       wv.zoom_token = 2;
@@ -3415,7 +3303,6 @@ win_proc(HWND wnd, UINT message, WPARAM wp, LPARAM lp)
         wp -= WMSZ_TOP;
         r->top += eh;
       }
-
       if (wp == WMSZ_RIGHT)
         r->right -= ew;
       else if (wp == WMSZ_LEFT)
@@ -3442,53 +3329,51 @@ win_proc(HWND wnd, UINT message, WPARAM wp, LPARAM lp)
 
       return ew || eh;
     }
-
     when WM_SIZE: {
       trace_resize(("# WM_SIZE (resizing %d) VK_SHIFT %02X\n", wv.resizing, (uchar)GetKeyState(VK_SHIFT)));
 #ifdef resize_view_via_drag_border
       if (get_mods() & MDK_ALT)
         return 0;
 #endif
-
-    /*
-      When restoring a window from minimized/iconized which is part 
-      of a virtual tabs tabset, there were some problems:
-      • Tabsets did not support transparency as opacity used to cumulate 
-        (handled since 3.6.5).
-      • Every tab had its own taskbar icon (grouped since 3.6.5).
-      • After taskbar grouping of the tabset, window switching behaved 
-        eratically (fixed in f1712).
-      • After taskbar grouping of the tabset, restoring the tab shown there 
-        did not restore the background tabs, so they were not accessible 
-        as usual; while they could be activated on the mintty tabbar, 
-        a noticeable delay exposed that they were just being restored; also 
-        it was not possible to switch to them with Ctrl+TAB (#1242 step 5).
-        To fix this, 4 strategies have been considered:
-        1. when restoring, also restore all background tabs 
-           (selected via #ifdef sanitize_min_restore_via_sync);
-           however, after the procedure, either the wrong tab was brought 
-           to the foreground, or the right foreground tab did not get 
-           the keyboard focus; all attempts to sort this out are still 
-           documented in the code but the approach was finally given up;
-           one problem appeared to be mutual restoring taking place, 
-           which was tried to be inhibited by sending the background 
-           tabs inhibit tokens (see IDM_RESTORE handling) but when that 
-           worked tabs still did not get restored properly
-        2. the current foreground tab could be marked using GWL_USERDATA 
-           and thus maintained while minimized, and a distributed 
-           procedure could use that information to focus the proper tab -
-           (not implemented)
-        3. given that background tabs are hidden anyway (using full 
-           transparency), they are not minimized in the first place;
-           this is enabled below by #ifndef sanitize_min_restore_via_sync 
-           and appears to be working; background tabs are kept hidden 
-           in order to simulate minimized state
-        4. monitor all tabs for being hidden or minimized 
-           and ensure at least one tab is accessible in case the 
-           actual foreground tab gets killed 
-           (selected via #ifdef sanitize_min_restore_via_monitoring, 
-           concept outlined but not fully implemented)
-     */
+      /*
+         When restoring a window from minimized/iconized which is part 
+         of a virtual tabs tabset, there were some problems:
+         • Tabsets did not support transparency as opacity used to cumulate 
+         (handled since 3.6.5).
+         • Every tab had its own taskbar icon (grouped since 3.6.5).
+         • After taskbar grouping of the tabset, window switching behaved 
+         eratically (fixed in f1712).
+         • After taskbar grouping of the tabset, restoring the tab shown there 
+         did not restore the background tabs, so they were not accessible 
+         as usual; while they could be activated on the mintty tabbar, 
+         a noticeable delay exposed that they were just being restored; also 
+         it was not possible to switch to them with Ctrl+TAB (#1242 step 5).
+         To fix this, 4 strategies have been considered:
+         1. when restoring, also restore all background tabs 
+         (selected via #ifdef sanitize_min_restore_via_sync);
+         however, after the procedure, either the wrong tab was brought 
+         to the foreground, or the right foreground tab did not get 
+         the keyboard focus; all attempts to sort this out are still 
+         documented in the code but the approach was finally given up;
+         one problem appeared to be mutual restoring taking place, 
+         which was tried to be inhibited by sending the background 
+         tabs inhibit tokens (see IDM_RESTORE handling) but when that 
+         worked tabs still did not get restored properly
+         2. the current foreground tab could be marked using GWL_USERDATA 
+         and thus maintained while minimized, and a distributed 
+         procedure could use that information to focus the proper tab -
+         (not implemented)
+         3. given that background tabs are hidden anyway (using full 
+         transparency), they are not minimized in the first place;
+         this is enabled below by #ifndef sanitize_min_restore_via_sync 
+         and appears to be working; background tabs are kept hidden 
+         in order to simulate minimized state
+         4. monitor all tabs for being hidden or minimized 
+         and ensure at least one tab is accessible in case the 
+         actual foreground tab gets killed 
+         (selected via #ifdef sanitize_min_restore_via_monitoring, 
+         concept outlined but not fully implemented)
+         */
 #ifdef sanitize_min_restore_via_sync
       if (wp == SIZE_RESTORED && manage_tab_hiding()) {
         // sync tab set by spreading RESTORED to all background tabs
@@ -3500,7 +3385,6 @@ win_proc(HWND wnd, UINT message, WPARAM wp, LPARAM lp)
           win_synctabs(3);
           restoring = false;
         }
-
         // after restoring a tab set, the focus must be set to the 
         // actually restored foreground window;
         // to distinguish it from the other (hidden) tabs, it was 
@@ -3520,19 +3404,15 @@ win_proc(HWND wnd, UINT message, WPARAM wp, LPARAM lp)
           SetFocus(wnd);
 #endif
         }
-
         focus_here = false;
         focus_inhibit = false;
-      }
-      else
+      } else
 #endif
-      if (wp == SIZE_RESTORED && wv.win_is_fullscreen)
-        clear_fullscreen();
-      else if (wp == SIZE_MAXIMIZED && wv.go_fullscr_on_max) {
-        wv.go_fullscr_on_max = false;
-        make_fullscreen();
-      }
-
+        if (wp == SIZE_RESTORED && wv.win_is_fullscreen) clear_fullscreen();
+        else if (wp == SIZE_MAXIMIZED && wv.go_fullscr_on_max) {
+          wv.go_fullscr_on_max = false;
+          make_fullscreen();
+        }
       if (!wv.resizing) {
         trace_resize((" (win_proc (WM_SIZE) -> win_adapt_term_size)\n"));
         // enable font zooming on Shift unless
@@ -3566,17 +3446,14 @@ win_proc(HWND wnd, UINT message, WPARAM wp, LPARAM lp)
         if (wv.zoom_token > 0)
           wv.zoom_token = wv.zoom_token >> 1;
         wv.default_size_token = false;
-      }
-      else if (cfg.rewrap_on_resize == 2) {
+      } else if (cfg.rewrap_on_resize == 2) {
         // support continuous reflow while resizing;
         // for this to work at acceptable speed (esp. with long scrollback) 
         // a partial/lazy version of the reflow procedure is required
         do_win_adapt_term_size(false, false, true);
       }
-
       return 0;
     }
-
     when WM_EXITSIZEMOVE or WM_CAPTURECHANGED: { // after mouse-drag resizing
       trace_resize(("# WM_EXITSIZEMOVE (resizing %d) VK_SHIFT %02X\n", wv.resizing, (uchar)GetKeyState(VK_SHIFT)));
 #ifdef resize_view_via_drag_border
@@ -3594,56 +3471,54 @@ win_proc(HWND wnd, UINT message, WPARAM wp, LPARAM lp)
         win_adapt_term_size(shift, false);
       }
     }
-
-    when WM_MOVE:
-        // enable coupled moving of window tabs on Win+Shift moving;
-        // (#600#issuecomment-366643426, if SessionGeomSync ≥ 2);
-        // avoid mutual repositioning (endless flickering);
-        // as an additional condition, position synchronization shall 
-        // only be done if the window has the focus; otherwise this 
-        // has bad impact when a window is (tried to be) restored 
-        // after the window set was minimized; the taskbar icons 
-        // would inconsistently be disabled except one, and after closing 
-        // windows, remaining ones would not be restored at all anymore, 
-        // also the window title sometimes appeared mysteriously corrupted
-        //printf("WM_MOVE moving %d focus %d\n", wv.moving, GetFocus() == wnd);
-        wv.moving = false;
-
+    when WM_MOVE:{
+      // enable coupled moving of window tabs on Win+Shift moving;
+      // (#600#issuecomment-366643426, if SessionGeomSync ≥ 2);
+      // avoid mutual repositioning (endless flickering);
+      // as an additional condition, position synchronization shall 
+      // only be done if the window has the focus; otherwise this 
+      // has bad impact when a window is (tried to be) restored 
+      // after the window set was minimized; the taskbar icons 
+      // would inconsistently be disabled except one, and after closing 
+      // windows, remaining ones would not be restored at all anymore, 
+      // also the window title sometimes appeared mysteriously corrupted
+      //printf("WM_MOVE moving %d focus %d\n", wv.moving, GetFocus() == wnd);
+      wv.moving = false;
+    }
 #define WP ((WINDOWPOS *) lp)
-
 #ifdef try_to_hook_resizing
-    when WM_NCCALCSIZE:
-        if (wp && hor_resizing) {
-          // https://stackoverflow.com/questions/53000291 and
-          // https://stackoverflow.com/questions/26700236
-          // suggest this tweak to avoid flicker on horizontal scrolling
-          // but it does not work
-          hor_resizing = false;
+    when WM_NCCALCSIZE:{
+      if (wp && hor_resizing) {
+        // https://stackoverflow.com/questions/53000291 and
+        // https://stackoverflow.com/questions/26700236
+        // suggest this tweak to avoid flicker on horizontal scrolling
+        // but it does not work
+        hor_resizing = false;
 #define NP ((NCCALCSIZE_PARAMS *) lp)
-          //printf("WM_NCCALCSIZE TRUE %d %d %d\n", NP->rgrc[0].left, NP->rgrc[1].left, NP->rgrc[2].left);
-          RECT ocr = NP->rgrc[2];
-          DefWindowProcW(wnd, message, wp, lp);
-          RECT ncr = NP->rgrc[0];
-          NP->rgrc[2] = ocr;
-          NP->rgrc[1] = ncr;
-          NP->rgrc[1].right = NP->rgrc[1].left + 1;
-          NP->rgrc[1].bottom = NP->rgrc[1].top + 1;
-          NP->rgrc[2].right = NP->rgrc[1].left + 1;
-          NP->rgrc[2].bottom = NP->rgrc[1].top + 1;
-          return WVR_VALIDRECTS;
-        }
+        //printf("WM_NCCALCSIZE TRUE %d %d %d\n", NP->rgrc[0].left, NP->rgrc[1].left, NP->rgrc[2].left);
+        RECT ocr = NP->rgrc[2];
+        DefWindowProcW(wnd, message, wp, lp);
+        RECT ncr = NP->rgrc[0];
+        NP->rgrc[2] = ocr;
+        NP->rgrc[1] = ncr;
+        NP->rgrc[1].right = NP->rgrc[1].left + 1;
+        NP->rgrc[1].bottom = NP->rgrc[1].top + 1;
+        NP->rgrc[2].right = NP->rgrc[1].left + 1;
+        NP->rgrc[2].bottom = NP->rgrc[1].top + 1;
+        return WVR_VALIDRECTS;
+      }
+    }
 #endif
-
-    when WM_WINDOWPOSCHANGING:
-        wv.poschanging = true;
-    trace_resize(("# WM_WINDOWPOSCHANGING %3X (resizing %d) %d %d @ %d %d\n", WP->flags, wv.resizing, WP->cy, WP->cx, WP->y, WP->x));
-    // https://stackoverflow.com/questions/53000291
-    // suggests this tweak to avoid flicker on horizontal scrolling
-    // but it does not work
-    //?DefWindowProcW(wnd, message, wp, lp);
-    //WP->flags |= SWP_NOCOPYBITS;
-    //?return 0;
-
+    when WM_WINDOWPOSCHANGING:{
+      wv.poschanging = true;
+      trace_resize(("# WM_WINDOWPOSCHANGING %3X (resizing %d) %d %d @ %d %d\n", WP->flags, wv.resizing, WP->cy, WP->cx, WP->y, WP->x));
+      // https://stackoverflow.com/questions/53000291
+      // suggests this tweak to avoid flicker on horizontal scrolling
+      // but it does not work
+      //?DefWindowProcW(wnd, message, wp, lp);
+      //WP->flags |= SWP_NOCOPYBITS;
+      //?return 0;
+    }
     when WM_WINDOWPOSCHANGED: {
       wv.poschanging = false;
       if (wv.disable_poschange)
@@ -3667,7 +3542,6 @@ win_proc(HWND wnd, UINT message, WPARAM wp, LPARAM lp)
           else
             dpi_changed = false;
         }
-
         if (dpi_changed && cfg.handle_dpichanged) {
           // remaining glitch:
           // start mintty -p @1; move it to other monitor;
@@ -3678,11 +3552,8 @@ win_proc(HWND wnd, UINT message, WPARAM wp, LPARAM lp)
         }
       }
     }
-
-    when WM_SETFONT:
-        wguifont=(HFONT)wp;
-    when WM_GETFONT:
-        return (WPARAM)wguifont;
+    when WM_SETFONT: wguifont=(HFONT)wp;
+    when WM_GETFONT: return (WPARAM)wguifont;
     when WM_GETDPISCALEDSIZE: {
       // here we could adjust the RECT passed to WM_DPICHANGED ...
 #ifdef debug_dpi
@@ -3691,7 +3562,6 @@ win_proc(HWND wnd, UINT message, WPARAM wp, LPARAM lp)
 #endif
       return 0;
     }
-
     when WM_DPICHANGED: {
       if (!cfg.handle_dpichanged) {
 #ifdef debug_dpi
@@ -3699,7 +3569,6 @@ win_proc(HWND wnd, UINT message, WPARAM wp, LPARAM lp)
 #endif
         break;
       }
-
       if (per_monitor_dpi_aware == DPI_AWAREV2) {
         is_in_dpi_change = true;
 
@@ -3731,7 +3600,6 @@ win_proc(HWND wnd, UINT message, WPARAM wp, LPARAM lp)
           // win_fix_position also clips the window to desktop size
           win_set_chars_keep_fullscreen(y, x);
         }
-
         is_in_dpi_change = false;
         return 0;
       } else if (per_monitor_dpi_aware == DPI_AWAREV1) {
@@ -3788,7 +3656,6 @@ win_proc(HWND wnd, UINT message, WPARAM wp, LPARAM lp)
       }
       break;
     }
-
 #if defined(debug_stylestuff) || defined(debug_messages)
     when /* WM_STYLECHANGING or */ WM_STYLECHANGED: {
       string what = message == WM_STYLECHANGING ? "CHNGING" : "CHANGED";
@@ -3799,10 +3666,10 @@ win_proc(HWND wnd, UINT message, WPARAM wp, LPARAM lp)
       DWORD on = new & ~old;
       printf("%sSTYLE%s %08X -> %08X, off %08X on %08X\n", which, what, old, new, off, on);
 
-typedef struct {
-  DWORD st;
-  string style;
-} style_desc;
+      typedef struct {
+        DWORD st;
+        string style;
+      } style_desc;
 #ifndef WS_EX_NOREDIRECTIONBITMAP
 #define WS_EX_NOREDIRECTIONBITMAP 0x00200000
 #endif
@@ -3821,12 +3688,10 @@ typedef struct {
         stylebits(true, off, ws_styles, lengthof(ws_styles));
         stylebits(false, on, ws_styles, lengthof(ws_styles));
       }
-
       //if (message == WM_STYLECHANGING) return 0;
     }
-
-    when WM_ERASEBKGND:
 #endif
+    when WM_ERASEBKGND:
 
     when WM_NCHITTEST: {
       LRESULT result = DefWindowProcW(wnd, message, wp, lp);
@@ -3836,95 +3701,61 @@ typedef struct {
         (GetKeyState(VK_MENU) & 0x80) && (GetKeyState(VK_CONTROL) & 0x80))
         // redirect click target from client area to caption
         return HTCAPTION;
-      else
-        return result;
+      else return result;
     }
-
-    when WM_SETHOTKEY:
+    when WM_SETHOTKEY:{
 #ifdef debug_hook
-        show_info(asform("WM_SETHOTKEY %X %02X", wp >> 8, wp & 0xFF));
+      show_info(asform("WM_SETHOTKEY %X %02X", wp >> 8, wp & 0xFF));
 #endif
-    if (wp & 0xFF) {
-      // Set up implicit startup hotkey as defined via Windows shortcut
-      hotkey = wp & 0xFF;
-      ushort mods = wp >> 8;
-      /* 
-       * HOTKEYF_CONTROL=0x2;MDK_CONTROL=4
-       * HOTKEYF_ALT    =0x4;MDK_ALT    =2
-       *  */
-      hotkey_mods = ((mods & HOTKEYF_SHIFT  ) ? MDK_SHIFT:0)
-          | ((mods & HOTKEYF_ALT    ) ? MDK_ALT  :0)
-          | ((mods & HOTKEYF_CONTROL) ? MDK_CTRL :0);
-
-    }
-    else {
-      hotkey = 0;
+      if (wp & 0xFF) {
+        // Set up implicit startup wv.hotkey as defined via Windows shortcut
+        wv.hotkey = wp & 0xFF;
+        ushort mods = wp >> 8;
+        /* 
+         * HOTKEYF_CONTROL=0x2;MDK_CONTROL=2
+         * HOTKEYF_ALT    =0x4;MDK_ALT    =4
+         *  */
+        wv.hotkey_mods = ((mods & HOTKEYF_SHIFT  ) ? MDK_SHIFT:0)
+            | ((mods & HOTKEYF_ALT    ) ? MDK_ALT  :0)
+            | ((mods & HOTKEYF_CONTROL) ? MDK_CTRL :0)
+            | ((mods & HOTKEYF_EXT    ) ? MDK_WIN  :0)
+            ;
+      } else {
+        wv.hotkey = 0;
+      }
     }
   }
-
   /*
    * Any messages we don't process completely above are passed through to
    * DefWindowProc() for default processing.
    */
   return DefWindowProcW(wnd, message, wp, lp);
 }
-
-//static DWORD spid,stid;
-#define KH_MAPSIZE 4096
-int pmapmem(int flg){
-  static HANDLE hMapFile=0 ;
-  static char*pBuf=NULL;
-  const char *szmmname="minttyz/keyhook";
-  int nnew=0;
-  if(flg){
-    hMapFile = OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE,szmmname) ;
-    if(!hMapFile ){
-      hMapFile = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, KH_MAPSIZE , szmmname) ;
-      nnew=1;
-      if(hMapFile == NULL){
-        return 1 ;
-      }
-    }
-    pBuf = (char*)MapViewOfFile(hMapFile, FILE_MAP_ALL_ACCESS, 0, 0, KH_MAPSIZE) ;
-    if(pBuf == NULL){
-      CloseHandle(hMapFile) ; 
-      return 2 ;
-    }
-    if(nnew){
-      memset(pBuf,0,KH_MAPSIZE);
-    }
-  }else{
-  }
-  return 0;
-}
 #define HKDBG(fmt, ...)	printf(fmt, ##__VA_ARGS__)
-static LRESULT CALLBACK
-hookprockbll(int nCode, WPARAM wParam, LPARAM lParam)
-{
+#define UNCAP_INFO (WM_APP + 3195) /* 35963 */
+static LRESULT CALLBACK hookprockbll(int nCode, WPARAM wParam, LPARAM lParam) {
   LPKBDLLHOOKSTRUCT kbdll = (LPKBDLLHOOKSTRUCT)lParam;
-  int isself=GetForegroundWindow() == wv.wnd;
-  if(!isself){
-    if(hotkey){
-      LPKBDLLHOOKSTRUCT kbdll = (LPKBDLLHOOKSTRUCT)lParam;
-      if(kbdll->vkCode == hotkey&&wParam==WM_KEYDOWN ){
-        if(get_mods() == hotkey_mods){
-          ShowWindow(wv.wnd, SW_MINIMIZE);
-          ShowWindow(wv.wnd, SW_RESTORE);
-          return 1;
-        }
-      }
-    }
-    return CallNextHookEx(kb_hook, nCode, wParam, lParam);
+  if(kbdll->dwExtraInfo == UNCAP_INFO){
+    return CallNextHookEx(wv.kb_hook, nCode, wParam, lParam);
   }
   uint key = kbdll->vkCode;
-  if(hotkey&&key == hotkey&&wParam==WM_KEYDOWN ){
-    if(get_mods()== hotkey_mods){
-      ShowWindow(wv.wnd, SW_SHOW);  // in case it was started with -w hide
-      ShowWindow(wv.wnd, SW_MINIMIZE);
-      return 1;
+  HWND hwnd=GetForegroundWindow();
+  int isself=0;
+  if(hwnd== wv.wnd)isself=1;
+  else if(hwnd== wv.config_wnd)isself=2;
+  //printf("HK %d %p %p %p \n",isself,hwnd,wv.config_wnd);
+  //Hotkey 
+  if(!isself){
+    if(wv.hotkey&&key == wv.hotkey&&wParam==WM_KEYDOWN ){
+      if(get_mods()== wv.hotkey_mods){
+        ShowWindow(wv.wnd, SW_SHOW);  // in case it was started with -w hide
+        ShowWindow(wv.wnd, SW_MINIMIZE);
+        return 1;
+      }
     }
+    return CallNextHookEx(wv.kb_hook, nCode, wParam, lParam);
   }
-#define UNCAP_INFO (WM_APP + 3195) /* 35963 */
+  //Map key
   if(cfg.capmapesc&&key==VK_CAPITAL&&kbdll->dwExtraInfo != UNCAP_INFO){
     INPUT inputs;
     PKEYBDINPUT ki = &inputs.ki;
@@ -3937,10 +3768,8 @@ hookprockbll(int nCode, WPARAM wParam, LPARAM lParam)
     return 1;
   }
   if (nCode != HC_ACTION ||term.shortcut_override ||(kbdll->flags&0x10)){
-    return CallNextHookEx(kb_hook, nCode, wParam, lParam);
+    return CallNextHookEx(wv.kb_hook, nCode, wParam, lParam);
   }
-  //keybd_event('Z', 0, 0, 0)　;//　表示模拟按下Z键
-  //keybd_event('Z', 0, 2, 0)　;//　表示模拟弹起Z键
   ULONG msgt=kbdll->time;
   if(msgt-wv.last_wink_time>5000){
     wv.winkey=wv.lwinkey=wv.rwinkey=0;
@@ -3963,15 +3792,16 @@ hookprockbll(int nCode, WPARAM wParam, LPARAM lParam)
         return 1;
       }
       if(wv.winkey){  
-        LPARAM lp = 1|(LPARAM)kbdll->flags << 24 | (LPARAM)kbdll->scanCode << 16;
-        wv.pressedkey=key;
         wv.pkeys=1;
+        wv.pressedkey=key;
+        if(isself==2) return 0;
+        LPARAM lp = 1|(LPARAM)kbdll->flags << 24 | (LPARAM)kbdll->scanCode << 16;
         win_tab_actv();
         if((!win_whotkey(key, lp))&&(cfg.hkwinkeyall==0)){
-          keybd_event(wv.pwinkey,0,2,0);
-          keybd_event(key,kbdll->scanCode,0,0);
-          keybd_event(key,kbdll->scanCode,2,0);
-          keybd_event(wv.pwinkey,0,2,0);
+          keybd_event(wv.pwinkey,0,2,UNCAP_INFO);
+          keybd_event(key,kbdll->scanCode,0,UNCAP_INFO);
+          keybd_event(key,kbdll->scanCode,2,UNCAP_INFO);
+          keybd_event(wv.pwinkey,0,2,UNCAP_INFO);
         }
         return 1;
       }
@@ -3982,55 +3812,60 @@ hookprockbll(int nCode, WPARAM wParam, LPARAM lParam)
         if(key==VK_LWIN){ wv.winkey=wv.lwinkey=0;iwk=1; }
         else if(key==VK_RWIN){wv.winkey=wv.rwinkey=0;iwk=1;}
         if(iwk){
-          if(wv.pkeys==0&&cfg.hkwinkeyall==0){
-            keybd_event(VK_LWIN,0,0,0);
-            keybd_event(VK_LWIN,0,2,0);
+          if(isself==1) {
+            if(wv.pkeys==0&&cfg.hkwinkeyall==0){
+              keybd_event(key,0,0,UNCAP_INFO);
+              keybd_event(key,0,2,UNCAP_INFO);
+            }
           }
           wv.pkeys=0;
+        }else{
+          if(isself==2) return 0;
         }
         return 1; 
       }
     }
   }
-  return CallNextHookEx(kb_hook, nCode, wParam, lParam);
+  return CallNextHookEx(wv.kb_hook, nCode, wParam, lParam);
 }
-static void
+void
 win_global_keyboard_hook(bool on,bool autooff)
 {
   int global=1;
   (void)autooff;
   //spid=getpid(); stid=GetCurrentThreadId();
+  if(IsDebuggerPresent()){
+    if (wv.kb_hook){
+      UnhookWindowsHookEx(wv.kb_hook);
+      wv.kb_hook=NULL;
+    }
+    return ;
+  }
+  if(autooff)if(!wv.hotkey)on=0;
   if(on){
     if(!cfg.hook_keyboard)return;
     if(!cfg.win_shortcuts)return;
-    //if(autooff)if(!hotkey)on=0;
   }
   if (on){
-    if(!kb_hook){
-      kb_hook = SetWindowsHookExW(WH_KEYBOARD_LL, hookprockbll,0, global ? 0 : GetCurrentThreadId());
-      //ErrMsg(GetLastError(),"HookKeyBoard:");
+    if(!wv.kb_hook){
+      wv.kb_hook = SetWindowsHookExW(WH_KEYBOARD_LL, hookprockbll,0, global ? 0 : GetCurrentThreadId());
     }
-
-  }else if (kb_hook){
-    UnhookWindowsHookEx(kb_hook);
-    kb_hook=NULL;
-    //ErrMsg(GetLastError(),"unHookKeyBoard:");
+  }else if (wv.kb_hook){
+    UnhookWindowsHookEx(wv.kb_hook);
+    wv.kb_hook=NULL;
   }
 }
-
 bool
 win_get_ime(void)
 {
   return ImmGetOpenStatus(wv.imc);
 }
-
 void
 win_set_ime(bool open)
 {
   ImmSetOpenStatus(wv.imc, open);
   win_set_ime_open(open);
 }
-
 void
 report_pos(void)
 {
@@ -4062,7 +3897,6 @@ report_pos(void)
     printf("\n");
   }
 }
-
 void
 win_to_top(HWND top_wnd)
 {
@@ -4102,7 +3936,6 @@ exit_mintty(void)
                | SWP_NOREPOSITION | SWP_NOACTIVATE | SWP_NOCOPYBITS);
   exit(0);
 }
-
 #if CYGWIN_VERSION_API_MINOR >= 74
 
 int
@@ -4141,7 +3974,6 @@ select_WSL(const char * wsl)
   }
   return err;
 }
-
 static void setwslcmd(){
   const char*wslcmd=NULL;
   const char*chkfile(const char*fn){
@@ -4195,7 +4027,6 @@ static void setwslcmd(){
     if(!(wslcmd=chkfile(uwslp)))
       free(uwslp);
   }
-
   if(!wslcmd) wslcmd=getbridge2();
   if(!wslcmd) wslcmd=getbridge();
   if(!wslcmd){
@@ -4215,7 +4046,6 @@ static void setwslcmd(){
   }
   wv.wslcmd=(char*)wslcmd;
 }
-
 #endif
 /*
    Check minimum cygwin version.
@@ -4230,7 +4060,6 @@ cygver_ge(uint v1, uint v2)
     if (uname(&name) >= 0)
       sscanf(name.release, "%d.%d.", &_v1, &_v2);
   }
-
   return _v1 > v1 || (_v1 == v1 && _v2 >= v2);
 }
 /*
@@ -4324,6 +4153,7 @@ static char help[] =
   "  -B, --Border frame|void  Use thin/no window border\n"
   "      --nopin           Make this instance not pinnable to taskbar\n"
   "  -H, --help            Display help and exit\n"
+  "      --helpfunc        Display functions help and exit\n"
   "  -V, --version         Print version information and exit\n"
   "      --fg COLOR        set ForegroundColour\n"
   "      --bg COLOR        set BackgroundColour\n"
@@ -4353,6 +4183,7 @@ enum {
   OPT_EN       = 0x88,
   OPT_LF       = 0x89,
   OPT_SL       = 0x8A,
+  OPT_HELPFUNC = 0x8B,
 };
 
 static const struct option
@@ -4395,6 +4226,7 @@ opts[] = {
   {"nodaemon",   no_argument,       0, 'd'},
   {"daemon",     no_argument,       0, 'D'},
   {"help",       no_argument,       0, 'H'},
+  {"helpfunc",   no_argument,       0, OPT_HELPFUNC },
   {"version",    no_argument,       0, 'V'},
   // further xterm-style convenience options, all without short option:
   {"fg",         required_argument, 0, OPT_FG},
@@ -4441,6 +4273,7 @@ void pcygargv(int login){
 }
 static char * lappdata = 0;
 static STARTUPINFOW sui;
+extern void initvkname();
 int LoadConfig(){
   // Load config files
   // try global config file
@@ -4484,7 +4317,6 @@ int LoadConfig(){
     trace_dir(asform("MINTTY_PWD: %s", getenv("MINTTY_PWD")));
     unsetenv("MINTTY_PWD");
   }
-
   bool wdpresent = true;
   if (invoked_from_shortcut && sui.lpTitle) {
     wv.shortcut = wcsdup(sui.lpTitle);
@@ -4512,6 +4344,7 @@ int LoadConfig(){
     if (err)
       fprintf(stderr,"WSL distribution '%s' not found\n", cfg.wslname);
   }
+  initvkname();
   for (;;) {
     int opt = cfg.short_long_opts
       ? getopt_long_only(argc, (char**)argv, short_opts, opts, 0)
@@ -4638,7 +4471,7 @@ int LoadConfig(){
         //set_arg_option("TabBar", strdup("1"));
         //set_arg_option("SessionGeomSync", optarg ?: strdup("2"));
       when 'B':
-        set_arg_option("Border", strdup(optarg));
+        set_arg_option("BorderStyle", strdup(optarg));
       when 'R':
         switch (*optarg) {
           when 's' or 'o':
@@ -4647,6 +4480,9 @@ int LoadConfig(){
             wv.report_moni = true;
           when 'f':
             list_fonts(true);
+            exit(0);
+          when 'R':
+            list_printers();
             exit(0);
 #if CYGWIN_VERSION_API_MINOR >= 74
           when 'W': {
@@ -4690,7 +4526,13 @@ int LoadConfig(){
         strappend(helptext, _(help));
         show_info(helptext);
         free(helptext);
-        return 0;
+        return -2;
+      }
+      when OPT_HELPFUNC:{
+        void helpfuncs();
+        finish_config();  // ensure localized message
+        helpfuncs();
+        return -3;
       }
       when 'V': {
         finish_config();  // ensure localized message
@@ -4702,7 +4544,7 @@ int LoadConfig(){
         free(abtext);
         show_info(vertext);
         free(vertext);
-        return 0;
+        return -1;
       }
       when OPT_FG:
         set_arg_option("ForegroundColour", optarg);
@@ -4763,7 +4605,6 @@ int LoadConfig(){
             }
             oa += n;
           }
-
         if (sscanf(oa, "@%i%n", &wv.monitor, &n) == 1)
           oa += n;
 
@@ -4780,7 +4621,6 @@ int LoadConfig(){
         set_arg_option("ConPTY", optarg);
     }
   }
-
   copy_config("main after -o", &file_cfg, &cfg);
   if (*cfg.colour_scheme)
     load_scheme(cfg.colour_scheme);
@@ -4900,15 +4740,13 @@ main(int argc, const char *argv[])
       wv.wsltty_appx = true;
     }
   }
-
   if (wv.wsltty_appx)
     lappdata = getlocalappdata();
 #endif
 
-  LoadConfig();
+  if(LoadConfig()<0)return 0;
   setwslcmd();
 
-  if(cfg.partline>6)cfg.partline=6;
   int term_rows = cfg.winsize.y;
   int term_cols = cfg.winsize.x;
   if (getenv("MINTTY_ROWS")) {
@@ -4940,7 +4778,6 @@ main(int argc, const char *argv[])
     run_max = atoi(getenv("MINTTY_MAXIMIZE"));
     unsetenv("MINTTY_MAXIMIZE");
   }
-
   // if started from console, try to detach from caller's terminal (~daemonizing)
   // in order to not suppress signals
   // (indicated by isatty if linked with -mwindows as ttyname() is null)
@@ -4963,7 +4800,6 @@ main(int argc, const char *argv[])
 
     setsid();  // detach child process
   }
-
   load_dwm_funcs();  // must be called after the fork() above!
 
   load_dpi_funcs();
@@ -5121,7 +4957,6 @@ main(int argc, const char *argv[])
     }
     delete(icon_file);
   }
-
   // Expand AppID placeholders
   const wchar * app_id = 0;
   if (invoked_from_shortcut && sui.lpTitle)
@@ -5146,7 +4981,6 @@ main(int argc, const char *argv[])
     wclass = cs__utftowcs(syncclass);
     free(syncclass);
   }
-
 #ifdef prevent_grouping_hidden_tabs
   // should an explicitly hidden window not be grouped with a "class" of tabs?
   if (!cfg.window)
@@ -5172,7 +5006,6 @@ main(int argc, const char *argv[])
       wtitle = W(APPNAME);
     }
   }
-
   // The window class.
   class_atom = RegisterClassExW(&(WNDCLASSEXW){
                                 .cbSize = sizeof(WNDCLASSEXW),
@@ -5225,7 +5058,6 @@ main(int argc, const char *argv[])
     // win_init_fonts here as before
     win_init_fonts(cfg.font.size, true);
   }
-
   // Reconfigure the charset module now that arguments have been converted,
   // the locale/charset settings have been loaded, and the font width has
   // been determined.
@@ -5255,7 +5087,6 @@ main(int argc, const char *argv[])
   if (pSetPreferredAppMode) {
     pSetPreferredAppMode(1); /* AllowDark */
   }
-
   // Figure out whether to setup window with horizontal scrollbar
   int _horbar = horbar;
   if (horbar == 1) {
@@ -5277,7 +5108,6 @@ main(int argc, const char *argv[])
     wcscat(labelbuf, iconlabelpad);
     wtitle = labelbuf;
   }
-
   // Create initial window.
   //term.show_scrollbar = cfg.scrollbar;  // hotfix #597
   window_style=up_borderstyle(window_style);
@@ -5296,7 +5126,6 @@ main(int argc, const char *argv[])
     horflush();
     horbar = _horbar;
   }
-
   // Dark mode support
   win_dark_mode(wv.wnd);
 
@@ -5335,17 +5164,14 @@ main(int argc, const char *argv[])
         x += monar.left - ar.left;
         y += monar.top - ar.top;
       }
-
       ar = monar;
       printpos("mon", x, y, ar);
     }
-
     if (cfg.x == (int)CW_USEDEFAULT) {
       if (wv.monitor == 0)
         win_get_pos(&x, &y);
       printpos("fix", x, y, ar);
     }
-
     if (wv.maxwidth) {
       x = ar.left;
       wv.width = ar.right - ar.left;
@@ -5365,7 +5191,6 @@ main(int argc, const char *argv[])
                  SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_NOACTIVATE);
     trace_winsize("-p");
   }
-
   for(argc=0;argv[argc];argc++);
   cursd.argc=argc;
   cursd.cmd=cmd;
@@ -5462,7 +5287,6 @@ main(int argc, const char *argv[])
     if (dpi != 96) {
       win_get_pixels(&wv.height, &wv.width, true);
     }
-
     MONITORINFO mi;
     get_my_monitor_info(&mi);
     RECT ar = mi.rcWork;
@@ -5477,7 +5301,6 @@ main(int argc, const char *argv[])
         cfg.y = 0;
       printpos("fix", x, y, ar);
     }
-
     if (wv.left)
       x = ar.left + cfg.x;
     else if (wv.right)
@@ -5517,7 +5340,6 @@ main(int argc, const char *argv[])
                  SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_NOACTIVATE);
     trace_winsize("-p");
   }
-
   win_update_border();
   configure_taskbar(app_id);
 
@@ -5530,7 +5352,6 @@ main(int argc, const char *argv[])
     win_fix_position(false);
     trace_winsize("fix_pos");
   }
-
   // Initialise the terminal.
   // If term_reset tries to align the status line before 
   // term.marg_bot is defined in term_resize 
@@ -5572,7 +5393,6 @@ main(int argc, const char *argv[])
     exit(0);
 #endif
   }
-
   // Determine how to show the window.
   wv.go_fullscr_on_max = (cfg.window == -1);
   wv.default_size_token = true;  // prevent font zooming (#708)
@@ -5609,7 +5429,6 @@ main(int argc, const char *argv[])
       setenv(env, val, true);
     }
   }
-
   // Create child process.
   //struct winsize ws={term_rows, term_cols, term_width, term_height};
   //child_create( &term, argv, &ws    ,NULL);
@@ -5652,9 +5471,6 @@ main(int argc, const char *argv[])
   // (https://github.com/mintty/mintty/issues/1113#issuecomment-1210278957)
   SetFocus(wv.wnd);
 
-  // mark userdata with timestamp, for initial tabbar ordering
-  SetWindowLong(wv.wnd, GWL_USERDATA, mtime() & GWL_TIMEMASK);
-
   // Cloning fullscreen window
   if (run_max == 2)
     win_maximise(2);
@@ -5665,6 +5481,9 @@ main(int argc, const char *argv[])
   // Save the non-maximised window size
   term.rows0 = term_rows;
   term.cols0 = term_cols;
+
+  // mark userdata with timestamp, for initial tabbar ordering
+  SetWindowLong(wv.wnd, GWL_USERDATA, mtime() & GWL_TIMEMASK);
 
   win_update_shortcuts();
   win_global_keyboard_hook(true,0);

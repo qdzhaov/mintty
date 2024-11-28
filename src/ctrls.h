@@ -21,6 +21,7 @@ enum {
   CTRL_CHECKBOX,   /* checkbox (contains own label) */
   CTRL_BUTTON,     /* simple push button (no label) */
   CTRL_LISTBOX,    /* label plus list box */
+  CTRL_LISTVIEW,   /* label plus list box */
   CTRL_COLUMNS,    /* divide window into columns */
   CTRL_FONTSELECT, /* label plus font selector */
   CTRL_FILESELECT,
@@ -68,11 +69,16 @@ enum {
   EVENT_DROP
 };
 
+typedef struct {
+  char buf[128];
+  int ind;
+  UINT *pflg;
+}vhotkey;
 extern wstring dragndrop;  // drop drag-and-drop contents here
 
 typedef struct control control;
 
-typedef void (* handler_fn)(control *, int event);
+typedef void (* handler_fn)(control *,int cid,int event,LPARAM p);
 
 struct control {
   int type;
@@ -113,6 +119,7 @@ struct control {
   /* Almost all of the above functions will find it useful to
    * be able to store a piece of `void *' data.
    */
+  uint base_id;
   void * context;
   struct _controlset*parent;
   int ind;
@@ -195,6 +202,28 @@ struct control {
       int ncols;  /* number of columns */
       int * percentages;   /* % width of each column */
     } listbox;
+    struct {//20
+      /* Height of the list box, in approximate number of lines.
+       * If this is zero, the list is a drop-down list.
+       */
+      int height;       /* height in lines */
+      /* Percentage of the dialog-box width used by the list box.
+       * If this is set to 100, the label is on its own line;
+       * otherwise the label is on the same line as the box itself.
+       * Setting this to anything other than 100 is not guaranteed
+       * to work on a _non_-drop-down list, so don't try it!
+       */
+      int percentwidth;
+      /* Some list boxes contain strings that contain tab characters.
+       * If `ncols' is greater than 0, then `percentages' is expected
+       * to be non-zero and to contain the respective widths of
+       * `ncols' columns, which together will exactly fit the width 
+       * of the list box. Otherwise `percentages' must be null.
+       */
+      int ncols;  /* number of columns */
+      wstring*cnames;
+      int * percentages;   /* % width of each column */
+    } listview;
     struct {//12
       /* In this variant, `label' MUST be null. */
       int ncols;                /* number of columns */
@@ -290,14 +319,13 @@ extern control * ctrl_combobox(controlset *, int col, const wchar * label,const 
                                handler_fn handler, void * context);
 extern control * ctrl_listbox(controlset *, int col, const wchar * label,const wchar * tip, int lines, int percentage,
                               handler_fn handler, void * context);
+control * ctrl_listview(controlset *s, int col, const wchar * label,const wchar * tip, int lines, int percentage,int ncols,opt_val*pv,
+              handler_fn handler, void *context) ;
 /* `ncolumns' is followed by (alternately) radio button titles and integers,
  * until a null in place of a title string is seen.
  */
-extern control * ctrl_radiobuttonsa(controlset *s, int col, const wchar * label,const wchar * tip, 
-                                    handler_fn handler,int*context, const opt_val *pov);
-extern control * ctrl_radiobuttons(controlset *, int col, const wchar * label,const wchar * tip, int ncolumns,
-                                   handler_fn handler, int * context, ...);
-
+extern control * ctrl_radiobuttons(controlset *s, int col, const wchar * label,const wchar * tip, const opt_val *pov, 
+                                    handler_fn handler,int*context);
 extern control * ctrl_pushbutton(controlset *, int col, const wchar * label,const wchar * tip,
                                  handler_fn handler, void * context);
 extern control * ctrl_clrbutton(controlset *, int col, const wchar * label,const wchar * tip,
@@ -310,39 +338,48 @@ extern control * ctrl_filesel(controlset *s, int col, const wchar * label,const 
              handler_fn handler, void *context);
 extern control * ctrl_checkbox(controlset *, int col, const wchar * label,const wchar * tip,
                                handler_fn handler, void * context);
-extern control * ctrl_hotkey(controlset *, int col, const wchar * label,const wchar * tip,
+extern control * ctrl_hotkey(controlset *, int col, const wchar * label,const wchar * tip,int percentage,
                              handler_fn handler, void * context);
 
 /* Standard handler routines to cover most of the common cases in
  * the config box.
  */
 
-extern void dlg_stdcheckbox_handler(control *, int event);
-extern void dlg_stdstringbox_handler(control *, int event);
-extern void dlg_stdwstringbox_handler(control *, int event);
-extern void dlg_stwdstringbox_handler(control *, int event);
-extern void dlg_stdintbox_handler(control *, int event);
-extern void dlg_stdradiobutton_handler(control *, int event);
-extern void dlg_stdfontsel_handler(control *, int event);
-extern void dlg_stdfilesel_handler(control *ctrl, int event);
-extern void dlg_stdcolour_handler(control *, int event);
+extern void dlg_stdcheckbox_handler(control *, int cid,int event,LPARAM p);
+extern void dlg_stdstringbox_handler(control *, int cid,int event,LPARAM p);
+extern void dlg_stdwstringbox_handler(control *, int cid,int event,LPARAM p);
+extern void dlg_stwdstringbox_handler(control *, int cid,int event,LPARAM p);
+extern void dlg_stdintbox_handler(control *, int cid,int event,LPARAM p);
+extern void dlg_stdradiobutton_handler(control *, int cid,int event,LPARAM p);
+extern void dlg_stdfontsel_handler(control *, int cid,int event,LPARAM p);
+extern void dlg_stdfilesel_handler(control *ctrl, int cid,int event,LPARAM p);
+extern void dlg_stdcolour_handler(control *, int cid,int event,LPARAM p);
 
 /* Routines the platform-independent dialog code can call to read
  * and write the values of controls.
  */
 extern void dlg_radiobutton_set(control *, int whichbutton);
 extern int dlg_radiobutton_get(control *);
-extern void dlg_checkbox_set(control *, bool);
-extern bool dlg_checkbox_get(control *);
-extern void dlg_editbox_set(control *, string);
-extern void dlg_editbox_set_w(control *, wstring);
-extern void dlg_editbox_get(control *, string *);
-extern void dlg_editbox_get_w(control *, wstring *);
+extern void dlg_checkbox_set(control *, UINT);
+extern UINT dlg_checkbox_get(control *);
+extern void dlg_label_setW(control *ctrl, wstring text);
+extern void dlg_label_setA(control *ctrl, string text);
+extern void dlg_label_getW(control *ctrl, wstring *text_p);
+extern void dlg_label_getA(control *ctrl, string *text_p);
+extern void dlg_editbox_setW(control *, wstring);
+extern void dlg_editbox_setA(control *, string);
+extern void dlg_editbox_getW(control *, wstring *);
+extern void dlg_editbox_getA(control *, string *);
+extern void dlg_hotkey_get(control *ctrl, string text,int size);
+extern void dlg_hotkey_set(control *ctrl, string text);
 /* The `listbox' functions also apply to combo boxes. */
 extern void dlg_listbox_clear(control *);
-extern void dlg_listbox_add(control *, string);
-extern void dlg_listbox_add_w(control *, wstring);
-extern int dlg_listbox_getcur(control *);
+extern void dlg_listbox_addA(control *, string);
+extern void dlg_listbox_addW(control *, wstring);
+extern int  dlg_listbox_getcur(control *);
+extern void dlg_listview_add(control *ctrl, int ind,wstring text);
+extern void dlg_listview_set(control *ctrl, int ind,int isub,wstring text);
+extern void dlg_listview_get(control *ctrl, int ind,int isub,wstring *text);
 extern void dlg_fontsel_set(control *, font_spec *);
 extern void dlg_fontsel_get(control *, font_spec *);
 /* Special for font sample */

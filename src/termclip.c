@@ -6,8 +6,8 @@
 #include "termpriv.h"
 
 #include "win.h"
-#include "child.h"
-#include "charset.h"
+//G #include "child.h"
+//G #include "charset.h"
 
 extern int line_scale;
 typedef struct {
@@ -677,10 +677,10 @@ term_cmd(const char * cmd)
     free(path1);
 }
 
-#include <time.h>
+//G #include <time.h>
 #include <sys/time.h>
-#include <fcntl.h>
-#include "winpriv.h"  // PADDING
+//G #include <fcntl.h>
+//G #include "winpriv.h"  // PADDING
 
 static char *
 term_create_html(FILE * hf, int level)

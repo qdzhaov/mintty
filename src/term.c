@@ -7,8 +7,8 @@
 
 #include "win.h"
 #include "winimg.h"
-#include "charset.h"
-#include "child.h"
+//G #include "charset.h"
+//G #include "child.h"
 #include "winsearch.h"
 #if CYGWIN_VERSION_API_MINOR >= 66
 #include <langinfo.h>
@@ -112,11 +112,13 @@ geturl(int n)
 static bool
 vt220(string Term)
 {
-  char * vt = strstr(Term, "vt");
-  if (vt) {
-    unsigned int ver;
-    if (sscanf(vt + 2, "%u", &ver) == 1 && ver >= 220)
-      return true;
+  if(Term){
+    char * vt = strstr(Term, "vt");
+    if (vt) {
+      unsigned int ver;
+      if (sscanf(vt + 2, "%u", &ver) == 1 && ver >= 220)
+        return true;
+    }
   }
   return false;
 }
@@ -513,7 +515,7 @@ term_reconfig(void)
     term_print_finish();
   if (new_cfg.allow_blinking != cfg.allow_blinking)
     term.blink_is_real = new_cfg.allow_blinking;
-  cfg.cursor_blinks = new_cfg.cursor_blinks;
+  //cfg.cursor_blinks = new_cfg.cursor_blinks;
   term_schedule_tblink();
   term_schedule_tblink2();
   term_schedule_cblink();
@@ -3075,12 +3077,18 @@ void
 _win_text(int line, int tx, int ty, wchar *text, int len, cattr attr, cattr *textattr, ushort lattr, char has_rtl, char has_sea, bool clearpad, uchar phase)
 {
   if (*text != ' ') {
-    printf("[%d] %d:%d(len %d) attr %08llX", line, ty, tx, len, attr.attr);
+    printf("[<%d] %d:%d(len %d) attr %08llX", line, ty, tx, len, attr.attr);
     for (int i = 0; i < len && i < 8; i++)
       printf(" %04X", text[i]);
     printf("\n");
   }
   win_text(tx, ty, text, len, attr, textattr, lattr, has_rtl, has_sea, clearpad, phase);
+  if (*text != ' ') {
+    printf("[>%d] %d:%d(len %d) attr %08llX", line, ty, tx, len, attr.attr);
+    for (int i = 0; i < len && i < 8; i++)
+      printf(" %04X", text[i]);
+    printf("\n");
+  }
 }
 
 #define win_text(tx, ty, text, len, attr, textattr, lattr, has_rtl, has_sea, clearpad, phase) _win_text(__LINE__, tx, ty, text, len, attr, textattr, lattr, has_rtl, has_sea, clearpad, phase)
@@ -3101,7 +3109,7 @@ void trace_line(const char * tag, termchar * chars)
 #endif
 
 #define UNLINED (UNDER_MASK | ATTR_STRIKEOUT | ATTR_OVERL | ATTR_OVERSTRIKE)
-#define UNBLINK (FONTFAM_MASK | GRAPH_MASK | UNLINED | TATTR_EMOJI)
+#define UNBLINK (FONTFAM_MASK | UNLINED | TATTR_EMOJI)
 
 // Attributes to be ignored when checking whether to apply overhang:
 // we cannot support overhang over double-width space (TATTR_WIDE),
@@ -3321,13 +3329,9 @@ term_paint(void)
         else if (tchar < ' ' && cfg.printable_controls > 1)
           tchar = 0x2591;  // ⌷⎕░▒▓
         if (tchar >= 0x2580 && tchar <= 0x259F) {
-          // Block Elements (U+2580-U+259F)
-          // ▀▁▂▃▄▅▆▇█▉▊▋▌▍▎▏▐░▒▓▔▕▖▗▘▙▚▛▜▝▞▟
-          tattr.attr |= ((cattrflags)(tchar & 0xF)) << ATTR_GRAPH_SHIFT;
-          uchar gcode = 14 + ((tchar >> 4) & 1);
-          // extend graph encoding with unused font numbers
+          // tag substitutes as Block Elements (U+2580-U+259F)
           tattr.attr &= ~FONTFAM_MASK;
-          tattr.attr |= (cattrflags)gcode << ATTR_FONTFAM_SHIFT;
+          tattr.attr |= (cattrflags)11<< ATTR_FONTFAM_SHIFT;
         }
       }
 
@@ -3605,6 +3609,8 @@ term_paint(void)
             // && is_ambigwide(tchar) ? but then they will be clipped...
            )
         {
+          // auto-narrowing of glyphs that don't fit into the cell
+
           //printf("[%d:%d] narrow? %04X..%04X\n", i, j, tchar, chars[j + 1].chr);
 
           // mark for later win_text parameter clearpad (#1179)
@@ -4076,6 +4082,7 @@ term_paint(void)
     void flush_text()
     {
       if (ovl_len) {
+        // now flush the text for 2-phase output
         win_text(ovl_x, ovl_y, ovl_text, ovl_len, ovl_attr, ovl_textattr, ovl_lattr, ovl_has_rtl, ovl_has_sea, false, 2);
         ovl_len = 0;
       }
@@ -4186,6 +4193,8 @@ term_paint(void)
          */
         win_text(x, y, text, len, attr, textattr, lattr, has_rtl, has_sea, false, 1);
         flush_text();
+        // remember actual text for later phase 2 output (flush)
+        // do this before phase 1 output below which may modify text contents
         ovl_x = x;
         ovl_y = y;
         wcsncpy(ovl_text, text, len);
@@ -4195,6 +4204,9 @@ term_paint(void)
         ovl_lattr = lattr;
         ovl_has_rtl = has_rtl;
         ovl_has_sea = has_sea;
+        // for 2-phase output, now do phase 1 for the background
+        win_text(x, y, text, len, attr, textattr, lattr, has_rtl, has_sea, false, 1);
+        flush_text();
       }
       else {
         win_text(x, y, text, len, attr, textattr, lattr, has_rtl, has_sea, false, 0);

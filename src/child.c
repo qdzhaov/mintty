@@ -2,23 +2,23 @@
 // Copyright 2008-11 Andy Koppe, 2015-2022 Thomas Wolff
 // Licensed under the terms of the GNU General Public License v3 or later.
 
-#include "child.h"
+//G #include "child.h"
 
 #include "term.h"
-#include "charset.h"
+//G #include "charset.h"
 
-#include "winpriv.h"  /* win_prefix_title, win_update_now */
+//G #include "winpriv.h"  /* win_prefix_title, win_update_now */
 #include "appinfo.h"  /* APPNAME, VERSION */
 
 #include <pwd.h>
-#include <fcntl.h>
+//G #include <fcntl.h>
 #include <utmp.h>
 #include <dirent.h>
 #include <signal.h>
 #include <sys/ioctl.h>
 #include <sys/wait.h>
 #ifdef __CYGWIN__
-#include <sys/cygwin.h>  // cygwin_internal
+//G #include <sys/cygwin.h>  // cygwin_internal
 #endif
 
 #if CYGWIN_VERSION_API_MINOR >= 93
@@ -27,7 +27,7 @@
 int forkpty(int *, char *, struct termios *, struct winsize *);
 #endif
 
-#include <winbase.h>
+//G #include <winbase.h>
 
 #if CYGWIN_VERSION_DLL_MAJOR < 1007
 #include <winnls.h>
@@ -1064,8 +1064,7 @@ user_command(STerm* pterm,wstring commands, int n)
     while (n >= 0 && (progp = strchr(cmdp, ':'))) {
       progp++;
       char * sepp = strchr(progp, sepch);
-      if (sepp)
-        *sepp = '\0';
+      if (sepp) *sepp = '\0';
 
       if (n == 0) {
         int fgpid = foregroundpid(pterm);

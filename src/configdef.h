@@ -167,6 +167,7 @@ _CFGDEFE: Legacy options for Backward Compatibility
   _CFGDEFC(0        ,=======                ,0               ,       IS(0),OPT_CMT          ,OPF_GRP  ,9,0,0,"Text"     ,__("Locale") )
   _CFGDEFC(0        ,=======                ,0               ,       IS(0),OPT_CMT          ,OPF_COL  ,9,2,0,""  ,0)
   _CFGDEFD(string   ,locale                 ,""              ,       IS(0),OPT_STR          ,OPF_LCL  ,9,7,7,"Locale"                   ,__("Locale")                   ) 
+  //charset must be followd locale
   _CFGDEFD(string   ,charset                ,""              ,       IS(0),OPT_STR          ,OPF_CHSET,9,7,7,"Charset"                  ,__("Charset")                  ) 
   _CFGDEFC(0        ,=======                ,0               ,       IS(0),OPT_CMT          ,OPF_GRP  ,9,0,0,"Text"     ,__("Emojis") )
   _CFGDEFC(0        ,=======                ,0               ,       IS(0),OPT_CMT          ,OPF_COL  ,9,2,0,""  ,0)
@@ -236,10 +237,13 @@ _CFGDEFE: Legacy options for Backward Compatibility
   _CFGDEFD(string   ,key_break              ,""            ,       IS(0),OPT_STR          ,OPF_STR  ,3,5,4,"Key_Break"                ,__("Key_Break")                              )  // VK_CANCEL
   _CFGDEFD(string   ,key_menu               ,""              ,       IS(0),OPT_STR          ,OPF_STR  ,3,5,4,"Key_Menu"                 ,__("Key_Menu")                               )  // VK_APPS
   _CFGDEFD(string   ,key_scrlock            ,""              ,       IS(0),OPT_STR          ,OPF_STR  ,3,5,4,"Key_ScrollLock"           ,__("Key_ScrollLock")                         )  // VK_SCROLL
-  _CFGDEFD(wstring  ,key_commands           ,W("")           ,       IS(0),OPT_WSTRK        ,OPF_WSTR ,3,5,4,"KeyFunctions"             ,__("KeyFunctions")                           )
   _CFGDEFD(int      ,manage_leds            ,7               ,IV( 0,    4),OPT_INT          ,OPF_INT  ,3,5,4,"ManageLEDs"               ,__("ManageLEDs")                             )
 //_CFGDEFD(CBOOL    ,enable_remap_ctrls     ,0               ,       IS(0),OPT_BOOL         ,OPF_CHK  ,3,0,0,"ShootFoot"                ,__("ShootFoot")                              )
 //_CFGDEFD(CBOOL    ,old_keyfuncs_keypad    ,0               ,       IS(0),OPT_BOOL         ,OPF_CHK  ,3,0,0,"OldKeyFunctionsKeypad"    ,__("OldKeyFunctionsKeypad")                  )
+
+  _CFGDEFC(0        ,=======                ,0               ,       IS(0),OPT_CMT          ,OPF_PANE ,1,0,0,__("HotKeys")     ,__("Hotkey Setting")  )
+  _CFGDEFC(0        ,=======                ,0               ,       IS(0),OPT_CMT          ,OPF_GRP  ,1,0,0,"HotKeys"     ,  ""  )
+  _CFGDEFD(wstring  ,key_commands           ,W("")           ,       IS(0),OPT_WSTRK        ,OPF_HKEY ,1,0,4,"KeyFunctions"             ,__("KeyFunctions")                           )
 
   _CFGDEFC(0        ,=======                ,0               ,       IS(0),OPT_CMT          ,OPF_PANE ,9,0,0,__("Mouse")    ,__("Mouse functions")  )
   _CFGDEFC(0        ,=======                ,0               ,       IS(0),OPT_CMT          ,OPF_GRP  ,9,0,0,"Mouse"    ,  ""  )
@@ -335,13 +339,12 @@ _CFGDEFE: Legacy options for Backward Compatibility
   _CFGDEFC(0        ,=======                ,0               ,       IS(0),OPT_CMT          ,OPF_GRP  ,9,0,0,"System"     ,__("Dialog"))
   _CFGDEFC(0        ,=======                ,0               ,       IS(0),OPT_CMT          ,OPF_COL  ,9,2,0,""  ,0)
   _CFGDEFD(int      ,optlevel               ,5               ,IV( 0,    9),OPT_INT          ,OPF_INT  ,9,5,4,"OptionsLevel"             ,__("Options Level")             )
-  _CFGDEFD(string   ,lang                   ,("")            ,       IS(0),OPT_STR          ,OPF_STR  ,9,6,5,"Language"                 ,__("Language")                 )
+  _CFGDEFD(string   ,lang                   ,("")            ,       IS(0),OPT_STR          ,OPF_LANG ,9,6,5,"Language"                 ,__("Language")                 )
   _CFGDEFD(int      ,scale_options_width    ,100             ,IV(80,  200),OPT_INT          ,OPF_H    ,5,5,4,"scale_options_width"      ,__("scale_options_width")      )
 
   _CFGDEFD(font_spec,opt_font               ,FNT("",12,0,0)  ,       IS(0),OPT_FONT         ,OPF_FONT ,9,0,7,"OptionsFont"              ,__("Options Font")                     ) 
   _CFGDEFE(wstring  ,opt_font.name          ,W("")           ,       IS(0),OPT_WSTR         ,OPF_WSTR ,0,0,7,"OptionsFontname"          ,__("OptionsFontname")              )
   _CFGDEFE(int      ,opt_font.size          ,12              ,IV( 0,    0),OPT_INT          ,OPF_H    ,0,0,7,"OptionsFontHeight"        ,__("OptionsFontHeight")        )
-//_CFGDEFD(int      ,gui_font_size          ,12              ,IV( 0,    0),OPT_INT          ,OPF_INT  ,5,5,5,"gui_font_size"            ,__("gui_font_size")            )
   _CFGDEFC(0        ,=======                ,0               ,       IS(0),OPT_CMT          ,OPF_GRP  ,9,0,0,"System"   ,  ""  )
   _CFGDEFC(0        ,=======                ,0               ,       IS(0),OPT_CMT          ,OPF_COL  ,9,2,0,""  ,0)
   _CFGDEFD(CBOOL    ,confirm_exit           ,1               ,       IS(0),OPT_BOOL         ,OPF_CHK  ,9,5,0,"ConfirmExit"              ,__("Prompt on &close"))
@@ -426,7 +429,7 @@ _CFGDEFE: Legacy options for Backward Compatibility
   _CFGDEFD(int      ,wslbridge              ,2               ,IV( 0,    0),OPT_INT          ,OPF_INT  ,1,0,5,"WSLBridge"                ,__("wslbridge version,0:nobridge,1:wslbridge,2:wslbreadge2") )
   _CFGDEFD(string   ,wslname                ,""              ,       IS(0),OPT_STR          ,OPF_STR  ,1,0,5,"WSLName"                  ,__("wslDistribution,null is default"))
   // Legacy
-//_CFGDEFD(int      ,status_debug           ,0               ,IV( 0,    0),OPT_INT          ,OPF_INT  ,1,0,5,"StatusDebug"              ,__("status_debug")             )
+  _CFGDEFD(int      ,status_debug           ,0               ,IV( 0,    0),OPT_INT          ,OPF_INT  ,1,0,5,"StatusDebug"              ,__("status_debug")             )
 //_CFGDEFD(string   ,menu_menu              ,"bs"            ,       IS(0),OPT_STR          ,OPF_STR  ,1,0,5,"MenuMenu"                 ,__("MenuMenu")                 )
 //_CFGDEFD(string   ,menu_ctrlmenu          ,"e|ls"          ,       IS(0),OPT_STR          ,OPF_STR  ,1,0,5,"MenuCtrlMenu"             ,__("MenuCtrlMenu")             )
   _CFGDEFE(int      ,font.size              ,0               ,IV( 0,    0),OPT_INT|OPT_LG   ,OPF_H    ,0,0,0,"FontSize"                 ,__("FontSize")  )
@@ -435,6 +438,7 @@ _CFGDEFE: Legacy options for Backward Compatibility
   _CFGDEFE(int      ,rtf_font.size          ,0               ,IV( 0,    0),OPT_INT|OPT_LG   ,OPF_H    ,0,0,0,"CopyAsRTFFontSize"        ,__("CopyAsRTFFontSize")  )
   _CFGDEFE(int      ,fontmenu               ,0               ,IV( 0,    0),OPT_INT|OPT_LG   ,OPF_H    ,0,0,0,"OldFontMenu"              ,__("OldFontMenu")  )
   _CFGDEFE(int      ,opt_font.size          ,0               ,IV( 0,    0),OPT_INT|OPT_LG   ,OPF_H    ,0,0,0,"OptionsFontSize"          ,__("OptionsFontSize")  )
+  _CFGDEFE(int      ,opt_font.size          ,12              ,IV( 0,    0),OPT_INT|OPT_LG   ,OPF_INT  ,5,5,5,"gui_font_size"            ,__("gui_font_size")            )
   _CFGDEFE(CBOOL    ,bold_as_colour         ,0               ,       IS(0),OPT_BOOL|OPT_LG  ,OPF_H    ,0,0,0,"BoldAsBright"             ,__("BoldAsBright")  )
   _CFGDEFE(CTYPE    ,font_smoothing         ,0               ,       IS(0),OPT_FONTST|OPT_LG,OPF_H    ,0,0,0,"FontQuality"              ,__("FontQuality")  )
   _CFGDEFD(colour   ,use_system_colours     ,0               ,       IS(0),OPT_BOOL|OPT_LG  ,OPF_H    ,0,0,0,"UseSystemColours"         ,__("UseSystemColours")         )

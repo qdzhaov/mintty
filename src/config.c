@@ -12,15 +12,15 @@
 #include "term.h"
 #include "ctrls.h"
 #include "print.h"
-#include "charset.h"
+//G #include "charset.h"
 #include "win.h"
-#include <fcntl.h>  // open+flags, mkdir
+//G #include <fcntl.h>  // open+flags, mkdir
 
-#include <windows.h>  // registry handling
-#include "winpriv.h"  // support_wsl, load_library_func
+//G #include <windows.h>  // registry handling
+//G #include "winpriv.h"  // support_wsl, load_library_func
 
 #ifdef __CYGWIN__
-#include <sys/cygwin.h>  // cygwin_internal
+//G #include <sys/cygwin.h>  // cygwin_internal
 #endif
 
 
@@ -60,7 +60,7 @@ typedef enum {
   //0x10
   OPT_CPYHTML,    OPT_BOLD,       OPT_BELL   ,    OPT_FLASH,
   OPT_LOG    ,    OPT_SPBRK,      OPT_PCTRL,      OPT_ALEAD,
-  OPT_LIGS   ,    OPT_DPIA,       OPT_PRSC,       
+  OPT_LIGS   ,    OPT_DPIA,       OPT_PRSC,       OPT_BCKFT,
   OPT_CMT,        OPT_ARR ,       OPT_INT,        OPT_INTP,       
   //0x20 
   OPT_STR,        OPT_WSTR,       OPT_STRK,       OPT_WSTRK,      
@@ -76,9 +76,9 @@ enum {
   OPF_LSTR ,OPF_LSTC ,OPF_CHK  ,OPF_ACLR ,
   OPF_CLR  ,OPF_CLRFG,OPF_INT  ,OPF_WSIZE,
   OPF_STR  ,OPF_WSTR ,OPF_TRANS,OPF_FONT ,
-  OPF_BACKF,
-  OPF_THEME,OPF_LCL  ,OPF_CHSET,OPF_CURS ,
-  OPF_TERM ,OPF_BELL ,OPF_BELLF,OPF_PRINT,
+  OPF_BACKF,OPF_THEME,OPF_LCL  ,OPF_CHSET,
+  OPF_CURS ,OPF_TERM ,OPF_BELL ,OPF_BELLF,
+  OPF_LANG ,OPF_PRINT,OPF_HKEY ,
   OPF_END  ,OPF_MASK=0x3f,
 };
 #define offcfg(option) offsetof(config, option)
@@ -311,17 +311,28 @@ static const opt_val * const opt_vals[] = {
     {__("Progress Scan on current cursor line") , 1}, 
     {__("Progress Scan on all line") , 2}, 
     {0, 0}
+  },
+  [OPT_BCKFT] = (opt_val[]) {
+    {__("none"),                         0},// ˜
+    {__("Scale image to term size"),   '_'},//_
+    {__("Scale term to image ration"), '%'},//%
+    {__("use Image as titled texture"),'*'},//*
+    {__("Scale image to term size,keep ratio,then titles"), '+'},//+
+    {__("Use desktop background"),     '='},//=
+    {0, 0}
   }
 };
 static void init_loptvals(){
   int i,n,m=0;
-  if(loptvals)return ;
   for(i=0;i<OPT_CMT;i++){
     const opt_val *o = opt_vals[i];
     for(n=0;o[n].name;n++);
     m+=n+1;
   }
-  loptvals=(opt_val*)malloc(m*sizeof(opt_val));
+  if(!loptvals){
+    loptvals=(opt_val*)malloc(m*sizeof(opt_val));
+    memset(loptvals,0,m*sizeof(opt_val));
+  }
   opt_val *od=loptvals;
   for(i=0;i<OPT_CMT;i++){
     const opt_val *o = opt_vals[i];
@@ -348,8 +359,7 @@ static struct {
 #include "rgb.t"
 };
 
-bool parse_colour(string s, colour *cp)
-{
+bool parse_colour(string s, colour *cp) {
   uint r, g, b ,ok=0;
   float c, m, y, k = 0;
   switch(s[0]){
@@ -402,9 +412,12 @@ bool parse_colour(string s, colour *cp)
 static int GetOptVal(int type,const char*val_str){
   int len = strlen(val_str);
   if (!len)return -1;
-  for (const opt_val *o = lopt_vals[type]; o->name; o++) {
-    if (!strncasecmp(val_str, o->name, len)) {
-      return o->val;
+  const opt_val *o = lopt_vals[type];
+  if(o){
+    for (; o->name; o++) {
+      if (!strncasecmp(val_str, o->name, len)) {
+        return o->val;
+      }
     }
   }
   for (const opt_val *o = opt_vals[type]; o->name; o++) {
@@ -495,19 +508,33 @@ static int set_opt(int type,void*val_p,const char*val_str,bool from_file){
       }else res=0;
     }
     when OPT_FONT: {
-      wchar ws[64];
+      char s[64];
       char bold[64];
       font_spec *p=(font_spec*)val_p;
       bold[0]=0;
-      sscanf(val_str,"%64l[^,],%d,%d,%64s",ws,&p->size,&p->weight,bold);
+      sscanf(val_str,"%64[^,],%d,%d,%64s",s,&p->size,&p->weight,bold);
+      wchar * ws;
+      if (from_file)
+        ws = cs__utforansitowcs(s);
+      else
+        ws = cs__mbstowcs(s);
       wstrset(&p->name, ws);
+      delete(ws);
       if(bold[0]){
         int val=GetOptVal(OPT_BOOL,bold);
         if(val>=0) p->isbold=(val>0);
       }
     }
     when OPT_BFILE: {
-      backg_analyse(val_str,(bg_file*)val_p);
+      if (from_file){
+        backg_analyse(val_str,(bg_file*)val_p);
+      }else{
+        wchar * ws = cs__mbstowcs(val_str);
+        char*s=cs__wcstoutf(ws);
+        delete(ws);
+        backg_analyse(s,(bg_file*)val_p);
+        delete(s);
+      }
     }
     when OPT_CMT: ;
     when OPT_ARR: ;
@@ -563,7 +590,7 @@ static void copy_opt(int type,void*dst_val_p ,void*src_val_p ){
     }
     when OPT_CMT: ;
     when OPT_ARR: ;
-        otherwise:
+    otherwise:
         validcfgtype(type, "copy_config");
     *(CTYPE *)dst_val_p = *(CTYPE *)src_val_p;
   }
@@ -608,9 +635,13 @@ static int ischg_opt(int type,const void*val_p,const void*new_val_p){
     when OPT_BFILE: {
       bg_file *pd=(bg_file*)val_p;
       bg_file *ps=(bg_file*)new_val_p;
-      changed=pd->type!=ps->type||
-          pd->alpha!=ps->alpha||
-          wcscmp(pd->fn,ps->fn);
+      //printf("%p %p \n",pd->fn,ps->fn);
+      changed=pd->type!=ps->type||pd->alpha!=ps->alpha;
+      if(pd->fn){
+        if(ps->fn)
+          changed|=wcscmp(pd->fn,ps->fn)!=0;
+        else changed|=1;
+      }else if(ps->fn)changed|=1;
     }
     when OPT_CMT: ;
     when OPT_ARR: ;
@@ -653,7 +684,9 @@ static void printOptVar(FILE*file,const char*name,int type,const void*val_p){
     }
     when OPT_FONT:{ 
       font_spec *pd=(font_spec*)val_p;
-      fprintf(file,"%ls,%d,%d,%d",pd->name,pd->size,pd->weight,pd->isbold);
+      char * s = cs__wcstoutf(pd->name);
+      fprintf(file,"%s,%d,%d,%d",s,pd->size,pd->weight,pd->isbold);
+      delete(s);
     }
     when OPT_BFILE: {
       bg_file *ps=(bg_file*)val_p;
@@ -662,11 +695,13 @@ static void printOptVar(FILE*file,const char*name,int type,const void*val_p){
           fprintf(file,"%c",ps->type);
         }else{
           if(ps->fn&&*ps->fn){
+            char * s = cs__wcstoutf(ps->fn);
             if(ps->alpha==255){
-              fprintf(file,"%c%ls",ps->type,ps->fn);
+              fprintf(file,"%c%s",ps->type,s);
             }else{
-              fprintf(file,"%c%ls,%d",ps->type,ps->fn,ps->alpha);
+              fprintf(file,"%c%s,%d",ps->type,s,ps->alpha);
             }
+            delete(s);
           }
         }
       }
@@ -676,22 +711,19 @@ static void printOptVar(FILE*file,const char*name,int type,const void*val_p){
     otherwise: {
       validcfgtype(type, "printOptVar");
       int val = *(CTYPE *)val_p;
-      const opt_val *o = lopt_vals[type];
+      const opt_val *o = opt_vals[type];
       for (; o->name; o++) {
         if (o->val == val)
           break;
       }
-      if (o->name) fputs(o->name, file);
+      if (o->name) fprintf(file,"%s",o->name);
       else fprintf(file, "%i", val);
     }
   }
   fputc('\n', file);
 }
-char *
-save_filename(const char * suf)
-{
+char * save_filename(const char * suf) {
   char * pat = cs__wcstombs(cfg.save_filename);
-
   // expand initial ~ or $variable
   char * sep;
   if (*pat == '~' && pat[1] == '/') {
@@ -733,13 +765,8 @@ save_filename(const char * suf)
 
   return fn;
 }
-
-
 #define dont_debug_opterror
-
-static void
-opterror(string msg, bool utf8params, string p1, string p2)
-{
+static void opterror(string msg, bool utf8params, string p1, string p2) {
   print_opterror(stderr, msg, utf8params, p1, p2);
 }
 #define USEHASHOPT
@@ -750,8 +777,7 @@ typedef struct {
 }s_co_hashtab;
 static s_co_hashtab  hopts[HASHTS] = {0};
 static int initedhopts=0;
-static void inithopt()
-{
+static void inithopt() {
   string nm;
   if(initedhopts)return;
   initedhopts=1;
@@ -762,8 +788,7 @@ static void inithopt()
     pt->n++;
   }
 }
-static int
-find_option(bool from_file, string name){
+static int find_option(bool from_file, string name){
   if(initedhopts==0)inithopt();
   s_co_hashtab *pt=&hopts[HASHS(name)];
   if(pt){
@@ -777,9 +802,7 @@ find_option(bool from_file, string name){
   return -1;
 }
 #else
-static int
-find_option(bool from_file, string name)
-{
+static int find_option(bool from_file, string name) {
   for (int i = 0; options[i].name; i++) {
     if (!strcasecmp(name, options[i].name))
       return i;
@@ -797,10 +820,7 @@ static cfg_file_opt *file_opts=NULL;
 static ushort *arg_opts=NULL;
 static uint file_opts_num = 0,maxfileopt=0;
 static uint arg_opts_num=0,maxargopt=0;
-
-static void
-clear_opts(void)
-{
+static void clear_opts(void) {
   for (uint n = 0; n < file_opts_num; n++)
     if (file_opts[n].opti>0x10000){
       delete(file_opts[n].comment);
@@ -809,20 +829,15 @@ clear_opts(void)
   file_opts_num = 0;
   arg_opts_num = 0;
 }
-
-static bool
-seen_file_option(uint i)
-{
-//  return memchr(file_opts, i, file_opts_num);
+static bool seen_file_option(uint i) {
+  //  return memchr(file_opts, i, file_opts_num);
   for (uint n = 0; n < file_opts_num; n++)
     if (file_opts[n].opti == i)
       return true;
   return false;
 }
 
-static bool
-seen_arg_option(uint i)
-{
+static bool seen_arg_option(uint i) {
   if(!arg_opts)return 0;
   for(uint j=0;j<arg_opts_num;j++){
     if(arg_opts[j]==i)return 1;
@@ -830,9 +845,7 @@ seen_arg_option(uint i)
   return 0;
 }
 
-static void
-remember_file_option(const char * tag, uint i)
-{
+static void remember_file_option(const char * tag, uint i) {
   (void)tag;
   trace_theme(("[%s] remember_file_option (file %d arg %d) %d %s\n", tag, seen_file_option(i), seen_arg_option(i), i, options[i].name));
 
@@ -843,18 +856,14 @@ remember_file_option(const char * tag, uint i)
   }
 }
 
-static void
-remember_file_comment(const char * comment)
-{
+static void remember_file_comment(const char * comment) {
   trace_theme(("[] remember_file_comment <%s>\n", comment));
   renewm(file_opts,file_opts_num,maxfileopt);
   file_opts[file_opts_num].comment = strdup(comment);
   file_opts_num++;
 }
 
-static void
-remember_arg_option(const char * tag, uint i)
-{
+static void remember_arg_option(const char * tag, uint i) {
   (void)tag;
   trace_theme(("[%s] remember_arg_option (file %d arg %d) %d %s\n", tag, seen_file_option(i), seen_arg_option(i), i, options[i].name));
 
@@ -864,9 +873,7 @@ remember_arg_option(const char * tag, uint i)
   }
 }
 
-static void
-check_legacy_options(void (*remember_option)(const char * tag, uint))
-{
+static void check_legacy_options(void (*remember_option)(const char * tag, uint)) {
   if (cfg.use_system_colours) {
     // Translate 'UseSystemColours' to colour settings.
     cfg.colour.fg = cfg.cursor_colour = win_get_sys_colour(COLOR_WINDOWTEXT);
@@ -881,9 +888,7 @@ check_legacy_options(void (*remember_option)(const char * tag, uint))
   }
 }
 
-static int
-set_option(config * p,string name, string val_str, bool from_file)
-{
+static int set_option(config * p,string name, string val_str, bool from_file) {
   int i = find_option(from_file, name);
   if (i < 0) return i;
   uint type = options[i].type ;
@@ -895,9 +900,7 @@ set_option(config * p,string name, string val_str, bool from_file)
   return -1;
 }
 
-static int
-parse_option(config * p,string option, bool from_file)
-{
+static int parse_option(config * p,string option, bool from_file) {
   const char *eq = strchr(option, '=');
   if (!eq) {
     ((char *)option)[strcspn(option, "\r")] = 0;
@@ -923,38 +926,25 @@ parse_option(config * p,string option, bool from_file)
   return set_option(p,name, val, from_file);
 }
 
-static void
-check_arg_option(int i)
-{
+static void check_arg_option(int i) {
   if (i >= 0) {
     remember_arg_option("chk_arg", i);
     check_legacy_options(remember_arg_option);
   }
 }
 
-void
-set_arg_option(string name, string val)
-{
+void set_arg_option(string name, string val) {
   check_arg_option(set_option(&cfg,name, val, false));
 }
 
-void
-parse_arg_option(string option)
-{
+void parse_arg_option(string option) {
   check_arg_option(parse_option(&cfg,option, false));
 }
-
-
-/*
-   In a configuration parameter list, map tag to value.
- */
-char *
-matchconf(char * conf,const char * item)
-{
+/* In a configuration parameter list, map tag to value.  */
+char * matchconf(char * conf,const char * item) {
   char * cmdp = conf;
   char sepch = ';';
-  if ((uchar)*cmdp <= (uchar)' ')
-    sepch = *cmdp++;
+  if ((uchar)*cmdp <= (uchar)' ') sepch = *cmdp++;
 
   char * paramp;
   while ((paramp = strchr(cmdp, ':'))) {
@@ -982,15 +972,11 @@ matchconf(char * conf,const char * item)
   return 0;
 }
 
-
 static string * config_dirs = 0;
 static int last_config_dir = -1;
 
-static void
-init_config_dirs(void)
-{
-  if (config_dirs)
-    return;
+static void init_config_dirs(void) {
+  if (config_dirs) return;
 
   int ncd = 3;
   char * appdata = getenv("APPDATA");
@@ -1020,9 +1006,7 @@ init_config_dirs(void)
   }
 }
 
-char *
-get_resource_file(string sub, string res, bool towrite)
-{
+char * get_resource_file(string sub, string res, bool towrite) {
   init_config_dirs();
   int fd;
   for (int i = last_config_dir; i >= 0; i--) {
@@ -1054,21 +1038,23 @@ get_resource_file(string sub, string res, bool towrite)
 }
 
 #define dont_debug_messages 1
-
 typedef struct {
   string msg;
-  string locmsg;
   wstring wmsg;
+  string locmsg;
+  wstring wlocmsg;
 }s_message;
 static void setmsg(s_message*pm,string msg, string locmsg){
   pm->msg = msg;
   pm->locmsg = locmsg;
+  pm->wlocmsg = null;
   pm->wmsg = null;
 }
 static void freemsg(s_message *pm){
     VFREE((void*)pm->msg);
+    VFREE((void*)pm->wmsg);
     VFREE((void*)pm->locmsg);
-    if  (pm->wmsg) VFREE((void*)pm->wmsg);
+    VFREE((void*)pm->wlocmsg);
 }
 #define usehashtab
 #ifdef usehashtab
@@ -1077,15 +1063,7 @@ typedef struct {
   s_message *t;
 }s_hashtab;
 static s_hashtab  hmsgt[HASHTS] = {0};
-static s_message*findmsg(string msg){
-  s_hashtab *pt=&hmsgt[HASHS(msg)];
-  for (int i = 0; i < pt->n; i++) {
-    if (strcmp(msg, pt->t[i].msg) == 0) { return &pt->t[i]; }
-  }
-  return NULL;
-}
-static void clear_messages()
-{
+static void clear_messages() {
   for (int j = 0; j < HASHTS; j++) { 
     s_hashtab *pt=&hmsgt[j];
     for (int i = 0; i < pt->n; i++) { freemsg(pt->t+i); }
@@ -1093,31 +1071,29 @@ static void clear_messages()
     pt->t=0;pt->n=0;pt->m=0;
   }
 }
-static s_message *add_message(string msg, string locmsg)
-{
+static s_message *add_message(string msg, string locmsg) {
   s_hashtab *pt=&hmsgt[HASHS(msg)];
   renewm(pt->t,pt->n, pt->m);
   setmsg(& pt->t[pt->n], msg, locmsg);
   pt->n++;
   return & pt->t[pt->n-1];
 }
+static s_message*findmsg(string msg){
+  s_hashtab *pt=&hmsgt[HASHS(msg)];
+  for (int i = 0; i < pt->n; i++) {
+    if (strcmp(msg, pt->t[i].msg) == 0) { return &pt->t[i]; }
+  }
+  return add_message(strdup(msg), NULL);
+}
 #else
 static s_message * messages = {0};
 int nmessages = 0;
 int maxmessages = 0;
-static s_message*findmsg(string msg){
-  for (int i = 0; i < nmessages; i++) {
-    if (strcmp(msg, messages[i].msg) == 0) { return &messages[i]; }
-  }
-  return NULL;
-}
-static void clear_messages()
-{
+static void clear_messages() {
   for (int i = 0; i < nmessages; i++) { freemsg(messages+i); }
   nmessages = 0;
 }
-static s_message *add_message(string msg, string locmsg)
-{
+static s_message *add_message(string msg, string locmsg) {
   renewm(messages,nmessages , maxmessages);
 #if defined(debug_messages) && debug_messages > 3
   printf("add %d <%s> <%s>\n", nmessages, msg, locmsg);
@@ -1126,31 +1102,42 @@ static s_message *add_message(string msg, string locmsg)
   nmessages ++;
   return & messages[nmessages];
 }
+static s_message*findmsg(string msg){
+  for (int i = 0; i < nmessages; i++) {
+    if (strcmp(msg, messages[i].msg) == 0) { return &messages[i]; }
+  }
+  return add_message(strdup(msg), NULL);
+}
 #endif
 
-const char*loctext(string msg)
-{
+const char*loctext(string msg) {
   s_message *pm=findmsg(msg);
-  if(pm)return (char*)pm->locmsg;
-  return  (char*)msg;
+  return (char*)(pm->locmsg?:pm->msg);
 }
 
-const wchar *wloctext(string msg)
-{
+const wchar *wloctext(string msg) {
   s_message *pm=findmsg(msg);
-  if(!pm)pm=add_message(strdup(msg), strdup(msg));
-  if (pm->wmsg == null)
-    pm->wmsg = cs__utftowcs(pm->locmsg);
-  return (wchar*)pm->wmsg;
+  if (pm->wlocmsg == null){
+    if(pm->locmsg)pm->wlocmsg = cs__utftowcs(pm->locmsg);
+    else {
+      if( !pm->wmsg) pm->wmsg = cs__utftowcs(pm->msg);
+      return pm->wmsg;
+    }
+  }
+  return (wchar*)(pm->wlocmsg?:pm->wmsg);
+}
+const wchar *wtext(string msg) {
+  s_message *pm=findmsg(msg);
+  if (pm->wmsg==null){
+    pm->wmsg = cs__utftowcs(pm->msg);
+  }
+  return (wchar*)(pm->wmsg);
 }
 
-static char *
-readtext(char * buf, int len, FILE * file)
-{
-  char * unescape(char * s)
-  {
+static char * readtext(char * buf, int len, FILE * file) {
+  char * unescape(char * s) {
     char * t = s;
-    while (*s && *s != '"') {
+    for(;*s && *s != '"';t++,s++) {
       if (*s == '\\') {
         s++;
         switch (*s) {
@@ -1158,61 +1145,33 @@ readtext(char * buf, int len, FILE * file)
           when 'n': *t = '\n';
           otherwise: *t = *s;
         }
-      }
-      else
-        *t = *s;
-      t++;
-      s++;
+      } else *t = *s;
     }
     *t = '\0';
     return t;
   }
-
   char * p = buf;
-  while (*p != ' ')
-    p++;
-  while (*p == ' ')
-    p++;
-  if (strncmp(p, "\"\"", 2) == 0) {
-    // scan multi-line text
-    char * str = newn(char, 1);
-    *str = '\0';
-    while (fgets(buf, len, file) && *buf == '"') {
-      p = buf + 1;
-      char * f = unescape(p);
-      if (!*f) {
-        str = renewn(str, strlen(str) + strlen(p) + 1);
-        strcat(str, p);
-      }
-      else {
-        delete(str);
-        return null;
-      }
-    }
-    return str;
+  for(;*p != ' '; p++);
+  for(;*p == ' '; p++);
+  p++; unescape(p);
+  char * str = strdup(p);
+  int slen=strlen(str);
+  while (fgets(buf, len, file) && *buf == '"') {
+    unescape(p= buf + 1);
+    int l=strlen(p);
+    str = renewn(str, slen+l + 1);
+    strcpy(str+slen, p);
+    slen+=l;
   }
-  else {
-    // scan single-line text
-    p++;
-    char * f = unescape(p);
-    if (!*f) {
-      char * str = strdup(p);
-      fgets(buf, len, file);
-      return str;
-    }
-  }
-  return null;
+  return str;
 }
 
-static void
-load_messages_file(const char * textdbf)
-{
+static void load_messages_file(const char * textdbf) {
   char linebuf[444];
   FILE * file = fopen(textdbf, "r");
   int nmsgs=0;
   if (file) {
     clear_messages();
-
     while (fgets(linebuf, sizeof linebuf, file)) {
       linebuf[strcspn(linebuf, "\r\n")] = 0;  /* trim newline */
       if (strncmp(linebuf, "msgid ", 6) == 0) {
@@ -1223,21 +1182,18 @@ load_messages_file(const char * textdbf)
             nmsgs++; add_message(msg, locmsg);
           }
         }
-      }
-      else {
-      }
+      } 
     }
     fclose(file);
   }
 #ifdef debug_messages
   printf("read %d messages\n", nmsgs);
 #endif
+  init_loptvals();
 }
 
 static bool
-load_messages_lang(string lang, bool fallback)
-{
-
+load_messages_lang(string lang, bool fallback) {
   if (lang) {
     char * wl = newn(char, strlen(lang) + 4);
     strcpy(wl, lang);
@@ -1245,9 +1201,7 @@ load_messages_lang(string lang, bool fallback)
       char * _ = strchr(wl, '_');
       if (_) {
         *_ = '\0';
-      }
-      else
-        return false;
+      } else return false;
     }
     strcat(wl, ".po");
     const char * textdbf = get_resource_file("lang", wl, false);
@@ -1264,22 +1218,18 @@ load_messages_lang(string lang, bool fallback)
   return false;
 }
 
-static void
-load_messages(config * cfg_p)
-{
+static void load_messages(config * cfg_p) {
   if (cfg_p->lang) for (int fallback = false; fallback <= true; fallback++) {
 #ifdef debug_messages
     printf("Loading localization <%ls> (fallback %d)\n", cfg_p->lang, fallback);
 #endif
     clear_messages();
     if (strcmp(cfg_p->lang, ("=")) == 0) {
-      if (load_messages_lang(cfg_p->locale, fallback))
-        return;
+      if (load_messages_lang(cfg_p->locale, fallback)) return;
     }
     else if (strcmp(cfg_p->lang, ("@")) == 0) {
       // locale_menu[1] is transformed from GetUserDefaultUILanguage()
-      if (load_messages_lang(locale_menu[1], fallback))
-        return;
+      if (load_messages_lang(locale_menu[1], fallback)) return;
     }
     else if (strcmp(cfg_p->lang, ("*")) == 0) {
       // determine UI language from environment
@@ -1288,13 +1238,10 @@ load_messages(config * cfg_p)
         lang = strdup(lang);
         while (lang && *lang) {
           char * sep = strchr(lang, ':');
-          if (sep)
-            *sep = '\0';
-          if (load_messages_lang(lang, fallback))
-            return;
+          if (sep) *sep = '\0';
+          if (load_messages_lang(lang, fallback)) return;
           lang = sep;
-          if (lang)
-            lang++;
+          if (lang) lang++;
         }
         delete(lang);
       }
@@ -1302,23 +1249,17 @@ load_messages(config * cfg_p)
       if (lang && *lang) {
         lang = strdup(lang);
         char * dot = strchr(lang, '.');
-        if (dot)
-          *dot = '\0';
-        if (load_messages_lang(lang, fallback))
-          return;
+        if (dot) *dot = '\0';
+        if (load_messages_lang(lang, fallback)) return;
         delete(lang);
       }
-    }
-    else {
-      if (load_messages_lang(cfg_p->lang, fallback))
-        return;
+    } else {
+      if (load_messages_lang(cfg_p->lang, fallback)) return;
     }
   }
 }
 
-static int 
-load_configr(config * p,string filename,int to_save)
-{
+static int load_configr(config * p,string filename,int to_save) {
   char linebuf[444];
   bool free_filename = false;
   if (*filename == '~' && filename[1] == '/') {
@@ -1336,12 +1277,8 @@ load_configr(config * p,string filename,int to_save)
     while (len = strlen(lbuf),
       (len && lbuf[len - 1] != '\n') ||
       (len > 1 && lbuf[len - 1] == '\n' && lbuf[len - 2] == '\\')
-      )
-    {
-      if (lbuf == linebuf) {
-        // make lbuf dynamic
-        lbuf = strdup(lbuf);
-      }
+      ) {
+      if (lbuf == linebuf)lbuf = strdup(lbuf);
       // append to lbuf
       len = strlen(lbuf);
       lbuf = renewn(lbuf, len + sizeof linebuf);
@@ -1349,28 +1286,21 @@ load_configr(config * p,string filename,int to_save)
         break;
     }
 
-    if (lbuf[len - 1] == '\n')
-      lbuf[len - 1] = 0;
-
+    if (lbuf[len - 1] == '\n') lbuf[len - 1] = 0;
     if (lbuf[0] == '#' || lbuf[0] == '\0') {
       // preserve comment lines and empty lines
-      if (to_save)
-        remember_file_comment(lbuf);
-    }
-    else {
+      if (to_save) remember_file_comment(lbuf);
+    } else {
       // apply config options
       int i = parse_option(p,lbuf, true);
-      // remember config options for saving
       if (to_save) {
-        if (i >= 0)
-          remember_file_option("load", i);
-        else
-          // preserve unknown options as comment lines
-          remember_file_comment(lbuf);
+        // remember config options for saving
+        if (i >= 0) remember_file_option("load", i);
+        // preserve unknown options as comment lines
+        else remember_file_comment(lbuf);
       }
     }
-    if (lbuf != linebuf)
-      delete(lbuf);
+    if (lbuf != linebuf) delete(lbuf);
   }
   fclose(file);
   return 1;
@@ -1381,15 +1311,11 @@ load_configr(config * p,string filename,int to_save)
 // 1 use filename for saving if file exists and is writable
 // 2 use filename for saving if none was previously determined
 // 3 use filename for saving (override)
-void
-load_config(string filename, int to_save)
-{
+void load_config(string filename, int to_save) {
   int rok;
   trace_theme(("load_config <%s> %d\n", filename, to_save));
-  if (!to_save) {
-    // restore base configuration, without theme mix-ins
-    copy_config("load", &cfg, &file_cfg);
-  }
+  // restore base configuration, without theme mix-ins
+  if (!to_save)  copy_config("load", &cfg, &file_cfg);
 
   bool free_filename = false;
   if (*filename == '~' && filename[1] == '/') {
@@ -1398,15 +1324,12 @@ load_config(string filename, int to_save)
   }
   rok=access(filename, R_OK) == 0;
 
-  if (rok && access(filename, W_OK) < 0)
-    to_save = false;
+  if (rok && access(filename, W_OK) < 0) to_save = false;
 
   // prevent saving to /etc/minttyrc
-  if (strstr(filename, "/etc/") == filename)
-    to_save = false;
+  if (strstr(filename, "/etc/") == filename) to_save = false;
 
-  if (wv.report_config)
-    printf("loading config <%s>\n", filename);
+  if (wv.report_config) printf("loading config <%s>\n", filename);
 
   if (to_save) {
     if (rok|| (!rc_filename && to_save == 2) || to_save == 3) {
@@ -1429,9 +1352,7 @@ load_config(string filename, int to_save)
   }
 }
 
-void
-copy_config(string tag, config * dst_p, const config * src_p)
-{
+void copy_config(string tag, config * dst_p, const config * src_p) {
 #ifdef debug_theme
   char * _cfg(const config * p) {
     return p == &new_cfg ? "new" : p == &file_cfg ? "file" : p == &cfg ? "cfg" : "?";
@@ -1450,42 +1371,20 @@ copy_config(string tag, config * dst_p, const config * src_p)
   }
 }
 
-void
-init_config(void)
-{
-  init_loptvals();
+void init_config(void) {
   copy_config("init", &cfg, &default_cfg);
   CLRFGSCPY(def_colours,default_cfg.ansi_colours);
 }
 
-static void
-fix_config(void)
-{
+static void fix_config(void) {
   // Avoid negative sizes.
   cfg.winsize.y = max(1, cfg.winsize.y);
   cfg.winsize.x = max(1, cfg.winsize.x);
   cfg.scrollback_lines = max(0, cfg.scrollback_lines);
+  if(cfg.partline>6)cfg.partline=6;
 
   // Limit size of scrollback buffer.
   cfg.scrollback_lines = min(cfg.scrollback_lines, cfg.max_scrollback_lines);
-}
-
-void
-finish_config(void)
-{
-  if (*cfg.lang && (strcmp(cfg.lang, ("=")) != 0 || *cfg.locale))
-    load_messages(&cfg);
-#if defined(debug_messages) && debug_messages > 1
-  else
-    (void)load_messages_lang("messages",0);
-#endif
-#ifdef debug_opterror
-  opterror("Tast L %s %s", false, "bh", "bh");
-  opterror("Tast U %s %s", true, "bh", "bh");
-#endif
-
-  fix_config();
-
   // Ignore charset setting if we haven't got a locale.
   if (!*cfg.locale)
     strset(&cfg.charset, "");
@@ -1506,12 +1405,26 @@ finish_config(void)
 
   if (0 < cfg.transparency && cfg.transparency <= 3)
     cfg.transparency *= 16;
+}
+
+void finish_config(void) {
+  if (*cfg.lang && (strcmp(cfg.lang, ("=")) != 0 || *cfg.locale))
+    load_messages(&cfg);
+#if defined(debug_messages) && debug_messages > 1
+  else
+    (void)load_messages_lang("messages",0);
+#endif
+#ifdef debug_opterror
+  opterror("Tast L %s %s", false, "bh", "bh");
+  opterror("Tast U %s %s", true, "bh", "bh");
+#endif
+
+  fix_config();
+
   //printf("finish_config bd %d\n", cfg.bold_as_font);
 }
 
-static void
-save_config(void)
-{
+static void save_config(void) {
   string filename;
 
   filename = path_win_w_to_posix(rc_filename);
@@ -1551,9 +1464,7 @@ save_config(void)
   fclose(file);
 }
 
-static int 
-load_themer(config *p,string theme)
-{
+static int load_themer(config *p,string theme) {
   char * thf=NULL;
   if (!*theme) return 0;
   if (strchr(theme, '/') || strchr(theme, '\\')) 
@@ -1568,14 +1479,11 @@ load_themer(config *p,string theme)
   strncpy(theme_file,theme,128);
   return 1;
 }
-void 
-load_theme(string theme){
+void load_theme(string theme){
   load_themer(&cfg,theme);
 }
 
-static void
-load_schemer(config*p,string cs)
-{
+static void load_schemer(config*p,string cs) {
   //copy_config("scheme", &cfg, &file_cfg);
 
   // analyse scheme description
@@ -1601,13 +1509,10 @@ load_schemer(config*p,string cs)
   }
   delete(scheme);
 }
-void
-load_scheme(string cs){
+void load_scheme(string cs){
   load_schemer(&cfg,cs);
 }
-void
-apply_config(bool save)
-{
+void apply_config(bool save) {
   // Record what's changed
   for (uint i = 0; options[i].name; i++) {
     opt_type type = options[i].type;
@@ -1619,7 +1524,6 @@ apply_config(bool save)
       }
     }
   }
-
   copy_config("apply", &file_cfg, &new_cfg);
   if (strcmp(new_cfg.lang, cfg.lang) != 0
       || (strcmp(new_cfg.lang, ("=")) == 0 && new_cfg.locale != cfg.locale)
@@ -1656,21 +1560,13 @@ apply_config(bool save)
   }
   //printf("apply_config %d bd %d\n", save, cfg.bold_as_font);
 }
-
-
 // Registry handling (for retrieving localized sound labels)
-
-HKEY
-regopen(HKEY key,const char * subkey)
-{
+HKEY regopen(HKEY key,const char * subkey) {
   HKEY hk = 0;
   RegOpenKeyA(key, subkey, &hk);
   return hk;
 }
-
-static HKEY
-getmuicache()
-{
+static HKEY getmuicache() {
   HKEY hk = regopen(HKEY_CURRENT_USER, "Software\\Classes\\Local Settings\\MuiCache");
   if (!hk)
     return 0;
@@ -1698,9 +1594,7 @@ getmuicache()
 static HKEY muicache = 0;
 static HKEY evlabels = 0;
 
-static void
-retrievemuicache()
-{
+static void retrievemuicache() {
   muicache = getmuicache();
   if (muicache) {
     evlabels = regopen(HKEY_CURRENT_USER, "AppEvents\\EventLabels");
@@ -1711,18 +1605,14 @@ retrievemuicache()
   }
 }
 
-static void
-closemuicache()
-{
+static void closemuicache() {
   if (muicache) {
     RegCloseKey(evlabels);
     RegCloseKey(muicache);
   }
 }
 
-wchar *
-getregstr(HKEY key, wstring subkey, wstring attribute)
-{
+wchar * getregstr(HKEY key, wstring subkey, wstring attribute) {
 #if CYGWIN_VERSION_API_MINOR < 74
   (void)key;
   (void)subkey;
@@ -1755,9 +1645,7 @@ getregstr(HKEY key, wstring subkey, wstring attribute)
 #endif
 }
 
-uint
-getregval(HKEY key, wstring subkey, wstring attribute)
-{
+uint getregval(HKEY key, wstring subkey, wstring attribute) {
 #if CYGWIN_VERSION_API_MINOR < 74
   (void)key;
   (void)subkey;
@@ -1786,9 +1674,7 @@ getregval(HKEY key, wstring subkey, wstring attribute)
 #endif
 }
 
-static wchar *
-muieventlabel(const wchar * event)
-{
+static wchar * muieventlabel(const wchar * event) {
   // HKEY_CURRENT_USER\AppEvents\EventLabels\SystemAsterisk
   // DispFileName -> "@mmres.dll,-5843"
   wchar * rsr = getregstr(evlabels, event, W("DispFileName"));
@@ -1800,36 +1686,29 @@ muieventlabel(const wchar * event)
   delete(rsr);
   return lbl;
 }
-
-
 // Options dialog handlers
-
-static void
-ok_handler(control *unused(ctrl), int event)
-{
+static void ok_handler(control *unused(ctrl),int cid, int event,LPARAM lp) {
+  (void)cid;(void)lp;
   if (event == EVENT_ACTION) {
     apply_config(true);
     dlg_end();
   }
 }
 
-static void
-cancel_handler(control *unused(ctrl), int event)
-{
+static void cancel_handler(control *unused(ctrl),int cid, int event,LPARAM lp) {
+  (void)cid;(void)lp;
   if (event == EVENT_ACTION)
     dlg_end();
 }
 
-static void
-apply_handler(control *unused(ctrl), int event)
-{
+static void apply_handler(control *unused(ctrl),int cid, int event,LPARAM lp) {
+  (void)cid;(void)lp;
   if (event == EVENT_ACTION)
     apply_config(false);
 }
 
-static void
-about_handler(control *unused(ctrl), int event)
-{
+static void about_handler(control *unused(ctrl),int cid, int event,LPARAM lp) {
+  (void)cid;(void)lp;
   if (event == EVENT_ACTION)
     win_show_about();
 }
@@ -1840,9 +1719,7 @@ about_handler(control *unused(ctrl), int event)
 #endif
 
 #ifdef use_findfile
-static void
-do_file_resources(control *ctrl, string pattern, bool list_dirs, str_fn fnh)
-{
+static void do_file_resources(control *ctrl, string pattern, bool list_dirs, str_fn fnh) {
   static wstring *lst=NULL;
   static int nl=0,ml=0;
   void clrlist(){
@@ -1887,7 +1764,7 @@ do_file_resources(control *ctrl, string pattern, bool list_dirs, str_fn fnh)
             if (wcslen(ffd.cFileName) > 1)
               if(addlist(ffd.cFileName)<0){
                 if (ctrl){
-                  dlg_listbox_add_w(ctrl, ffd.cFileName);
+                  dlg_listbox_addW(ctrl, ffd.cFileName);
                 }
               }
         }
@@ -1901,7 +1778,7 @@ do_file_resources(control *ctrl, string pattern, bool list_dirs, str_fn fnh)
             ffd.cFileName[len - sufl] = 0;
             if(addlist(ffd.cFileName)<0){
               if (ctrl)
-                dlg_listbox_add_w(ctrl, ffd.cFileName);
+                dlg_listbox_addW(ctrl, ffd.cFileName);
               else if(fnh){
                 char * fn= asform(("%ls/%ls"), rc, ffd.cFileName);
                 fnh(fn);  // CYGWIN_VERSION_API_MINOR < 74
@@ -1924,9 +1801,7 @@ do_file_resources(control *ctrl, string pattern, bool list_dirs, str_fn fnh)
   clrlist();
 }
 #else
-static void
-do_file_resources(control *ctrl, string pattern, bool list_dirs, str_fn fnh)
-{
+static void do_file_resources(control *ctrl, string pattern, bool list_dirs, str_fn fnh) {
   static string *lst=NULL;
   static int nl=0,ml=0;
   void clrlist(){
@@ -1964,16 +1839,17 @@ do_file_resources(control *ctrl, string pattern, bool list_dirs, str_fn fnh)
     if (dir) {
       struct dirent * direntry;
       while ((direntry = readdir(dir)) != 0) {
-        if (patsuf && !strstr(direntry->d_name, patsuf))
-          continue;
-
+        if (patsuf){
+          char*s=strstr(direntry->d_name, patsuf);
+          if(!s||strcmp(s,patsuf)) continue;
+        }
         if (list_dirs && direntry->d_type == DT_DIR) {
           if (direntry->d_name[0] != '.' && !!strcmp(direntry->d_name, "common"))
             // exclude the [0-7] links left over by the `getemojis` script
             if (strlen(direntry->d_name) > 1) {
               if(addlist(direntry->d_name)<0){
                 if (ctrl)
-                  dlg_listbox_add(ctrl, direntry->d_name);
+                  dlg_listbox_addA(ctrl, direntry->d_name);
               }
             }
         }
@@ -1984,7 +1860,7 @@ do_file_resources(control *ctrl, string pattern, bool list_dirs, str_fn fnh)
             direntry->d_name[len - patsuflen] = 0;
             if(addlist(direntry->d_name)<0){
               if (ctrl)
-                dlg_listbox_add(ctrl, direntry->d_name);
+                dlg_listbox_addA(ctrl, direntry->d_name);
               else {
                 char * fn = asform(("%s/%s"), rcpat, direntry->d_name);
                 if(fnh)fnh(fn);
@@ -2003,22 +1879,16 @@ do_file_resources(control *ctrl, string pattern, bool list_dirs, str_fn fnh)
 }
 #endif
 
-static void
-add_file_resources(control *ctrl, string pattern, bool list_dirs)
-{
+static void add_file_resources(control *ctrl, string pattern, bool list_dirs) {
   do_file_resources(ctrl, pattern, list_dirs, 0);
 }
 
-void
-handle_file_resources(string pattern, str_fn fn_handler)
-{
+void handle_file_resources(string pattern, str_fn fn_handler) {
   do_file_resources(0, pattern, false, fn_handler);
 }
 
-
-static void
-current_size_handler(control *ctrl, int event)
-{
+static void current_size_handler(control *ctrl,int cid, int event,LPARAM lp) {
+  (void)cid;(void)lp;
   intpair* p = ctrl->context;
   if (event == EVENT_ACTION) {
     p->x = term.cols;
@@ -2027,9 +1897,8 @@ current_size_handler(control *ctrl, int event)
   }
 }
 
-static void
-printer_handler(control *ctrl, int event)
-{
+static void printer_handler(control *ctrl,int cid, int event,LPARAM lp) {
+  (void)cid;(void)lp;
   const wstring NONE = _W("◇ None (printing disabled) ◇");  // ♢◇
   const wstring CFG_NONE = W("");
   const wstring DEFAULT = _W("◆ Default printer ◆");  // ♦◆
@@ -2037,16 +1906,16 @@ printer_handler(control *ctrl, int event)
   wstring printer = new_cfg.printer;
   if (event == EVENT_REFRESH) {
     dlg_listbox_clear(ctrl);
-    dlg_listbox_add_w(ctrl, NONE);
-    dlg_listbox_add_w(ctrl, DEFAULT);
+    dlg_listbox_addW(ctrl, NONE);
+    dlg_listbox_addW(ctrl, DEFAULT);
     uint num = printer_start_enum();
     for (uint i = 0; i < num; i++)
-      dlg_listbox_add_w(ctrl, printer_get_name(i));
+      dlg_listbox_addW(ctrl, printer_get_name(i));
     printer_finish_enum();
     if (*printer == '*')
-      dlg_editbox_set_w(ctrl, DEFAULT);
+      dlg_editbox_setW(ctrl, DEFAULT);
     else
-      dlg_editbox_set_w(ctrl, *printer ? printer : NONE);
+      dlg_editbox_setW(ctrl, *printer ? printer : NONE);
   }
   else if (event == EVENT_VALCHANGE || event == EVENT_SELCHANGE) {
     int n = dlg_listbox_getcur(ctrl);
@@ -2055,110 +1924,136 @@ printer_handler(control *ctrl, int event)
     else if (n == 1)
       wstrset(&printer, CFG_DEFAULT);
     else
-      dlg_editbox_get_w(ctrl, &printer);
+      dlg_editbox_getW(ctrl, &printer);
 
     new_cfg.printer = printer;
   }
 }
 
-static control *locale_box=NULL, *charset_box=NULL;
-static control *transparency_valbox=NULL, *transparency_selbox=NULL;
-static void
-set_charset(string charset)
-{
-  strset(&new_cfg.charset, charset);
-  dlg_editbox_set(charset_box, charset);
-}
-
-static void
-locale_handler(control *ctrl, int event)
-{
+control *ctrl_next(control *ctrl,int n);
+static void locale_handler(control *ctrl,int cid, int event,LPARAM lp) {
+  (void)cid;(void)lp;
   string locale = new_cfg.locale;
+  control *ctl_charset=ctrl_next(ctrl,1);
+  void set_charset(control *ctrl,string charset) {
+    strset(&new_cfg.charset, charset);
+    dlg_editbox_setA(ctrl, charset);
+  }
   switch (event) {
     when EVENT_REFRESH:
       dlg_listbox_clear(ctrl);
       string l;
       for (int i = 0; (l = locale_menu[i]); i++)
-        dlg_listbox_add(ctrl, l);
-      dlg_editbox_set(ctrl, locale);
+        dlg_listbox_addA(ctrl, l);
+      dlg_editbox_setA(ctrl, locale);
     when EVENT_UNFOCUS:
-      dlg_editbox_set(ctrl, locale);
-      if (!*locale)
-        set_charset("");
+      dlg_editbox_setA(ctrl, locale);
+      if (!*locale) set_charset(ctl_charset ,"");
     when EVENT_VALCHANGE:
-      dlg_editbox_get(ctrl, &new_cfg.locale);
+      dlg_editbox_getA(ctrl, &new_cfg.locale);
     when EVENT_SELCHANGE:
-      dlg_editbox_get(ctrl, &new_cfg.locale);
-      if (*locale == '(')
-        strset(&locale, "");
-      if (!*locale)
-        set_charset("");
+      dlg_editbox_getA(ctrl, &new_cfg.locale);
+      if (*locale == '(') strset(&locale, "");
+      if (!*locale) set_charset(ctl_charset ,"");
 #if HAS_LOCALES
       else if (!*new_cfg.charset)
-        set_charset("UTF-8");
+        set_charset(ctl_charset ,"UTF-8");
 #endif
       new_cfg.locale = locale;
   }
 }
 
-static void
-check_locale(void)
-{
+static void lang_handler(control *ctrl,int cid, int event,LPARAM lp) {
+  (void)cid;(void)lp;
+  //__ UI localization disabled
+  const wstring NONE = _W("- None -");
+  //__ UI localization: use Windows desktop setting
+  const wstring WINLOC = _W("@ Windows language @");
+  //__ UI localization: use environment variable setting (LANGUAGE, LC_*)
+  const wstring LOCENV = _W("* Locale environm. *");
+  //__ UI localization: use mintty configuration setting (Text - Locale)
+  const wstring LOCALE = _W("= cfg. Text Locale =");
+  switch (event) {
+    when EVENT_REFRESH:{
+      dlg_listbox_clear(ctrl);
+      dlg_listbox_addW(ctrl, NONE);
+      dlg_listbox_addW(ctrl, WINLOC);
+      dlg_listbox_addW(ctrl, LOCENV);
+      dlg_listbox_addW(ctrl, LOCALE);
+      add_file_resources(ctrl, ("lang/*.po"), false);
+      if (strcmp(new_cfg.lang, ("")) == 0)
+        dlg_editbox_setW(ctrl, NONE);
+      else if (strcmp(new_cfg.lang, ("@")) == 0)
+        dlg_editbox_setW(ctrl, WINLOC);
+      else if (strcmp(new_cfg.lang, ("*")) == 0)
+        dlg_editbox_setW(ctrl, LOCENV);
+      else if (strcmp(new_cfg.lang, ("=")) == 0)
+        dlg_editbox_setW(ctrl, LOCALE);
+      else
+        dlg_editbox_setA(ctrl, new_cfg.lang);
+    }
+    when EVENT_VALCHANGE or EVENT_SELCHANGE: {
+      int n = dlg_listbox_getcur(ctrl);
+      if (n == 0) strset(&new_cfg.lang, (""));
+      else if (n == 1) strset(&new_cfg.lang, ("@"));
+      else if (n == 2) strset(&new_cfg.lang, ("*"));
+      else if (n == 3) strset(&new_cfg.lang, ("="));
+      else dlg_editbox_getA(ctrl, &new_cfg.lang);
+    }
+  }
+}
+static void check_locale(control *ctrl) {
   if (!*new_cfg.locale) {
     strset(&new_cfg.locale, "C");
-    dlg_editbox_set(locale_box, "C");
+    dlg_editbox_setA(ctrl, "C");
   }
 }
 
-static void
-charset_handler(control *ctrl, int event)
-{
+static void charset_handler(control *ctrl,int cid, int event,LPARAM lp) {
+  (void)lp;
   string charset = new_cfg.charset;
   switch (event) {
     when EVENT_REFRESH:
       dlg_listbox_clear(ctrl);
       string cs;
       for (int i = 0; (cs = charset_menu[i]); i++)
-        dlg_listbox_add(ctrl, cs);
-      dlg_editbox_set(ctrl, charset);
+        dlg_listbox_addA(ctrl, cs);
+      dlg_editbox_setA(ctrl, charset);
     when EVENT_UNFOCUS:
-      dlg_editbox_set(ctrl, charset);
-      if (*charset)
-        check_locale();
+      dlg_editbox_setA(ctrl, charset);
+      if (*charset) check_locale(ctrl);
     when EVENT_VALCHANGE:
-      dlg_editbox_get(ctrl, &new_cfg.charset);
+      dlg_editbox_getA(ctrl, &new_cfg.charset);
     when EVENT_SELCHANGE:
-      dlg_editbox_get(ctrl, &charset);
+      dlg_editbox_getA(ctrl, &charset);
       if (*charset == '(')
         strset(&charset, "");
       else {
         *strchr(charset, ' ') = 0;
-        check_locale();
+        check_locale(ctrl);
       }
       new_cfg.charset = charset;
+  (void)cid;
   }
 }
 
-
-static void
-cursor_handler(control *ctrl, int event)
-{
+static void cursor_handler(control *ctrl,int cid, int event,LPARAM lp) {
+  (void)cid;(void)lp;
   wstring *cs=(wstring*)ctrl->context;
   switch (event) {
     when EVENT_REFRESH:{
       dlg_listbox_clear(ctrl);
       for (uint i = 0; cursorstyles[i].name; i++){
-        dlg_listbox_add(ctrl, cursorstyles[i].name);
+        dlg_listbox_addA(ctrl, cursorstyles[i].name);
       }
-      dlg_editbox_set_w(ctrl, *cs);
+      dlg_editbox_setW(ctrl, *cs);
     }
     when EVENT_VALCHANGE or EVENT_SELCHANGE:
-      dlg_editbox_get_w(ctrl, cs);
+      dlg_editbox_getW(ctrl, cs);
   }
 }
-static void
-term_handler(control *ctrl, int event)
-{
+static void term_handler(control *ctrl,int cid, int event,LPARAM lp) {
+  (void)cid;(void)lp;
   bool terminfo_exists(const char * ti) {
     bool terminfo_exists_in(const char * dir, const char * sub, const char * ti) {
       char * terminfo = asform("%s%s/%x/%s", dir, sub ?: "", *ti, ti);
@@ -2195,23 +2090,23 @@ term_handler(control *ctrl, int event)
   switch (event) {
     when EVENT_REFRESH:
       dlg_listbox_clear(ctrl);
-      dlg_listbox_add(ctrl, "xterm");
-      dlg_listbox_add(ctrl, "xterm-256color");
+      dlg_listbox_addA(ctrl, "xterm");
+      dlg_listbox_addA(ctrl, "xterm-256color");
       if (terminfo_exists("xterm-direct"))
-        dlg_listbox_add(ctrl, "xterm-direct");
-      dlg_listbox_add(ctrl, "xterm-vt220");
-      dlg_listbox_add(ctrl, "vt100");
-      dlg_listbox_add(ctrl, "vt220");
-      dlg_listbox_add(ctrl, "vt340");
-      dlg_listbox_add(ctrl, "vt420");
-      dlg_listbox_add(ctrl, "vt525");
+        dlg_listbox_addA(ctrl, "xterm-direct");
+      dlg_listbox_addA(ctrl, "xterm-vt220");
+      dlg_listbox_addA(ctrl, "vt100");
+      dlg_listbox_addA(ctrl, "vt220");
+      dlg_listbox_addA(ctrl, "vt340");
+      dlg_listbox_addA(ctrl, "vt420");
+      dlg_listbox_addA(ctrl, "vt525");
       if (terminfo_exists("mintty"))
-        dlg_listbox_add(ctrl, "mintty");
+        dlg_listbox_addA(ctrl, "mintty");
       if (terminfo_exists("mintty-direct"))
-        dlg_listbox_add(ctrl, "mintty-direct");
-      dlg_editbox_set(ctrl, new_cfg.Term);
+        dlg_listbox_addA(ctrl, "mintty-direct");
+      dlg_editbox_setA(ctrl, new_cfg.Term);
     when EVENT_VALCHANGE or EVENT_SELCHANGE:
-      dlg_editbox_get(ctrl, &new_cfg.Term);
+      dlg_editbox_getA(ctrl, &new_cfg.Term);
   }
 }
 
@@ -2234,9 +2129,8 @@ static struct {
   {__("Asterisk"),	W("SystemAsterisk")},
 };
 
-static void
-bell_handler(control *ctrl, int event)
-{
+static void bell_handler(control *ctrl,int cid, int event,LPARAM lp) {
+  (void)cid;(void)lp;
   switch (event) {
     when EVENT_REFRESH:
       dlg_listbox_clear(ctrl);
@@ -2248,18 +2142,18 @@ bell_handler(control *ctrl, int event)
           if (muicache && beeps[i].event) {
             wchar * lbl = muieventlabel(beeps[i].event);
             if (lbl) {
-              dlg_listbox_add_w(ctrl, lbl);
+              dlg_listbox_addW(ctrl, lbl);
               if ((int)i == new_cfg.bell_type + 1)
-                dlg_editbox_set_w(ctrl, lbl);
+                dlg_editbox_setW(ctrl, lbl);
               beepname = null;
               delete(lbl);
             }
           }
         }
         if (beepname) {
-          dlg_listbox_add(ctrl, beepname);
+          dlg_listbox_addA(ctrl, beepname);
           if ((int)i == new_cfg.bell_type + 1)
-            dlg_editbox_set(ctrl, beepname);
+            dlg_editbox_setA(ctrl, beepname);
         }
       }
       closemuicache();
@@ -2270,56 +2164,43 @@ bell_handler(control *ctrl, int event)
   }
 }
 
-static void
-bellfile_handler(control *ctrl, int event)
-{
+static void bellfile_handler(control *ctrl,int cid, int event,LPARAM lp) {
+  (void)cid;(void)lp;
   const string NONE = ("◇ None (system sound) ◇");  // ♢◇
   const string CFG_NONE = ("");
   string *cs=(string*)ctrl->context;
   if (event == EVENT_REFRESH) {
     dlg_listbox_clear(ctrl);
-    dlg_listbox_add(ctrl, NONE);
+    dlg_listbox_addA(ctrl, NONE);
     add_file_resources(ctrl, ("sounds/*.wav"), false);
     // strip std dir prefix...
-    dlg_editbox_set(ctrl, **cs? *cs: NONE);
-  }
-  else if (event == EVENT_VALCHANGE || event == EVENT_SELCHANGE) {
+    dlg_editbox_setA(ctrl, **cs? *cs: NONE);
+  } else if (event == EVENT_VALCHANGE || event == EVENT_SELCHANGE) {
     if (dlg_listbox_getcur(ctrl) == 0)
       strset(cs, CFG_NONE);
     else
-      dlg_editbox_get(ctrl, cs);
+      dlg_editbox_getA(ctrl, cs);
 
     // add std dir prefix?
     win_bell(&new_cfg);
-  }
-  else if (event == EVENT_DROP) {
-    dlg_editbox_set_w(ctrl, dragndrop);
+  } else if (event == EVENT_DROP) {
+    dlg_editbox_setW(ctrl, dragndrop);
     wstrset2a(cs, dragndrop);
     win_bell(&new_cfg);
   }
 }
 
-//static control * theme = null;
-static control * store_button = null;
-
-static void
-enable_widget(control * ctrl, bool enable)
-{
-  if (!ctrl)
-    return;
-
+static void enable_widget(control * ctrl, bool enable) {
+  if (!ctrl) return;
   HWND wid = ctrl->widget;
   EnableWindow(wid, enable);
 }
 
 #define dont_debug_scheme 2
 
-/*
-   Load scheme from URL or file, convert .itermcolors and .json formats
+/*    Load scheme from URL or file, convert .itermcolors and .json formats
  */
-static char *
-download_scheme(const char * url)
-{
+static char * download_scheme(const char * url) {
   if (strchr(url, '\''))
     return null;  // Insecure link
 
@@ -2349,14 +2230,14 @@ download_scheme(const char * url)
       ok = S_OK == pURLDownloadToFile(NULL, url, wfn, 0, NULL);
       delete(wfn);
     }
-    if (!ok)
-      delete(sfn);
-    sf = fopen(sfn, "r");
-    //printf("URL <%s> file <%s> OK %d\n", url, sfn, !!sf);
-    if (!sf) {
-      remove(sfn);
-      delete(sfn);
+    if (ok){
+      sf = fopen(sfn, "r");
+      //printf("URL <%s> file <%s> OK %d\n", url, sfn, !!sf);
+      if (!sf) {
+        remove(sfn);
+      }
     }
+    delete(sfn);
 #endif
   }
   if (!sf)
@@ -2378,8 +2259,7 @@ download_scheme(const char * url)
   colour cursor_colour = (colour)-1, sel_fg_colour = (colour)-1, sel_bg_colour = (colour)-1;
   colour underl_colour = (colour)-1, hover_colour = (colour)-1;
   // construct a ColourScheme string
-  void schapp(const char * opt, colour c)
-  {
+  void schapp(const char * opt, colour c) {
 #if defined(debug_scheme) && debug_scheme > 1
     printf("schapp %s %06X\n", opt, c);
 #endif
@@ -2392,8 +2272,7 @@ download_scheme(const char * url)
     }
   }
   // collect all modified colours in a colour scheme string
-  void schappall()
-  {
+  void schappall() {
     schapp("ForegroundColour", fg_colour);
     schapp("BackgroundColour", bg_colour);
     schapp("BoldColour", bold_colour);
@@ -2543,8 +2422,7 @@ download_scheme(const char * url)
         printf("<%s> <%s> (%s)\n", key, val, linebuf);
 #endif
         // transform .json colour names
-        void schapp(const char * jname, const char * name)
-        {
+        void schapp(const char * jname, const char * name) {
           if (strcasecmp(key, jname) == 0) {
 #if defined(debug_scheme) && debug_scheme > 1
             printf("%s=%s\n", name, val);
@@ -2589,8 +2467,7 @@ download_scheme(const char * url)
         // handle drag-and-drop json formats that contain colour specs like 
         // "Red=190,70,120" (https://github.com/mskyaxl/wsl-terminal) or
         // "Red=220,50,47\r" (https://github.com/oumu/mintty-color-schemes)
-        void schapp(char * name)
-        {
+        void schapp(char * name) {
           char specbuf[30];
           sprintf(specbuf, "\"%s=", name);
           char * colspec = strstr(linebuf, specbuf);
@@ -2703,9 +2580,9 @@ static int themechanged(){
   return 0;
 }
 
-static void
-theme_handler(control *ctrl, int event)
-{
+static control * store_button = null;
+static void theme_handler(control *ctrl,int cid, int event,LPARAM lp) {
+  (void)cid;(void)lp;
   //__ terminal theme / colour scheme
   const string NONE = ("◇ None ◇");  // ♢◇
   const string CFG_NONE = ("");
@@ -2721,22 +2598,22 @@ theme_handler(control *ctrl, int event)
     when EVENT_REFRESH: {
       ued=0;
       dlg_listbox_clear(ctrl);
-      dlg_listbox_add(ctrl, NONE);
+      dlg_listbox_addA(ctrl, NONE);
       add_file_resources(ctrl, ("themes/*"), false);
 #ifdef attempt_to_keep_scheme_hidden
       if (*new_cfg.colour_scheme)
         // don't do this, rather keep previously entered name to store scheme
         // scheme string will not be entered here anyway
-        dlg_editbox_set_w(ctrl, W(""));
+        dlg_editbox_setW(ctrl, W(""));
       else
 #endif
-        dlg_editbox_set(ctrl, !strcmp(theme_name, CFG_DOWNLOADED) ? DOWNLOADED : *theme_name ? theme_name : NONE);
+        dlg_editbox_setA(ctrl, !strcmp(theme_name, CFG_DOWNLOADED) ? DOWNLOADED : *theme_name ? theme_name : NONE);
     }
     when EVENT_SELCHANGE: {  // pull-down selection
       if (dlg_listbox_getcur(ctrl) == 0)
         strset(&theme_name, CFG_NONE);
       else
-        dlg_editbox_get(ctrl, &theme_name);
+        dlg_editbox_getA(ctrl, &theme_name);
 
       new_cfg.theme_file = theme_name;
       // clear pending colour scheme
@@ -2751,7 +2628,7 @@ theme_handler(control *ctrl, int event)
     when EVENT_UNFOCUS: {  // edit end
       if(ued){
         ued=0;
-        dlg_editbox_get(ctrl, &theme_name);
+        dlg_editbox_getA(ctrl, &theme_name);
         new_cfg.theme_file = theme_name;
         enable_widget(store_button,themechanged());
         upd=1;
@@ -2765,7 +2642,7 @@ theme_handler(control *ctrl, int event)
       char * url = cs__wcstoutf(dragndrop);
       if (wcsncmp(W("data:text/plain,"), dragndrop, 16) == 0) {
         // indicate availability of downloaded scheme to be stored
-        dlg_editbox_set(ctrl, DOWNLOADED);
+        dlg_editbox_setA(ctrl, DOWNLOADED);
         strset(&new_cfg.theme_file, CFG_DOWNLOADED);
         // un-URL-escape scheme description
         char * scheme = cs__wcstoutf(&dragndrop[16]);
@@ -2800,8 +2677,7 @@ theme_handler(control *ctrl, int event)
             )
            )
 #endif
-        )
-      {
+        ) {
         char * sch = download_scheme(url);
         if (sch) {
           char * urlpoi = strchr(url, '?');
@@ -2812,7 +2688,7 @@ theme_handler(control *ctrl, int event)
           if (urlpoi) {
             // set theme name proposal to url base name
             urlpoi++;
-            dlg_editbox_set(ctrl, urlpoi);
+            dlg_editbox_setA(ctrl, urlpoi);
             strset(&new_cfg.theme_file, urlpoi);
             // set scheme
             strset(&new_cfg.colour_scheme, sch);
@@ -2827,7 +2703,7 @@ theme_handler(control *ctrl, int event)
         }
       }
       else {
-        dlg_editbox_set(ctrl, url);
+        dlg_editbox_setA(ctrl, url);
         strset(&new_cfg.theme_file, url);
         enable_widget(store_button, false);
       }
@@ -2850,14 +2726,13 @@ theme_handler(control *ctrl, int event)
   if(upd)InvalidateRect(GetParent((HWND)ctrl->widget),NULL,true);
   //if(upd)InvalidateRect((HWND)ctrl->widget,NULL,true);
 }
-static void
-backgfsel_handler(control *ctrl, int event)
-{
+static void backgfsel_handler(control *ctrl,int cid, int event,LPARAM lp) {
+  (void)cid;(void)lp;
   bg_file *bf=&new_cfg.backgfile;
   control **cs;
   cs=ctrl->parent->ctrls+ctrl->ind;
   if(ctrl->type==CTRL_FILESELECT){ //0,1:2-8:9-10
-    dlg_stdfilesel_handler(ctrl,event);
+    dlg_stdfilesel_handler(ctrl,cid,event,0);
     if(event== EVENT_VALCHANGE){// EVENT_SELCHANGE: 
       if(bf->fn&&bf->fn){
         if(bf->type==0) bf->type='_';
@@ -2868,7 +2743,7 @@ backgfsel_handler(control *ctrl, int event)
     }
   }else if(ctrl->type==CTRL_RADIO){
     cs-=1;
-    dlg_stdradiobutton_handler(ctrl,event);
+    dlg_stdradiobutton_handler(ctrl,cid,event,0);
     if(event== EVENT_VALCHANGE){// EVENT_SELCHANGE: 
       if(bf->alpha==0) bf->alpha=255;
       if(bf->type==0||bf->type=='='){
@@ -2877,19 +2752,18 @@ backgfsel_handler(control *ctrl, int event)
     }
   }else if(ctrl->type==CTRL_INTEDITBOX){
     cs-=2;
-    dlg_stdintbox_handler(ctrl,event);
+    dlg_stdintbox_handler(ctrl,cid,event,0);
   }
   if(event== EVENT_VALCHANGE){// EVENT_SELCHANGE: 
-    dlg_stdfilesel_handler(cs[0],EVENT_REFRESH);
-    dlg_stdradiobutton_handler(cs[1],EVENT_REFRESH);
-    dlg_stdintbox_handler(cs[2],EVENT_REFRESH);
+    dlg_stdfilesel_handler(cs[0],cid,EVENT_REFRESH,0);
+    dlg_stdradiobutton_handler(cs[1],cid,EVENT_REFRESH,0);
+    dlg_stdintbox_handler(cs[2],cid,EVENT_REFRESH,0);
   }
 }
 
 #define dont_debug_dragndrop
-static void
-theme_saver(control *ctrl, int event)
-{
+static void theme_saver(control *ctrl,int cid, int event,LPARAM lp) {
+  (void)cid;(void)lp;
   string theme_name =  new_cfg.theme_file;
   if (event == EVENT_REFRESH) {
     enable_widget(ctrl,themechanged());
@@ -2924,9 +2798,8 @@ theme_saver(control *ctrl, int event)
   }
 }
 
-static void
-bell_tester(control *unused(ctrl), int event)
-{
+static void bell_tester(control *unused(ctrl),int cid, int event,LPARAM lp) {
+  (void)cid;(void)lp;
   if (event == EVENT_ACTION)
     win_bell(&new_cfg);
 }
@@ -2941,7 +2814,6 @@ struct fontlist {
 };
 static struct fontlist * fontlist = 0;
 static uint fontlistn = 0;
-
 
 /* Windows LOGFONT values
 	100	FW_THIN
@@ -2994,9 +2866,7 @@ static wstring weights[] = {
   W("Ultrablack"),	// 900
 };
 
-static void
-enterfontlist(const wchar * fn, int weight, const wchar * style)
-{
+static void enterfontlist(const wchar * fn, int weight, const wchar * style) {
   if (*fn == '@') {
     delete(fn);
     // ignore vertical font
@@ -3067,9 +2937,7 @@ struct data_fontenum {
   bool outer;
 };
 
-static int CALLBACK
-fontenum(const ENUMLOGFONTW *lpelf, const NEWTEXTMETRICW *lpntm, DWORD fontType, LPARAM lParam)
-{
+static int CALLBACK fontenum(const ENUMLOGFONTW *lpelf, const NEWTEXTMETRICW *lpntm, DWORD fontType, LPARAM lParam) {
   const LOGFONTW * lfp = &lpelf->elfLogFont;
   struct data_fontenum * pdata = (struct data_fontenum *)lParam;
   (void)lpntm, (void)fontType;
@@ -3087,8 +2955,7 @@ fontenum(const ENUMLOGFONTW *lpelf, const NEWTEXTMETRICW *lpntm, DWORD fontType,
       // skip vertical font families
       return 1;
 
-    const wchar * tagsplit(const wchar * fn, wstring style)
-    {
+    const wchar * tagsplit(const wchar * fn, wstring style) {
 #if CYGWIN_VERSION_API_MINOR >= 74
       wchar * tag = wcsstr(fn, style);
       if (tag) {
@@ -3105,8 +2972,7 @@ fontenum(const ENUMLOGFONTW *lpelf, const NEWTEXTMETRICW *lpntm, DWORD fontType,
       return 0;
     }
 
-    /**
-       Courier|
+    /**        Courier|
        FreeMono|Medium
        Inconsolata|Medium
        Source Code Pro ExtraLight|ExtraLight
@@ -3154,9 +3020,7 @@ fontenum(const ENUMLOGFONTW *lpelf, const NEWTEXTMETRICW *lpntm, DWORD fontType,
   return 1;
 }
 
-void
-list_fonts(bool report)
-{
+void list_fonts(bool report) {
   struct data_fontenum data = {
     .dc = GetDC(0),
     .report = report,
@@ -3167,12 +3031,8 @@ list_fonts(bool report)
   ReleaseDC(0, data.dc);
 }
 
-
-
-
-static void
-opt_handlern(control *ctrl, int event)
-{
+static void opt_handlern(control *ctrl,int cid, int event,LPARAM lp) {
+  (void)cid;(void)lp;
   cfg_option *co=(cfg_option *)ctrl->context;
   int *popt=(int*)(((char*)&new_cfg)+co->offset);
   const opt_val *ovals=lopt_vals[co->type];
@@ -3180,9 +3040,9 @@ opt_handlern(control *ctrl, int event)
     when EVENT_REFRESH:
       dlg_listbox_clear(ctrl);
       while (ovals->name) {
-        dlg_listbox_add(ctrl, _(ovals->name));
+        dlg_listbox_addA(ctrl, _(ovals->name));
         if (*popt == ovals->val)
-          dlg_editbox_set(ctrl, _(ovals->name));
+          dlg_editbox_setA(ctrl, _(ovals->name));
         ovals++;
       }
     when EVENT_VALCHANGE or EVENT_SELCHANGE: {
@@ -3195,11 +3055,10 @@ opt_handlern(control *ctrl, int event)
     }
   }
 }
-static void
-ansicolour_handler(control *ctrl, int event)
-{
+static void ansicolour_handler(control *ctrl,int cid, int event,LPARAM lp) {
+  (void)cid;(void)lp;
   colour c = *(colour *)ctrl->context;
-  dlg_stdcolour_handler(ctrl, event);
+  dlg_stdcolour_handler(ctrl,cid, event,0);
   if (event == EVENT_CALLBACK) {
     colour cn = *(colour *)ctrl->context;
     if(c!=cn){
@@ -3210,49 +3069,66 @@ ansicolour_handler(control *ctrl, int event)
   }
 }
 
-void
-transparency_valhandler(control *ctrl, int event)
-{
+void transparency_valhandler(control *ctrl,int cid, int event,LPARAM lp) {
+  (void)cid;(void)lp;
+  int*pv = ctrl->context;
   if (event == EVENT_VALCHANGE) {
     string val = 0;
-    dlg_editbox_get(ctrl, &val);
-    new_cfg.transparency = atoi(val);
+    dlg_editbox_getA(ctrl, &val);
+    *pv = atoi(val);
     delete(val);
-  }
-  else if (event == EVENT_UNFOCUS) {
+  } else if (event == EVENT_UNFOCUS) {
     string val = 0;
-    dlg_editbox_get(ctrl, &val);
+    dlg_editbox_getA(ctrl, &val);
     int transp = atoi(val);
     delete(val);
     // adjust value if out of range
-    if (transp < 4)
-      transp = 0;
-    else if (transp > 254)
-      transp = 254;
-    new_cfg.transparency = transp;
+    if (transp < 4) transp = 0;
+    else if (transp > 254) transp = 254;
+    *pv = transp;
     // refresh box in case we changed it
     char buf[16];
     sprintf(buf, "%i", transp);
-    dlg_editbox_set(ctrl, buf);
+    dlg_editbox_setA(ctrl, buf);
     // update radio buttons
-    if(transparency_selbox)
-      dlg_stdradiobutton_handler(transparency_selbox, EVENT_REFRESH);
-  }
-  else if (event == EVENT_REFRESH) {
+    dlg_stdradiobutton_handler(ctrl_next(ctrl,-1),cid, EVENT_REFRESH,0);
+  } else if (event == EVENT_REFRESH) {
     char buf[16];
-    sprintf(buf, "%i", (uchar)new_cfg.transparency);
-    dlg_editbox_set(ctrl, buf);
+    sprintf(buf, "%i", (uchar)*pv);
+    dlg_editbox_setA(ctrl, buf);
   }
 }
 
-void
-transparency_selhandler(control *ctrl, int event)
-{
-  dlg_stdradiobutton_handler(ctrl, event);
+void transparency_selhandler(control *ctrl,int cid, int event,LPARAM lp) {
+  (void)cid;(void)lp;
+  dlg_stdradiobutton_handler(ctrl,cid, event,0);
   if (event == EVENT_VALCHANGE) {
-    if(transparency_valbox)
-      transparency_valhandler(transparency_valbox, EVENT_REFRESH);
+    transparency_valhandler(ctrl_next(ctrl,1),cid, EVENT_REFRESH,lp);
   }
+}
+static void transparency_slider(control *ctrl,int cid, int event,int inc) {
+  int*pv = ctrl->context;
+  mod_keys mods = get_mods();
+  if (event == EVENT_ACTION) {
+    int step = inc*4 ;
+    if (mods & MDK_SHIFT) step *= 4;
+    else if (mods & MDK_CTRL) step /= 4;
+    int transp = *pv;
+    transp += step;
+    if (transp < 4) transp = step > 0 ? 4 : 0;
+    else if (transp > 254) transp = 254;
+    *pv = transp;
+    transparency_valhandler(ctrl,cid, EVENT_REFRESH,0);
+    dlg_stdradiobutton_handler(ctrl_next(ctrl,-1),cid, EVENT_REFRESH,0);
+  }
+}
+static void transparency_sliderd(control *ctrl,int cid, int event,LPARAM lp) {
+  (void)lp;
+  transparency_slider(ctrl_next(ctrl,-1),cid,event,-1);
+}
+static void transparency_slideri(control *ctrl,int cid, int event,LPARAM lp) {
+  (void)lp;
+  transparency_slider(ctrl_next(ctrl,-2),cid,event,1);
 }
 static char *backgtag="_%*+=";
   //_:1 Scale image to term size
@@ -3280,17 +3156,111 @@ void backg_analyse(string pbf,bg_file *backgfile){
   }else{
     backgfile->alpha = 255;
   }
-  backgfile->fn= cs__mbstowcs(pbf);
+  backgfile->fn= cs__utftowcs(pbf);
 }
-void
-setup_config_box(controlbox * b)
-{
+extern string vk_name(uint key);
+extern char *mod2s(char*pb,int moda,int lr);
+struct HotkeyData{
+  control *name,*tip;
+  control *hk[3];
+  control *lr,*set;
+  control *hkl;
+  int lrflg,ind;
+  int hkchged[3];
+  int mflgs,nflgs;
+  int *flgs;
+}hd;
+extern void setsck(int moda,uint key,int ft,void*func);
+extern mod_keys str2key(const char * k,int*key);
+static void hotkey_handlers(control *ctrl,int cid, int event,LPARAM lp) {
+  (void)cid;(void)ctrl;(void)lp;
+  if (event == EVENT_ACTION){
+    struct function_def *p=cmd_defs+hd.ind;
+    for(int i=0;i<3;i++){
+      int i1=i+3;
+      char mbuf[128];
+      if(hd.hkchged[i]){
+        if(p->k[i1].flg){
+          setsck(p->k[i1].mode,p->k[i1].key,0,NULL);
+        }
+        dlg_hotkey_get(hd.hk[i],mbuf,128);
+        p->k[i1].flg=1;
+        int key;
+        p->k[i1].mode=str2key(mbuf,&key);
+        p->k[i1].key=key;
+        setsck(p->k[i1].mode,p->k[i1].key,p->type,p->fv);
+      }
+    }
+  }
+}
+extern void dlg_listview_adds(control *ctrl, int ind,int ncol,wstring *text,LPARAM lp);
+#include <commctrl.h>  // LPNMLISTVIEW
+static void hotkey_handlerl(control *ctrl,int cid, int event,LPARAM lp) {
+  (void)cid;(void)ctrl;(void)lp;
+  //when LVN_ODFINDITEMW: {
+  if(event== EVENT_SELCHANGE) {
+    enable_widget(hd.set,0);
+    hd.ind=(((LPNMLISTVIEW)lp)->iItem);
+    struct function_def *p=cmd_defs+hd.ind;
+    printf("List Selchange %d \n",hd.ind);
+    dlg_label_setW(hd.name,_W(p->name));
+    dlg_label_setW(hd.tip ,_W(p->tip ));
+    char mbuf[128];
+    for(int i=0;i<3;i++){
+      int i1=i+3;
+      hd.hkchged[i]=0;
+      printf("KEY:%s %d %x %s %x%s \n",mbuf,p->k[i1].flg,p->k[i1].mode,mod2s(mbuf,p->k[i1].mode,1),p->k[i1].key,vk_name(p->k[i1].key));
+      if(p->k[i1].flg){
+        mod2s(mbuf,p->k[i1].mode,1);
+        strcat(mbuf,vk_name(p->k[i1].key));
+        dlg_hotkey_set(hd.hk[i],mbuf);
+      }else{
+        mbuf[0]=0;
+        dlg_hotkey_set(hd.hk[i],mbuf);
+      }
+    }
+  } else if(event== EVENT_REFRESH) {
+    int j;
+    struct function_def *p;
+    char mbuf[32];
+    wchar buf[3][128];
+    wstring text[5];
+    for(int i=0;i<3;i++) text[i+2]=buf[i];
+    for (p=cmd_defs,j=0; p->name; p++,j++){
+      text[0]=_w(p->name);
+      text[1]=_W(p->tip);
+      for(int i=0;i<3;i++){
+        int i1=i+3;
+        buf[i][0]=0;
+        if(p->k[i1].flg){
+          swprintf(buf[i],128,W("%s%s\n"),mod2s(mbuf,p->k[i1].mode,1),vk_name(p->k[i1].key));
+        }
+      }
+      dlg_listview_adds(ctrl,j,5,text,(LPARAM)p);
+    }
+    hd.mflgs=j+10; hd.nflgs=j;
+    hd.flgs=newn(int,hd.mflgs);
+    memset(hd.flgs,0,sizeof(int)*hd.mflgs);
+    for(int i=0;i<3;i++)hd.hkchged[i]=0;
+    enable_widget(hd.set,0);
+  }
+}
+static void hotkey_handlerk(control *ctrl,int cid, int event,LPARAM lp) {
+  (void)cid;(void)ctrl;(void)lp;
+  if (event == EVENT_VALCHANGE){
+    int ind=0;
+    for(int i=0;i<3;i++) if(ctrl==hd.hk[i])ind=i;
+    printf("val_change %d\n",ind);
+    for(int i=0;i<3;i++) if(ctrl==hd.hk[i])hd.hkchged[i]=1;
+    enable_widget(hd.set,1);
+  }
+}
+void setup_config_box(controlbox * b) {
   controlset *s;
   control *c;
   copy_config("dialog", &new_cfg, &file_cfg);
   if(*theme_file)CLRFGSCPY(new_cfg.ansi_colours,theme_colours );
-  /*
-   * The standard panel that appears at the bottom of all panels:
+  /*    * The standard panel that appears at the bottom of all panels:
    * Open, Cancel, Apply etc.
    */
   s = ctrl_new_set(b, W(""), W(""), W(""));
@@ -3344,7 +3314,8 @@ setup_config_box(controlbox * b)
         ic=-1;
       }
       when OPF_LSTR:{
-        ctrl_radiobuttonsa(s,ic,WCMT,0,dlg_stdradiobutton_handler,(int*)pv,opt_vals[co->type&OPT_TYPE_MASK]);
+        ctrl_radiobuttons(s,ic,WCMT,0,opt_vals[co->type&OPT_TYPE_MASK],
+                          dlg_stdradiobutton_handler,(int*)pv);
       }
       when OPF_LSTC :{
         ctrl_combobox(s,ic,WCMT,0,nnc,opt_handlern,(void*)co);
@@ -3389,7 +3360,12 @@ setup_config_box(controlbox * b)
         ctrl_editbox(s,ic,WCMT,0,nnc,dlg_stdwstringbox_handler,pv);
       }
       when OPF_TRANS:{
-        transparency_selbox = ctrl_radiobuttonsa(s,ic,WCMT,0,transparency_selhandler,(int*)pv,opt_vals[co->type&OPT_TYPE_MASK]);
+        ctrl_columns(s, 4, 80,5,10,5);
+        ctrl_radiobuttons(s,0,WCMT,0,opt_vals[co->type&OPT_TYPE_MASK],
+                           transparency_selhandler,(int*)pv);
+        ctrl_editbox( s,2, 0,0, 100, transparency_valhandler, (int*)pv);
+        ctrl_pushbutton( s,1, _W("◄"),0, transparency_sliderd, (int*)pv);
+        ctrl_pushbutton( s,3, _W("►"),0, transparency_slideri, (int*)pv);
       }
       when OPF_FONT :{
         ctrl_fontsel(s,-1,WCMT,0,dlg_stdfontsel_handler,pv);
@@ -3397,28 +3373,20 @@ setup_config_box(controlbox * b)
       when OPF_BACKF:{
         bg_file*bf=(bg_file*)pv;
         ctrl_filesel(s,-1,WCMT,0,backgfsel_handler,&bf->fn);
-        ctrl_radiobuttons( s,-1, _W(""),0, 2,
-                           backgfsel_handler, &bf->type,
-                           _W("none"), 0,// ˜
-                           _W("Scale image to term size"), '_',//_
-                           _W("Scale term to image ration"), '%',//%
-                           _W("use Image as titled texture"), '*',//*
-                           _W("Scale image to term size,keep ratio,then titles"), '+',//+
-                           _W("Use desktop background"), '=',//=
-                           null
-                         );
+        ctrl_radiobuttons( s,-1, W(""),0, opt_vals[OPT_BCKFT],
+                           backgfsel_handler, &bf->type);
         ctrl_inteditbox(s,-1,_W("alpha"),0,80,backgfsel_handler,&bf->alpha,0,255);
       }
       when OPF_THEME:{
         ctrl_columns(s, 2, 70,30);
         ctrl_combobox(s,0,WCMT,0,70,theme_handler,pv);
-        store_button = ctrl_pushbutton(s,1,_W("T&heme Save"),0,theme_saver,0) ;
+        store_button = ctrl_pushbutton(s,1,_W("T&heme Save"),0,theme_saver,pv) ;
       }
       when OPF_LCL  :{
-        locale_box = ctrl_combobox(s,ic,WCMT,0,nnc,locale_handler,pv);
+        ctrl_combobox(s,ic,WCMT,0,nnc,locale_handler,pv);
       }
       when OPF_CHSET:{
-        charset_box = ctrl_combobox(s,ic,WCMT,0,nnc,charset_handler,pv);
+        ctrl_combobox(s,ic,WCMT,0,nnc,charset_handler,pv);
       }
       when OPF_CURS:{
         ctrl_combobox(s,ic,WCMT,0,nnc,cursor_handler,pv);
@@ -3434,8 +3402,33 @@ setup_config_box(controlbox * b)
       when OPF_BELLF:{
         ctrl_combobox(s,ic,WCMT,0,nnc,bellfile_handler,pv);
       }
+      when OPF_LANG:{
+        ctrl_combobox( s,ic, WCMT,0, nnc, lang_handler, pv);
+      }
       when OPF_PRINT:{
         ctrl_combobox( s,ic, WCMT,0, nnc, printer_handler, pv);
+      }
+      when OPF_HKEY:{
+        static opt_val lsth[]={
+          {__("name"),10},
+          {__("describe"),40},
+          {__("Hotkey1"),10},
+          {__("Hotkey2"),10},
+          {__("Hotkey3"),10},
+        };
+        wchar buf[6];
+        memset(&hd,0,sizeof(hd));
+        ctrl_columns(s, 2, 33,66);
+        hd.name=ctrl_label(s,0,W(""),0);
+        hd.tip=ctrl_label(s,1,W(""),0);
+        ctrl_columns(s, 3, 33,33,33);
+        for(int i=0;i<3;i++){
+          swprintf(buf,6,W("%d:"),i);
+          hd.hk[i]=ctrl_hotkey( s,i, buf,0,80, hotkey_handlerk, &hd.lrflg);
+        }
+        hd.lr=ctrl_checkbox(s,0,_W("Left Right"),0,dlg_stdcheckbox_handler,&hd.lrflg);
+        hd.set=ctrl_pushbutton( s,2, _W("Set"),0, hotkey_handlers, &hd);
+        hd.hkl=ctrl_listview(s, -1,0,0, 17, 100,lengthof(lsth),lsth,hotkey_handlerl, &hd) ;
       }
     }
   }

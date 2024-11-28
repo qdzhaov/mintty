@@ -5,12 +5,12 @@
 
 // Enums for various options.
 
-typedef enum { MDK_SHIFT = 1, MDK_ALT = 2, MDK_CTRL = 4, 
-               MDK_WIN = 8, MDK_SUPER = 16, MDK_HYPER = 32, 
+typedef enum { MDK_SHIFT = 1,MDK_CTRL = 2, MDK_ALT = 4,  
+               MDK_WIN = 8, MDK_EXT=16, MDK_SUPER = 32, MDK_HYPER = 64, 
                MDK_CAPSLOCK = 64  // for Compose key
              } mod_keys;
-typedef enum { SMDK_SHIFT = 0, SMDK_ALT   = 1, SMDK_CTRL  = 2, 
-               SMDK_WIN   = 3, SMDK_SUPER = 4, SMDK_HYPER = 5 } smod_keys;
+typedef enum { SMDK_SHIFT = 0, SMDK_CTRL  = 1, SMDK_ALT   = 2, 
+               SMDK_WIN   = 3, SMDK_EXT   = 4, SMDK_SUPER = 5, SMDK_HYPER = 6 } smod_keys;
 
 enum { HOLD_NEVER, HOLD_START, HOLD_ERROR, HOLD_ALWAYS };
 enum { CUR_BLOCK, CUR_UNDERSCORE, CUR_LINE, CUR_BOX };
@@ -65,6 +65,36 @@ typedef struct {
 #ifdef CFGDEFT  
 #undef CFGDEFT  
 #endif
+struct function_def {
+  int level;
+  string name;
+  int type;
+  union {
+    WPARAM cmd;
+    void *fv;
+    void (*fct)(void);
+    int  (*fctv)(void);
+    void (*fct_key)(uint key, mod_keys mods);
+    int  (*fct_keyv)(uint key, mod_keys mods);
+    void (*fct_par1)(int p0);
+    void (*fct_par2)(int p0,int p1);
+  };
+  uint (*fct_status)(void);
+  char*tip;
+  //int p0,p1;
+  struct hkdef{
+    int mode;
+    unsigned char flg,key;
+  }k[8];
+  /*type :
+   * 1: cmd;
+   * 2: fct();
+   * 3: fct_key(key,mods)
+   * 4: fct_par(p0,)
+   * 5: fct_par(p0,p1)
+   */
+};
+extern struct function_def cmd_defs[] ;
 typedef void (* str_fn)(char *);
 
 extern string config_dir;

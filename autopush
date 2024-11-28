@@ -1,0 +1,3 @@
+#!/bin/sh
+HN=`hostname`
+git log -1 --oneline|grep $HN && AF="--amend"|| AF="" ;git commit -a $AF -m "`date +%d/%m` $HN " ;git push -f

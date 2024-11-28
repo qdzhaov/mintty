@@ -1,10 +1,10 @@
-#include <windows.h>
-#include <unistd.h>
-#include <stdlib.h>
+//G #include <windows.h>
+//G #include <unistd.h>
+//G #include <stdlib.h>
 #include "term.h"
-#include "child.h"
-#include "winpriv.h"
-#include "charset.h"
+//G #include "child.h"
+//G #include "winpriv.h"
+//G #include "charset.h"
 
 #define lengthof(array) (sizeof(array) / sizeof(*(array)))
 static unsigned int ntabs=0,mtabs=0 ,active_tab = 0;
@@ -359,12 +359,12 @@ void win_tab_paint(HDC dc) {
   if (tab_bar_visible||cfg.indicator){
     State[0]=' ';
     State[1]=term.selection_pending?'S':' ';
-    State[2]=wv.tabctrling>2?'C':' ';
+    State[2]=wv.extkey?'C':' ';
     State[3]=cfg.partline&&term.usepartline?'P':' ';
     State[4]=0 ;
     Statel=4;
   }else{
-    if(wv.tabctrling){
+    if(wv.extkey){
       State[0]='C';
       State[1]=0 ;
       Statel=1;

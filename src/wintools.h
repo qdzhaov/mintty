@@ -1,4 +1,4 @@
-#include <windowsx.h>  // GET_X_LPARAM, GET_Y_LPARAM
+//G #include <windowsx.h>  // GET_X_LPARAM, GET_Y_LPARAM
 #if WINVER < 0x600
 
 typedef struct {

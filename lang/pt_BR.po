@@ -3,12 +3,11 @@
 # This file is distributed under the same license as the mintty package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 #
-#: config.c:3400
 msgid ""
 msgstr ""
 "Project-Id-Version: mintty\n"
 "Report-Msgid-Bugs-To: https://github.com/mintty/mintty/issues/700\n"
-"POT-Creation-Date: 2024-09-30 20:36+0800\n"
+"POT-Creation-Date: 2024-10-14 13:54+0800\n"
 "PO-Revision-Date: 2018-06-24 00:19-0300\n"
 "Last-Translator: \n"
 "Language-Team: \n"
@@ -19,7 +18,7 @@ msgstr ""
 "X-Generator: Poedit 2.0.6\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
-#: charset.c:228 charset.c:239 winmain.c:4541 winmain.c:4548 winmain.c:4897
+#: charset.c:228 charset.c:239 winmain.c:4536 winmain.c:4543 winmain.c:4898
 msgid "(Default)"
 msgstr "(Padrão)"
 
@@ -216,7 +215,7 @@ msgstr ""
 msgid "right"
 msgstr "&Direita"
 
-#: config.c:177 config.c:211 config.c:242 config.c:3402
+#: config.c:177 config.c:211 config.c:242 config.c:3413
 msgid "none"
 msgstr ""
 
@@ -519,7 +518,7 @@ msgid "Ignoring option '%s' with missing value"
 msgstr "Ignorando opção '%s' com valor faltando"
 
 #. __ %1$s: config file name, %2$s: error message
-#: config.c:1530
+#: config.c:1531
 msgid ""
 "Could not save options to '%s':\n"
 "%s."
@@ -548,189 +547,198 @@ msgstr "Não foi possível carregar o tema web"
 msgid "Cannot store theme file"
 msgstr "Não é possível salvar o tema web"
 
-#: config.c:3298
+#: config.c:3309
 msgid "About..."
 msgstr "Sobre..."
 
-#: config.c:3299
+#: config.c:3310
 #, fuzzy
 msgid "&Save"
 msgstr "Salvar"
 
-#: config.c:3301
+#: config.c:3312
 #, fuzzy
 msgid "&Cancel"
 msgstr "Cancelar"
 
-#: config.c:3303
+#: config.c:3314
 msgid "&Apply"
 msgstr "&Aplicar"
 
-#: config.c:3358
+#: config.c:3369
 msgid "Ansi:"
 msgstr ""
 
-#: config.c:3383 configdef.h:288
+#: config.c:3394 configdef.h:291
 msgid "C&urrent size"
 msgstr "&Tam. atual"
 
-#: config.c:3403
+#: config.c:3414
 msgid "Scale image to term size"
 msgstr ""
 
-#: config.c:3404
+#: config.c:3415
 msgid "Scale term to image ration"
 msgstr ""
 
-#: config.c:3405
+#: config.c:3416
 msgid "use Image as titled texture"
 msgstr ""
 
-#: config.c:3406
+#: config.c:3417
 msgid "Scale image to term size,keep ratio,then titles"
 msgstr ""
 
-#: config.c:3407
+#: config.c:3418
 msgid "Use desktop background"
 msgstr ""
 
-#: config.c:3410
+#: config.c:3421
 msgid "alpha"
 msgstr ""
 
-#: config.c:3415
+#: config.c:3426
 msgid "T&heme Save"
 msgstr ""
 
-#: config.c:3432
+#: config.c:3443
 msgid "► &Play"
 msgstr "► T&ocar"
+
+#: config.c:3452
+msgid "&Ctrl"
+msgstr "Ct&rl"
 
 #: textprint.c:44 textprint.c:128
 msgid "[Printing...] "
 msgstr "[Imprimindo...] "
 
-#: winctrls.c:1355 windialog.c:938
+#: winctrls.c:338
+#, fuzzy
+msgid "Left Right"
+msgstr "&Direita"
+
+#: winctrls.c:1062 windialog.c:937
 msgid "OK"
 msgstr "OK"
 
-#: winctrls.c:1356 windialog.c:939
+#: winctrls.c:1063 windialog.c:938
 msgid "Cancel"
 msgstr "Cancelar"
 
 #. __ Font chooser: title bar label
-#: winctrls.c:1362
+#: winctrls.c:1069
 msgid "Font "
 msgstr "Fonte "
 
 #. __ Font chooser: button
-#: winctrls.c:1365
+#: winctrls.c:1072
 #, fuzzy
 msgid "&ApplyA"
 msgstr "&Aplicar"
 
 #. __ Font chooser:
-#: winctrls.c:1367
+#: winctrls.c:1074
 msgid "&Font:"
 msgstr "&Fonte:"
 
 #. __ Font chooser:
-#: winctrls.c:1369
+#: winctrls.c:1076
 msgid "Font st&yle:"
 msgstr "E&stilo de fonte:"
 
 #. __ Font chooser:
-#: winctrls.c:1371
+#: winctrls.c:1078
 msgid "&Size:"
 msgstr "&Tamanho:"
 
 #. __ Font chooser:
-#: winctrls.c:1373
+#: winctrls.c:1080
 msgid "Sample"
 msgstr "Exemplo"
 
 #. __ Font chooser: text sample ("AaBbYyZz" by default)
-#: winctrls.c:1377 winctrls.c:1633 winctrls.c:1823
+#: winctrls.c:1084 winctrls.c:1333 winctrls.c:1518
 msgid "Ferqœm’4€"
 msgstr "AaBbYyZz"
 
 #. __ Font chooser: this field is only shown with FontMenu=1
-#: winctrls.c:1393
+#: winctrls.c:1100
 msgid "Sc&ript:"
 msgstr "Sc&ript:"
 
 #. __ Font chooser: this field is only shown with FontMenu=1
-#: winctrls.c:1395
+#: winctrls.c:1102
 msgid "<A>Show more fonts</A>"
 msgstr "<A>Mostrar mais fontes</A>"
 
 #. __ Colour chooser: title bar label
-#: winctrls.c:1401
+#: winctrls.c:1108
 msgid "Colour "
 msgstr "Cor "
 
 #. __ Colour chooser:
-#: winctrls.c:1415 winctrls.c:1427
+#: winctrls.c:1122 winctrls.c:1134
 msgid "B&asic colours:"
 msgstr "Cores &básicas:"
 
 #. __ Colour chooser:
-#: winctrls.c:1436
+#: winctrls.c:1143
 msgid "&Custom colours:"
 msgstr "Cores &personalizadas:"
 
 #. __ Colour chooser:
-#: winctrls.c:1443
+#: winctrls.c:1150
 msgid "De&fine Custom Colours >>"
 msgstr "De&finir cores personalizadas >>"
 
 #. __ Colour chooser:
-#: winctrls.c:1446 configdef.h:73
+#: winctrls.c:1153 configdef.h:73
 msgid "Colour"
 msgstr "Cor"
 
 #. __ Colour chooser:
-#: winctrls.c:1448
+#: winctrls.c:1155
 msgid "|S&olid"
 msgstr "|Só&lida"
 
 #. __ Colour chooser:
-#: winctrls.c:1450
+#: winctrls.c:1157
 msgid "&Hue:"
 msgstr "&Hue:"
 
 #. __ Colour chooser:
-#: winctrls.c:1453
+#: winctrls.c:1160
 msgid "&Sat:"
 msgstr "&Sat:"
 
 #. __ Colour chooser:
-#: winctrls.c:1455
+#: winctrls.c:1162
 msgid "&Lum:"
 msgstr "&Lum:"
 
 #. __ Colour chooser:
-#: winctrls.c:1457
+#: winctrls.c:1164
 msgid "&Red:"
 msgstr "&Vermelho:"
 
 #. __ Colour chooser:
-#: winctrls.c:1459
+#: winctrls.c:1166
 msgid "&Green:"
 msgstr "V&erde:"
 
 #. __ Colour chooser:
-#: winctrls.c:1461
+#: winctrls.c:1168
 msgid "&Blue:"
 msgstr "&Azul:"
 
 #. __ Colour chooser:
-#: winctrls.c:1464
+#: winctrls.c:1171
 msgid "A&dd to Custom Colours"
 msgstr "A&dicionar às cores personalizadas"
 
 #. __ Options: dialog title
-#: windialog.c:219 windialog.c:883
+#: windialog.c:219 windialog.c:882
 msgid "Options"
 msgstr "Opções"
 
@@ -739,268 +747,268 @@ msgstr "Opções"
 msgid "available"
 msgstr "disponível"
 
-#: windialog.c:936
+#: windialog.c:935
 msgid "I see"
 msgstr "Entendi"
 
-#: windialog.c:968 windialog.c:995
+#: windialog.c:967 windialog.c:994
 msgid "Error"
 msgstr "Erro"
 
 #. __ Context menu, session switcher ("virtual tabs") menu label
-#: wininput.c:199
+#: wininput.c:183
 msgid "Session switcher"
 msgstr "Alternar sessão"
 
-#: wininput.c:211
+#: wininput.c:193
 msgid "Session launcher"
 msgstr "Iniciar sessão"
 
-#: wininput.c:357
+#: wininput.c:327
 msgid "&Close"
 msgstr "&Fechar"
 
 #. __ System menu:
-#: wininput.c:367
+#: wininput.c:337
 #, fuzzy
 msgid "New &Win"
 msgstr "Nova &janela"
 
 #. __ Context menu:
-#: wininput.c:370
+#: wininput.c:340
 msgid "&Copy"
 msgstr "&Copiar"
 
-#: wininput.c:380
+#: wininput.c:350
 msgid "Copy → Paste"
 msgstr "Copiar → Colar"
 
-#: wininput.c:386
+#: wininput.c:356
 msgid "&Paste "
 msgstr "Co&lar "
 
-#: wininput.c:391
+#: wininput.c:361
 msgid "S&earch"
 msgstr "P&rocurar"
 
-#: wininput.c:395
+#: wininput.c:365
 #, fuzzy
 msgid "&Log to File[I]"
 msgstr "&Registrar em arquivo"
 
-#: wininput.c:396
+#: wininput.c:366
 #, fuzzy
 msgid "&Log to File[O]"
 msgstr "&Registrar em arquivo"
 
-#: wininput.c:397
+#: wininput.c:367
 #, fuzzy
 msgid "&Log to File[IO]"
 msgstr "&Registrar em arquivo"
 
-#: wininput.c:399
+#: wininput.c:369
 msgid "&Log to File"
 msgstr "&Registrar em arquivo"
 
-#: wininput.c:403
+#: wininput.c:373
 msgid "Character &Info"
 msgstr "In&formações do caractere"
 
-#: wininput.c:405
+#: wininput.c:375
 msgid "VT220 Keyboard"
 msgstr "Teclado VT220"
 
-#: wininput.c:406
+#: wininput.c:376
 msgid "&Reset"
 msgstr "R&edefinir"
 
-#: wininput.c:410
+#: wininput.c:380
 msgid "&Default Size"
 msgstr "&Tamanho padrão"
 
-#: wininput.c:412
+#: wininput.c:382
 msgid "Tabbar(&H)"
 msgstr ""
 
-#: wininput.c:419
+#: wininput.c:389
 #, fuzzy
 msgid "Scrollbar(&S)"
 msgstr "Barra de rolagem"
 
-#: wininput.c:423
+#: wininput.c:393
 msgid "&Border[T]"
 msgstr ""
 
-#: wininput.c:424
+#: wininput.c:394
 msgid "&Border[N]"
 msgstr ""
 
-#: wininput.c:425
+#: wininput.c:395
 msgid "&Border"
 msgstr ""
 
-#: wininput.c:428
+#: wininput.c:398
 msgid "PartLine(&K)"
 msgstr ""
 
-#: wininput.c:429
+#: wininput.c:399
 msgid "Indicator(&J)"
 msgstr ""
 
-#: wininput.c:430
+#: wininput.c:400
 msgid "&Full Screen"
 msgstr "Tela &cheia"
 
-#: wininput.c:433
+#: wininput.c:403
 #, fuzzy
 msgid "Flip Screen(&W)"
 msgstr "Al&ternar tela"
 
 #. __ Context menu:
-#: wininput.c:439 configdef.h:352
+#: wininput.c:409 configdef.h:354
 msgid "Status Line"
 msgstr ""
 
-#: wininput.c:445 wininput.c:640
+#: wininput.c:415 wininput.c:599
 #, fuzzy
 msgid "Copy T&Itle"
 msgstr "Copiar tít&ulo"
 
 #. __ Context menu:
-#: wininput.c:446 wininput.c:603 wininput.c:641
+#: wininput.c:416 wininput.c:564 wininput.c:600
 msgid "&Options..."
 msgstr "O&pções..."
 
 #. __ Context menu:
-#: wininput.c:531
+#: wininput.c:493
 msgid "Ope&n"
 msgstr "A&brir"
 
-#: wininput.c:532 wininput.c:635
+#: wininput.c:494 wininput.c:594
 #, fuzzy
 msgid "New &Tab\twin+T"
 msgstr "Nova &aba"
 
-#: wininput.c:533 wininput.c:634
+#: wininput.c:495 wininput.c:593
 msgid "&Kill tab\twin+w"
 msgstr ""
 
-#: wininput.c:535 wininput.c:632
+#: wininput.c:497 wininput.c:591
 msgid "&Previous tab\twin+<-"
 msgstr ""
 
-#: wininput.c:536 wininput.c:631
+#: wininput.c:498 wininput.c:590
 msgid "&Next tab\twin+->"
 msgstr ""
 
-#: wininput.c:537 wininput.c:629
+#: wininput.c:499 wininput.c:588
 msgid "Move to &Left\twin+<-"
 msgstr ""
 
-#: wininput.c:538 wininput.c:630
+#: wininput.c:500 wininput.c:589
 msgid "Move to &Right\twin+->"
 msgstr ""
 
-#: wininput.c:542
+#: wininput.c:504
 msgid "Copy as text"
 msgstr "Copiar como texto"
 
-#: wininput.c:543 configdef.h:271
+#: wininput.c:505 configdef.h:274
 msgid "Copy with TABs"
 msgstr "Copiar com &TABs"
 
-#: wininput.c:544
+#: wininput.c:506
 msgid "Copy as RTF"
 msgstr "Copiar como RTF"
 
-#: wininput.c:545
+#: wininput.c:507
 msgid "Copy as HTML text"
 msgstr "Cop. como HTML texto"
 
-#: wininput.c:546
+#: wininput.c:508
 msgid "Copy as HTML"
 msgstr "Cop. como HTML"
 
-#: wininput.c:547
+#: wininput.c:509
 msgid "Copy as HTML full"
 msgstr "Cop. como HTML total"
 
-#: wininput.c:553
+#: wininput.c:515
 msgid "Select &All"
 msgstr "Se&lecionar tudo"
 
-#: wininput.c:554
+#: wininput.c:516
 msgid "Save as &Image"
 msgstr "Salvar como &imagem"
 
 #. __ Context menu: write terminal window contents as HTML file
-#: wininput.c:566
+#: wininput.c:528
 msgid "HTML Screen Dump"
 msgstr "Salvar tela como HTML"
 
 #. __ Context menu: clear scrollback buffer (lines scrolled off the window)
-#: wininput.c:574
+#: wininput.c:536
 msgid "Clear Scrollback"
 msgstr "Limpar tela"
 
 #. __ Context menu: generate a TTY BRK condition (tty line interrupt)
-#: wininput.c:589
+#: wininput.c:551
 msgid "Send Break"
 msgstr "Enviar break"
 
-#: wininput.c:649
+#: wininput.c:608
 msgid "N&Ew Win"
 msgstr ""
 
-#: wininput.c:654
+#: wininput.c:613
 #, fuzzy
 msgid "New T&Ab"
 msgstr "Nova &aba"
 
 #. __ Context menu, user commands
-#: wininput.c:724
+#: wininput.c:674
 msgid "User commands"
 msgstr "Comandos do usuário"
 
-#: wininput.c:3572 wininput.c:3574 wininput.c:3576 wininput.c:3606
-#: wininput.c:3632
+#: wininput.c:3002 wininput.c:3004 wininput.c:3006 wininput.c:3028
+#: wininput.c:3048
 msgid "[NO SCROLL] "
 msgstr ""
 
-#: wininput.c:3573 wininput.c:3578 wininput.c:3617 wininput.c:3645
+#: wininput.c:3003 wininput.c:3008 wininput.c:3037 wininput.c:3057
 msgid "[SCROLL MODE] "
 msgstr "[MODO de SCROLL] "
 
-#: winmain.c:2369
+#: winmain.c:2352
 msgid "Processes are running in session:"
 msgstr "Processos rodando na sessão:"
 
-#: winmain.c:2370
+#: winmain.c:2353
 msgid "Close anyway?"
 msgstr "Fechar mesmo assim?"
 
-#: winmain.c:2394
+#: winmain.c:2377
 msgid "Reset terminal?"
 msgstr "Redefinir terminal?"
 
-#: winmain.c:2604
+#: winmain.c:2587
 msgid "Try '--help' for more information"
 msgstr "Tente '--help' para mais informações"
 
-#: winmain.c:2612
+#: winmain.c:2595
 msgid "Could not load icon"
 msgstr "Não foi possível carregar o ícone"
 
-#: winmain.c:4271
+#: winmain.c:4261
 msgid "Usage:"
 msgstr "Uso:"
 
-#: winmain.c:4272
+#: winmain.c:4262
 msgid "[OPTION]... [ PROGRAM [ARG]... | - ]"
 msgstr "[OPÇÃO]... [ PROGRAMA [ARG]... | - ]"
 
 #. __ help text (output of -H / --help), after initial line ("synopsis")
-#: winmain.c:4275
+#: winmain.c:4265
 msgid ""
 "Start a new terminal session running the specified program or the user's "
 "shell.\n"
@@ -1056,6 +1064,7 @@ msgid ""
 "  -B, --Border frame|void  Use thin/no window border\n"
 "      --nopin           Make this instance not pinnable to taskbar\n"
 "  -H, --help            Display help and exit\n"
+"      --helpfunc        Display functions help and exit\n"
 "  -V, --version         Print version information and exit\n"
 "      --fg COLOR        set ForegroundColour\n"
 "      --bg COLOR        set BackgroundColour\n"
@@ -1071,31 +1080,31 @@ msgid ""
 "See manual page for further command line options and configuration.\n"
 msgstr ""
 
-#: winmain.c:4528
+#: winmain.c:4523
 msgid "Duplicate option '%s'"
 msgstr "Opção repetida: '%s'"
 
-#: winmain.c:4541 winmain.c:4548 winmain.c:4897
+#: winmain.c:4536 winmain.c:4543 winmain.c:4898
 msgid "WSL distribution '%s' not found"
 msgstr "Distribuição WSL '%s' não encontrada"
 
-#: winmain.c:4578 winmain.c:4667
+#: winmain.c:4573 winmain.c:4662
 msgid "Unknown option '%s'"
 msgstr "Opção desconhecida: '%s'"
 
-#: winmain.c:4580
+#: winmain.c:4575
 msgid "Option '%s' requires an argument"
 msgstr "A opção '%s' precisa de um argumento"
 
-#: winmain.c:4607
+#: winmain.c:4602
 msgid "Syntax error in position argument '%s'"
 msgstr "Erro de sintaxe no argumento de posição '%s'"
 
-#: winmain.c:4618
+#: winmain.c:4613
 msgid "Syntax error in size argument '%s'"
 msgstr "Erro de sintaxe no argumento de tamanho '%s'"
 
-#: winmain.c:4771
+#: winmain.c:4772
 msgid "Syntax error in geometry argument '%s'"
 msgstr "Erro de sintaxe no argumento de geometria '%s'"
 
@@ -1759,741 +1768,1362 @@ msgid "Key_ScrollLock"
 msgstr "Limpar tela"
 
 #: configdef.h:239
-#, fuzzy
-msgid "KeyFunctions"
-msgstr "Funções do mouse"
-
-#: configdef.h:240
 msgid "ManageLEDs"
 msgstr ""
 
 #. __("ShootFoot")                              )
 #. _CFGDEFD(CBOOL    ,old_keyfuncs_keypad    ,0               ,       IS(0),OPT_BOOL         ,OPF_CHK  ,3,0,0,"OldKeyFunctionsKeypad"    ,__("OldKeyFunctionsKeypad")                  )
-#: configdef.h:244
+#: configdef.h:243
+#, fuzzy
+msgid "HotKeys"
+msgstr "Teclado"
+
+#: configdef.h:243
+msgid "Hotkey Setting"
+msgstr ""
+
+#: configdef.h:245
+#, fuzzy
+msgid "KeyFunctions"
+msgstr "Funções do mouse"
+
+#: configdef.h:247
 msgid "Mouse"
 msgstr "Mouse"
 
-#: configdef.h:244
+#: configdef.h:247
 msgid "Mouse functions"
 msgstr "Funções do mouse"
 
-#: configdef.h:246
+#: configdef.h:249
 msgid "Clic&ks place command line cursor"
 msgstr "Cliques &posicionam o cursor na linha de com."
 
-#: configdef.h:247
+#: configdef.h:250
 msgid "Delimiters:"
 msgstr ""
 
-#: configdef.h:248
+#: configdef.h:251
 #, fuzzy
 msgid "Word Characters:"
 msgstr "&Conjunto de caracteres"
 
-#: configdef.h:249
+#: configdef.h:252
 msgid "Click actions"
 msgstr "Ações de clique"
 
-#: configdef.h:250
+#: configdef.h:253
 msgid "Right mouse button"
 msgstr "Botão direito do mouse"
 
-#: configdef.h:251
+#: configdef.h:254
 msgid "Middle mouse button"
 msgstr "Botão do meio do mouse"
 
-#: configdef.h:252
+#: configdef.h:255
 msgid "Clicks Send to App"
 msgstr ""
 
-#: configdef.h:253
+#: configdef.h:256
 msgid "Modifier for overriding default"
 msgstr "Modificador para sobrescrever o padrão"
 
-#: configdef.h:255
+#: configdef.h:258
 msgid "OpeningClicks"
 msgstr ""
 
-#: configdef.h:256
+#: configdef.h:259
 msgid "OpeningMod"
 msgstr ""
 
-#: configdef.h:258
+#: configdef.h:261
 #, fuzzy
 msgid "ZoomMouse"
 msgstr "Mouse"
 
-#: configdef.h:259
+#: configdef.h:262
 #, fuzzy
 msgid "HideMouse"
 msgstr "Mouse"
 
-#: configdef.h:260
+#: configdef.h:263
 msgid "ElasticMouse"
 msgstr ""
 
-#: configdef.h:261
+#: configdef.h:264
 msgid "LinesPerMouseWheelNotch"
 msgstr ""
 
-#: configdef.h:263
+#: configdef.h:266
 #, fuzzy
 msgid "MousePointer"
 msgstr "Impressora"
 
-#: configdef.h:264
+#: configdef.h:267
 msgid "AppMousePointer"
 msgstr ""
 
-#: configdef.h:266
+#: configdef.h:269
 msgid "Selection"
 msgstr "Seleção"
 
-#: configdef.h:266
+#: configdef.h:269
 msgid "Selection and clipboard"
 msgstr "Seleção e área de transferência"
 
-#: configdef.h:268
+#: configdef.h:271
 msgid "Clear selection on input"
 msgstr "Limpar a seleção na entrada"
 
-#: configdef.h:269
+#: configdef.h:272
 msgid "Clipboard"
 msgstr "Área de transferência"
 
-#: configdef.h:270
+#: configdef.h:273
 msgid "Cop&y on select"
 msgstr "&Copiar ao selecionar"
 
-#: configdef.h:272
+#: configdef.h:275
 msgid "Copy as &rich text"
 msgstr "Cop. como texto &rico"
 
-#: configdef.h:273
+#: configdef.h:276
 #, fuzzy
 msgid "CopyAsHTML"
 msgstr "Cop. como HTML"
 
-#: configdef.h:274
+#: configdef.h:277
 #, fuzzy
 msgid "CopyAsRTFFont"
 msgstr "Copiar como RTF"
 
-#: configdef.h:275
+#: configdef.h:278
 #, fuzzy
 msgid "CopyAsRTFFontName"
 msgstr "Copiar como RTF"
 
-#: configdef.h:276
+#: configdef.h:279
 msgid "CopyAsRTFFontHeight"
 msgstr ""
 
-#: configdef.h:277
+#: configdef.h:280
 msgid "Trim space from selection"
 msgstr "Aparar espaço da seleção"
 
-#: configdef.h:278
+#: configdef.h:281
 msgid "Allow setting selection"
 msgstr "Permitir seleção de configuração"
 
-#: configdef.h:279
+#: configdef.h:282
 #, fuzzy
 msgid "allow_paste_selection"
 msgstr "Permitir seleção de configuração"
 
-#: configdef.h:280
+#: configdef.h:283
 msgid "Show size while selecting (0..12)"
 msgstr "Mostrar tamanho ao selecionar (0..12)"
 
-#: configdef.h:281
+#: configdef.h:284
 msgid "Suspend output while selecting"
 msgstr "Suspender saída durante a seleção"
 
-#: configdef.h:283 configdef.h:367
+#: configdef.h:286 configdef.h:369
 msgid "Window"
 msgstr "Janela"
 
-#: configdef.h:283
+#: configdef.h:286
 #, fuzzy
 msgid "Window Options"
 msgstr "Propriedades da janela"
 
-#: configdef.h:284
+#: configdef.h:287
 msgid "Default size"
 msgstr "Tamanho padrão"
 
-#: configdef.h:286
+#: configdef.h:289
 msgid "Colu&mns"
 msgstr "Col&unas"
 
-#: configdef.h:287
+#: configdef.h:290
 msgid "Ro&ws"
 msgstr "&Linhas"
 
-#: configdef.h:289
+#: configdef.h:292
 msgid "Re&wrap on resize"
 msgstr "Reajustar ao redimensionar"
 
-#: configdef.h:290
+#: configdef.h:293
 msgid "Scrollbar"
 msgstr "Barra de rolagem"
 
-#: configdef.h:292
+#: configdef.h:295
 msgid "Scroll&back lines"
 msgstr "Linhas de &rol."
 
-#: configdef.h:293
+#: configdef.h:296
 #, fuzzy
 msgid "MaxScrollbackLines"
 msgstr "Linhas de &rol."
 
-#: configdef.h:294
+#: configdef.h:297
 msgid "Modifier for scrolling"
 msgstr "Modificador para rolagem"
 
-#: configdef.h:296
+#: configdef.h:299
 msgid "&PgUp and PgDn scroll without modifier"
 msgstr "&PgUp e PgDn rolam sem modificador"
 
-#: configdef.h:297
+#: configdef.h:300
 #, fuzzy
 msgid "BorderStyle"
 msgstr "Estilo"
 
-#: configdef.h:298
+#: configdef.h:301
 msgid "&AllocConsole ,Some console programs need it."
 msgstr ""
 
-#: configdef.h:301
+#: configdef.h:304
 #, fuzzy
 msgid "Search Bar"
 msgstr "P&rocurar"
 
-#: configdef.h:302
+#: configdef.h:305
 #, fuzzy
 msgid "SearchContext"
 msgstr "P&rocurar"
 
-#: configdef.h:304
+#: configdef.h:307
 msgid "Terminal"
 msgstr "Terminal"
 
-#: configdef.h:304
+#: configdef.h:307
 msgid "Terminal features"
 msgstr "Recursos do terminal"
 
-#: configdef.h:307
+#: configdef.h:310
 #, fuzzy
 msgid "Term"
 msgstr "Terminal"
 
-#: configdef.h:308
+#: configdef.h:311
 msgid "&Answerback"
 msgstr "&Answerback"
 
-#: configdef.h:309
+#: configdef.h:312
 msgid "WrapTab"
 msgstr ""
 
-#: configdef.h:310
+#: configdef.h:313
 msgid "OldWrapModes"
 msgstr ""
 
-#: configdef.h:311
+#: configdef.h:314
 msgid "Enable132ColumnSwitching"
 msgstr ""
 
-#: configdef.h:312
-msgid "Bell"
-msgstr "Aviso"
-
-#: configdef.h:313
-#, fuzzy
-msgid "BellType"
-msgstr "Aviso"
-
-#: configdef.h:314
-#, fuzzy
-msgid "BellFiles"
-msgstr "Aviso"
-
 #: configdef.h:315
-#, fuzzy
-msgid "BellFile"
+msgid "Bell"
 msgstr "Aviso"
 
 #: configdef.h:316
 #, fuzzy
-msgid "BellFile2"
+msgid "BellType"
 msgstr "Aviso"
 
 #: configdef.h:317
 #, fuzzy
-msgid "BellFile3"
+msgid "BellFiles"
 msgstr "Aviso"
 
 #: configdef.h:318
 #, fuzzy
-msgid "BellFile4"
+msgid "BellFile"
 msgstr "Aviso"
 
 #: configdef.h:319
 #, fuzzy
-msgid "BellFile5"
+msgid "BellFile2"
 msgstr "Aviso"
 
 #: configdef.h:320
 #, fuzzy
-msgid "BellFile6"
+msgid "BellFile3"
 msgstr "Aviso"
 
 #: configdef.h:321
 #, fuzzy
-msgid "BellFile7"
+msgid "BellFile4"
 msgstr "Aviso"
 
 #: configdef.h:322
 #, fuzzy
-msgid "BellFreq"
+msgid "BellFile5"
 msgstr "Aviso"
 
 #: configdef.h:323
 #, fuzzy
-msgid "BellLen"
+msgid "BellFile6"
+msgstr "Aviso"
+
+#: configdef.h:324
+#, fuzzy
+msgid "BellFile7"
 msgstr "Aviso"
 
 #: configdef.h:325
+#, fuzzy
+msgid "BellFreq"
+msgstr "Aviso"
+
+#: configdef.h:326
+#, fuzzy
+msgid "BellLen"
+msgstr "Aviso"
+
+#: configdef.h:328
 msgid "&Highlight in taskbar"
 msgstr "&Destac. na bar. de tar."
 
-#: configdef.h:326
+#: configdef.h:329
 msgid "&Popup"
 msgstr "&Saltar"
 
-#: configdef.h:327
+#: configdef.h:330
 msgid "&Flash"
 msgstr "&Piscar"
 
-#: configdef.h:328
+#: configdef.h:331
 msgid "BellFlashStyle"
 msgstr ""
 
-#: configdef.h:330
+#: configdef.h:333
 msgid "BellInterval"
 msgstr ""
 
-#: configdef.h:331
+#: configdef.h:334
 msgid "PlayTone"
 msgstr ""
 
-#: configdef.h:332
+#: configdef.h:335
 msgid "Printer"
 msgstr "Impressora"
 
-#: configdef.h:334
+#: configdef.h:337
 msgid "System"
 msgstr ""
 
-#: configdef.h:334
+#: configdef.h:337
 msgid "system setting"
 msgstr ""
 
-#: configdef.h:335
+#: configdef.h:338
 msgid "Dialog"
 msgstr ""
 
-#: configdef.h:337
+#: configdef.h:340
 #, fuzzy
 msgid "Options Level"
 msgstr "Opções"
 
-#: configdef.h:338
+#: configdef.h:341
 #, fuzzy
 msgid "Language"
 msgstr "Idioma da interface"
 
-#: configdef.h:339
+#: configdef.h:342
 msgid "scale_options_width"
 msgstr ""
 
-#: configdef.h:341
+#: configdef.h:344
 #, fuzzy
 msgid "Options Font"
 msgstr "Opções"
 
-#: configdef.h:342
+#: configdef.h:345
 #, fuzzy
 msgid "OptionsFontname"
 msgstr "Opções"
 
-#: configdef.h:343
+#: configdef.h:346
 msgid "OptionsFontHeight"
 msgstr ""
 
-#: configdef.h:347
+#: configdef.h:349
 msgid "Prompt on &close"
 msgstr ""
 
-#: configdef.h:348
+#: configdef.h:350
 msgid "ConfirmReset"
 msgstr ""
 
-#: configdef.h:349
+#: configdef.h:351
 msgid "ConfirmMultiLinePasting"
 msgstr ""
 
-#: configdef.h:350
+#: configdef.h:352
 #, fuzzy
 msgid "NoAltScreen"
 msgstr "Tela &cheia"
 
-#: configdef.h:351
+#: configdef.h:353
 #, fuzzy
 msgid "EraseToScrollback"
 msgstr "Limpar tela"
 
-#: configdef.h:353
+#: configdef.h:355
 msgid "Bidi"
 msgstr ""
 
-#: configdef.h:354
+#: configdef.h:356
 msgid "DisplaySpeedup"
 msgstr ""
 
-#: configdef.h:356
+#: configdef.h:358
 msgid "Command line Options"
 msgstr ""
 
-#: configdef.h:357
+#: configdef.h:359
 msgid "Class"
 msgstr ""
 
-#: configdef.h:358
+#: configdef.h:360
 msgid "Hold"
 msgstr ""
 
-#: configdef.h:359
+#: configdef.h:361
 msgid "ExitWrite"
 msgstr ""
 
-#: configdef.h:360
+#: configdef.h:362
 msgid "ExitTitle"
 msgstr ""
 
-#: configdef.h:361
+#: configdef.h:363
 msgid "Icon"
 msgstr ""
 
-#: configdef.h:362
+#: configdef.h:364
 msgid "Log"
 msgstr ""
 
-#: configdef.h:363
+#: configdef.h:365
 msgid "Logging"
 msgstr ""
 
-#: configdef.h:364
+#: configdef.h:366
 msgid "Utmp"
 msgstr ""
 
-#: configdef.h:365
+#: configdef.h:367
 msgid "Title"
 msgstr ""
 
-#: configdef.h:366
+#: configdef.h:368
 msgid "title_settable"
 msgstr ""
 
-#: configdef.h:368
+#: configdef.h:370
 msgid "X"
 msgstr "X"
 
-#: configdef.h:369
+#: configdef.h:371
 msgid "Y"
 msgstr ""
 
-#: configdef.h:370
+#: configdef.h:372
 msgid "Daemonize"
 msgstr ""
 
-#: configdef.h:371
+#: configdef.h:373
 msgid "Daemonize Always"
 msgstr ""
 
-#: configdef.h:373
+#: configdef.h:375
 #, fuzzy
 msgid "Hidden Options"
 msgstr "Opções"
 
-#: configdef.h:374
+#: configdef.h:376
 msgid "SuppressSGR"
 msgstr ""
 
-#: configdef.h:375
+#: configdef.h:377
 msgid "SuppressDEC"
 msgstr ""
 
-#: configdef.h:376
+#: configdef.h:378
 msgid "SuppressWIN"
 msgstr ""
 
-#: configdef.h:377
+#: configdef.h:379
 msgid "SuppressOSC"
 msgstr ""
 
-#: configdef.h:378
+#: configdef.h:380
 msgid "SuppressNRC"
 msgstr ""
 
-#: configdef.h:379
+#: configdef.h:381
 msgid "SuppressMouseWheel"
 msgstr ""
 
-#: configdef.h:380
+#: configdef.h:382
 msgid "FilterPasteControls"
 msgstr ""
 
-#: configdef.h:381
+#: configdef.h:383
 msgid "GuardNetworkPaths"
 msgstr ""
 
-#: configdef.h:382
+#: configdef.h:384
 msgid "BracketedPasteByLine"
 msgstr ""
 
-#: configdef.h:383
+#: configdef.h:385
 msgid "PrintableControls"
 msgstr ""
 
-#: configdef.h:384
+#: configdef.h:386
 msgid "CharNarrowing"
 msgstr ""
 
-#: configdef.h:385
+#: configdef.h:387
 msgid "SaveFilename"
 msgstr ""
 
-#: configdef.h:386
+#: configdef.h:388
 msgid "AppID"
 msgstr ""
 
-#: configdef.h:387
+#: configdef.h:389
 msgid "AppName"
 msgstr ""
 
-#: configdef.h:388
-msgid "AppLaunchCmd"
-msgstr ""
-
-#: configdef.h:389
-#, fuzzy
-msgid "DropCommands"
-msgstr "Comandos do usuário"
-
 #: configdef.h:390
-msgid "ExitCommands"
+msgid "AppLaunchCmd"
 msgstr ""
 
 #: configdef.h:391
 #, fuzzy
-msgid "UserCommands"
+msgid "DropCommands"
 msgstr "Comandos do usuário"
 
 #: configdef.h:392
+msgid "ExitCommands"
+msgstr ""
+
+#: configdef.h:393
+#, fuzzy
+msgid "UserCommands"
+msgstr "Comandos do usuário"
+
+#: configdef.h:394
 #, fuzzy
 msgid "CtxMenuFunctions"
 msgstr "Funções do mouse"
 
-#: configdef.h:393
+#: configdef.h:395
 #, fuzzy
 msgid "SysMenuFunctions"
 msgstr "Funções do mouse"
 
-#: configdef.h:394
+#: configdef.h:396
 #, fuzzy
 msgid "UserCommandsPath"
 msgstr "Comandos do usuário"
 
-#: configdef.h:395
-msgid "SessionCommands"
-msgstr ""
-
-#: configdef.h:396
-#, fuzzy
-msgid "TaskCommands"
-msgstr "Comandos do usuário"
-
 #: configdef.h:397
-msgid "ConPTY"
+msgid "SessionCommands"
 msgstr ""
 
 #: configdef.h:398
 #, fuzzy
+msgid "TaskCommands"
+msgstr "Comandos do usuário"
+
+#: configdef.h:399
+msgid "ConPTY"
+msgstr ""
+
+#: configdef.h:400
+#, fuzzy
 msgid "LoginFromShortcut"
 msgstr "Atalhos"
 
-#: configdef.h:399
+#: configdef.h:401
 #, fuzzy
 msgid "MenuMouse"
 msgstr "Mouse"
 
-#: configdef.h:400
+#: configdef.h:402
 msgid "MenuCtrlMouse"
 msgstr ""
 
-#: configdef.h:401
+#: configdef.h:403
 #, fuzzy
 msgid "MenuMouse5"
 msgstr "Mouse"
 
-#: configdef.h:402
+#: configdef.h:404
 msgid "MenuTitleCtrlLeft"
 msgstr ""
 
-#: configdef.h:403
+#: configdef.h:405
 msgid "MenuTitleCtrlRight"
 msgstr ""
 
-#: configdef.h:404
+#: configdef.h:406
 msgid "SessionGeomSync"
 msgstr ""
 
-#: configdef.h:405
+#: configdef.h:407
 msgid "ColSpacing"
 msgstr ""
 
-#: configdef.h:406
+#: configdef.h:408
 msgid "RowSpacing"
 msgstr ""
 
-#: configdef.h:407
+#: configdef.h:409
 msgid "AutoLeading"
 msgstr ""
 
-#: configdef.h:408
+#: configdef.h:410
 msgid "Ligatures"
 msgstr ""
 
-#: configdef.h:409
+#: configdef.h:411
 msgid "LigaturesSupport"
 msgstr ""
 
-#: configdef.h:410
+#: configdef.h:412
 msgid "BoxDrawing"
 msgstr ""
 
-#: configdef.h:411
+#: configdef.h:413
 msgid "HandleDPI"
 msgstr ""
 
-#: configdef.h:412
+#: configdef.h:414
 msgid "CheckVersionUpdate"
 msgstr ""
 
-#: configdef.h:413
+#: configdef.h:415
 msgid "IMECursorColour"
 msgstr ""
 
-#: configdef.h:414
+#: configdef.h:416
 msgid "SixelClipChars"
 msgstr ""
 
-#: configdef.h:415
+#: configdef.h:417
 msgid "OldBold"
 msgstr ""
 
-#: configdef.h:416
+#: configdef.h:418
 #, fuzzy
 msgid "ShortLongOpts"
 msgstr "Atalhos"
 
-#: configdef.h:417
+#: configdef.h:419
 msgid "BoldAsRainbowSparkles"
 msgstr ""
 
-#: configdef.h:418
+#: configdef.h:420
 msgid "HoverTitle"
 msgstr ""
 
-#: configdef.h:419
+#: configdef.h:421
 msgid "ProgressBar"
 msgstr ""
 
-#: configdef.h:420
+#: configdef.h:422
 msgid "ProgressScan"
 msgstr ""
 
-#: configdef.h:421
+#: configdef.h:423
 msgid "DimMargins"
 msgstr ""
 
-#: configdef.h:422
+#: configdef.h:424
 msgid "Baud"
 msgstr ""
 
-#: configdef.h:423
+#: configdef.h:425
 msgid "Bloom"
 msgstr ""
 
-#: configdef.h:424
+#: configdef.h:426
 #, fuzzy
 msgid "OldOptions"
 msgstr "Opções"
 
-#: configdef.h:425
+#: configdef.h:427
 msgid "OldXButtons"
 msgstr ""
 
-#: configdef.h:426
+#: configdef.h:428
 msgid "wslbridge version,0:nobridge,1:wslbridge,2:wslbreadge2"
 msgstr ""
 
-#: configdef.h:427
+#: configdef.h:429
 msgid "wslDistribution,null is default"
 msgstr ""
 
 #. __("status_debug")             )
 #. _CFGDEFD(string   ,menu_menu              ,"bs"            ,       IS(0),OPT_STR          ,OPF_STR  ,1,0,5,"MenuMenu"                 ,__("MenuMenu")                 )
 #. _CFGDEFD(string   ,menu_ctrlmenu          ,"e|ls"          ,       IS(0),OPT_STR          ,OPF_STR  ,1,0,5,"MenuCtrlMenu"             ,__("MenuCtrlMenu")             )
-#: configdef.h:432
+#: configdef.h:434
 #, fuzzy
 msgid "FontSize"
 msgstr "Fonte"
 
-#: configdef.h:433
+#: configdef.h:435
 #, fuzzy
 msgid "Break"
 msgstr "Enviar break"
 
-#: configdef.h:434
+#: configdef.h:436
 msgid "Pause"
 msgstr ""
 
-#: configdef.h:435
+#: configdef.h:437
 msgid "CopyAsRTFFontSize"
 msgstr ""
 
-#: configdef.h:436
+#: configdef.h:438
 msgid "OldFontMenu"
 msgstr ""
 
-#: configdef.h:437
+#: configdef.h:439
 #, fuzzy
 msgid "OptionsFontSize"
 msgstr "Opções"
 
-#: configdef.h:438
+#: configdef.h:440
+msgid "gui_font_size"
+msgstr ""
+
+#: configdef.h:441
 msgid "BoldAsBright"
 msgstr ""
 
-#: configdef.h:439
+#: configdef.h:442
 msgid "FontQuality"
 msgstr ""
 
-#: configdef.h:440
+#: configdef.h:443
 #, fuzzy
 msgid "UseSystemColours"
 msgstr "Cores"
+
+#: funtips.h:2
+msgid "Begin move window"
+msgstr ""
+
+#: funtips.h:3
+#, fuzzy
+msgid "Resize window"
+msgstr "Janela"
+
+#: funtips.h:4 funtips.h:21
+#, fuzzy
+msgid "Minimize Window"
+msgstr "Mi&nimizar"
+
+#: funtips.h:5 funtips.h:18
+#, fuzzy
+msgid "Maximize Window"
+msgstr "Mi&nimizar"
+
+#: funtips.h:6
+msgid "Sysmenu"
+msgstr ""
+
+#: funtips.h:7
+#, fuzzy
+msgid "Close Window"
+msgstr "Janela"
+
+#: funtips.h:8
+#, fuzzy
+msgid "Close App"
+msgstr "&Fechar"
+
+#: funtips.h:9
+#, fuzzy
+msgid "Close Tab"
+msgstr "&Fechar"
+
+#: funtips.h:10
+msgid "New Tab for current"
+msgstr ""
+
+#: funtips.h:11
+msgid "New Window for current"
+msgstr ""
+
+#: funtips.h:12
+msgid "New Window for use define size&position"
+msgstr ""
+
+#: funtips.h:13
+msgid "New Window for give monitor"
+msgstr ""
+
+#: funtips.h:14
+#, fuzzy
+msgid "Set Window Default Size"
+msgstr "&Tamanho padrão"
+
+#: funtips.h:15
+#, fuzzy
+msgid "Zoom Window to Default Size"
+msgstr "&Tamanho padrão"
+
+#: funtips.h:16
+msgid "Zoom Window to Full Screen"
+msgstr ""
+
+#: funtips.h:17
+#, fuzzy
+msgid "Set Window Full Screen"
+msgstr "Tela &cheia"
+
+#: funtips.h:19
+msgid "Toggle Window Maximise"
+msgstr ""
+
+#: funtips.h:20
+#, fuzzy
+msgid "restore Window"
+msgstr "Janela"
+
+#: funtips.h:22
+msgid "toggle Minimize window"
+msgstr ""
+
+#: funtips.h:23
+msgid "toggle window always on top"
+msgstr ""
+
+#: funtips.h:24
+msgid "toggle Window can be sleep"
+msgstr ""
+
+#: funtips.h:25
+msgid "Prev Tab"
+msgstr ""
+
+#: funtips.h:26
+msgid "Next Tab"
+msgstr ""
+
+#: funtips.h:27
+msgid "move current tab prev"
+msgstr ""
+
+#: funtips.h:28
+msgid "move current tab next"
+msgstr ""
+
+#: funtips.h:29
+msgid "Change Tab to curtab ind+n"
+msgstr ""
+
+#: funtips.h:30
+msgid "Change tab to n"
+msgstr ""
+
+#: funtips.h:31
+msgid "move cur tab to curtab ind+n"
+msgstr ""
+
+#: funtips.h:32
+#, fuzzy
+msgid "decrease font size"
+msgstr "Reajustar ao redimensionar"
+
+#: funtips.h:33
+msgid "increase font size"
+msgstr ""
+
+#: funtips.h:34
+#, fuzzy
+msgid "set default font size"
+msgstr "Tamanho padrão"
+
+#: funtips.h:35
+msgid "decrease font size&adapt term size"
+msgstr ""
+
+#: funtips.h:36
+msgid "increase font size&adapt term size"
+msgstr ""
+
+#: funtips.h:37
+msgid "set default font size&adapt term size"
+msgstr ""
+
+#: funtips.h:38
+msgid "de/increase font size "
+msgstr ""
+
+#: funtips.h:39
+msgid "horscroll left  1 cell"
+msgstr ""
+
+#: funtips.h:40
+msgid "horscroll Right 1 cell"
+msgstr ""
+
+#: funtips.h:41
+msgid "horscroll left  1/10"
+msgstr ""
+
+#: funtips.h:42
+msgid "horscroll Right 1/10"
+msgstr ""
+
+#: funtips.h:43
+msgid "horsizing out 1 cell"
+msgstr ""
+
+#: funtips.h:44
+msgid "horsizing in  1 cell"
+msgstr ""
+
+#: funtips.h:45
+msgid "horsizing out 1/10  "
+msgstr ""
+
+#: funtips.h:46
+msgid "horsizing in  1/10  "
+msgstr ""
+
+#: funtips.h:47
+msgid "horsizing out 1 cell from right"
+msgstr ""
+
+#: funtips.h:48
+msgid "horsizing in  1 cell from right"
+msgstr ""
+
+#: funtips.h:49
+msgid "horsizing out 1/10   from right"
+msgstr ""
+
+#: funtips.h:50
+msgid "horsizing in  1/10   from right"
+msgstr ""
+
+#: funtips.h:51
+msgid "scroll to top "
+msgstr ""
+
+#: funtips.h:52
+#, fuzzy
+msgid "scroll to end "
+msgstr "Barra de rolagem"
+
+#: funtips.h:53
+msgid "scroll page up"
+msgstr ""
+
+#: funtips.h:54
+msgid "scroll page down"
+msgstr ""
+
+#: funtips.h:55
+#, fuzzy
+msgid "scroll line up"
+msgstr "Linhas de &rol."
+
+#: funtips.h:56
+#, fuzzy
+msgid "scroll line down"
+msgstr "Linhas de &rol."
+
+#: funtips.h:57
+msgid "scroll to prev mark"
+msgstr ""
+
+#: funtips.h:58
+msgid "scroll to next mark"
+msgstr ""
+
+#: funtips.h:59
+msgid "set to scroll"
+msgstr ""
+
+#: funtips.h:60
+#, fuzzy
+msgid "set No Scroll"
+msgstr "Limpar tela"
+
+#: funtips.h:61
+msgid "toggle no scroll"
+msgstr ""
+
+#: funtips.h:62
+#, fuzzy
+msgid "set scroll mode"
+msgstr "Barra de rolagem"
+
+#: funtips.h:63
+msgid "toggle scroll mode"
+msgstr ""
+
+#: funtips.h:65
+#, fuzzy
+msgid "Options Dialog"
+msgstr "Opções"
+
+#: funtips.h:66
+msgid "Ctrl mode"
+msgstr ""
+
+#: funtips.h:67
+msgid "sys Menu Or Popup Menu"
+msgstr ""
+
+#: funtips.h:68
+msgid "Popup Menu At Cursor"
+msgstr ""
+
+#: funtips.h:69
+#, fuzzy
+msgid "Popup Menu At Mouse"
+msgstr "Mouse"
+
+#: funtips.h:70
+msgid "Start Keyboard Select"
+msgstr ""
+
+#: funtips.h:71 funtips.h:74
+#, fuzzy
+msgid "Select All"
+msgstr "Se&lecionar tudo"
+
+#: funtips.h:72
+#, fuzzy
+msgid "Copy"
+msgstr "&Copiar"
+
+#: funtips.h:73
+#, fuzzy
+msgid "Paste"
+msgstr "C&olar"
+
+#: funtips.h:75
+#, fuzzy
+msgid "Open Select String"
+msgstr "Suspender saída durante a seleção"
+
+#: funtips.h:76
+#, fuzzy
+msgid "Copy As Text"
+msgstr "Copiar como texto"
+
+#: funtips.h:77
+#, fuzzy
+msgid "Copy As Text with tabs"
+msgstr "Copiar com &TABs"
+
+#: funtips.h:78
+msgid "Copy As Text without tabs"
+msgstr ""
+
+#: funtips.h:79
+#, fuzzy
+msgid "Copy As Rich Text format"
+msgstr "Cop. como texto &rico"
+
+#: funtips.h:80
+msgid "Copy As Html level 1"
+msgstr ""
+
+#: funtips.h:81
+msgid "Copy As Html level 2"
+msgstr ""
+
+#: funtips.h:82
+msgid "Copy As Html level 3"
+msgstr ""
+
+#: funtips.h:83
+#, fuzzy
+msgid "Paste Path"
+msgstr "Co&lar "
+
+#: funtips.h:84
+#, fuzzy
+msgid "Copy then Paste"
+msgstr "Copiar → Colar"
+
+#: funtips.h:85
+msgid "export as Html"
+msgstr ""
+
+#: funtips.h:86
+#, fuzzy
+msgid "Print Screen"
+msgstr "Tela &cheia"
+
+#: funtips.h:87
+msgid "TEK start New Page"
+msgstr ""
+
+#: funtips.h:88
+msgid "TEK save to image and open"
+msgstr ""
+
+#: funtips.h:89
+#, fuzzy
+msgid "copy Title"
+msgstr "Copiar tít&ulo"
+
+#: funtips.h:90
+msgid "save to image and open"
+msgstr ""
+
+#: funtips.h:91
+#, fuzzy
+msgid "Start Search"
+msgstr "P&rocurar"
+
+#: funtips.h:92
+#, fuzzy
+msgid "toggle scroll bar"
+msgstr "Barra de rolagem"
+
+#: funtips.h:93
+msgid "toggle show dim margins"
+msgstr ""
+
+#: funtips.h:94
+msgid "toggle show status line"
+msgstr ""
+
+#: funtips.h:95
+msgid "toggle borders"
+msgstr ""
+
+#: funtips.h:96
+msgid "toggle show tabs"
+msgstr ""
+
+#: funtips.h:97
+msgid "toggle show Indicator"
+msgstr ""
+
+#: funtips.h:98
+msgid "toggle surport partline"
+msgstr ""
+
+#: funtips.h:99
+msgid "toggle Pointer style"
+msgstr ""
+
+#: funtips.h:100
+msgid "start Adjust transparency level"
+msgstr ""
+
+#: funtips.h:101
+msgid "toggle opaque"
+msgstr ""
+
+#: funtips.h:102
+#, fuzzy
+msgid "Clear Scroll back"
+msgstr "Limpar tela"
+
+#: funtips.h:103
+#, fuzzy
+msgid "Reset"
+msgstr "R&edefinir"
+
+#: funtips.h:104
+msgid "Reset Force"
+msgstr ""
+
+#: funtips.h:105
+#, fuzzy
+msgid "Tek Reset"
+msgstr "R&edefinir"
+
+#: funtips.h:106
+#, fuzzy
+msgid "flip screen"
+msgstr "Al&ternar tela"
+
+#: funtips.h:107
+msgid "refresh"
+msgstr ""
+
+#: funtips.h:108
+msgid "toggle Lock Title"
+msgstr ""
+
+#: funtips.h:109
+msgid "Clear Title"
+msgstr ""
+
+#: funtips.h:110
+#, fuzzy
+msgid "Child Break "
+msgstr "Enviar break"
+
+#: funtips.h:111
+msgid "Send an INTR char"
+msgstr ""
+
+#: funtips.h:112
+msgid "toggle logging"
+msgstr ""
+
+#: funtips.h:113
+msgid "toggle show charinfo"
+msgstr ""
+
+#: funtips.h:114
+msgid "toggle vt220 mode"
+msgstr ""
+
+#: funtips.h:115
+msgid "toggle auto repeat"
+msgstr ""
+
+#: funtips.h:116
+msgid "toggle bidi"
+msgstr ""
+
+#. __("");
+#. char* TP(hyper_down           )=__("");
+#. char* TP(compose_down         )=__("");
+#: funtips.h:121
+msgid "Start Unicode Char"
+msgstr ""
+
+#, fuzzy
+#~ msgid "Minimize"
+#~ msgstr "Mi&nimizar"
+
+#, fuzzy
+#~ msgid "Maximize"
+#~ msgstr "Ma&ximizar"
+
+#, fuzzy
+#~ msgid "resize"
+#~ msgstr "&Tam. atual"
+
+#, fuzzy
+#~ msgid "minimize"
+#~ msgstr "Mi&nimizar"
+
+#, fuzzy
+#~ msgid "maximize"
+#~ msgstr "Ma&ximizar"
+
+#, fuzzy
+#~ msgid "close"
+#~ msgstr "&Fechar"
+
+#, fuzzy
+#~ msgid "new-window"
+#~ msgstr "Janela"
+
+#, fuzzy
+#~ msgid "default-size"
+#~ msgstr "Tamanho padrão"
+
+#, fuzzy
+#~ msgid "fullscreen"
+#~ msgstr "Tela &cheia"
+
+#, fuzzy
+#~ msgid "win-restore"
+#~ msgstr "&Restaurar"
+
+#, fuzzy
+#~ msgid "hor-right-1"
+#~ msgstr "&Direita"
+
+#, fuzzy
+#~ msgid "scroll-top"
+#~ msgstr "Barra de rolagem"
+
+#, fuzzy
+#~ msgid "scroll-end"
+#~ msgstr "Barra de rolagem"
+
+#, fuzzy
+#~ msgid "scroll-pgdn"
+#~ msgstr "Barra de rolagem"
+
+#, fuzzy
+#~ msgid "scroll-lndn"
+#~ msgstr "Barra de rolagem"
+
+#, fuzzy
+#~ msgid "scroll-prev"
+#~ msgstr "Barra de rolagem"
+
+#, fuzzy
+#~ msgid "clear-scroll-lock"
+#~ msgstr "Limpar tela"
+
+#, fuzzy
+#~ msgid "options"
+#~ msgstr "Opções"
+
+#, fuzzy
+#~ msgid "select-all"
+#~ msgstr "Se&lecionar tudo"
+
+#, fuzzy
+#~ msgid "win-paste"
+#~ msgstr "C&olar"
+
+#, fuzzy
+#~ msgid "copy-text"
+#~ msgstr "Copiar como texto"
+
+#, fuzzy
+#~ msgid "paste-path"
+#~ msgstr "C&olar"
+
+#, fuzzy
+#~ msgid "copy-paste"
+#~ msgstr "C&olar"
+
+#, fuzzy
+#~ msgid "search"
+#~ msgstr "P&rocurar"
+
+#, fuzzy
+#~ msgid "scrollbar"
+#~ msgstr "Barra de rolagem"
+
+#, fuzzy
+#~ msgid "transparency-level"
+#~ msgstr "Transparência"
+
+#, fuzzy
+#~ msgid "clear-scrollback"
+#~ msgstr "Limpar tela"
+
+#, fuzzy
+#~ msgid "reset"
+#~ msgstr "R&edefinir"
+
+#, fuzzy
+#~ msgid "flipscreen"
+#~ msgstr "Al&ternar tela"
+
+#, fuzzy
+#~ msgid "break"
+#~ msgstr "Enviar break"
 
 #~ msgid "&Select..."
 #~ msgstr "Selec&..."
@@ -2590,17 +3220,11 @@ msgstr "Cores"
 #~ msgid "&Shift"
 #~ msgstr "&Shift"
 
-#~ msgid "&Ctrl"
-#~ msgstr "Ct&rl"
-
 #~ msgid "&Alt"
 #~ msgstr "A&lt"
 
 #~ msgid "Copy as &HTML"
 #~ msgstr "Copiar como &HTML"
-
-#~ msgid "&Paste"
-#~ msgstr "C&olar"
 
 #~ msgid "E&xtend"
 #~ msgstr "E&stender"
@@ -2631,9 +3255,6 @@ msgstr "Cores"
 
 #~ msgid "&Left"
 #~ msgstr "&Esquerda"
-
-#~ msgid "&Right"
-#~ msgstr "&Direita"
 
 #~ msgid "UI language"
 #~ msgstr "Idioma da interface"
@@ -2784,10 +3405,6 @@ msgstr "Cores"
 #~ msgstr "Linhas de &rol."
 
 #, fuzzy
-#~ msgid "ScrollMod"
-#~ msgstr "Barra de rolagem"
-
-#, fuzzy
 #~ msgid "Terminal Options"
 #~ msgstr "Recursos do terminal"
 
@@ -2802,10 +3419,6 @@ msgstr "Cores"
 #, fuzzy
 #~ msgid "BellPopup"
 #~ msgstr "&Saltar"
-
-#, fuzzy
-#~ msgid "SuspendWhileSelecting"
-#~ msgstr "Suspender saída durante a seleção"
 
 #, fuzzy
 #~ msgid "EmojiPlacement"
@@ -2856,20 +3469,11 @@ msgstr "Cores"
 #~ msgid "Shift+"
 #~ msgstr "Shift+"
 
-#~ msgid "&Restore"
-#~ msgstr "&Restaurar"
-
 #~ msgid "&Move"
 #~ msgstr "Mo&ver"
 
 #~ msgid "&Size"
 #~ msgstr "&Tamanho"
-
-#~ msgid "Mi&nimize"
-#~ msgstr "Mi&nimizar"
-
-#~ msgid "Ma&ximize"
-#~ msgstr "Ma&ximizar"
 
 #~ msgid "Scroll&bar"
 #~ msgstr "&Barra de rolagem"

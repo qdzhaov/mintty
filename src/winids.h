@@ -70,19 +70,9 @@
 #define IDM_KEY_DOWN_UP     0x04A0
 
 #define IDM_NEWTB           0x0500
-#define IDM_NEWWSLT         0x0500
-#define IDM_NEWCYGT         0x0510
-#define IDM_NEWCMDT         0x0520
-#define IDM_NEWPSHT         0x0530
-#define IDM_NEWUSRT         0x0540
 #define IDM_NEWTE           0x05FF
 
 #define IDM_NEWWB           0x0600
-#define IDM_NEWWSLW         0x0600
-#define IDM_NEWCYGW         0x0610
-#define IDM_NEWCMDW         0x0620
-#define IDM_NEWPSHW         0x0630
-#define IDM_NEWUSRW         0x0640
 #define IDM_NEWWE           0x06FF
                                 
 #define IDM_USERCOMMAND     0x1000

@@ -1,0 +1,40 @@
+#!/bin/bash
+cmd=""
+acmdg(){
+  cmd=${cmd}"s/^\(#include <$1>\)/\/\/G \1/;"
+}
+acmdl(){
+  cmd=${cmd}"s/^\(#include \"$1\"\)/\/\/G \1/;"
+}
+acmdg assert.h
+acmdg limits.h
+acmdg stdbool.h
+acmdg stdlib.h
+acmdg string.h
+acmdg stdarg.h
+acmdg stdio.h
+acmdg unistd.h
+acmdg ctype.h
+acmdg wchar.h
+acmdg errno.h
+acmdg stdint.h
+acmdg fcntl.h
+acmdg sys\\/cygwin.h
+acmdg time.h
+acmdg winbase.h
+acmdg windows.h
+acmdg windowsx.h
+acmdl winpriv.h
+acmdl charset.h
+acmdl child.h
+echo $cmd
+for f in *.h;do
+if [ "$f" != "std.h" ];then
+  echo $f
+  sed -i -e "$cmd" $f
+fi
+done
+for f in *.c;do
+  echo $f
+  sed -i -e "$cmd" $f
+done

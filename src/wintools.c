@@ -1,15 +1,15 @@
-#include "winpriv.h"
+//G #include "winpriv.h"
 #include <mmsystem.h>  // PlaySound for MSys
-#include <windowsx.h>  // GET_X_LPARAM, GET_Y_LPARAM
+//G #include <windowsx.h>  // GET_X_LPARAM, GET_Y_LPARAM
 #include <shlwapi.h>  // PathIsNetworkPathW
 #include <shellapi.h>
 #include "wintools.h"
-#include "charset.h"
+//G #include "charset.h"
 
 #include <shlobj.h>
 
 #include "jumplist.h"
-#include "child.h"
+//G #include "child.h"
 
 #if CYGWIN_VERSION_API_MINOR < 74
 #define getopt_long_only getopt_long
@@ -21,7 +21,7 @@ typedef UINT_PTR uintptr_t;
 #include <propkey.h> //PKEY_...
 #endif
 
-#include <fcntl.h>  // open flags,struct stat
+//G #include <fcntl.h>  // open flags,struct stat
 
 #define dont_debug_guardpath
 

@@ -3,12 +3,11 @@
 # This file is distributed under the same license as the mintty package.
 # Ken Takata <kentkt@csc.jp>, 2017.
 #
-#: config.c:3400
 msgid ""
 msgstr ""
 "Project-Id-Version: mintty\n"
 "Report-Msgid-Bugs-To: https://github.com/mintty/mintty/issues/700\n"
-"POT-Creation-Date: 2024-09-30 20:36+0800\n"
+"POT-Creation-Date: 2024-10-14 13:54+0800\n"
 "PO-Revision-Date: 2017-02-27 18:11+0900\n"
 "Last-Translator: Ken Takata <kentkt@csc.jp>\n"
 "Language-Team: \n"
@@ -17,7 +16,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: charset.c:228 charset.c:239 winmain.c:4541 winmain.c:4548 winmain.c:4897
+#: charset.c:228 charset.c:239 winmain.c:4536 winmain.c:4543 winmain.c:4898
 msgid "(Default)"
 msgstr "(既定)"
 
@@ -213,7 +212,7 @@ msgstr ""
 msgid "right"
 msgstr "右(&R)"
 
-#: config.c:177 config.c:211 config.c:242 config.c:3402
+#: config.c:177 config.c:211 config.c:242 config.c:3413
 msgid "none"
 msgstr ""
 
@@ -516,7 +515,7 @@ msgid "Ignoring option '%s' with missing value"
 msgstr "値のないオプション '%s' を無視します"
 
 #. __ %1$s: config file name, %2$s: error message
-#: config.c:1530
+#: config.c:1531
 msgid ""
 "Could not save options to '%s':\n"
 "%s."
@@ -545,189 +544,198 @@ msgstr "webテーマをロードできません"
 msgid "Cannot store theme file"
 msgstr "テーマファイルを保存できません"
 
-#: config.c:3298
+#: config.c:3309
 msgid "About..."
 msgstr "About..."
 
-#: config.c:3299
+#: config.c:3310
 #, fuzzy
 msgid "&Save"
 msgstr "保存"
 
-#: config.c:3301
+#: config.c:3312
 #, fuzzy
 msgid "&Cancel"
 msgstr "キャンセル"
 
-#: config.c:3303
+#: config.c:3314
 msgid "&Apply"
 msgstr "適用(&A)"
 
-#: config.c:3358
+#: config.c:3369
 msgid "Ansi:"
 msgstr ""
 
-#: config.c:3383 configdef.h:288
+#: config.c:3394 configdef.h:291
 msgid "C&urrent size"
 msgstr "現在のサイズ(&U)"
 
-#: config.c:3403
+#: config.c:3414
 msgid "Scale image to term size"
 msgstr ""
 
-#: config.c:3404
+#: config.c:3415
 msgid "Scale term to image ration"
 msgstr ""
 
-#: config.c:3405
+#: config.c:3416
 msgid "use Image as titled texture"
 msgstr ""
 
-#: config.c:3406
+#: config.c:3417
 msgid "Scale image to term size,keep ratio,then titles"
 msgstr ""
 
-#: config.c:3407
+#: config.c:3418
 msgid "Use desktop background"
 msgstr ""
 
-#: config.c:3410
+#: config.c:3421
 msgid "alpha"
 msgstr ""
 
-#: config.c:3415
+#: config.c:3426
 msgid "T&heme Save"
 msgstr ""
 
-#: config.c:3432
+#: config.c:3443
 msgid "► &Play"
 msgstr "► 再生(&P)"
+
+#: config.c:3452
+msgid "&Ctrl"
+msgstr "Ctrl(&C)"
 
 #: textprint.c:44 textprint.c:128
 msgid "[Printing...] "
 msgstr "[印刷中...] "
 
-#: winctrls.c:1355 windialog.c:938
+#: winctrls.c:338
+#, fuzzy
+msgid "Left Right"
+msgstr "右(&R)"
+
+#: winctrls.c:1062 windialog.c:937
 msgid "OK"
 msgstr "OK"
 
-#: winctrls.c:1356 windialog.c:939
+#: winctrls.c:1063 windialog.c:938
 msgid "Cancel"
 msgstr "キャンセル"
 
 #. __ Font chooser: title bar label
-#: winctrls.c:1362
+#: winctrls.c:1069
 msgid "Font "
 msgstr "フォント "
 
 #. __ Font chooser: button
-#: winctrls.c:1365
+#: winctrls.c:1072
 #, fuzzy
 msgid "&ApplyA"
 msgstr "適用(&A)"
 
 #. __ Font chooser:
-#: winctrls.c:1367
+#: winctrls.c:1074
 msgid "&Font:"
 msgstr "フォント(&F):"
 
 #. __ Font chooser:
-#: winctrls.c:1369
+#: winctrls.c:1076
 msgid "Font st&yle:"
 msgstr "フォントスタイル(&Y):"
 
 #. __ Font chooser:
-#: winctrls.c:1371
+#: winctrls.c:1078
 msgid "&Size:"
 msgstr "サイズ(&S):"
 
 #. __ Font chooser:
-#: winctrls.c:1373
+#: winctrls.c:1080
 msgid "Sample"
 msgstr "サンプル"
 
 #. __ Font chooser: text sample ("AaBbYyZz" by default)
-#: winctrls.c:1377 winctrls.c:1633 winctrls.c:1823
+#: winctrls.c:1084 winctrls.c:1333 winctrls.c:1518
 msgid "Ferqœm’4€"
 msgstr "Aaあぁアァ亜宇"
 
 #. __ Font chooser: this field is only shown with FontMenu=1
-#: winctrls.c:1393
+#: winctrls.c:1100
 msgid "Sc&ript:"
 msgstr "文字セット(&R):"
 
 #. __ Font chooser: this field is only shown with FontMenu=1
-#: winctrls.c:1395
+#: winctrls.c:1102
 msgid "<A>Show more fonts</A>"
 msgstr "<A>他のフォントを表示</A>"
 
 #. __ Colour chooser: title bar label
-#: winctrls.c:1401
+#: winctrls.c:1108
 msgid "Colour "
 msgstr "色"
 
 #. __ Colour chooser:
-#: winctrls.c:1415 winctrls.c:1427
+#: winctrls.c:1122 winctrls.c:1134
 msgid "B&asic colours:"
 msgstr "基本色:"
 
 #. __ Colour chooser:
-#: winctrls.c:1436
+#: winctrls.c:1143
 msgid "&Custom colours:"
 msgstr "作成した色:"
 
 #. __ Colour chooser:
-#: winctrls.c:1443
+#: winctrls.c:1150
 msgid "De&fine Custom Colours >>"
 msgstr "色の作成 >>"
 
 #. __ Colour chooser:
-#: winctrls.c:1446 configdef.h:73
+#: winctrls.c:1153 configdef.h:73
 msgid "Colour"
 msgstr "色"
 
 #. __ Colour chooser:
-#: winctrls.c:1448
+#: winctrls.c:1155
 msgid "|S&olid"
 msgstr "| 純色"
 
 #. __ Colour chooser:
-#: winctrls.c:1450
+#: winctrls.c:1157
 msgid "&Hue:"
 msgstr "色合い:"
 
 #. __ Colour chooser:
-#: winctrls.c:1453
+#: winctrls.c:1160
 msgid "&Sat:"
 msgstr "鮮やかさ:"
 
 #. __ Colour chooser:
-#: winctrls.c:1455
+#: winctrls.c:1162
 msgid "&Lum:"
 msgstr "明るさ:"
 
 #. __ Colour chooser:
-#: winctrls.c:1457
+#: winctrls.c:1164
 msgid "&Red:"
 msgstr "赤:"
 
 #. __ Colour chooser:
-#: winctrls.c:1459
+#: winctrls.c:1166
 msgid "&Green:"
 msgstr "緑:"
 
 #. __ Colour chooser:
-#: winctrls.c:1461
+#: winctrls.c:1168
 msgid "&Blue:"
 msgstr "青:"
 
 #. __ Colour chooser:
-#: winctrls.c:1464
+#: winctrls.c:1171
 msgid "A&dd to Custom Colours"
 msgstr "色の追加"
 
 #. __ Options: dialog title
-#: windialog.c:219 windialog.c:883
+#: windialog.c:219 windialog.c:882
 msgid "Options"
 msgstr "オプション"
 
@@ -736,268 +744,268 @@ msgstr "オプション"
 msgid "available"
 msgstr "が利用可能"
 
-#: windialog.c:936
+#: windialog.c:935
 msgid "I see"
 msgstr "了解"
 
-#: windialog.c:968 windialog.c:995
+#: windialog.c:967 windialog.c:994
 msgid "Error"
 msgstr "エラー"
 
 #. __ Context menu, session switcher ("virtual tabs") menu label
-#: wininput.c:199
+#: wininput.c:183
 msgid "Session switcher"
 msgstr "セッション切り替え"
 
-#: wininput.c:211
+#: wininput.c:193
 msgid "Session launcher"
 msgstr "セッション立ち上げ"
 
-#: wininput.c:357
+#: wininput.c:327
 msgid "&Close"
 msgstr "閉じる(&C)"
 
 #. __ System menu:
-#: wininput.c:367
+#: wininput.c:337
 #, fuzzy
 msgid "New &Win"
 msgstr "新規ウィンドウ(&W)"
 
 #. __ Context menu:
-#: wininput.c:370
+#: wininput.c:340
 msgid "&Copy"
 msgstr "コピー(&C)"
 
-#: wininput.c:380
+#: wininput.c:350
 msgid "Copy → Paste"
 msgstr "コピー → ペースト"
 
-#: wininput.c:386
+#: wininput.c:356
 msgid "&Paste "
 msgstr "ペースト(&P)"
 
-#: wininput.c:391
+#: wininput.c:361
 msgid "S&earch"
 msgstr "検索(&E)"
 
-#: wininput.c:395
+#: wininput.c:365
 #, fuzzy
 msgid "&Log to File[I]"
 msgstr "ログをファイルに出力(&L)"
 
-#: wininput.c:396
+#: wininput.c:366
 #, fuzzy
 msgid "&Log to File[O]"
 msgstr "ログをファイルに出力(&L)"
 
-#: wininput.c:397
+#: wininput.c:367
 #, fuzzy
 msgid "&Log to File[IO]"
 msgstr "ログをファイルに出力(&L)"
 
-#: wininput.c:399
+#: wininput.c:369
 msgid "&Log to File"
 msgstr "ログをファイルに出力(&L)"
 
-#: wininput.c:403
+#: wininput.c:373
 msgid "Character &Info"
 msgstr "文字情報(&I)"
 
-#: wininput.c:405
+#: wininput.c:375
 msgid "VT220 Keyboard"
 msgstr "VT220キーボード"
 
-#: wininput.c:406
+#: wininput.c:376
 msgid "&Reset"
 msgstr "リセット(&R)"
 
-#: wininput.c:410
+#: wininput.c:380
 msgid "&Default Size"
 msgstr "既定のサイズ(&D)"
 
-#: wininput.c:412
+#: wininput.c:382
 msgid "Tabbar(&H)"
 msgstr ""
 
-#: wininput.c:419
+#: wininput.c:389
 #, fuzzy
 msgid "Scrollbar(&S)"
 msgstr "スクロールバー"
 
-#: wininput.c:423
+#: wininput.c:393
 msgid "&Border[T]"
 msgstr ""
 
-#: wininput.c:424
+#: wininput.c:394
 msgid "&Border[N]"
 msgstr ""
 
-#: wininput.c:425
+#: wininput.c:395
 msgid "&Border"
 msgstr ""
 
-#: wininput.c:428
+#: wininput.c:398
 msgid "PartLine(&K)"
 msgstr ""
 
-#: wininput.c:429
+#: wininput.c:399
 msgid "Indicator(&J)"
 msgstr ""
 
-#: wininput.c:430
+#: wininput.c:400
 msgid "&Full Screen"
 msgstr "全画面(&F)"
 
-#: wininput.c:433
+#: wininput.c:403
 #, fuzzy
 msgid "Flip Screen(&W)"
 msgstr "スクリーン切り替え(&S)"
 
 #. __ Context menu:
-#: wininput.c:439 configdef.h:352
+#: wininput.c:409 configdef.h:354
 msgid "Status Line"
 msgstr "ステータスライン"
 
-#: wininput.c:445 wininput.c:640
+#: wininput.c:415 wininput.c:599
 #, fuzzy
 msgid "Copy T&Itle"
 msgstr "タイトルをコピー(&T)"
 
 #. __ Context menu:
-#: wininput.c:446 wininput.c:603 wininput.c:641
+#: wininput.c:416 wininput.c:564 wininput.c:600
 msgid "&Options..."
 msgstr "オプション(&O)..."
 
 #. __ Context menu:
-#: wininput.c:531
+#: wininput.c:493
 msgid "Ope&n"
 msgstr "開く(&N)"
 
-#: wininput.c:532 wininput.c:635
+#: wininput.c:494 wininput.c:594
 #, fuzzy
 msgid "New &Tab\twin+T"
 msgstr "新規タブ(&T)"
 
-#: wininput.c:533 wininput.c:634
+#: wininput.c:495 wininput.c:593
 msgid "&Kill tab\twin+w"
 msgstr ""
 
-#: wininput.c:535 wininput.c:632
+#: wininput.c:497 wininput.c:591
 msgid "&Previous tab\twin+<-"
 msgstr ""
 
-#: wininput.c:536 wininput.c:631
+#: wininput.c:498 wininput.c:590
 msgid "&Next tab\twin+->"
 msgstr ""
 
-#: wininput.c:537 wininput.c:629
+#: wininput.c:499 wininput.c:588
 msgid "Move to &Left\twin+<-"
 msgstr ""
 
-#: wininput.c:538 wininput.c:630
+#: wininput.c:500 wininput.c:589
 msgid "Move to &Right\twin+->"
 msgstr ""
 
-#: wininput.c:542
+#: wininput.c:504
 msgid "Copy as text"
 msgstr "テキストとしてコピー"
 
-#: wininput.c:543 configdef.h:271
+#: wininput.c:505 configdef.h:274
 msgid "Copy with TABs"
 msgstr "タブ付きで(テキストとして)コピー"
 
-#: wininput.c:544
+#: wininput.c:506
 msgid "Copy as RTF"
 msgstr "RTFとしてコピー"
 
-#: wininput.c:545
+#: wininput.c:507
 msgid "Copy as HTML text"
 msgstr "HTMLテキストとしてコピー"
 
-#: wininput.c:546
+#: wininput.c:508
 msgid "Copy as HTML"
 msgstr "HTMLとしてコピー"
 
-#: wininput.c:547
+#: wininput.c:509
 msgid "Copy as HTML full"
 msgstr "完全なHTMLとしてコピー"
 
-#: wininput.c:553
+#: wininput.c:515
 msgid "Select &All"
 msgstr "すべてを選択(&A)"
 
-#: wininput.c:554
+#: wininput.c:516
 msgid "Save as &Image"
 msgstr "画像として保存(&I)"
 
 #. __ Context menu: write terminal window contents as HTML file
-#: wininput.c:566
+#: wininput.c:528
 msgid "HTML Screen Dump"
 msgstr "HTML画面ダンプ"
 
 #. __ Context menu: clear scrollback buffer (lines scrolled off the window)
-#: wininput.c:574
+#: wininput.c:536
 msgid "Clear Scrollback"
 msgstr "スクロールバックをクリア"
 
 #. __ Context menu: generate a TTY BRK condition (tty line interrupt)
-#: wininput.c:589
+#: wininput.c:551
 msgid "Send Break"
 msgstr "Breakを送信"
 
-#: wininput.c:649
+#: wininput.c:608
 msgid "N&Ew Win"
 msgstr ""
 
-#: wininput.c:654
+#: wininput.c:613
 #, fuzzy
 msgid "New T&Ab"
 msgstr "新規タブ(&T)"
 
 #. __ Context menu, user commands
-#: wininput.c:724
+#: wininput.c:674
 msgid "User commands"
 msgstr "ユーザーコマンド"
 
-#: wininput.c:3572 wininput.c:3574 wininput.c:3576 wininput.c:3606
-#: wininput.c:3632
+#: wininput.c:3002 wininput.c:3004 wininput.c:3006 wininput.c:3028
+#: wininput.c:3048
 msgid "[NO SCROLL] "
 msgstr "[スクロール停止] "
 
-#: wininput.c:3573 wininput.c:3578 wininput.c:3617 wininput.c:3645
+#: wininput.c:3003 wininput.c:3008 wininput.c:3037 wininput.c:3057
 msgid "[SCROLL MODE] "
 msgstr "[スクロールモード] "
 
-#: winmain.c:2369
+#: winmain.c:2352
 msgid "Processes are running in session:"
 msgstr "セッションでプロセスが動作中です:"
 
-#: winmain.c:2370
+#: winmain.c:2353
 msgid "Close anyway?"
 msgstr "構わず閉じますか？"
 
-#: winmain.c:2394
+#: winmain.c:2377
 msgid "Reset terminal?"
 msgstr "端末をリセットしますか？"
 
-#: winmain.c:2604
+#: winmain.c:2587
 msgid "Try '--help' for more information"
 msgstr "さらなる情報には '--help' を試してください"
 
-#: winmain.c:2612
+#: winmain.c:2595
 msgid "Could not load icon"
 msgstr "アイコンをロードできません"
 
-#: winmain.c:4271
+#: winmain.c:4261
 msgid "Usage:"
 msgstr "使用法:"
 
-#: winmain.c:4272
+#: winmain.c:4262
 msgid "[OPTION]... [ PROGRAM [ARG]... | - ]"
 msgstr "[オプション]... [ プログラム [引数]... | - ]"
 
 #. __ help text (output of -H / --help), after initial line ("synopsis")
-#: winmain.c:4275
+#: winmain.c:4265
 msgid ""
 "Start a new terminal session running the specified program or the user's "
 "shell.\n"
@@ -1053,6 +1061,7 @@ msgid ""
 "  -B, --Border frame|void  Use thin/no window border\n"
 "      --nopin           Make this instance not pinnable to taskbar\n"
 "  -H, --help            Display help and exit\n"
+"      --helpfunc        Display functions help and exit\n"
 "  -V, --version         Print version information and exit\n"
 "      --fg COLOR        set ForegroundColour\n"
 "      --bg COLOR        set BackgroundColour\n"
@@ -1068,31 +1077,31 @@ msgid ""
 "See manual page for further command line options and configuration.\n"
 msgstr ""
 
-#: winmain.c:4528
+#: winmain.c:4523
 msgid "Duplicate option '%s'"
 msgstr "オプションが重複しています '%s'"
 
-#: winmain.c:4541 winmain.c:4548 winmain.c:4897
+#: winmain.c:4536 winmain.c:4543 winmain.c:4898
 msgid "WSL distribution '%s' not found"
 msgstr "WSL ディストリビューション '%s' が見つかりません"
 
-#: winmain.c:4578 winmain.c:4667
+#: winmain.c:4573 winmain.c:4662
 msgid "Unknown option '%s'"
 msgstr "未知のオプションです '%s'"
 
-#: winmain.c:4580
+#: winmain.c:4575
 msgid "Option '%s' requires an argument"
 msgstr "オプション '%s' は引数が必要です"
 
-#: winmain.c:4607
+#: winmain.c:4602
 msgid "Syntax error in position argument '%s'"
 msgstr "position引数に文法エラーがあります '%s'"
 
-#: winmain.c:4618
+#: winmain.c:4613
 msgid "Syntax error in size argument '%s'"
 msgstr "size引数に文法エラーがあります '%s'"
 
-#: winmain.c:4771
+#: winmain.c:4772
 msgid "Syntax error in geometry argument '%s'"
 msgstr "geometry引数に文法エラーがあります '%s'"
 
@@ -1755,741 +1764,1362 @@ msgid "Key_ScrollLock"
 msgstr "スクロールバックをクリア"
 
 #: configdef.h:239
-#, fuzzy
-msgid "KeyFunctions"
-msgstr "マウス設定"
-
-#: configdef.h:240
 msgid "ManageLEDs"
 msgstr ""
 
 #. __("ShootFoot")                              )
 #. _CFGDEFD(CBOOL    ,old_keyfuncs_keypad    ,0               ,       IS(0),OPT_BOOL         ,OPF_CHK  ,3,0,0,"OldKeyFunctionsKeypad"    ,__("OldKeyFunctionsKeypad")                  )
-#: configdef.h:244
+#: configdef.h:243
+#, fuzzy
+msgid "HotKeys"
+msgstr "キー"
+
+#: configdef.h:243
+msgid "Hotkey Setting"
+msgstr ""
+
+#: configdef.h:245
+#, fuzzy
+msgid "KeyFunctions"
+msgstr "マウス設定"
+
+#: configdef.h:247
 msgid "Mouse"
 msgstr "マウス"
 
-#: configdef.h:244
+#: configdef.h:247
 msgid "Mouse functions"
 msgstr "マウス設定"
 
-#: configdef.h:246
+#: configdef.h:249
 msgid "Clic&ks place command line cursor"
 msgstr "クリックでコマンドラインカーソルを移動(&K)"
 
-#: configdef.h:247
+#: configdef.h:250
 msgid "Delimiters:"
 msgstr ""
 
-#: configdef.h:248
+#: configdef.h:251
 #, fuzzy
 msgid "Word Characters:"
 msgstr "文字セット(&C)"
 
-#: configdef.h:249
+#: configdef.h:252
 msgid "Click actions"
 msgstr "クリック動作"
 
-#: configdef.h:250
+#: configdef.h:253
 msgid "Right mouse button"
 msgstr "右マウスボタン"
 
-#: configdef.h:251
+#: configdef.h:254
 msgid "Middle mouse button"
 msgstr "中マウスボタン"
 
-#: configdef.h:252
+#: configdef.h:255
 msgid "Clicks Send to App"
 msgstr ""
 
-#: configdef.h:253
+#: configdef.h:256
 msgid "Modifier for overriding default"
 msgstr "既定を上書きするための修飾子"
 
-#: configdef.h:255
+#: configdef.h:258
 msgid "OpeningClicks"
 msgstr ""
 
-#: configdef.h:256
+#: configdef.h:259
 msgid "OpeningMod"
 msgstr ""
 
-#: configdef.h:258
+#: configdef.h:261
 #, fuzzy
 msgid "ZoomMouse"
 msgstr "マウス"
 
-#: configdef.h:259
+#: configdef.h:262
 #, fuzzy
 msgid "HideMouse"
 msgstr "マウス"
 
-#: configdef.h:260
+#: configdef.h:263
 msgid "ElasticMouse"
 msgstr ""
 
-#: configdef.h:261
+#: configdef.h:264
 msgid "LinesPerMouseWheelNotch"
 msgstr ""
 
-#: configdef.h:263
+#: configdef.h:266
 #, fuzzy
 msgid "MousePointer"
 msgstr "プリンター"
 
-#: configdef.h:264
+#: configdef.h:267
 msgid "AppMousePointer"
 msgstr ""
 
-#: configdef.h:266
+#: configdef.h:269
 msgid "Selection"
 msgstr "選択"
 
-#: configdef.h:266
+#: configdef.h:269
 msgid "Selection and clipboard"
 msgstr "選択とクリップボード"
 
-#: configdef.h:268
+#: configdef.h:271
 msgid "Clear selection on input"
 msgstr "入力時に選択を解除する"
 
-#: configdef.h:269
+#: configdef.h:272
 msgid "Clipboard"
 msgstr "クリップボード"
 
-#: configdef.h:270
+#: configdef.h:273
 msgid "Cop&y on select"
 msgstr "選択時にコピー(&Y)"
 
-#: configdef.h:272
+#: configdef.h:275
 msgid "Copy as &rich text"
 msgstr "リッチテキストとしてコピー(&R)"
 
-#: configdef.h:273
+#: configdef.h:276
 #, fuzzy
 msgid "CopyAsHTML"
 msgstr "HTMLとしてコピー"
 
-#: configdef.h:274
+#: configdef.h:277
 #, fuzzy
 msgid "CopyAsRTFFont"
 msgstr "RTFとしてコピー"
 
-#: configdef.h:275
+#: configdef.h:278
 #, fuzzy
 msgid "CopyAsRTFFontName"
 msgstr "RTFとしてコピー"
 
-#: configdef.h:276
+#: configdef.h:279
 msgid "CopyAsRTFFontHeight"
 msgstr ""
 
-#: configdef.h:277
+#: configdef.h:280
 msgid "Trim space from selection"
 msgstr "選択から空白を取り除く"
 
-#: configdef.h:278
+#: configdef.h:281
 msgid "Allow setting selection"
 msgstr "選択の設定を許可する"
 
-#: configdef.h:279
+#: configdef.h:282
 #, fuzzy
 msgid "allow_paste_selection"
 msgstr "選択の設定を許可する"
 
-#: configdef.h:280
+#: configdef.h:283
 msgid "Show size while selecting (0..12)"
 msgstr "選択中にサイズを表示する (0..12)"
 
-#: configdef.h:281
+#: configdef.h:284
 msgid "Suspend output while selecting"
 msgstr "選択中に一時停止する"
 
-#: configdef.h:283 configdef.h:367
+#: configdef.h:286 configdef.h:369
 msgid "Window"
 msgstr "ウィンドウ"
 
-#: configdef.h:283
+#: configdef.h:286
 #, fuzzy
 msgid "Window Options"
 msgstr "ウィンドウ設定"
 
-#: configdef.h:284
+#: configdef.h:287
 msgid "Default size"
 msgstr "既定のサイズ"
 
-#: configdef.h:286
+#: configdef.h:289
 msgid "Colu&mns"
 msgstr "桁(&M)"
 
-#: configdef.h:287
+#: configdef.h:290
 msgid "Ro&ws"
 msgstr "行(&W)"
 
-#: configdef.h:289
+#: configdef.h:292
 msgid "Re&wrap on resize"
 msgstr "サイズ変更時に改行し直す(&W)"
 
-#: configdef.h:290
+#: configdef.h:293
 msgid "Scrollbar"
 msgstr "スクロールバー"
 
-#: configdef.h:292
+#: configdef.h:295
 msgid "Scroll&back lines"
 msgstr "スクロール行数(&B)"
 
-#: configdef.h:293
+#: configdef.h:296
 #, fuzzy
 msgid "MaxScrollbackLines"
 msgstr "スクロール行数(&B)"
 
-#: configdef.h:294
+#: configdef.h:297
 msgid "Modifier for scrolling"
 msgstr "スクロール用修飾子"
 
-#: configdef.h:296
+#: configdef.h:299
 msgid "&PgUp and PgDn scroll without modifier"
 msgstr "修飾子なしでPgUpとPgDnでスクロール(&P)"
 
-#: configdef.h:297
+#: configdef.h:300
 #, fuzzy
 msgid "BorderStyle"
 msgstr "スタイル"
 
-#: configdef.h:298
+#: configdef.h:301
 msgid "&AllocConsole ,Some console programs need it."
 msgstr ""
 
-#: configdef.h:301
+#: configdef.h:304
 #, fuzzy
 msgid "Search Bar"
 msgstr "検索(&E)"
 
-#: configdef.h:302
+#: configdef.h:305
 #, fuzzy
 msgid "SearchContext"
 msgstr "検索(&E)"
 
-#: configdef.h:304
+#: configdef.h:307
 msgid "Terminal"
 msgstr "端末"
 
-#: configdef.h:304
+#: configdef.h:307
 msgid "Terminal features"
 msgstr "端末設定"
 
-#: configdef.h:307
+#: configdef.h:310
 #, fuzzy
 msgid "Term"
 msgstr "端末"
 
-#: configdef.h:308
+#: configdef.h:311
 msgid "&Answerback"
 msgstr "応答(&A)"
 
-#: configdef.h:309
+#: configdef.h:312
 msgid "WrapTab"
 msgstr ""
 
-#: configdef.h:310
+#: configdef.h:313
 msgid "OldWrapModes"
 msgstr ""
 
-#: configdef.h:311
+#: configdef.h:314
 msgid "Enable132ColumnSwitching"
 msgstr ""
 
-#: configdef.h:312
-msgid "Bell"
-msgstr "ベル"
-
-#: configdef.h:313
-#, fuzzy
-msgid "BellType"
-msgstr "ベル"
-
-#: configdef.h:314
-#, fuzzy
-msgid "BellFiles"
-msgstr "ベル"
-
 #: configdef.h:315
-#, fuzzy
-msgid "BellFile"
+msgid "Bell"
 msgstr "ベル"
 
 #: configdef.h:316
 #, fuzzy
-msgid "BellFile2"
+msgid "BellType"
 msgstr "ベル"
 
 #: configdef.h:317
 #, fuzzy
-msgid "BellFile3"
+msgid "BellFiles"
 msgstr "ベル"
 
 #: configdef.h:318
 #, fuzzy
-msgid "BellFile4"
+msgid "BellFile"
 msgstr "ベル"
 
 #: configdef.h:319
 #, fuzzy
-msgid "BellFile5"
+msgid "BellFile2"
 msgstr "ベル"
 
 #: configdef.h:320
 #, fuzzy
-msgid "BellFile6"
+msgid "BellFile3"
 msgstr "ベル"
 
 #: configdef.h:321
 #, fuzzy
-msgid "BellFile7"
+msgid "BellFile4"
 msgstr "ベル"
 
 #: configdef.h:322
 #, fuzzy
-msgid "BellFreq"
+msgid "BellFile5"
 msgstr "ベル"
 
 #: configdef.h:323
 #, fuzzy
-msgid "BellLen"
+msgid "BellFile6"
+msgstr "ベル"
+
+#: configdef.h:324
+#, fuzzy
+msgid "BellFile7"
 msgstr "ベル"
 
 #: configdef.h:325
+#, fuzzy
+msgid "BellFreq"
+msgstr "ベル"
+
+#: configdef.h:326
+#, fuzzy
+msgid "BellLen"
+msgstr "ベル"
+
+#: configdef.h:328
 msgid "&Highlight in taskbar"
 msgstr "タスクバーで強調表示(&H)"
 
-#: configdef.h:326
+#: configdef.h:329
 msgid "&Popup"
 msgstr "ポップアップ(&P)"
 
-#: configdef.h:327
+#: configdef.h:330
 msgid "&Flash"
 msgstr "点滅(&F)"
 
-#: configdef.h:328
+#: configdef.h:331
 msgid "BellFlashStyle"
 msgstr ""
 
-#: configdef.h:330
+#: configdef.h:333
 msgid "BellInterval"
 msgstr ""
 
-#: configdef.h:331
+#: configdef.h:334
 msgid "PlayTone"
 msgstr ""
 
-#: configdef.h:332
+#: configdef.h:335
 msgid "Printer"
 msgstr "プリンター"
 
-#: configdef.h:334
+#: configdef.h:337
 msgid "System"
 msgstr ""
 
-#: configdef.h:334
+#: configdef.h:337
 msgid "system setting"
 msgstr ""
 
-#: configdef.h:335
+#: configdef.h:338
 msgid "Dialog"
 msgstr ""
 
-#: configdef.h:337
+#: configdef.h:340
 #, fuzzy
 msgid "Options Level"
 msgstr "オプション"
 
-#: configdef.h:338
+#: configdef.h:341
 #, fuzzy
 msgid "Language"
 msgstr "UI言語"
 
-#: configdef.h:339
+#: configdef.h:342
 msgid "scale_options_width"
 msgstr ""
 
-#: configdef.h:341
+#: configdef.h:344
 #, fuzzy
 msgid "Options Font"
 msgstr "オプション"
 
-#: configdef.h:342
+#: configdef.h:345
 #, fuzzy
 msgid "OptionsFontname"
 msgstr "オプション"
 
-#: configdef.h:343
+#: configdef.h:346
 msgid "OptionsFontHeight"
 msgstr ""
 
-#: configdef.h:347
+#: configdef.h:349
 msgid "Prompt on &close"
 msgstr ""
 
-#: configdef.h:348
+#: configdef.h:350
 msgid "ConfirmReset"
 msgstr ""
 
-#: configdef.h:349
+#: configdef.h:351
 msgid "ConfirmMultiLinePasting"
 msgstr ""
 
-#: configdef.h:350
+#: configdef.h:352
 #, fuzzy
 msgid "NoAltScreen"
 msgstr "全画面(&F)"
 
-#: configdef.h:351
+#: configdef.h:353
 #, fuzzy
 msgid "EraseToScrollback"
 msgstr "スクロールバックをクリア"
 
-#: configdef.h:353
+#: configdef.h:355
 msgid "Bidi"
 msgstr ""
 
-#: configdef.h:354
+#: configdef.h:356
 msgid "DisplaySpeedup"
 msgstr ""
 
-#: configdef.h:356
+#: configdef.h:358
 msgid "Command line Options"
 msgstr ""
 
-#: configdef.h:357
+#: configdef.h:359
 msgid "Class"
 msgstr ""
 
-#: configdef.h:358
+#: configdef.h:360
 msgid "Hold"
 msgstr ""
 
-#: configdef.h:359
+#: configdef.h:361
 msgid "ExitWrite"
 msgstr ""
 
-#: configdef.h:360
+#: configdef.h:362
 msgid "ExitTitle"
 msgstr ""
 
-#: configdef.h:361
+#: configdef.h:363
 msgid "Icon"
 msgstr ""
 
-#: configdef.h:362
+#: configdef.h:364
 msgid "Log"
 msgstr ""
 
-#: configdef.h:363
+#: configdef.h:365
 msgid "Logging"
 msgstr ""
 
-#: configdef.h:364
+#: configdef.h:366
 msgid "Utmp"
 msgstr ""
 
-#: configdef.h:365
+#: configdef.h:367
 msgid "Title"
 msgstr ""
 
-#: configdef.h:366
+#: configdef.h:368
 msgid "title_settable"
 msgstr ""
 
-#: configdef.h:368
+#: configdef.h:370
 msgid "X"
 msgstr "X"
 
-#: configdef.h:369
+#: configdef.h:371
 msgid "Y"
 msgstr ""
 
-#: configdef.h:370
+#: configdef.h:372
 msgid "Daemonize"
 msgstr ""
 
-#: configdef.h:371
+#: configdef.h:373
 msgid "Daemonize Always"
 msgstr ""
 
-#: configdef.h:373
+#: configdef.h:375
 #, fuzzy
 msgid "Hidden Options"
 msgstr "オプション"
 
-#: configdef.h:374
+#: configdef.h:376
 msgid "SuppressSGR"
 msgstr ""
 
-#: configdef.h:375
+#: configdef.h:377
 msgid "SuppressDEC"
 msgstr ""
 
-#: configdef.h:376
+#: configdef.h:378
 msgid "SuppressWIN"
 msgstr ""
 
-#: configdef.h:377
+#: configdef.h:379
 msgid "SuppressOSC"
 msgstr ""
 
-#: configdef.h:378
+#: configdef.h:380
 msgid "SuppressNRC"
 msgstr ""
 
-#: configdef.h:379
+#: configdef.h:381
 msgid "SuppressMouseWheel"
 msgstr ""
 
-#: configdef.h:380
+#: configdef.h:382
 msgid "FilterPasteControls"
 msgstr ""
 
-#: configdef.h:381
+#: configdef.h:383
 msgid "GuardNetworkPaths"
 msgstr ""
 
-#: configdef.h:382
+#: configdef.h:384
 msgid "BracketedPasteByLine"
 msgstr ""
 
-#: configdef.h:383
+#: configdef.h:385
 msgid "PrintableControls"
 msgstr ""
 
-#: configdef.h:384
+#: configdef.h:386
 msgid "CharNarrowing"
 msgstr ""
 
-#: configdef.h:385
+#: configdef.h:387
 msgid "SaveFilename"
 msgstr ""
 
-#: configdef.h:386
+#: configdef.h:388
 msgid "AppID"
 msgstr ""
 
-#: configdef.h:387
+#: configdef.h:389
 msgid "AppName"
 msgstr ""
 
-#: configdef.h:388
-msgid "AppLaunchCmd"
-msgstr ""
-
-#: configdef.h:389
-#, fuzzy
-msgid "DropCommands"
-msgstr "ユーザーコマンド"
-
 #: configdef.h:390
-msgid "ExitCommands"
+msgid "AppLaunchCmd"
 msgstr ""
 
 #: configdef.h:391
 #, fuzzy
-msgid "UserCommands"
+msgid "DropCommands"
 msgstr "ユーザーコマンド"
 
 #: configdef.h:392
+msgid "ExitCommands"
+msgstr ""
+
+#: configdef.h:393
+#, fuzzy
+msgid "UserCommands"
+msgstr "ユーザーコマンド"
+
+#: configdef.h:394
 #, fuzzy
 msgid "CtxMenuFunctions"
 msgstr "マウス設定"
 
-#: configdef.h:393
+#: configdef.h:395
 #, fuzzy
 msgid "SysMenuFunctions"
 msgstr "マウス設定"
 
-#: configdef.h:394
+#: configdef.h:396
 #, fuzzy
 msgid "UserCommandsPath"
 msgstr "ユーザーコマンド"
 
-#: configdef.h:395
-msgid "SessionCommands"
-msgstr ""
-
-#: configdef.h:396
-#, fuzzy
-msgid "TaskCommands"
-msgstr "ユーザーコマンド"
-
 #: configdef.h:397
-msgid "ConPTY"
+msgid "SessionCommands"
 msgstr ""
 
 #: configdef.h:398
 #, fuzzy
+msgid "TaskCommands"
+msgstr "ユーザーコマンド"
+
+#: configdef.h:399
+msgid "ConPTY"
+msgstr ""
+
+#: configdef.h:400
+#, fuzzy
 msgid "LoginFromShortcut"
 msgstr "ショートカット"
 
-#: configdef.h:399
+#: configdef.h:401
 #, fuzzy
 msgid "MenuMouse"
 msgstr "マウス"
 
-#: configdef.h:400
+#: configdef.h:402
 msgid "MenuCtrlMouse"
 msgstr ""
 
-#: configdef.h:401
+#: configdef.h:403
 #, fuzzy
 msgid "MenuMouse5"
 msgstr "マウス"
 
-#: configdef.h:402
+#: configdef.h:404
 msgid "MenuTitleCtrlLeft"
 msgstr ""
 
-#: configdef.h:403
+#: configdef.h:405
 msgid "MenuTitleCtrlRight"
 msgstr ""
 
-#: configdef.h:404
+#: configdef.h:406
 msgid "SessionGeomSync"
 msgstr ""
 
-#: configdef.h:405
+#: configdef.h:407
 msgid "ColSpacing"
 msgstr ""
 
-#: configdef.h:406
+#: configdef.h:408
 msgid "RowSpacing"
 msgstr ""
 
-#: configdef.h:407
+#: configdef.h:409
 msgid "AutoLeading"
 msgstr ""
 
-#: configdef.h:408
+#: configdef.h:410
 msgid "Ligatures"
 msgstr ""
 
-#: configdef.h:409
+#: configdef.h:411
 msgid "LigaturesSupport"
 msgstr ""
 
-#: configdef.h:410
+#: configdef.h:412
 msgid "BoxDrawing"
 msgstr ""
 
-#: configdef.h:411
+#: configdef.h:413
 msgid "HandleDPI"
 msgstr ""
 
-#: configdef.h:412
+#: configdef.h:414
 msgid "CheckVersionUpdate"
 msgstr ""
 
-#: configdef.h:413
+#: configdef.h:415
 msgid "IMECursorColour"
 msgstr ""
 
-#: configdef.h:414
+#: configdef.h:416
 msgid "SixelClipChars"
 msgstr ""
 
-#: configdef.h:415
+#: configdef.h:417
 msgid "OldBold"
 msgstr ""
 
-#: configdef.h:416
+#: configdef.h:418
 #, fuzzy
 msgid "ShortLongOpts"
 msgstr "ショートカット"
 
-#: configdef.h:417
+#: configdef.h:419
 msgid "BoldAsRainbowSparkles"
 msgstr ""
 
-#: configdef.h:418
+#: configdef.h:420
 msgid "HoverTitle"
 msgstr ""
 
-#: configdef.h:419
+#: configdef.h:421
 msgid "ProgressBar"
 msgstr ""
 
-#: configdef.h:420
+#: configdef.h:422
 msgid "ProgressScan"
 msgstr ""
 
-#: configdef.h:421
+#: configdef.h:423
 msgid "DimMargins"
 msgstr ""
 
-#: configdef.h:422
+#: configdef.h:424
 msgid "Baud"
 msgstr ""
 
-#: configdef.h:423
+#: configdef.h:425
 msgid "Bloom"
 msgstr ""
 
-#: configdef.h:424
+#: configdef.h:426
 #, fuzzy
 msgid "OldOptions"
 msgstr "オプション"
 
-#: configdef.h:425
+#: configdef.h:427
 msgid "OldXButtons"
 msgstr ""
 
-#: configdef.h:426
+#: configdef.h:428
 msgid "wslbridge version,0:nobridge,1:wslbridge,2:wslbreadge2"
 msgstr ""
 
-#: configdef.h:427
+#: configdef.h:429
 msgid "wslDistribution,null is default"
 msgstr ""
 
 #. __("status_debug")             )
 #. _CFGDEFD(string   ,menu_menu              ,"bs"            ,       IS(0),OPT_STR          ,OPF_STR  ,1,0,5,"MenuMenu"                 ,__("MenuMenu")                 )
 #. _CFGDEFD(string   ,menu_ctrlmenu          ,"e|ls"          ,       IS(0),OPT_STR          ,OPF_STR  ,1,0,5,"MenuCtrlMenu"             ,__("MenuCtrlMenu")             )
-#: configdef.h:432
+#: configdef.h:434
 #, fuzzy
 msgid "FontSize"
 msgstr "フォント"
 
-#: configdef.h:433
+#: configdef.h:435
 #, fuzzy
 msgid "Break"
 msgstr "Breakを送信"
 
-#: configdef.h:434
+#: configdef.h:436
 msgid "Pause"
 msgstr ""
 
-#: configdef.h:435
+#: configdef.h:437
 msgid "CopyAsRTFFontSize"
 msgstr ""
 
-#: configdef.h:436
+#: configdef.h:438
 msgid "OldFontMenu"
 msgstr ""
 
-#: configdef.h:437
+#: configdef.h:439
 #, fuzzy
 msgid "OptionsFontSize"
 msgstr "オプション"
 
-#: configdef.h:438
+#: configdef.h:440
+msgid "gui_font_size"
+msgstr ""
+
+#: configdef.h:441
 msgid "BoldAsBright"
 msgstr ""
 
-#: configdef.h:439
+#: configdef.h:442
 msgid "FontQuality"
 msgstr ""
 
-#: configdef.h:440
+#: configdef.h:443
 #, fuzzy
 msgid "UseSystemColours"
 msgstr "色"
+
+#: funtips.h:2
+msgid "Begin move window"
+msgstr ""
+
+#: funtips.h:3
+#, fuzzy
+msgid "Resize window"
+msgstr "ウィンドウ"
+
+#: funtips.h:4 funtips.h:21
+#, fuzzy
+msgid "Minimize Window"
+msgstr "最小化(&N)"
+
+#: funtips.h:5 funtips.h:18
+#, fuzzy
+msgid "Maximize Window"
+msgstr "最小化(&N)"
+
+#: funtips.h:6
+msgid "Sysmenu"
+msgstr ""
+
+#: funtips.h:7
+#, fuzzy
+msgid "Close Window"
+msgstr "ウィンドウ"
+
+#: funtips.h:8
+#, fuzzy
+msgid "Close App"
+msgstr "閉じる(&C)"
+
+#: funtips.h:9
+#, fuzzy
+msgid "Close Tab"
+msgstr "閉じる(&C)"
+
+#: funtips.h:10
+msgid "New Tab for current"
+msgstr ""
+
+#: funtips.h:11
+msgid "New Window for current"
+msgstr ""
+
+#: funtips.h:12
+msgid "New Window for use define size&position"
+msgstr ""
+
+#: funtips.h:13
+msgid "New Window for give monitor"
+msgstr ""
+
+#: funtips.h:14
+#, fuzzy
+msgid "Set Window Default Size"
+msgstr "既定のサイズ(&D)"
+
+#: funtips.h:15
+#, fuzzy
+msgid "Zoom Window to Default Size"
+msgstr "既定のサイズ(&D)"
+
+#: funtips.h:16
+msgid "Zoom Window to Full Screen"
+msgstr ""
+
+#: funtips.h:17
+#, fuzzy
+msgid "Set Window Full Screen"
+msgstr "全画面(&F)"
+
+#: funtips.h:19
+msgid "Toggle Window Maximise"
+msgstr ""
+
+#: funtips.h:20
+#, fuzzy
+msgid "restore Window"
+msgstr "ウィンドウ"
+
+#: funtips.h:22
+msgid "toggle Minimize window"
+msgstr ""
+
+#: funtips.h:23
+msgid "toggle window always on top"
+msgstr ""
+
+#: funtips.h:24
+msgid "toggle Window can be sleep"
+msgstr ""
+
+#: funtips.h:25
+msgid "Prev Tab"
+msgstr ""
+
+#: funtips.h:26
+msgid "Next Tab"
+msgstr ""
+
+#: funtips.h:27
+msgid "move current tab prev"
+msgstr ""
+
+#: funtips.h:28
+msgid "move current tab next"
+msgstr ""
+
+#: funtips.h:29
+msgid "Change Tab to curtab ind+n"
+msgstr ""
+
+#: funtips.h:30
+msgid "Change tab to n"
+msgstr ""
+
+#: funtips.h:31
+msgid "move cur tab to curtab ind+n"
+msgstr ""
+
+#: funtips.h:32
+#, fuzzy
+msgid "decrease font size"
+msgstr "サイズ変更時に改行し直す(&W)"
+
+#: funtips.h:33
+msgid "increase font size"
+msgstr ""
+
+#: funtips.h:34
+#, fuzzy
+msgid "set default font size"
+msgstr "既定のサイズ"
+
+#: funtips.h:35
+msgid "decrease font size&adapt term size"
+msgstr ""
+
+#: funtips.h:36
+msgid "increase font size&adapt term size"
+msgstr ""
+
+#: funtips.h:37
+msgid "set default font size&adapt term size"
+msgstr ""
+
+#: funtips.h:38
+msgid "de/increase font size "
+msgstr ""
+
+#: funtips.h:39
+msgid "horscroll left  1 cell"
+msgstr ""
+
+#: funtips.h:40
+msgid "horscroll Right 1 cell"
+msgstr ""
+
+#: funtips.h:41
+msgid "horscroll left  1/10"
+msgstr ""
+
+#: funtips.h:42
+msgid "horscroll Right 1/10"
+msgstr ""
+
+#: funtips.h:43
+msgid "horsizing out 1 cell"
+msgstr ""
+
+#: funtips.h:44
+msgid "horsizing in  1 cell"
+msgstr ""
+
+#: funtips.h:45
+msgid "horsizing out 1/10  "
+msgstr ""
+
+#: funtips.h:46
+msgid "horsizing in  1/10  "
+msgstr ""
+
+#: funtips.h:47
+msgid "horsizing out 1 cell from right"
+msgstr ""
+
+#: funtips.h:48
+msgid "horsizing in  1 cell from right"
+msgstr ""
+
+#: funtips.h:49
+msgid "horsizing out 1/10   from right"
+msgstr ""
+
+#: funtips.h:50
+msgid "horsizing in  1/10   from right"
+msgstr ""
+
+#: funtips.h:51
+msgid "scroll to top "
+msgstr ""
+
+#: funtips.h:52
+#, fuzzy
+msgid "scroll to end "
+msgstr "スクロールバー"
+
+#: funtips.h:53
+msgid "scroll page up"
+msgstr ""
+
+#: funtips.h:54
+msgid "scroll page down"
+msgstr ""
+
+#: funtips.h:55
+#, fuzzy
+msgid "scroll line up"
+msgstr "スクロール行数(&B)"
+
+#: funtips.h:56
+#, fuzzy
+msgid "scroll line down"
+msgstr "スクロール行数(&B)"
+
+#: funtips.h:57
+msgid "scroll to prev mark"
+msgstr ""
+
+#: funtips.h:58
+msgid "scroll to next mark"
+msgstr ""
+
+#: funtips.h:59
+msgid "set to scroll"
+msgstr ""
+
+#: funtips.h:60
+#, fuzzy
+msgid "set No Scroll"
+msgstr "スクロールバックをクリア"
+
+#: funtips.h:61
+msgid "toggle no scroll"
+msgstr ""
+
+#: funtips.h:62
+#, fuzzy
+msgid "set scroll mode"
+msgstr "スクロールバー"
+
+#: funtips.h:63
+msgid "toggle scroll mode"
+msgstr ""
+
+#: funtips.h:65
+#, fuzzy
+msgid "Options Dialog"
+msgstr "オプション"
+
+#: funtips.h:66
+msgid "Ctrl mode"
+msgstr ""
+
+#: funtips.h:67
+msgid "sys Menu Or Popup Menu"
+msgstr ""
+
+#: funtips.h:68
+msgid "Popup Menu At Cursor"
+msgstr ""
+
+#: funtips.h:69
+#, fuzzy
+msgid "Popup Menu At Mouse"
+msgstr "マウス"
+
+#: funtips.h:70
+msgid "Start Keyboard Select"
+msgstr ""
+
+#: funtips.h:71 funtips.h:74
+#, fuzzy
+msgid "Select All"
+msgstr "すべてを選択(&A)"
+
+#: funtips.h:72
+#, fuzzy
+msgid "Copy"
+msgstr "コピー(&C)"
+
+#: funtips.h:73
+#, fuzzy
+msgid "Paste"
+msgstr "ペースト(&P)"
+
+#: funtips.h:75
+#, fuzzy
+msgid "Open Select String"
+msgstr "選択中に一時停止する"
+
+#: funtips.h:76
+#, fuzzy
+msgid "Copy As Text"
+msgstr "テキストとしてコピー"
+
+#: funtips.h:77
+#, fuzzy
+msgid "Copy As Text with tabs"
+msgstr "タブ付きで(テキストとして)コピー"
+
+#: funtips.h:78
+msgid "Copy As Text without tabs"
+msgstr ""
+
+#: funtips.h:79
+#, fuzzy
+msgid "Copy As Rich Text format"
+msgstr "リッチテキストとしてコピー(&R)"
+
+#: funtips.h:80
+msgid "Copy As Html level 1"
+msgstr ""
+
+#: funtips.h:81
+msgid "Copy As Html level 2"
+msgstr ""
+
+#: funtips.h:82
+msgid "Copy As Html level 3"
+msgstr ""
+
+#: funtips.h:83
+#, fuzzy
+msgid "Paste Path"
+msgstr "ペースト(&P)"
+
+#: funtips.h:84
+#, fuzzy
+msgid "Copy then Paste"
+msgstr "コピー → ペースト"
+
+#: funtips.h:85
+msgid "export as Html"
+msgstr ""
+
+#: funtips.h:86
+#, fuzzy
+msgid "Print Screen"
+msgstr "全画面(&F)"
+
+#: funtips.h:87
+msgid "TEK start New Page"
+msgstr ""
+
+#: funtips.h:88
+msgid "TEK save to image and open"
+msgstr ""
+
+#: funtips.h:89
+#, fuzzy
+msgid "copy Title"
+msgstr "タイトルをコピー(&T)"
+
+#: funtips.h:90
+msgid "save to image and open"
+msgstr ""
+
+#: funtips.h:91
+#, fuzzy
+msgid "Start Search"
+msgstr "検索(&E)"
+
+#: funtips.h:92
+#, fuzzy
+msgid "toggle scroll bar"
+msgstr "スクロールバー"
+
+#: funtips.h:93
+msgid "toggle show dim margins"
+msgstr ""
+
+#: funtips.h:94
+msgid "toggle show status line"
+msgstr ""
+
+#: funtips.h:95
+msgid "toggle borders"
+msgstr ""
+
+#: funtips.h:96
+msgid "toggle show tabs"
+msgstr ""
+
+#: funtips.h:97
+msgid "toggle show Indicator"
+msgstr ""
+
+#: funtips.h:98
+msgid "toggle surport partline"
+msgstr ""
+
+#: funtips.h:99
+msgid "toggle Pointer style"
+msgstr ""
+
+#: funtips.h:100
+msgid "start Adjust transparency level"
+msgstr ""
+
+#: funtips.h:101
+msgid "toggle opaque"
+msgstr ""
+
+#: funtips.h:102
+#, fuzzy
+msgid "Clear Scroll back"
+msgstr "スクロールバックをクリア"
+
+#: funtips.h:103
+#, fuzzy
+msgid "Reset"
+msgstr "リセット(&R)"
+
+#: funtips.h:104
+msgid "Reset Force"
+msgstr ""
+
+#: funtips.h:105
+#, fuzzy
+msgid "Tek Reset"
+msgstr "リセット(&R)"
+
+#: funtips.h:106
+#, fuzzy
+msgid "flip screen"
+msgstr "スクリーン切り替え(&S)"
+
+#: funtips.h:107
+msgid "refresh"
+msgstr ""
+
+#: funtips.h:108
+msgid "toggle Lock Title"
+msgstr ""
+
+#: funtips.h:109
+msgid "Clear Title"
+msgstr ""
+
+#: funtips.h:110
+#, fuzzy
+msgid "Child Break "
+msgstr "Breakを送信"
+
+#: funtips.h:111
+msgid "Send an INTR char"
+msgstr ""
+
+#: funtips.h:112
+msgid "toggle logging"
+msgstr ""
+
+#: funtips.h:113
+msgid "toggle show charinfo"
+msgstr ""
+
+#: funtips.h:114
+msgid "toggle vt220 mode"
+msgstr ""
+
+#: funtips.h:115
+msgid "toggle auto repeat"
+msgstr ""
+
+#: funtips.h:116
+msgid "toggle bidi"
+msgstr ""
+
+#. __("");
+#. char* TP(hyper_down           )=__("");
+#. char* TP(compose_down         )=__("");
+#: funtips.h:121
+msgid "Start Unicode Char"
+msgstr ""
+
+#, fuzzy
+#~ msgid "Minimize"
+#~ msgstr "最小化(&N)"
+
+#, fuzzy
+#~ msgid "Maximize"
+#~ msgstr "最大化(&X)"
+
+#, fuzzy
+#~ msgid "resize"
+#~ msgstr "現在のサイズ(&U)"
+
+#, fuzzy
+#~ msgid "minimize"
+#~ msgstr "最小化(&N)"
+
+#, fuzzy
+#~ msgid "maximize"
+#~ msgstr "最大化(&X)"
+
+#, fuzzy
+#~ msgid "close"
+#~ msgstr "閉じる(&C)"
+
+#, fuzzy
+#~ msgid "new-window"
+#~ msgstr "ウィンドウ"
+
+#, fuzzy
+#~ msgid "default-size"
+#~ msgstr "既定のサイズ"
+
+#, fuzzy
+#~ msgid "fullscreen"
+#~ msgstr "全画面(&F)"
+
+#, fuzzy
+#~ msgid "win-restore"
+#~ msgstr "元のサイズに戻す(&R)"
+
+#, fuzzy
+#~ msgid "hor-right-1"
+#~ msgstr "右(&R)"
+
+#, fuzzy
+#~ msgid "scroll-top"
+#~ msgstr "スクロールバー"
+
+#, fuzzy
+#~ msgid "scroll-end"
+#~ msgstr "スクロールバー"
+
+#, fuzzy
+#~ msgid "scroll-pgdn"
+#~ msgstr "スクロールバー"
+
+#, fuzzy
+#~ msgid "scroll-lndn"
+#~ msgstr "スクロールバー"
+
+#, fuzzy
+#~ msgid "scroll-prev"
+#~ msgstr "スクロールバー"
+
+#, fuzzy
+#~ msgid "clear-scroll-lock"
+#~ msgstr "スクロールバックをクリア"
+
+#, fuzzy
+#~ msgid "options"
+#~ msgstr "オプション"
+
+#, fuzzy
+#~ msgid "select-all"
+#~ msgstr "すべてを選択(&A)"
+
+#, fuzzy
+#~ msgid "win-paste"
+#~ msgstr "ペースト(&P)"
+
+#, fuzzy
+#~ msgid "copy-text"
+#~ msgstr "テキストとしてコピー"
+
+#, fuzzy
+#~ msgid "paste-path"
+#~ msgstr "ペースト(&P)"
+
+#, fuzzy
+#~ msgid "copy-paste"
+#~ msgstr "ペースト(&P)"
+
+#, fuzzy
+#~ msgid "search"
+#~ msgstr "検索(&E)"
+
+#, fuzzy
+#~ msgid "scrollbar"
+#~ msgstr "スクロールバー"
+
+#, fuzzy
+#~ msgid "transparency-level"
+#~ msgstr "透明度"
+
+#, fuzzy
+#~ msgid "clear-scrollback"
+#~ msgstr "スクロールバックをクリア"
+
+#, fuzzy
+#~ msgid "reset"
+#~ msgstr "リセット(&R)"
+
+#, fuzzy
+#~ msgid "flipscreen"
+#~ msgstr "スクリーン切り替え(&S)"
+
+#, fuzzy
+#~ msgid "break"
+#~ msgstr "Breakを送信"
 
 #~ msgid "&Select..."
 #~ msgstr "選択(&S)..."
@@ -2586,17 +3216,11 @@ msgstr "色"
 #~ msgid "&Shift"
 #~ msgstr "Shift(&S)"
 
-#~ msgid "&Ctrl"
-#~ msgstr "Ctrl(&C)"
-
 #~ msgid "&Alt"
 #~ msgstr "Alt(&A)"
 
 #~ msgid "Copy as &HTML"
 #~ msgstr "HTMLとしてコピー(&H)"
-
-#~ msgid "&Paste"
-#~ msgstr "ペースト(&P)"
 
 #~ msgid "E&xtend"
 #~ msgstr "拡張(&X)"
@@ -2636,9 +3260,6 @@ msgstr "色"
 
 #~ msgid "&Left"
 #~ msgstr "左(&L)"
-
-#~ msgid "&Right"
-#~ msgstr "右(&R)"
 
 #~ msgid "UI language"
 #~ msgstr "UI言語"
@@ -2789,10 +3410,6 @@ msgstr "色"
 #~ msgstr "スクロール行数(&B)"
 
 #, fuzzy
-#~ msgid "ScrollMod"
-#~ msgstr "スクロールバー"
-
-#, fuzzy
 #~ msgid "Terminal Options"
 #~ msgstr "端末設定"
 
@@ -2807,10 +3424,6 @@ msgstr "色"
 #, fuzzy
 #~ msgid "BellPopup"
 #~ msgstr "ポップアップ(&P)"
-
-#, fuzzy
-#~ msgid "SuspendWhileSelecting"
-#~ msgstr "選択中に一時停止する"
 
 #, fuzzy
 #~ msgid "EmojiPlacement"
@@ -2865,20 +3478,11 @@ msgstr "色"
 #~ msgid "Shift+"
 #~ msgstr "Shift+"
 
-#~ msgid "&Restore"
-#~ msgstr "元のサイズに戻す(&R)"
-
 #~ msgid "&Move"
 #~ msgstr "移動(&M)"
 
 #~ msgid "&Size"
 #~ msgstr "サイズ変更(&S)"
-
-#~ msgid "Mi&nimize"
-#~ msgstr "最小化(&N)"
-
-#~ msgid "Ma&ximize"
-#~ msgstr "最大化(&X)"
 
 #~ msgid "Scroll&bar"
 #~ msgstr "スクロールバー(&B)"

@@ -4,12 +4,11 @@
 # Gore Liu <goreliu@126.com>, 2017.
 # GeekDuanLian <dl@pbstu.com>, 2022.
 #
-#: config.c:3400
 msgid ""
 msgstr ""
 "Project-Id-Version: mintty\n"
 "Report-Msgid-Bugs-To: https://github.com/mintty/mintty/issues/700\n"
-"POT-Creation-Date: 2024-09-30 20:36+0800\n"
+"POT-Creation-Date: 2024-10-14 13:54+0800\n"
 "PO-Revision-Date: 2022-06-20 23:00+0800\n"
 "Last-Translator: GeekDuanLian <dl@pbstu.com>\n"
 "Language-Team: \n"
@@ -20,7 +19,7 @@ msgstr ""
 "X-Generator: Poedit 2.0.3\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
-#: charset.c:228 charset.c:239 winmain.c:4541 winmain.c:4548 winmain.c:4897
+#: charset.c:228 charset.c:239 winmain.c:4536 winmain.c:4543 winmain.c:4898
 msgid "(Default)"
 msgstr "(默认)"
 
@@ -204,7 +203,7 @@ msgstr "左边"
 msgid "right"
 msgstr "右边"
 
-#: config.c:177 config.c:211 config.c:242 config.c:3402
+#: config.c:177 config.c:211 config.c:242 config.c:3413
 msgid "none"
 msgstr "无"
 
@@ -501,7 +500,7 @@ msgid "Ignoring option '%s' with missing value"
 msgstr "忽略 '%s' 选项，因为缺少值"
 
 #. __ %1$s: config file name, %2$s: error message
-#: config.c:1530
+#: config.c:1531
 msgid ""
 "Could not save options to '%s':\n"
 "%s."
@@ -530,186 +529,195 @@ msgstr "无法加载网络主题"
 msgid "Cannot store theme file"
 msgstr "无法储存主题文件"
 
-#: config.c:3298
+#: config.c:3309
 msgid "About..."
 msgstr "关于..."
 
-#: config.c:3299
+#: config.c:3310
 msgid "&Save"
 msgstr "保存"
 
-#: config.c:3301
+#: config.c:3312
 msgid "&Cancel"
 msgstr "取消"
 
-#: config.c:3303
+#: config.c:3314
 msgid "&Apply"
 msgstr "应用(&A)"
 
-#: config.c:3358
+#: config.c:3369
 msgid "Ansi:"
 msgstr "Ansi:"
 
-#: config.c:3383 configdef.h:288
+#: config.c:3394 configdef.h:291
 msgid "C&urrent size"
 msgstr "当前大小(&U)"
 
-#: config.c:3403
+#: config.c:3414
 msgid "Scale image to term size"
 msgstr "缩放图像到终端大小"
 
-#: config.c:3404
+#: config.c:3415
 msgid "Scale term to image ration"
 msgstr "缩放到图像比例"
 
-#: config.c:3405
+#: config.c:3416
 msgid "use Image as titled texture"
 msgstr "平铺"
 
-#: config.c:3406
+#: config.c:3417
 msgid "Scale image to term size,keep ratio,then titles"
 msgstr "保持比例缩放图像平铺"
 
-#: config.c:3407
+#: config.c:3418
 msgid "Use desktop background"
 msgstr "使用桌面图像"
 
-#: config.c:3410
+#: config.c:3421
 msgid "alpha"
 msgstr "通道"
 
-#: config.c:3415
+#: config.c:3426
 msgid "T&heme Save"
 msgstr "保存主题"
 
-#: config.c:3432
+#: config.c:3443
 msgid "► &Play"
 msgstr "► 播放(&P)"
+
+#: config.c:3452
+msgid "&Ctrl"
+msgstr "&Ctrl"
 
 #: textprint.c:44 textprint.c:128
 msgid "[Printing...] "
 msgstr "[打印中...] "
 
-#: winctrls.c:1355 windialog.c:938
+#: winctrls.c:338
+#, fuzzy
+msgid "Left Right"
+msgstr "右(&R)"
+
+#: winctrls.c:1062 windialog.c:937
 msgid "OK"
 msgstr "确定"
 
-#: winctrls.c:1356 windialog.c:939
+#: winctrls.c:1063 windialog.c:938
 msgid "Cancel"
 msgstr "取消"
 
 #. __ Font chooser: title bar label
-#: winctrls.c:1362
+#: winctrls.c:1069
 msgid "Font "
 msgstr "字体 "
 
 #. __ Font chooser: button
-#: winctrls.c:1365
+#: winctrls.c:1072
 msgid "&ApplyA"
 msgstr "应用(&A)"
 
 #. __ Font chooser:
-#: winctrls.c:1367
+#: winctrls.c:1074
 msgid "&Font:"
 msgstr "字体(&F)："
 
 #. __ Font chooser:
-#: winctrls.c:1369
+#: winctrls.c:1076
 msgid "Font st&yle:"
 msgstr "字体样式(&Y)"
 
 #. __ Font chooser:
-#: winctrls.c:1371
+#: winctrls.c:1078
 msgid "&Size:"
 msgstr "大小(&S)"
 
 #. __ Font chooser:
-#: winctrls.c:1373
+#: winctrls.c:1080
 msgid "Sample"
 msgstr "实例"
 
 #. __ Font chooser: text sample ("AaBbYyZz" by default)
-#: winctrls.c:1377 winctrls.c:1633 winctrls.c:1823
+#: winctrls.c:1084 winctrls.c:1333 winctrls.c:1518
 msgid "Ferqœm’4€"
 msgstr "ABC abc 文字实例"
 
 #. __ Font chooser: this field is only shown with FontMenu=1
-#: winctrls.c:1393
+#: winctrls.c:1100
 msgid "Sc&ript:"
 msgstr "字符集："
 
 #. __ Font chooser: this field is only shown with FontMenu=1
-#: winctrls.c:1395
+#: winctrls.c:1102
 msgid "<A>Show more fonts</A>"
 msgstr "<A>显示更多字体</A>"
 
 #. __ Colour chooser: title bar label
-#: winctrls.c:1401
+#: winctrls.c:1108
 msgid "Colour "
 msgstr "颜色 "
 
 #. __ Colour chooser:
-#: winctrls.c:1415 winctrls.c:1427
+#: winctrls.c:1122 winctrls.c:1134
 msgid "B&asic colours:"
 msgstr "基本颜色(&B)："
 
 #. __ Colour chooser:
-#: winctrls.c:1436
+#: winctrls.c:1143
 msgid "&Custom colours:"
 msgstr "自定义颜色(&C)："
 
 #. __ Colour chooser:
-#: winctrls.c:1443
+#: winctrls.c:1150
 msgid "De&fine Custom Colours >>"
 msgstr "定义当前颜色(&F)>>"
 
 #. __ Colour chooser:
-#: winctrls.c:1446 configdef.h:73
+#: winctrls.c:1153 configdef.h:73
 msgid "Colour"
 msgstr "颜色"
 
 #. __ Colour chooser:
-#: winctrls.c:1448
+#: winctrls.c:1155
 msgid "|S&olid"
 msgstr "|纯色(&O)"
 
 #. __ Colour chooser:
-#: winctrls.c:1450
+#: winctrls.c:1157
 msgid "&Hue:"
 msgstr "色调(&H)"
 
 #. __ Colour chooser:
-#: winctrls.c:1453
+#: winctrls.c:1160
 msgid "&Sat:"
 msgstr "饱和度(&S)"
 
 #. __ Colour chooser:
-#: winctrls.c:1455
+#: winctrls.c:1162
 msgid "&Lum:"
 msgstr "亮度(&L)"
 
 #. __ Colour chooser:
-#: winctrls.c:1457
+#: winctrls.c:1164
 msgid "&Red:"
 msgstr "红色(&R)："
 
 #. __ Colour chooser:
-#: winctrls.c:1459
+#: winctrls.c:1166
 msgid "&Green:"
 msgstr "绿色(&G)："
 
 #. __ Colour chooser:
-#: winctrls.c:1461
+#: winctrls.c:1168
 msgid "&Blue:"
 msgstr "蓝色(&B)："
 
 #. __ Colour chooser:
-#: winctrls.c:1464
+#: winctrls.c:1171
 msgid "A&dd to Custom Colours"
 msgstr "添加到自定义颜色(&D)"
 
 #. __ Options: dialog title
-#: windialog.c:219 windialog.c:883
+#: windialog.c:219 windialog.c:882
 msgid "Options"
 msgstr "选项"
 
@@ -718,259 +726,259 @@ msgstr "选项"
 msgid "available"
 msgstr "可用"
 
-#: windialog.c:936
+#: windialog.c:935
 msgid "I see"
 msgstr "我了解了"
 
-#: windialog.c:968 windialog.c:995
+#: windialog.c:967 windialog.c:994
 msgid "Error"
 msgstr "错误"
 
 #. __ Context menu, session switcher ("virtual tabs") menu label
-#: wininput.c:199
+#: wininput.c:183
 msgid "Session switcher"
 msgstr "切换会话"
 
-#: wininput.c:211
+#: wininput.c:193
 msgid "Session launcher"
 msgstr "启动会话"
 
-#: wininput.c:357
+#: wininput.c:327
 msgid "&Close"
 msgstr "关闭(&C)"
 
 #. __ System menu:
-#: wininput.c:367
+#: wininput.c:337
 msgid "New &Win"
 msgstr "新建窗口(&W)"
 
 #. __ Context menu:
-#: wininput.c:370
+#: wininput.c:340
 msgid "&Copy"
 msgstr "复制(&C)"
 
-#: wininput.c:380
+#: wininput.c:350
 msgid "Copy → Paste"
 msgstr "复制 → 粘贴"
 
-#: wininput.c:386
+#: wininput.c:356
 msgid "&Paste "
 msgstr "粘贴(&P) "
 
-#: wininput.c:391
+#: wininput.c:361
 msgid "S&earch"
 msgstr "搜索(&E)"
 
-#: wininput.c:395
+#: wininput.c:365
 msgid "&Log to File[I]"
 msgstr "写入到文件(&L)[I]"
 
-#: wininput.c:396
+#: wininput.c:366
 msgid "&Log to File[O]"
 msgstr "写入到文件(&L)[O]"
 
-#: wininput.c:397
+#: wininput.c:367
 msgid "&Log to File[IO]"
 msgstr "写入到文件(&L)[IO]"
 
-#: wininput.c:399
+#: wininput.c:369
 msgid "&Log to File"
 msgstr "写入到日志文件(&L)"
 
-#: wininput.c:403
+#: wininput.c:373
 msgid "Character &Info"
 msgstr "字符详情(&I)"
 
-#: wininput.c:405
+#: wininput.c:375
 msgid "VT220 Keyboard"
 msgstr "VT200 键盘"
 
-#: wininput.c:406
+#: wininput.c:376
 msgid "&Reset"
 msgstr "重置(&R)"
 
-#: wininput.c:410
+#: wininput.c:380
 msgid "&Default Size"
 msgstr "默认大小(&D)"
 
-#: wininput.c:412
+#: wininput.c:382
 msgid "Tabbar(&H)"
 msgstr "标签行(&H)"
 
-#: wininput.c:419
+#: wininput.c:389
 msgid "Scrollbar(&S)"
 msgstr "滚动条(&S)"
 
-#: wininput.c:423
+#: wininput.c:393
 msgid "&Border[T]"
 msgstr "边框(&B)[细]"
 
-#: wininput.c:424
+#: wininput.c:394
 msgid "&Border[N]"
 msgstr "边框(&B)[无]"
 
-#: wininput.c:425
+#: wininput.c:395
 msgid "&Border"
 msgstr "边框(&B)"
 
-#: wininput.c:428
+#: wininput.c:398
 msgid "PartLine(&K)"
 msgstr "半行模式(&K)"
 
-#: wininput.c:429
+#: wininput.c:399
 msgid "Indicator(&J)"
 msgstr "指示器(&J)"
 
-#: wininput.c:430
+#: wininput.c:400
 msgid "&Full Screen"
 msgstr "全屏(&F)"
 
-#: wininput.c:433
+#: wininput.c:403
 msgid "Flip Screen(&W)"
 msgstr "备用屏幕(&S)"
 
 #. __ Context menu:
-#: wininput.c:439 configdef.h:352
+#: wininput.c:409 configdef.h:354
 msgid "Status Line"
 msgstr "状态行"
 
-#: wininput.c:445 wininput.c:640
+#: wininput.c:415 wininput.c:599
 msgid "Copy T&Itle"
 msgstr "复制标题(&I)"
 
 #. __ Context menu:
-#: wininput.c:446 wininput.c:603 wininput.c:641
+#: wininput.c:416 wininput.c:564 wininput.c:600
 msgid "&Options..."
 msgstr "选项(&O)..."
 
 #. __ Context menu:
-#: wininput.c:531
+#: wininput.c:493
 msgid "Ope&n"
 msgstr "打开(&O)"
 
-#: wininput.c:532 wininput.c:635
+#: wininput.c:494 wininput.c:594
 msgid "New &Tab\twin+T"
 msgstr "新建标签(&T)\twin+T"
 
-#: wininput.c:533 wininput.c:634
+#: wininput.c:495 wininput.c:593
 msgid "&Kill tab\twin+w"
 msgstr "关闭标签(&K)\twin+w"
 
-#: wininput.c:535 wininput.c:632
+#: wininput.c:497 wininput.c:591
 msgid "&Previous tab\twin+<-"
 msgstr "前一标签\tWin+<-"
 
-#: wininput.c:536 wininput.c:631
+#: wininput.c:498 wininput.c:590
 msgid "&Next tab\twin+->"
 msgstr "下一标签\tWin+->"
 
-#: wininput.c:537 wininput.c:629
+#: wininput.c:499 wininput.c:588
 msgid "Move to &Left\twin+<-"
 msgstr "标签左移\tWin+Shift+<-"
 
-#: wininput.c:538 wininput.c:630
+#: wininput.c:500 wininput.c:589
 msgid "Move to &Right\twin+->"
 msgstr "标签右移\tWin+Shift+->"
 
-#: wininput.c:542
+#: wininput.c:504
 msgid "Copy as text"
 msgstr "以纯文本复制"
 
-#: wininput.c:543 configdef.h:271
+#: wininput.c:505 configdef.h:274
 msgid "Copy with TABs"
 msgstr "以纯文本复制（包括 &Tab）"
 
-#: wininput.c:544
+#: wininput.c:506
 msgid "Copy as RTF"
 msgstr "以 RTF 复制"
 
-#: wininput.c:545
+#: wininput.c:507
 msgid "Copy as HTML text"
 msgstr "以 HTML 文本复制"
 
-#: wininput.c:546
+#: wininput.c:508
 msgid "Copy as HTML"
 msgstr "以 HTML 复制"
 
-#: wininput.c:547
+#: wininput.c:509
 msgid "Copy as HTML full"
 msgstr "以 HTML 全部复制"
 
-#: wininput.c:553
+#: wininput.c:515
 msgid "Select &All"
 msgstr "全选(&A)"
 
-#: wininput.c:554
+#: wininput.c:516
 msgid "Save as &Image"
 msgstr "保存截图(&I)"
 
 #. __ Context menu: write terminal window contents as HTML file
-#: wininput.c:566
+#: wininput.c:528
 msgid "HTML Screen Dump"
 msgstr "HTML 屏幕转储"
 
 #. __ Context menu: clear scrollback buffer (lines scrolled off the window)
-#: wininput.c:574
+#: wininput.c:536
 msgid "Clear Scrollback"
 msgstr "清除滚动历史"
 
 #. __ Context menu: generate a TTY BRK condition (tty line interrupt)
-#: wininput.c:589
+#: wininput.c:551
 msgid "Send Break"
 msgstr "发送 Break"
 
-#: wininput.c:649
+#: wininput.c:608
 msgid "N&Ew Win"
 msgstr "新建窗口(&E)"
 
-#: wininput.c:654
+#: wininput.c:613
 msgid "New T&Ab"
 msgstr "新建标签(&A)"
 
 #. __ Context menu, user commands
-#: wininput.c:724
+#: wininput.c:674
 msgid "User commands"
 msgstr "用户命令"
 
-#: wininput.c:3572 wininput.c:3574 wininput.c:3576 wininput.c:3606
-#: wininput.c:3632
+#: wininput.c:3002 wininput.c:3004 wininput.c:3006 wininput.c:3028
+#: wininput.c:3048
 msgid "[NO SCROLL] "
 msgstr "［暂停滚屏］"
 
-#: wininput.c:3573 wininput.c:3578 wininput.c:3617 wininput.c:3645
+#: wininput.c:3003 wininput.c:3008 wininput.c:3037 wininput.c:3057
 msgid "[SCROLL MODE] "
 msgstr "［滚屏模式］"
 
-#: winmain.c:2369
+#: winmain.c:2352
 msgid "Processes are running in session:"
 msgstr "在当前会话中还运行着进程："
 
-#: winmain.c:2370
+#: winmain.c:2353
 msgid "Close anyway?"
 msgstr "确认关闭？"
 
-#: winmain.c:2394
+#: winmain.c:2377
 msgid "Reset terminal?"
 msgstr "重置 终端？"
 
-#: winmain.c:2604
+#: winmain.c:2587
 msgid "Try '--help' for more information"
 msgstr "使用 --help 参数运行来了解如何使用"
 
-#: winmain.c:2612
+#: winmain.c:2595
 msgid "Could not load icon"
 msgstr "无法加载图标"
 
-#: winmain.c:4271
+#: winmain.c:4261
 msgid "Usage:"
 msgstr "用法："
 
-#: winmain.c:4272
+#: winmain.c:4262
 msgid "[OPTION]... [ PROGRAM [ARG]... | - ]"
 msgstr "[选项]... [ 程序名 [参数]... | - ]"
 
 #. __ help text (output of -H / --help), after initial line ("synopsis")
-#: winmain.c:4275
+#: winmain.c:4265
 msgid ""
 "Start a new terminal session running the specified program or the user's "
 "shell.\n"
@@ -1026,6 +1034,7 @@ msgid ""
 "  -B, --Border frame|void  Use thin/no window border\n"
 "      --nopin           Make this instance not pinnable to taskbar\n"
 "  -H, --help            Display help and exit\n"
+"      --helpfunc        Display functions help and exit\n"
 "  -V, --version         Print version information and exit\n"
 "      --fg COLOR        set ForegroundColour\n"
 "      --bg COLOR        set BackgroundColour\n"
@@ -1087,6 +1096,7 @@ msgstr ""
 "  -B, --Border frame|void  使用窗口窄边框/无边框\n"
 "      --nopin           让这个实例不能被固定在任务栏上\n"
 "  -H, --help            显示帮助信息然后退出\n"
+"      --helpfunc        显示功能帮助信息然后退出\n"
 "  -V, --version         打印版本信息然后退出\n"
 "      --fg COLOR        设置前景色\n"
 "      --cr COLOR        设置光标色\n"
@@ -1100,31 +1110,31 @@ msgstr ""
 "      --sl NUM          设置设置回滚行数\n"
 "请查阅 man 手册了解更多命令行选项和配置相关帮助内容。\n"
 
-#: winmain.c:4528
+#: winmain.c:4523
 msgid "Duplicate option '%s'"
 msgstr "重复的选项 %s"
 
-#: winmain.c:4541 winmain.c:4548 winmain.c:4897
+#: winmain.c:4536 winmain.c:4543 winmain.c:4898
 msgid "WSL distribution '%s' not found"
 msgstr "找不到 '%s' WSL 发行版"
 
-#: winmain.c:4578 winmain.c:4667
+#: winmain.c:4573 winmain.c:4662
 msgid "Unknown option '%s'"
 msgstr "未知的选项 %s"
 
-#: winmain.c:4580
+#: winmain.c:4575
 msgid "Option '%s' requires an argument"
 msgstr "选项 %s 需要一个参数"
 
-#: winmain.c:4607
+#: winmain.c:4602
 msgid "Syntax error in position argument '%s'"
 msgstr "position 选项的参数 '%s' 有语法错误"
 
-#: winmain.c:4618
+#: winmain.c:4613
 msgid "Syntax error in size argument '%s'"
 msgstr "size 选项的参数 '%s' 有语法错误"
 
-#: winmain.c:4771
+#: winmain.c:4772
 msgid "Syntax error in geometry argument '%s'"
 msgstr "geometry 选项的参数 '%s' 有语法错误"
 
@@ -1734,699 +1744,1163 @@ msgid "Key_ScrollLock"
 msgstr "滚动锁定键"
 
 #: configdef.h:239
-msgid "KeyFunctions"
-msgstr "F功能键"
-
-#: configdef.h:240
 msgid "ManageLEDs"
 msgstr "管理指示灯"
 
 #. __("ShootFoot")                              )
 #. _CFGDEFD(CBOOL    ,old_keyfuncs_keypad    ,0               ,       IS(0),OPT_BOOL         ,OPF_CHK  ,3,0,0,"OldKeyFunctionsKeypad"    ,__("OldKeyFunctionsKeypad")                  )
-#: configdef.h:244
+#: configdef.h:243
+#, fuzzy
+msgid "HotKeys"
+msgstr "按键"
+
+#: configdef.h:243
+#, fuzzy
+msgid "Hotkey Setting"
+msgstr "快捷键定义"
+
+#: configdef.h:245
+msgid "KeyFunctions"
+msgstr "F功能键"
+
+#: configdef.h:247
 msgid "Mouse"
 msgstr "鼠标"
 
-#: configdef.h:244
+#: configdef.h:247
 msgid "Mouse functions"
 msgstr "鼠标功能"
 
-#: configdef.h:246
+#: configdef.h:249
 msgid "Clic&ks place command line cursor"
 msgstr "使用鼠标点击来定位光标(&K)"
 
-#: configdef.h:247
+#: configdef.h:250
 msgid "Delimiters:"
 msgstr "分隔符:"
 
-#: configdef.h:248
+#: configdef.h:251
 msgid "Word Characters:"
 msgstr "单词字符:"
 
-#: configdef.h:249
+#: configdef.h:252
 msgid "Click actions"
 msgstr "单击动作"
 
-#: configdef.h:250
+#: configdef.h:253
 msgid "Right mouse button"
 msgstr "鼠标右键"
 
-#: configdef.h:251
+#: configdef.h:254
 msgid "Middle mouse button"
 msgstr "鼠标中键"
 
-#: configdef.h:252
+#: configdef.h:255
 msgid "Clicks Send to App"
 msgstr "鼠标点击发送到应用"
 
-#: configdef.h:253
+#: configdef.h:256
 msgid "Modifier for overriding default"
 msgstr "覆盖默认配置的修饰键"
 
-#: configdef.h:255
+#: configdef.h:258
 msgid "OpeningClicks"
 msgstr "扩展选择鼠标点击"
 
-#: configdef.h:256
+#: configdef.h:259
 msgid "OpeningMod"
 msgstr "扩展选择控制键"
 
-#: configdef.h:258
+#: configdef.h:261
 msgid "ZoomMouse"
 msgstr "鼠标缩放"
 
-#: configdef.h:259
+#: configdef.h:262
 msgid "HideMouse"
 msgstr "隐藏鼠标"
 
-#: configdef.h:260
+#: configdef.h:263
 msgid "ElasticMouse"
 msgstr "弹性鼠标"
 
-#: configdef.h:261
+#: configdef.h:264
 msgid "LinesPerMouseWheelNotch"
 msgstr "鼠标滚动行数"
 
-#: configdef.h:263
+#: configdef.h:266
 msgid "MousePointer"
 msgstr "鼠标指针"
 
-#: configdef.h:264
+#: configdef.h:267
 msgid "AppMousePointer"
 msgstr "应用鼠标指针"
 
-#: configdef.h:266
+#: configdef.h:269
 msgid "Selection"
 msgstr "选中"
 
-#: configdef.h:266
+#: configdef.h:269
 msgid "Selection and clipboard"
 msgstr "选中字符和剪切板功能"
 
-#: configdef.h:268
+#: configdef.h:271
 msgid "Clear selection on input"
 msgstr "输入后取消选中"
 
-#: configdef.h:269
+#: configdef.h:272
 msgid "Clipboard"
 msgstr "剪切板"
 
-#: configdef.h:270
+#: configdef.h:273
 msgid "Cop&y on select"
 msgstr "选中后立即复制(&Y)"
 
-#: configdef.h:272
+#: configdef.h:275
 msgid "Copy as &rich text"
 msgstr "以富文本复制(&R)"
 
-#: configdef.h:273
+#: configdef.h:276
 msgid "CopyAsHTML"
 msgstr "以HTML复制"
 
-#: configdef.h:274
+#: configdef.h:277
 msgid "CopyAsRTFFont"
 msgstr "以RTF复制字体名"
 
-#: configdef.h:275
+#: configdef.h:278
 msgid "CopyAsRTFFontName"
 msgstr "以RTF复制字体名"
 
-#: configdef.h:276
+#: configdef.h:279
 msgid "CopyAsRTFFontHeight"
 msgstr "以RTF复制字体大小"
 
-#: configdef.h:277
+#: configdef.h:280
 msgid "Trim space from selection"
 msgstr "移除不必要的空格"
 
-#: configdef.h:278
+#: configdef.h:281
 msgid "Allow setting selection"
 msgstr "允许使用 OSC 52 转义字符设置剪切板内容"
 
-#: configdef.h:279
+#: configdef.h:282
 msgid "allow_paste_selection"
 msgstr "允许使用 OSC 52 转义字符粘贴"
 
-#: configdef.h:280
+#: configdef.h:283
 msgid "Show size while selecting (0..12)"
 msgstr "选择时显示尺寸 (0:关闭/1-12:方位)"
 
-#: configdef.h:281
+#: configdef.h:284
 msgid "Suspend output while selecting"
 msgstr "选择时暂停屏幕输出"
 
-#: configdef.h:283 configdef.h:367
+#: configdef.h:286 configdef.h:369
 msgid "Window"
 msgstr "窗口"
 
-#: configdef.h:283
+#: configdef.h:286
 msgid "Window Options"
 msgstr "窗口属性"
 
-#: configdef.h:284
+#: configdef.h:287
 msgid "Default size"
 msgstr "默认大小"
 
-#: configdef.h:286
+#: configdef.h:289
 msgid "Colu&mns"
 msgstr "列数"
 
-#: configdef.h:287
+#: configdef.h:290
 msgid "Ro&ws"
 msgstr "行数"
 
-#: configdef.h:289
+#: configdef.h:292
 msgid "Re&wrap on resize"
 msgstr "调整大小时重新折行(&W)"
 
-#: configdef.h:290
+#: configdef.h:293
 msgid "Scrollbar"
 msgstr "滚动条"
 
-#: configdef.h:292
+#: configdef.h:295
 msgid "Scroll&back lines"
 msgstr "保存历史行数"
 
-#: configdef.h:293
+#: configdef.h:296
 msgid "MaxScrollbackLines"
 msgstr "最大保存历史行数"
 
-#: configdef.h:294
+#: configdef.h:297
 msgid "Modifier for scrolling"
 msgstr "用于滚动的修饰键"
 
-#: configdef.h:296
+#: configdef.h:299
 msgid "&PgUp and PgDn scroll without modifier"
 msgstr "即使不按修饰键，也用 PgUp 和 PgDn 滚动"
 
-#: configdef.h:297
+#: configdef.h:300
 msgid "BorderStyle"
 msgstr "边框类型"
 
-#: configdef.h:298
+#: configdef.h:301
 msgid "&AllocConsole ,Some console programs need it."
 msgstr "&AllocConsole,部分console程序需要"
 
-#: configdef.h:301
+#: configdef.h:304
 msgid "Search Bar"
 msgstr "搜索条"
 
-#: configdef.h:302
+#: configdef.h:305
 msgid "SearchContext"
 msgstr "搜索条高度"
 
-#: configdef.h:304
+#: configdef.h:307
 msgid "Terminal"
 msgstr "终端"
 
-#: configdef.h:304
+#: configdef.h:307
 msgid "Terminal features"
 msgstr "终端特性"
 
-#: configdef.h:307
+#: configdef.h:310
 msgid "Term"
 msgstr "终端仿真"
 
-#: configdef.h:308
+#: configdef.h:311
 msgid "&Answerback"
 msgstr "应答(&A)"
 
-#: configdef.h:309
+#: configdef.h:312
 msgid "WrapTab"
 msgstr "折行tab"
 
-#: configdef.h:310
+#: configdef.h:313
 msgid "OldWrapModes"
 msgstr "旧折行模式"
 
-#: configdef.h:311
+#: configdef.h:314
 msgid "Enable132ColumnSwitching"
 msgstr "允许80/132列的DECCOLM序列"
 
-#: configdef.h:312
+#: configdef.h:315
 msgid "Bell"
 msgstr "响铃"
 
-#: configdef.h:313
+#: configdef.h:316
 msgid "BellType"
 msgstr "响铃类型"
 
-#: configdef.h:314
+#: configdef.h:317
 msgid "BellFiles"
 msgstr "响铃文件"
 
-#: configdef.h:315
+#: configdef.h:318
 msgid "BellFile"
 msgstr "响铃文件"
 
-#: configdef.h:316
+#: configdef.h:319
 msgid "BellFile2"
 msgstr "响铃文件2"
 
-#: configdef.h:317
+#: configdef.h:320
 msgid "BellFile3"
 msgstr "响铃文件3"
 
-#: configdef.h:318
+#: configdef.h:321
 msgid "BellFile4"
 msgstr "响铃文件4"
 
-#: configdef.h:319
+#: configdef.h:322
 msgid "BellFile5"
 msgstr "响铃文件5"
 
-#: configdef.h:320
+#: configdef.h:323
 msgid "BellFile6"
 msgstr "响铃文件6"
 
-#: configdef.h:321
+#: configdef.h:324
 msgid "BellFile7"
 msgstr "响铃文件7"
 
-#: configdef.h:322
+#: configdef.h:325
 msgid "BellFreq"
 msgstr "响铃频率"
 
-#: configdef.h:323
+#: configdef.h:326
 msgid "BellLen"
 msgstr "响铃时长"
 
-#: configdef.h:325
+#: configdef.h:328
 msgid "&Highlight in taskbar"
 msgstr "任务栏高亮(&H)"
 
-#: configdef.h:326
+#: configdef.h:329
 msgid "&Popup"
 msgstr "弹出(&P)"
 
-#: configdef.h:327
+#: configdef.h:330
 msgid "&Flash"
 msgstr "闪屏(&F)"
 
-#: configdef.h:328
+#: configdef.h:331
 msgid "BellFlashStyle"
 msgstr "响铃闪屏类型"
 
-#: configdef.h:330
+#: configdef.h:333
 msgid "BellInterval"
 msgstr "响铃间隔"
 
-#: configdef.h:331
+#: configdef.h:334
 msgid "PlayTone"
 msgstr "声调类型"
 
-#: configdef.h:332
+#: configdef.h:335
 msgid "Printer"
 msgstr "打印机"
 
-#: configdef.h:334
+#: configdef.h:337
 msgid "System"
 msgstr "系统"
 
-#: configdef.h:334
+#: configdef.h:337
 msgid "system setting"
 msgstr "系统设置"
 
-#: configdef.h:335
+#: configdef.h:338
 msgid "Dialog"
 msgstr "对话框"
 
-#: configdef.h:337
+#: configdef.h:340
 msgid "Options Level"
 msgstr "选项显示级别"
 
-#: configdef.h:338
+#: configdef.h:341
 msgid "Language"
 msgstr "界面语言"
 
-#: configdef.h:339
+#: configdef.h:342
 msgid "scale_options_width"
 msgstr "配置对话框缩放"
 
-#: configdef.h:341
+#: configdef.h:344
 msgid "Options Font"
 msgstr "选项字体"
 
-#: configdef.h:342
+#: configdef.h:345
 msgid "OptionsFontname"
 msgstr "选项字体名"
 
-#: configdef.h:343
+#: configdef.h:346
 msgid "OptionsFontHeight"
 msgstr "选项字体大小"
 
-#: configdef.h:347
+#: configdef.h:349
 msgid "Prompt on &close"
 msgstr "关闭时提示"
 
-#: configdef.h:348
+#: configdef.h:350
 msgid "ConfirmReset"
 msgstr "重置时提示"
 
-#: configdef.h:349
+#: configdef.h:351
 msgid "ConfirmMultiLinePasting"
 msgstr "多行粘贴时提示"
 
-#: configdef.h:350
+#: configdef.h:352
 msgid "NoAltScreen"
 msgstr "禁止屏幕切换"
 
-#: configdef.h:351
+#: configdef.h:353
 msgid "EraseToScrollback"
 msgstr "清除到滚动历史"
 
-#: configdef.h:353
+#: configdef.h:355
 msgid "Bidi"
 msgstr "bidi从右向左的支持"
 
-#: configdef.h:354
+#: configdef.h:356
 msgid "DisplaySpeedup"
 msgstr "显示加速"
 
-#: configdef.h:356
+#: configdef.h:358
 msgid "Command line Options"
 msgstr "命令行选项"
 
-#: configdef.h:357
+#: configdef.h:359
 msgid "Class"
 msgstr "窗口类名"
 
-#: configdef.h:358
+#: configdef.h:360
 msgid "Hold"
 msgstr "命令运行结束后维持窗口开启状态"
 
-#: configdef.h:359
+#: configdef.h:361
 msgid "ExitWrite"
 msgstr "退出时输出"
 
-#: configdef.h:360
+#: configdef.h:362
 msgid "ExitTitle"
 msgstr "退出时窗口标题"
 
-#: configdef.h:361
+#: configdef.h:363
 msgid "Icon"
 msgstr "窗口图标"
 
-#: configdef.h:362
+#: configdef.h:364
 msgid "Log"
 msgstr "输出日志到文件或者标准输出"
 
-#: configdef.h:363
+#: configdef.h:365
 msgid "Logging"
 msgstr "进行Log"
 
-#: configdef.h:364
+#: configdef.h:366
 msgid "Utmp"
 msgstr "create_utmp"
 
-#: configdef.h:365
+#: configdef.h:367
 msgid "Title"
 msgstr "窗口标题"
 
-#: configdef.h:366
+#: configdef.h:368
 msgid "title_settable"
 msgstr "窗口标题可更改"
 
-#: configdef.h:368
+#: configdef.h:370
 msgid "X"
 msgstr "窗口X"
 
-#: configdef.h:369
+#: configdef.h:371
 msgid "Y"
 msgstr "窗口Y"
 
-#: configdef.h:370
+#: configdef.h:372
 msgid "Daemonize"
 msgstr "守护进程,使用 Win 快捷键来启动新实例"
 
-#: configdef.h:371
+#: configdef.h:373
 msgid "Daemonize Always"
 msgstr "守护进程,使用 Win 快捷键来启动新实例"
 
-#: configdef.h:373
+#: configdef.h:375
 msgid "Hidden Options"
 msgstr "隐藏选项"
 
-#: configdef.h:374
+#: configdef.h:376
 msgid "SuppressSGR"
 msgstr "抑制SGR"
 
-#: configdef.h:375
+#: configdef.h:377
 msgid "SuppressDEC"
 msgstr "抑制DEC"
 
-#: configdef.h:376
+#: configdef.h:378
 msgid "SuppressWIN"
 msgstr "抑制WIN"
 
-#: configdef.h:377
+#: configdef.h:379
 msgid "SuppressOSC"
 msgstr "抑制OSC"
 
-#: configdef.h:378
+#: configdef.h:380
 msgid "SuppressNRC"
 msgstr "抑制NRC"
 
-#: configdef.h:379
+#: configdef.h:381
 msgid "SuppressMouseWheel"
 msgstr "抑制鼠标滚轮"
 
-#: configdef.h:380
+#: configdef.h:382
 msgid "FilterPasteControls"
 msgstr "过滤粘贴控制"
 
-#: configdef.h:381
+#: configdef.h:383
 msgid "GuardNetworkPaths"
 msgstr "保护网络路径"
 
-#: configdef.h:382
+#: configdef.h:384
 msgid "BracketedPasteByLine"
 msgstr "按行包括粘贴"
 
-#: configdef.h:383
+#: configdef.h:385
 msgid "PrintableControls"
 msgstr "可打印控制符"
 
-#: configdef.h:384
+#: configdef.h:386
 msgid "CharNarrowing"
 msgstr "字符变窄"
 
-#: configdef.h:385
+#: configdef.h:387
 msgid "SaveFilename"
 msgstr "保存文件名格式"
 
-#: configdef.h:386
+#: configdef.h:388
 msgid "AppID"
 msgstr "应用ID"
 
-#: configdef.h:387
+#: configdef.h:389
 msgid "AppName"
 msgstr "应用名字"
 
-#: configdef.h:388
+#: configdef.h:390
 msgid "AppLaunchCmd"
 msgstr "应用启动命令"
 
-#: configdef.h:389
+#: configdef.h:391
 msgid "DropCommands"
 msgstr "drop命令"
 
-#: configdef.h:390
+#: configdef.h:392
 msgid "ExitCommands"
 msgstr "退出命令"
 
-#: configdef.h:391
+#: configdef.h:393
 msgid "UserCommands"
 msgstr "用户命令"
 
-#: configdef.h:392
+#: configdef.h:394
 msgid "CtxMenuFunctions"
 msgstr "Ctx菜单功能"
 
-#: configdef.h:393
+#: configdef.h:395
 msgid "SysMenuFunctions"
 msgstr "Sys菜单功能"
 
-#: configdef.h:394
+#: configdef.h:396
 msgid "UserCommandsPath"
 msgstr "用户命令路径"
 
-#: configdef.h:395
+#: configdef.h:397
 msgid "SessionCommands"
 msgstr "会话命令"
 
-#: configdef.h:396
+#: configdef.h:398
 msgid "TaskCommands"
 msgstr "任务命令"
 
-#: configdef.h:397
+#: configdef.h:399
 msgid "ConPTY"
 msgstr "支持conpty"
 
-#: configdef.h:398
+#: configdef.h:400
 msgid "LoginFromShortcut"
 msgstr "快捷方式登录模式"
 
-#: configdef.h:399
+#: configdef.h:401
 msgid "MenuMouse"
 msgstr "鼠标右键菜单"
 
-#: configdef.h:400
+#: configdef.h:402
 msgid "MenuCtrlMouse"
 msgstr "鼠标Ctrl右键菜单"
 
-#: configdef.h:401
+#: configdef.h:403
 msgid "MenuMouse5"
 msgstr "鼠标Alt右键菜单"
 
-#: configdef.h:402
+#: configdef.h:404
 msgid "MenuTitleCtrlLeft"
 msgstr "边框左键菜单"
 
-#: configdef.h:403
+#: configdef.h:405
 msgid "MenuTitleCtrlRight"
 msgstr "边框右键菜单"
 
-#: configdef.h:404
+#: configdef.h:406
 msgid "SessionGeomSync"
 msgstr "会话同步布局"
 
-#: configdef.h:405
+#: configdef.h:407
 msgid "ColSpacing"
 msgstr "列间隙"
 
-#: configdef.h:406
+#: configdef.h:408
 msgid "RowSpacing"
 msgstr "行间距"
 
-#: configdef.h:407
+#: configdef.h:409
 msgid "AutoLeading"
 msgstr "自动间隙"
 
-#: configdef.h:408
+#: configdef.h:410
 msgid "Ligatures"
 msgstr "字符合并"
 
-#: configdef.h:409
+#: configdef.h:411
 msgid "LigaturesSupport"
 msgstr "支持字符合并"
 
-#: configdef.h:410
+#: configdef.h:412
 msgid "BoxDrawing"
 msgstr "绘制盒子"
 
-#: configdef.h:411
+#: configdef.h:413
 msgid "HandleDPI"
 msgstr "处理DPI变化"
 
-#: configdef.h:412
+#: configdef.h:414
 msgid "CheckVersionUpdate"
 msgstr "更新检测"
 
-#: configdef.h:413
+#: configdef.h:415
 msgid "IMECursorColour"
 msgstr "IME光标颜色"
 
-#: configdef.h:414
+#: configdef.h:416
 msgid "SixelClipChars"
 msgstr "SixelClipChars"
 
-#: configdef.h:415
+#: configdef.h:417
 msgid "OldBold"
 msgstr "旧粗体"
 
-#: configdef.h:416
+#: configdef.h:418
 msgid "ShortLongOpts"
 msgstr "长短选项"
 
-#: configdef.h:417
+#: configdef.h:419
 msgid "BoldAsRainbowSparkles"
 msgstr "粗体特殊"
 
-#: configdef.h:418
+#: configdef.h:420
 msgid "HoverTitle"
 msgstr "悬浮标题"
 
-#: configdef.h:419
+#: configdef.h:421
 msgid "ProgressBar"
 msgstr "进度条"
 
-#: configdef.h:420
+#: configdef.h:422
 msgid "ProgressScan"
 msgstr "进度扫描"
 
-#: configdef.h:421
+#: configdef.h:423
 msgid "DimMargins"
 msgstr "半隐边界"
 
-#: configdef.h:422
+#: configdef.h:424
 msgid "Baud"
 msgstr "波特率"
 
-#: configdef.h:423
+#: configdef.h:425
 msgid "Bloom"
 msgstr "开花"
 
-#: configdef.h:424
+#: configdef.h:426
 msgid "OldOptions"
 msgstr "旧选项"
 
-#: configdef.h:425
+#: configdef.h:427
 msgid "OldXButtons"
 msgstr "旧X按键"
 
-#: configdef.h:426
+#: configdef.h:428
 msgid "wslbridge version,0:nobridge,1:wslbridge,2:wslbreadge2"
 msgstr "wslbridge 版本"
 
-#: configdef.h:427
+#: configdef.h:429
 msgid "wslDistribution,null is default"
 msgstr "wsl 分配"
 
 #. __("status_debug")             )
 #. _CFGDEFD(string   ,menu_menu              ,"bs"            ,       IS(0),OPT_STR          ,OPF_STR  ,1,0,5,"MenuMenu"                 ,__("MenuMenu")                 )
 #. _CFGDEFD(string   ,menu_ctrlmenu          ,"e|ls"          ,       IS(0),OPT_STR          ,OPF_STR  ,1,0,5,"MenuCtrlMenu"             ,__("MenuCtrlMenu")             )
-#: configdef.h:432
+#: configdef.h:434
 msgid "FontSize"
 msgstr "字体大小"
 
-#: configdef.h:433
+#: configdef.h:435
 msgid "Break"
 msgstr "发送 Break"
 
-#: configdef.h:434
+#: configdef.h:436
 msgid "Pause"
 msgstr "暂停键"
 
-#: configdef.h:435
+#: configdef.h:437
 msgid "CopyAsRTFFontSize"
 msgstr "以RTF复制字体大小"
 
-#: configdef.h:436
+#: configdef.h:438
 msgid "OldFontMenu"
 msgstr "旧字体字体"
 
-#: configdef.h:437
+#: configdef.h:439
 msgid "OptionsFontSize"
 msgstr "选项字体大小"
 
-#: configdef.h:438
+#: configdef.h:440
+msgid "gui_font_size"
+msgstr "配置对话框字体大小"
+
+#: configdef.h:441
 msgid "BoldAsBright"
 msgstr "粗体颜色"
 
-#: configdef.h:439
+#: configdef.h:442
 msgid "FontQuality"
 msgstr "字体平滑"
 
-#: configdef.h:440
+#: configdef.h:443
 msgid "UseSystemColours"
 msgstr "使用系统颜色"
 
-#~ msgid "&Select..."
-#~ msgstr "选择(&S)..."
+#: funtips.h:2
+msgid "Begin move window"
+msgstr "开始移动窗口"
 
-#~ msgid "- None -"
-#~ msgstr "无"
+#: funtips.h:3
+msgid "Resize window"
+msgstr "调整窗口大小"
+
+#: funtips.h:4 funtips.h:21
+msgid "Minimize Window"
+msgstr "最小化窗口"
+
+#: funtips.h:5 funtips.h:18
+msgid "Maximize Window"
+msgstr "最大化窗口"
+
+#: funtips.h:6
+msgid "Sysmenu"
+msgstr "系统菜单"
+
+#: funtips.h:7
+msgid "Close Window"
+msgstr "关闭窗口"
+
+#: funtips.h:8
+msgid "Close App"
+msgstr "关闭应用"
+
+#: funtips.h:9
+msgid "Close Tab"
+msgstr "关闭标签"
+
+#: funtips.h:10
+msgid "New Tab for current"
+msgstr "按当前新建标签"
+
+#: funtips.h:11
+msgid "New Window for current"
+msgstr "按当前新建窗口"
+
+#: funtips.h:12
+msgid "New Window for use define size&position"
+msgstr "指定大小位置新建窗口"
+
+#: funtips.h:13
+msgid "New Window for give monitor"
+msgstr "在给定显示器新建窗口"
+
+#: funtips.h:14
+msgid "Set Window Default Size"
+msgstr "窗口设为默认大小"
+
+#: funtips.h:15
+msgid "Zoom Window to Default Size"
+msgstr "缩放窗口到默认大小"
+
+#: funtips.h:16
+msgid "Zoom Window to Full Screen"
+msgstr "缩放到全屏"
+
+#: funtips.h:17
+msgid "Set Window Full Screen"
+msgstr "设为全屏"
+
+#: funtips.h:19
+msgid "Toggle Window Maximise"
+msgstr "切换窗口最大化"
+
+#: funtips.h:20
+msgid "restore Window"
+msgstr "恢复窗口"
+
+#: funtips.h:22
+msgid "toggle Minimize window"
+msgstr "切换最小化窗口"
+
+#: funtips.h:23
+msgid "toggle window always on top"
+msgstr "切换窗口置顶"
+
+#: funtips.h:24
+msgid "toggle Window can be sleep"
+msgstr "切换窗口可休眠"
+
+#: funtips.h:25
+msgid "Prev Tab"
+msgstr "前一标签"
+
+#: funtips.h:26
+msgid "Next Tab"
+msgstr "后一标签"
+
+#: funtips.h:27
+msgid "move current tab prev"
+msgstr "向前标签"
+
+#: funtips.h:28
+msgid "move current tab next"
+msgstr "向后标签"
+
+#: funtips.h:29
+msgid "Change Tab to curtab ind+n"
+msgstr "切换标签+n"
+
+#: funtips.h:30
+msgid "Change tab to n"
+msgstr "切换标签到n"
+
+#: funtips.h:31
+msgid "move cur tab to curtab ind+n"
+msgstr "移动标签+n"
+
+#: funtips.h:32
+msgid "decrease font size"
+msgstr "缩小字体"
+
+#: funtips.h:33
+msgid "increase font size"
+msgstr "增加字体"
+
+#: funtips.h:34
+msgid "set default font size"
+msgstr "默认字体大小"
+
+#: funtips.h:35
+msgid "decrease font size&adapt term size"
+msgstr "缩小字体并调整窗口"
+
+#: funtips.h:36
+msgid "increase font size&adapt term size"
+msgstr "增加字体并调整窗口"
+
+#: funtips.h:37
+msgid "set default font size&adapt term size"
+msgstr "默认字体大小并调整窗口"
+
+#: funtips.h:38
+msgid "de/increase font size "
+msgstr "缩放字体大小"
+
+#: funtips.h:39
+msgid "horscroll left  1 cell"
+msgstr "左滚"
+
+#: funtips.h:40
+msgid "horscroll Right 1 cell"
+msgstr "右滚"
+
+#: funtips.h:41
+msgid "horscroll left  1/10"
+msgstr "左滚1/10屏"
+
+#: funtips.h:42
+msgid "horscroll Right 1/10"
+msgstr "右滚1/10屏"
+
+#: funtips.h:43
+msgid "horsizing out 1 cell"
+msgstr "水平扩大"
+
+#: funtips.h:44
+msgid "horsizing in  1 cell"
+msgstr "水平缩小"
+
+#: funtips.h:45
+msgid "horsizing out 1/10  "
+msgstr "水平扩大1/10屏"
+
+#: funtips.h:46
+msgid "horsizing in  1/10  "
+msgstr "水平缩小1/10"
+
+#: funtips.h:47
+msgid "horsizing out 1 cell from right"
+msgstr "水平扩大,右侧"
+
+#: funtips.h:48
+msgid "horsizing in  1 cell from right"
+msgstr "水平缩小,右侧"
+
+#: funtips.h:49
+msgid "horsizing out 1/10   from right"
+msgstr "水平扩大1/10,右侧"
+
+#: funtips.h:50
+msgid "horsizing in  1/10   from right"
+msgstr "水平缩小1/10,右侧"
+
+#: funtips.h:51
+msgid "scroll to top "
+msgstr "滚动到顶部"
+
+#: funtips.h:52
+msgid "scroll to end "
+msgstr "滚动到末尾"
+
+#: funtips.h:53
+msgid "scroll page up"
+msgstr "上滚1页"
+
+#: funtips.h:54
+msgid "scroll page down"
+msgstr "下滚1页"
+
+#: funtips.h:55
+msgid "scroll line up"
+msgstr "上滚1行"
+
+#: funtips.h:56
+msgid "scroll line down"
+msgstr "下滚1行"
+
+#: funtips.h:57
+msgid "scroll to prev mark"
+msgstr "滚动到上一标记"
+
+#: funtips.h:58
+msgid "scroll to next mark"
+msgstr "滚动到下一标记"
+
+#: funtips.h:59
+msgid "set to scroll"
+msgstr "关闭不滚动"
+
+#: funtips.h:60
+msgid "set No Scroll"
+msgstr "设为不滚动"
+
+#: funtips.h:61
+msgid "toggle no scroll"
+msgstr "切换不滚动"
+
+#: funtips.h:62
+#, fuzzy
+msgid "set scroll mode"
+msgstr "滚动模式"
+
+#: funtips.h:63
+msgid "toggle scroll mode"
+msgstr "切换滚动模式"
+
+#: funtips.h:65
+msgid "Options Dialog"
+msgstr "选项对话框"
+
+#: funtips.h:66
+msgid "Ctrl mode"
+msgstr "控制模式"
+
+#: funtips.h:67
+msgid "sys Menu Or Popup Menu"
+msgstr "弹出菜单"
+
+#: funtips.h:68
+msgid "Popup Menu At Cursor"
+msgstr "在光标处弹出菜单"
+
+#: funtips.h:69
+msgid "Popup Menu At Mouse"
+msgstr "在鼠标位置弹出菜单"
+
+#: funtips.h:70
+msgid "Start Keyboard Select"
+msgstr "开始键盘选择"
+
+#: funtips.h:71 funtips.h:74
+msgid "Select All"
+msgstr "全选"
+
+#: funtips.h:72
+msgid "Copy"
+msgstr "复制"
+
+#: funtips.h:73
+msgid "Paste"
+msgstr "粘贴"
+
+#: funtips.h:75
+msgid "Open Select String"
+msgstr "打开选中字符串"
+
+#: funtips.h:76
+msgid "Copy As Text"
+msgstr "以纯文本复制"
+
+#: funtips.h:77
+msgid "Copy As Text with tabs"
+msgstr "以纯文本复制使用Tab"
+
+#: funtips.h:78
+msgid "Copy As Text without tabs"
+msgstr "以纯文本复制不使用使用Tab"
+
+#: funtips.h:79
+msgid "Copy As Rich Text format"
+msgstr "以富文本复制"
+
+#: funtips.h:80
+msgid "Copy As Html level 1"
+msgstr "以HTML格式复制1"
+
+#: funtips.h:81
+msgid "Copy As Html level 2"
+msgstr "以HTML格式复制2"
+
+#: funtips.h:82
+msgid "Copy As Html level 3"
+msgstr "以HTML格式复制3"
+
+#: funtips.h:83
+msgid "Paste Path"
+msgstr "粘贴路径"
+
+#: funtips.h:84
+msgid "Copy then Paste"
+msgstr "复制然后粘贴"
+
+#: funtips.h:85
+msgid "export as Html"
+msgstr "以HTML格式导出"
+
+#: funtips.h:86
+msgid "Print Screen"
+msgstr "打印屏幕"
+
+#: funtips.h:87
+msgid "TEK start New Page"
+msgstr "TEK开始新页"
+
+#: funtips.h:88
+msgid "TEK save to image and open"
+msgstr "TEK保存图像并打开"
+
+#: funtips.h:89
+msgid "copy Title"
+msgstr "复制标题"
+
+#: funtips.h:90
+msgid "save to image and open"
+msgstr "保存到图像然后打开"
+
+#: funtips.h:91
+msgid "Start Search"
+msgstr "开始搜索"
+
+#: funtips.h:92
+msgid "toggle scroll bar"
+msgstr "切换滚动条"
+
+#: funtips.h:93
+msgid "toggle show dim margins"
+msgstr "切换显示DIM边界"
+
+#: funtips.h:94
+msgid "toggle show status line"
+msgstr "切换显示状态行"
+
+#: funtips.h:95
+msgid "toggle borders"
+msgstr "切换边框类型"
+
+#: funtips.h:96
+msgid "toggle show tabs"
+msgstr "切换显示标签"
+
+#: funtips.h:97
+msgid "toggle show Indicator"
+msgstr "切换显示指示器"
+
+#: funtips.h:98
+msgid "toggle surport partline"
+msgstr "切换支持半行显示"
+
+#: funtips.h:99
+msgid "toggle Pointer style"
+msgstr "切换鼠标指针形状"
+
+#: funtips.h:100
+msgid "start Adjust transparency level"
+msgstr "开始调整透明度"
+
+#: funtips.h:101
+msgid "toggle opaque"
+msgstr "切换不透明"
+
+#: funtips.h:102
+msgid "Clear Scroll back"
+msgstr "清除滚动历史"
+
+#: funtips.h:103
+msgid "Reset"
+msgstr "重置"
+
+#: funtips.h:104
+msgid "Reset Force"
+msgstr "强制重置"
+
+#: funtips.h:105
+msgid "Tek Reset"
+msgstr "TEK重置"
+
+#: funtips.h:106
+msgid "flip screen"
+msgstr "备用屏幕"
+
+#: funtips.h:107
+msgid "refresh"
+msgstr "刷新"
+
+#: funtips.h:108
+msgid "toggle Lock Title"
+msgstr "切换锁定标题"
+
+#: funtips.h:109
+msgid "Clear Title"
+msgstr "清除标题"
+
+#: funtips.h:110
+msgid "Child Break "
+msgstr "关闭子进程"
+
+#: funtips.h:111
+msgid "Send an INTR char"
+msgstr "发送中断字符"
+
+#: funtips.h:112
+msgid "toggle logging"
+msgstr "切换记录"
+
+#: funtips.h:113
+msgid "toggle show charinfo"
+msgstr "切换显示字符信息"
+
+#: funtips.h:114
+msgid "toggle vt220 mode"
+msgstr "切换VT200模式"
+
+#: funtips.h:115
+msgid "toggle auto repeat"
+msgstr "切换键盘自动重复"
+
+#: funtips.h:116
+msgid "toggle bidi"
+msgstr "切换支持bidi"
+
+#. __("");
+#. char* TP(hyper_down           )=__("");
+#. char* TP(compose_down         )=__("");
+#: funtips.h:121
+msgid "Start Unicode Char"
+msgstr "开始输入Unicode字符"
+
+#, fuzzy
+#~ msgid "Hotkeys"
+#~ msgstr "快捷键"
 
 #~ msgid "@ Windows language @"
 #~ msgstr "@ Windows 语言 @"
@@ -2524,17 +2998,11 @@ msgstr "使用系统颜色"
 #~ msgid "&Shift"
 #~ msgstr "&Shift"
 
-#~ msgid "&Ctrl"
-#~ msgstr "&Ctrl"
-
 #~ msgid "&Alt"
 #~ msgstr "&Alt"
 
 #~ msgid "Copy as &HTML"
 #~ msgstr "以 HTML 复制"
-
-#~ msgid "&Paste"
-#~ msgstr "粘贴(&P)"
 
 #~ msgid "E&xtend"
 #~ msgstr "扩展(&E)"
@@ -2575,9 +3043,6 @@ msgstr "使用系统颜色"
 #~ msgid "&Left"
 #~ msgstr "左(&L)"
 
-#~ msgid "&Right"
-#~ msgstr "右(&R)"
-
 #~ msgid "UI language"
 #~ msgstr "界面语言"
 
@@ -2590,17 +3055,8 @@ msgstr "使用系统颜色"
 #~ msgid "Prompt about running processes on &close"
 #~ msgstr "退出时提示还在运行的进程(&C)"
 
-#~ msgid "Hotkey"
-#~ msgstr "快捷键"
-
-#~ msgid "hotkey define"
-#~ msgstr "快捷键定义"
-
 #~ msgid "hotkeys"
 #~ msgstr "快捷键"
-
-#~ msgid "gui_font_size"
-#~ msgstr "配置对话框字体大小"
 
 #~ msgid "Bold"
 #~ msgstr "粗体"
@@ -2728,9 +3184,6 @@ msgstr "使用系统颜色"
 #~ msgid "ScrollbackLines"
 #~ msgstr "保存历史行数"
 
-#~ msgid "ScrollMod"
-#~ msgstr "滚动模式"
-
 #~ msgid "PgUpDnScroll"
 #~ msgstr "即使不按修饰键，也用 PgUp 和 PgDn 滚动"
 
@@ -2754,9 +3207,6 @@ msgstr "使用系统颜色"
 
 #~ msgid "ConfirmExit"
 #~ msgstr "退出时提示还在运行的进程"
-
-#~ msgid "SuspendWhileSelecting"
-#~ msgstr "选择时暂停屏幕输出"
 
 #~ msgid "EmojiPlacement"
 #~ msgstr "表情布局"

@@ -32,8 +32,8 @@ enum {
   IDCX_0730      =  730,
   IDCX_0731      =  731,
   IDCX_TVSTATIC  = 1001,
-  IDCX_TREEVIEW,
-  IDCX_STDBASE,
+  IDCX_TREEVIEW  = 1002,
+  IDCX_STDBASE   = 1003,
   IDCX_APPLY     = IDCX_STDBASE  + 23,//1026
   IDCX_PANELBASE = IDCX_STDBASE  + 32,//1035
   IDCX_FONTLSP   = IDCX_PANELBASE+ 38,//1073
@@ -114,6 +114,7 @@ void winctrl_init(winctrls *);
 void winctrl_cleanup(winctrls *);
 void winctrl_layout(winctrls *, ctrlpos *, controlset *, int *id);
 int winctrl_handle_command(HWND hwnd,UINT msg, WPARAM wParam, LPARAM lParam);
+int winctrl_handle_notify(HWND hwnd,UINT msg, WPARAM wParam, LPARAM lParam);
 WPARAM win_set_font(HWND hwnd);//set font for gui,user do not release it;
 
 #endif

@@ -1,10 +1,15 @@
 #update from origin:
-vd(){vimdiff ~/dev/mintty/mintty/$1 ~/dev/mintty/mintty_org/$1 ~/dev/mintty/minttyo/$1}
-ve(){vimdiff ~/dev/mintty/mintty_org/$1 ~/dev/mintty/minttyo/$1}
-pd(){ \cp ~/dev/mintty/mintty_org/$1 ~/dev/mintty/mintty/$1 ;\cp ~/dev/mintty/mintty_org/$1 ~/dev/mintty/minttyo/$1 }
-dfs(){diff -r ~/dev/mintty/mintty_org/$1 ~/dev/mintty/minttyo/$1}
+rdir=~/dev/mintty
+ndir=$rdir/mintty_org
+odir=$rdir/minttyo
+sdir=$rdir/mintty
+vd(){vimdiff $sdir/$1 $ndir/$1 $odir/$1}
+ve(){vimdiff $ndir/$1 $odir/$1}
+pd(){ \cp $ndir/$1 $sdir/$1 ;\cp $ndir/$1 $odir/$1 }
+pe(){ \cp $ndir/$1 $odir/$1 }
+dfs(){diff -r $ndir/$1 $odir/$1}
 DD=.
-diff -r mintty_org/$DD minttyo/$DD >diffs
+diff -r $ndir/$DD $odir/$DD >diffs
 echo diff End >>diffs
 #diff -r mintty_org/LICENSE minttyo/LICENSE
 fnl(){

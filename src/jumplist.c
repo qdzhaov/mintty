@@ -19,7 +19,7 @@ typedef struct _PROCESSOR_NUMBER {
 #include <propkey.h>  // PKEY_Title
 
 #include "jumplist.h"
-#include "charset.h"
+//G #include "charset.h"
 #include "config.h"
 
 

@@ -2,14 +2,14 @@
 // originally written by kmiya@cluti (https://github.com/saitoha/sixel/blob/master/fromsixel.c)
 // Licensed under the terms of the GNU General Public License v3 or later.
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <ctype.h>   /* isdigit */
-#include <string.h>  /* memcpy */
+//G #include <stdlib.h>
+//G #include <stdio.h>
+//G #include <ctype.h>   /* isdigit */
+//G #include <string.h>  /* memcpy */
 
 #include "sixel.h"
 #include "sixel_hls.h"
-#include "winpriv.h"
+//G #include "winpriv.h"
 
 #define SIXEL_RGB(r, g, b) ((r) + ((g) << 8) +  ((b) << 16))
 #define PALVAL(n,a,m) (((n) * (a) + ((m) / 2)) / (m))

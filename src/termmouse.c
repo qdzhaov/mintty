@@ -5,8 +5,8 @@
 
 #include "termpriv.h"
 #include "win.h"
-#include "child.h"
-#include "charset.h"  // cs__utftowcs
+//G #include "child.h"
+//G #include "charset.h"  // cs__utftowcs
 #include "tek.h"
 
 
@@ -575,7 +575,7 @@ term_mouse_click(mouse_button b, mod_keys mods, pos p, int count)
       // WM_CAPTURECHANGED, WM_UNINITMENUPOPUP, WM_MENUSELECT, WM_EXITMENULOOP
       // trying to ignore WM_CAPTURECHANGED does not help
       if (!alt || fake_alt)
-        win_popup_menu(0,mods);
+        open_popup_menu(false, null, mods);
       else
         res = false;
     }

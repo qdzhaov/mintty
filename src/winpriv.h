@@ -4,7 +4,7 @@
 #include "win.h"
 #include "winids.h"
 
-#include <winbase.h>
+//G #include <winbase.h>
 #include <wingdi.h>
 #include <winuser.h>
 #include <imm.h>
@@ -101,11 +101,13 @@ typedef struct {
   int cell_width, cell_height;
 
   bool click_focus_token ;
-  int tabctrling;
-  LONG last_tabk_time  ;
+  LONG last_extk_time  ;
   ULONG last_wink_time;
-  uint pressedkey,pkeys,pwinkey;
+  HHOOK kb_hook ;
+  mod_keys hotkey_mods ;
+  uint pressedkey,pkeys,pwinkey,hotkey;
   int lwinkey,rwinkey,winkey,twinkey;
+  int extkey;
   bool kb_input ;
   //
   HWND wnd;        // the main terminal window
@@ -196,6 +198,7 @@ extern void provide_input(wchar);
 extern bool win_key_down(WPARAM, LPARAM);
 extern bool win_whotkey(WPARAM, LPARAM);
 extern void win_update_shortcuts();
+extern void setsck(int moda,uint key,int ft,void*func);
 extern bool win_key_up(WPARAM, LPARAM);
 extern void do_win_key_toggle(int vk, bool on);
 extern void win_csi_seq(const char * pre, const char * suf);
@@ -214,8 +217,6 @@ typedef struct SChild SChild;
 extern char * foreground_cwd(STerm* pterm);
 
 extern void toggle_status_line(void);
-
-extern void win_switch(bool back, bool alternate);
 
 extern int search_monitors(int * minx, int * miny, HMONITOR lookup_mon, int get_primary, MONITORINFO *mip);
 

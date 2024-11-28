@@ -3,11 +3,11 @@
 // Based on code from PuTTY-0.60 by Simon Tatham and team.
 // Licensed under the terms of the GNU General Public License v3 or later.
 
-#include "charset.h"
+//G #include "charset.h"
 
 #include "config.h"
-#include "child.h"    // child_update_charset
-#include "winpriv.h"  // support_wsl, font_ambig_wide, cygver_ge
+//G #include "child.h"    // child_update_charset
+//G #include "winpriv.h"  // support_wsl, font_ambig_wide, cygver_ge
 
 #if HAS_LOCALES
 #include <locale.h>
@@ -16,7 +16,7 @@
 
 #include <sys/utsname.h>
 
-#include <winbase.h>
+//G #include <winbase.h>
 #include <winnls.h>
 
 
@@ -1087,7 +1087,7 @@ wcsdup(const wchar * s)
 */
 
 #ifdef __CYGWIN__
-#include <sys/cygwin.h>  // cygwin_conv_path
+//G #include <sys/cygwin.h>  // cygwin_conv_path
 # if CYGWIN_VERSION_API_MINOR >= 181
 
 char *
@@ -1178,7 +1178,7 @@ path_posix_to_win_a(const char * p)
 }
 
 # else
-#include <winbase.h>
+//G #include <winbase.h>
 #include <winnls.h>
 
 char *

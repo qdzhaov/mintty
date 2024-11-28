@@ -3,13 +3,13 @@
 // Adapted from code from PuTTY-0.60 by Simon Tatham and team.
 // Licensed under the terms of the GNU General Public License v3 or later.
 
-#include "winpriv.h"
+//G #include "winpriv.h"
 #include "winsearch.h"
-#include "charset.h"  // wcscpy, wcsncat, combiningdouble
+//G #include "charset.h"  // wcscpy, wcsncat, combiningdouble
 #include "config.h"
 #include "winimg.h"  // winimgs_paint
 #include "tek.h"
-#include "child.h"
+//G #include "child.h"
 
 #include <winnls.h>
 #include <usp10.h>  // Uniscribe
@@ -89,6 +89,7 @@ static const wchar linedraw_chars[LDRAW_CHAR_NUM][LDRAW_CHAR_TRIES] = {
 
 // colour values; this should perhaps be part of struct term
 
+
 // diagnostic information flag
 bool show_charinfo = false;
 
@@ -100,6 +101,7 @@ int font_size;
 // scaled font size; pure font height, without spacing
 static int font_height;
 // character cell size, including spacing:
+
 // border padding:
 int PADDING = 1;
 int OFFSET = 0;
@@ -152,7 +154,6 @@ win_linedraw_char(int i)
   struct fontfam * ff = &fontfamilies[findex];
   return ff->win_linedraw_chars[i];
 }
-
 
 wchar *
 fontpropinfo()
@@ -634,6 +635,7 @@ win_init_fontfamily(HDC dc, int findex)
 {
   struct fontfam * ff = &fontfamilies[findex];
 
+
   trace_resize(("--- init_fontfamily\n"));
   TEXTMETRIC tm;
 
@@ -806,12 +808,6 @@ win_init_fontfamily(HDC dc, int findex)
   printf("font faw %d (dual %d [ambig %d])\n", faw, ff->font_dualwidth, font_ambig_wide);
 #endif
 
-  // Initialise VT100 linedraw character mappings.
-  // See what glyphs are available.
-  ushort glyphs[LDRAW_CHAR_NUM][LDRAW_CHAR_TRIES];
-  GetGlyphIndicesW(dc, *linedraw_chars, LDRAW_CHAR_NUM * LDRAW_CHAR_TRIES,
-                   *glyphs, true);
-
   // See what RTL glyphs are available.
   ushort rtlglyphs[2];
   GetGlyphIndicesW(dc, W("אا"), 2, rtlglyphs, true);
@@ -820,19 +816,22 @@ win_init_fontfamily(HDC dc, int findex)
     ff->no_rtl |= 4;
   //printf("RTL glyphs %04X %04X %d\n", rtlglyphs[0], rtlglyphs[1], ff->no_rtl);
 
+  // Initialise VT100 linedraw character mappings.
+  // See what glyphs are available.
+  ushort glyphs[LDRAW_CHAR_NUM][LDRAW_CHAR_TRIES];
+  GetGlyphIndicesW(dc, *linedraw_chars, LDRAW_CHAR_NUM * LDRAW_CHAR_TRIES,
+                   *glyphs, true);
+
   // For each character, try the list of possible mappings until either we
   // find one that has a glyph in the font or we hit the ASCII fallback.
   for (uint i = 0; i < LDRAW_CHAR_NUM; i++) {
+    bool decbox = 'j' <= i + '`' && i + '`' <= 'x';
     uint j = 0;
     while (linedraw_chars[i][j] >= 0x80 &&
+           !decbox &&  // no substitutes for self-drawn box graphics
            (glyphs[i][j] == 0xFFFF || glyphs[i][j] == 0x1F))
       j++;
     ff->win_linedraw_chars[i] = linedraw_chars[i][j];
-#define draw_vt100_line_drawing_chars
-#ifdef draw_vt100_line_drawing_chars
-    if ('j' - '`' <= i && i <= 'x' - '`')
-      ff->win_linedraw_chars[i] = linedraw_chars[i][0];
-#endif
   }
 
   ff->fonts[FONT_UNDERLINE] = create_font(ff->name, ff->fw_norm, true);
@@ -1003,10 +1002,12 @@ findFraktur(wstring * fnp)
   wcscpy(lf.lfFaceName, W(""));
   lf.lfPitchAndFamily = 0;
   lf.lfCharSet = ANSI_CHARSET;   // report only ANSI character range
+
   HDC dc = GetDC(0);
   EnumFontFamiliesExW(dc, 0, enum_fonts_find_Fraktur, (LPARAM)fnp, 0);
   ReleaseDC(0, dc);
 }
+
 
 /*
  * Initialize fonts for all configured font families.
@@ -1137,6 +1138,7 @@ static bool ime_open = false;
 
 static int update_skipped = 0;
 
+
 #define dont_debug_cursor 1
 
 static struct charnameentry {
@@ -1243,119 +1245,241 @@ toggle_charinfo()
   show_charinfo = !show_charinfo;
 }
 
+static char *
+get_char_info(termchar * cpoi, bool doret)
+{
+  init_charnametable();
+
+  static termchar * pp = 0;
+  static termchar prev; // = (termchar) {.cc_next = 0, .chr = 0, .attr = CATTR_DEFAULT};
+  char * cs = 0;
+
+  // return if base character same as previous and no combining chars
+  if (!doret && cpoi == pp && cpoi && cpoi->chr == prev.chr && !cpoi->cc_next)
+    return 0;
+
+#define dont_debug_emojis
+
+  if (cpoi && cfg.emojis && (cpoi->attr.attr & TATTR_EMOJI)) {
+    if (!doret && cpoi == pp)
+      return 0;
+    cs = get_emoji_description(cpoi);
+#ifdef debug_emojis
+    printf("Emoji sequence: %s\n", cs);
+#endif
+  }
+
+  pp = cpoi;
+
+  if (!cs && cpoi) {
+    prev = *cpoi;
+
+    cs = strdup("");
+
+    char * cn = strdup("");
+
+    xchar chbase = 0;
+#ifdef show_only_1_charname
+    bool combined = false;
+#endif
+    // show char codes
+    while (cpoi) {
+      cs = renewn(cs, strlen(cs) + 8 + 1);
+      char * cp = &cs[strlen(cs)];
+      xchar ci;
+      if (is_high_surrogate(cpoi->chr) && cpoi->cc_next && is_low_surrogate((cpoi + cpoi->cc_next)->chr)) {
+        ci = combine_surrogates(cpoi->chr, (cpoi + cpoi->cc_next)->chr);
+        sprintf(cp, "U+%05X ", ci);
+        cpoi += cpoi->cc_next;
+      }
+      else {
+        ci = cpoi->chr;
+        sprintf(cp, "U+%04X ", ci);
+      }
+      if (!chbase)
+        chbase = ci;
+      char * cni = charname(ci);
+      if (cni && *cni) {
+        cn = renewn(cn, strlen(cn) + strlen(cni) + 4);
+        sprintf(&cn[strlen(cn)], "| %s ", cni);
+      }
+
+      if (cpoi->cc_next) {
+#ifdef show_only_1_charname
+        combined = true;
+#endif
+        cpoi += cpoi->cc_next;
+      }
+      else
+        cpoi = null;
+    }
+#ifdef show_only_1_charname
+    char * cn = charname(chbase);
+    char * extra = combined ? " combined..." : "";
+    cs = renewn(cs, strlen(cs) + strlen(cn) + strlen(extra) + 1);
+    sprintf(&cs[strlen(cs)], "%s%s", cn, extra);
+#else
+    cs = renewn(cs, strlen(cs) + strlen(cn) + 1);
+    sprintf(&cs[strlen(cs)], "%s", cn);
+    free(cn);
+#endif
+    int n = strlen(cs) - 1;
+    if (cs[n] == ' ')
+      cs[n] = 0;
+  }
+
+  return cs;
+}
+
+static void
+show_status_line()
+{
+#if CYGWIN_VERSION_API_MINOR >= 74
+  term_cursor curs = term.curs;
+  term.st_active = true;
+  cattr erase_attr = term.erase_char.attr;
+
+  // get current character from normal screen cursor position
+  termline * displine = term.displines[term.curs.y];
+  termchar * dispchar = &displine->chars[term.curs.x];
+
+  term.curs.x = 0;
+  term.curs.y = term.rows;
+
+  colour bg = win_get_colour(FG_COLOUR_I);
+  bg = ((bg & 0xFEFEFEFE) >> 1) + ((win_get_colour(BG_COLOUR_I) & 0xFEFEFEFE) >> 1);
+  term.curs.attr.attr &= ~(ATTR_FGMASK | ATTR_BGMASK);
+  term.curs.attr.attr |= (TRUE_COLOUR << ATTR_FGSHIFT) | (TRUE_COLOUR << ATTR_BGSHIFT);
+  term.curs.attr.truefg = win_get_colour(BG_COLOUR_I);
+  term.curs.attr.truebg = bg;
+  term.erase_char.attr.attr &= ~(ATTR_FGMASK | ATTR_BGMASK);
+  term.erase_char.attr.attr |= (TRUE_COLOUR << ATTR_FGSHIFT) | (TRUE_COLOUR << ATTR_BGSHIFT);
+  term.erase_char.attr.truefg = win_get_colour(BG_COLOUR_I);
+  term.erase_char.attr.truebg = bg;
+
+  bool status_bell = false;
+  if (term.bell.last_bell) {
+    // flash status line bell 6 times for 2s
+    // - let's make that 5s, in order to smooth out chaotic blinking a bit
+    // for a better solution, we'd need a timer
+    int deltabell = (mtime() - term.bell.last_bell) / (5000 / 11);
+    if (deltabell < 11 && !(deltabell & 1))
+      status_bell = true;
+  }
+
+  if (status_bell) {
+    term.curs.utf = true;
+    term_update_cs();
+  }
+  wchar wstbuf[term.cols + 1];
+
+  wchar debug[22];
+  *debug = 0;
+  if (cfg.status_debug) {
+    wchar kblayout[KL_NAMELENGTH];
+    GetKeyboardLayoutNameW(kblayout);
+    wchar * kbl = kblayout;
+    while (*kbl == '0')
+      kbl++;
+    wcscpy(debug, W(" ["));
+    if (cfg.status_debug & 1)
+      wcscat(debug, kbl);
+    if (cfg.status_debug & 2) {
+      wcscat(debug, W("."));
+#ifdef use_mods_debug
+      extern uint mods_debug;
+      swprintf(&debug[wcslen(debug)], 9, W("%06X"), mods_debug);
+#endif
+    }
+    wcscat(debug, W("]"));
+  }
+
+  swprintf(wstbuf, term.cols + 1, W("%s%s%s%s%s%ls %s%s@%02d:%03d%s%s%s%s%s %ls%s"), 
+                 term.st_kb_flag ?
+                     (term.st_kb_flag == 16 ? "Hex "
+                      : term.st_kb_flag == 10 ? "Dec "
+                      : term.st_kb_flag == 8 ? "Oct "
+                      : term.st_kb_flag == 4 ? "Alt "
+                      : term.st_kb_flag == 2 ? "Com "
+                      : ""
+                     )
+                   : "",
+                 term.vt220_keys ? "VT220" : "",
+                 term.app_cursor_keys ? "↕" : "",
+                 term.app_keypad ? "±" : "",
+                 child_tty(&term),
+                 debug,
+                 term.printing ? "⎙" : "",
+                 term.bracketed_paste ? "⁅⁆" : "",
+                 curs.y, curs.x,
+                 term.on_alt_screen ? "A🖵" : "",
+                 term.insert ? "⎀" : "",
+                 term.curs.wrapnext ? "↵" : "",
+                 term.marg_left || term.marg_right != term.cols - 1
+                 || term.marg_top || term.marg_bot != term.rows - 1
+                   ? "⬚" : "",
+                 term.curs.origin ? "⊡" : "",
+                 status_bell ? W("🔔 ") : W(""),   // bell indicator 🔔 or 🛎️ 
+                 get_char_info(dispchar, true) ?: ""
+                 );
+  int n = 0;
+  for (wchar * cp = wstbuf; *cp; cp++)
+    if (is_high_surrogate(*cp) && is_low_surrogate(cp[1])) {
+      write_ucschar(*cp, cp[1], (n += 2, 2));  // simplified width assumptions
+      cp++;
+    }
+    else
+      write_char(*cp, (n++, 1));
+  for (; n < term.cols; n++)
+    write_char(W(' '), 1);
+
+  term.erase_char.attr = erase_attr;
+  term.st_active = false;
+  term.curs = curs;
+  if (status_bell) {
+    term_update_cs();
+  }
+#endif
+}
+
 static void
 show_curchar_info(char tag)
 {
   //if (term.st_type == 1) show_status_line(); //ZZ Fix me
+  (void)show_status_line;
   if (!show_charinfo)
     return;
-  init_charnametable();
+
   (void)tag;
-  static termchar * pp = 0;
-  static termchar prev; // = (termchar) {.cc_next = 0, .chr = 0, .attr = CATTR_DEFAULT};
 
   void show_char_msg(char * cs) {
     static char * prev = null;
-    if (!prev || 0 != strcmp(cs, prev)) {
+    char * _cs = cs ?: "";
+    if (!prev || 0 != strcmp(_cs, prev)) {
       //printf("[%c]%s\n", tag, cs);
-      if (nonascii(cs)) {
-        wchar * wcs = cs__utftowcs(cs);
+      if (nonascii(_cs)) {
+        wchar * wcs = cs__utftowcs(_cs);
         SetWindowTextW(wv.wnd, wcs);
-        delete(wcs);
+        free(wcs);
       }
       else
-        SetWindowTextA(wv.wnd, cs);
+        SetWindowTextA(wv.wnd, _cs);
     }
     if (prev)
-      delete(prev);
+      free(prev);
     prev = cs;
-  }
-
-  void show_char_info(termchar * cpoi) {
-    char * cs = 0;
-
-    // return if base character same as previous and no combining chars
-    if (cpoi == pp && cpoi && cpoi->chr == prev.chr && !cpoi->cc_next)
-      return;
-
-#define dont_debug_emojis
-
-    if (cfg.emojis && (cpoi->attr.attr & TATTR_EMOJI)) {
-      if (cpoi == pp)
-        return;
-      cs = get_emoji_description(cpoi);
-#ifdef debug_emojis
-      printf("Emoji sequence: %s\n", cs);
-#endif
-    }
-
-    pp = cpoi;
-
-    if (!cs && cpoi) {
-      prev = *cpoi;
-
-      cs = strdup("");
-
-      char * cn = strdup("");
-
-      xchar chbase = 0;
-#ifdef show_only_1_charname
-      bool combined = false;
-#endif
-      // show char codes
-      while (cpoi) {
-        cs = renewn(cs, strlen(cs) + 8 + 1);
-        char * cp = &cs[strlen(cs)];
-        xchar ci;
-        if (is_high_surrogate(cpoi->chr) && cpoi->cc_next && is_low_surrogate((cpoi + cpoi->cc_next)->chr)) {
-          ci = combine_surrogates(cpoi->chr, (cpoi + cpoi->cc_next)->chr);
-          sprintf(cp, "U+%05X ", ci);
-          cpoi += cpoi->cc_next;
-        }
-        else {
-          ci = cpoi->chr;
-          sprintf(cp, "U+%04X ", ci);
-        }
-        if (!chbase)
-          chbase = ci;
-        char * cni = charname(ci);
-        if (cni && *cni) {
-          cn = renewn(cn, strlen(cn) + strlen(cni) + 4);
-          sprintf(&cn[strlen(cn)], "| %s ", cni);
-        }
-
-        if (cpoi->cc_next) {
-#ifdef show_only_1_charname
-          combined = true;
-#endif
-          cpoi += cpoi->cc_next;
-        }
-        else
-          cpoi = null;
-      }
-#ifdef show_only_1_charname
-      char * cn = charname(chbase);
-      char * extra = combined ? " combined..." : "";
-      cs = renewn(cs, strlen(cs) + strlen(cn) + strlen(extra) + 1);
-      sprintf(&cs[strlen(cs)], "%s%s", cn, extra);
-#else
-      cs = renewn(cs, strlen(cs) + strlen(cn) + 1);
-      sprintf(&cs[strlen(cs)], "%s", cn);
-      delete(cn);
-#endif
-    }
-
-    show_char_msg(cs);  // does delete(cs);
   }
 
   int line = term.curs.y - term.disptop;
   if (line < 0 || line >= term.rows) {
-    show_char_info(null);
+    show_char_msg(0);
   }
   else {
     termline * displine = term.displines[line];
     termchar * dispchar = &displine->chars[term.curs.x];
-    show_char_info(dispchar);
+    char * cs = get_char_info(dispchar, false);
+    if (cs)
+      show_char_msg(cs);  // does free(cs);
   }
 }
 
@@ -1370,12 +1494,12 @@ do_update(void)
 #if defined(debug_cursor) && debug_cursor > 1
   printf("do_update cursor_on %d @%d,%d\n", term.cursor_on, term.curs.y, term.curs.x);
 #endif
+
   if (update_state == UPDATE_BLOCKED) {
     update_state = UPDATE_IDLE;
     return;
   }
   win_tab_actv();
-
   update_skipped++;
   int output_speed = term.lines_scrolled / (term.rows ?: cfg.winsize.y);
   term.lines_scrolled = 0;
@@ -1389,6 +1513,7 @@ do_update(void)
         || (update_skipped * update_timer < term.suspend_update)
      )
   {
+
     win_set_timer(do_update, update_timer);
     return;
   }
@@ -1419,7 +1544,6 @@ do_update(void)
     winimgs_paint();
   }
   win_tab_paint(dc);
-
   ReleaseDC(wv.wnd, dc);
 
   // Update scrollbar
@@ -1656,6 +1780,7 @@ win_set_ime_open(bool open)
 static bool tiled = false;
 static bool ratio = false;
 static bool wallp = false;
+static bool multi = false;
 static int wallp_style;
 static int alpha = -1;
 static LONG w = 0, h = 0;
@@ -1883,6 +2008,12 @@ load_background_image_brush(HDC dc, wstring fn)
       // keep aspect ratio of background image if requested
       if (ratio && cfg.backgfile.update&& abs((int)bw * h - (int)bh * w) > 5) {
         cfg.backgfile.update=0;
+      printf("isnewbg %d <%ls> <%ls>\n", isnewbg, cfg.background, prevbg);
+      if (ratio && isnewbg && abs((int)bw * h - (int)bh * w) > 5) {
+        if (prevbg)
+          free(prevbg);
+        prevbg = wcsdup(cfg.background);
+
         int xh, xw;
         if (bw * h < bh * w) {
           xh = h;
@@ -1911,6 +2042,21 @@ load_background_image_brush(HDC dc, wstring fn)
       // prepare source memory DC and select the source bitmap into it
       HDC dc0 = CreateCompatibleDC(dc);
       HBITMAP oldhbm0 = SelectObject(dc0, hbm);
+      // crop image for combined scaling and tiling (#1180)
+      if (multi) {
+        int imgw = w;
+        int imgh = h;
+        if (bw * h > w * bh) {
+          imgw = w;
+          imgh = bh * imgw / bw;
+        }
+        else if (bw * h < w * bh) {
+          imgh = h;
+          imgw = bw * imgh / bh;
+        }
+        w = imgw;
+        h = imgh;
+      }
 
       // prepare destination memory DC, 
       // create and select the destination bitmap into it
@@ -2112,58 +2258,76 @@ get_bg_filename(void)
     when '%': ratio = true;//%,Scale term to image ration, 
     when '*': tiled = true;//*,use Image as titled texture, 
     when '+': ;//+,Scale image to term size,keep ratio,then titles, 
-    when '=':{//= Use desktop background
+
+
+
+
+
+
+
+
+
+
 #if CYGWIN_VERSION_API_MINOR >= 74
-      wallp = true;
-      if (!wallpfn)
-        wallpfn = newn(wchar, MAX_PATH + 1);
+    when '=':{//= Use desktop background
+    wallp = true;
 
-      void readregstr(HKEY key, wstring attribute, wchar * val, DWORD len) {
-        DWORD type;
-        int err = RegQueryValueExW(key, attribute, 0, &type, (void *)val, &len);
-        if (err ||
-          !(type == REG_SZ || type == REG_EXPAND_SZ || type == REG_MULTI_SZ)
-          )
-          *val = 0;
-      }
+    if (!wallpfn)
+      wallpfn = newn(wchar, MAX_PATH + 1);
 
-      HKEY wpk = 0;
-      RegOpenKeyA(HKEY_CURRENT_USER, "Control Panel\\Desktop", &wpk);
-      if (wpk) {
-        readregstr(wpk, W("Wallpaper"), wallpfn, MAX_PATH);
-        wchar regval[22];
-        readregstr(wpk, W("TileWallpaper"), regval, lengthof(regval));
-        tiled = 0 == wcscmp(regval, W("1"));
-        readregstr(wpk, W("WallpaperStyle"), regval, lengthof(regval));
-        wallp_style = wcstol(regval, 0, 0);
-        //printf("wallpaper <%ls> tiled %d style %d\n", wallpfn, tiled, wallp_style);
-
-        if (tiled && !wallp_style) {
-          // can be used as brush directly
-        }
-        else {
-          // need to scale wallpaper later, when loading;
-          // not implemented, invalidate
-          *wallpfn = 0;
-          // possibly, according to docs, but apparently ignored, 
-          // also determine origin according to
-          // readregstr(wpk, W("WallpaperOriginX"), ...)
-          // readregstr(wpk, W("WallpaperOriginY"), ...)
-        }
-        RegCloseKey(wpk);
-      }
-#else
-      (void)wallp_style;
-#endif
+    void readregstr(HKEY key, wstring attribute, wchar * val, DWORD len) {
+      DWORD type;
+      int err = RegQueryValueExW(key, attribute, 0, &type, (void *)val, &len);
+      if (err ||
+        !(type == REG_SZ || type == REG_EXPAND_SZ || type == REG_MULTI_SZ)
+       )
+        *val = 0;
     }
+
+    HKEY wpk = 0;
+    RegOpenKeyA(HKEY_CURRENT_USER, "Control Panel\\Desktop", &wpk);
+    if (wpk) {
+      readregstr(wpk, W("Wallpaper"), wallpfn, MAX_PATH);
+      wchar regval[22];
+      readregstr(wpk, W("TileWallpaper"), regval, lengthof(regval));
+      tiled = 0 == wcscmp(regval, W("1"));
+      readregstr(wpk, W("WallpaperStyle"), regval, lengthof(regval));
+      wallp_style = wcstol(regval, 0, 0);
+      //printf("wallpaper <%ls> tiled %d style %d\n", wallpfn, tiled, wallp_style);
+
+      if (tiled && !wallp_style) {
+        // can be used as brush directly
+      }
+      else {
+        // need to scale wallpaper later, when loading;
+        // not implemented, invalidate
+        *wallpfn = 0;
+        // possibly, according to docs, but apparently ignored, 
+        // also determine origin according to
+        // readregstr(wpk, W("WallpaperOriginX"), ...)
+        // readregstr(wpk, W("WallpaperOriginY"), ...)
+      }
+      RegCloseKey(wpk);
+    }
+    }
+#else
+  (void)wallp_style;
+#endif
   }
-  alpha=cfg.backgfile.alpha;
   char * bf = cs__wcstombs(cfg.backgfile.fn);
   // try to extract an alpha value from file spec
+  alpha=cfg.backgfile.alpha;
+
+
+
+
+
+
+
   if (wallp)
     bgfn = wcsdup(wallpfn);
   else {
-    // path transformations
+    // path transformations:
     // for dynamic changes (OSC 11) they are already handled 
     // before setting cfg.backgfile in termout.c,
     // but for static configuration (option Background) they 
@@ -2193,6 +2357,7 @@ get_bg_filename(void)
       bf = dewbf;
     }
 #endif
+
     bgfn = path_posix_to_win_w(bf);
   }
 
@@ -2229,7 +2394,6 @@ load_background_brush(HDC dc)
   cr.top += OFFSET;
 
   wchar * bgfn = get_bg_filename();  // also set tiled and alpha
-
   if(!bgfn )return;
   HBITMAP
   load_background_bitmap(wstring fn)
@@ -2279,6 +2443,8 @@ load_background_brush(HDC dc)
     // this is now detected in win_paint by checking the brushes
     //else if (!bgbrush_bmp)
 #endif
+
+
   }
 #ifdef debug_gdiplus
   printf("loaded brush <%ls>: GDI %d GDI+ %d (tiled %d)\n", bgfn, !!bgbrush_bmp, !!bgbrush_img, tiled);
@@ -2314,6 +2480,7 @@ scale_to_image_ratio()
 {
 #if CYGWIN_VERSION_API_MINOR >= 74
   if (cfg.backgfile.type!= '%') return;
+
   wchar * bgfn = get_bg_filename();
 #ifdef debug_aspect_ratio
   printf("scale_to_image_ratio <%ls> ratio %d\n", bgfn, ratio);
@@ -2394,6 +2561,15 @@ _trace_line(char * tag, cattr attr, ushort lattr, wchar * text, int len)
 #define trace_line(tag)
 #endif
 
+
+#ifdef substitute_combining_chars
+/* Substitution of (some) combining characters by lookalike characters; 
+   this has not been needed anymore for a while already (see #295),
+   it was dropped for unpleasant side effects:
+   for a combined character like x̀, when displayed in two phases 
+   (e.g. with background or with cursor), the accent would 
+   skip to the next position
+*/
 static wchar
 combsubst(wchar comb, cattrflags attr)
 {
@@ -2457,6 +2633,8 @@ combsubst(wchar comb, cattrflags attr)
   }
   return comb;
 }
+#endif
+
 
 int
 termattrs_equal_fg(cattr * a, cattr * b)
@@ -2854,51 +3032,30 @@ win_text(int tx, int ty,wchar *text, int len, cattr attr, cattr *textattr, ushor
 #endif
   //if (kb_trace) {printf("[%ld] <win_text\n", mtime()); kb_trace = 0;}
 
-  int graph = (attr.attr & GRAPH_MASK) >> ATTR_GRAPH_SHIFT;
-  bool graph_vt52 = false;
-  bool boxpower = false;  // Box Drawing or Powerline symbols
-  //bool boxdraw = false;  // Box Drawing
   int findex = (attr.attr & FONTFAM_MASK) >> ATTR_FONTFAM_SHIFT;
-  // in order to save attributes bits, special graphic handling is encoded 
-  // in a compact form, combined with unused values of the font number;
-  // here we do some decoding and also recoding back to the previous format, 
-  // in order to avoid micro-refactoring in the code below, 
-  // where graphic encoding is interpreted bitwise in some cases;
-  // the font ranges used are:
-  //  <none> (graph part only): special for DEC Technical, VT52 fraction
-  //  11     VT100 Line Drawing, bit-wise encoded segments
-  //  12     VT100 scanlines 1...5
-  //  13     VT52 scanlines 1...8
-  //  14     Unicode Block Elements, part 1
-  //  15     Unicode Block Elements, part 2
+  bool boxpower = false;  // Box Drawing or Powerline symbols
+  bool boxcoded = false;  // coded DEC box drawing and scanlines
+  bool vt52fraction = false;
+  bool dectcs = false;
+  // self-drawn graphic glyphs and some special graphic handling are 
+  // indicated as unused font family number, in order to save attribute bits
+  //  11    Unicode Box Drawing and Powerline box drawing
+  //  12    encoded VT100 box drawing and VT100/VT52 scanlines
+  //  13    VT52 fraction numerators 3/ 5/ 7/
+  //  14    DEC Technical Character Set square root, sum segments, triangles
   if (findex > 10) {
-    if (findex == 12) // VT100 scanlines
-      graph <<= 4;
-    else if (findex == 13 && graph == 15) { // Private: geometric Powerline
-      graph = 0;
+    if (findex == 11)  // Unicode Box Drawing and Powerline box drawing
       boxpower = true;
-    }
-    else if (findex == 13 && graph == 0) { // Unicode Box Drawing
-      boxpower = true;
-      //boxdraw = true;
-    }
-    else if (findex == 13) { // VT52 scanlines
-      graph <<= 4;
-      graph_vt52 = true;
-    }
-    else if (findex >= 14)
-      graph |= 0x80 | ((findex & 1) << 4);
+    else if (findex == 12) // VT100 box drawing, VT100/VT52 scanlines
+      boxcoded = true;
+    else if (findex == 13) // VT52 fraction numerators
+      vt52fraction = true;
+    else if (findex == 14) // DEC Technical Character Set (TCS)
+      dectcs = true;
 
     findex = 0;
   }
-  else if (graph) {
-    if (graph == 0xF)
-      graph = 0xF7;
-    else if (graph == 0xE)
-      graph = 0xE0;
-    else
-      graph |= 0xE0;
-  }
+
   struct fontfam * ff = &fontfamilies[findex];
   // check whether font lacks support of given RTL bidi class
   // has_rtl:    1: R/Hebrew,    2: AL/Arabic,    4: other
@@ -2951,7 +3108,7 @@ win_text(int tx, int ty,wchar *text, int len, cattr attr, cattr *textattr, ushor
   bool default_bg = (attr.attr & ATTR_BGMASK) >> ATTR_BGSHIFT == BG_COLOUR_I;
   if (attr.attr & ATTR_REVERSE)
     default_bg = false;
-  cattr attr0 = attr;  // need unmodified colour attributes for combinings
+  //cattr attr0 = attr;  // needed unmodified colour attributes for combinings
   attr = apply_attr_colour(attr, ACM_TERM);
   colour fg = attr.truefg;
   colour bg = attr.truebg;
@@ -2978,10 +3135,17 @@ win_text(int tx, int ty,wchar *text, int len, cattr attr, cattr *textattr, ushor
     default_bg = false;
   }
 
-  if (has_cursor) {
+ /* Suppress graphic background at cursor position */
+  if (has_cursor)
     if (term_cursor_type() == CUR_BLOCK && (attr.attr & TATTR_ACTCURS))
       default_bg = false;
 
+ /* Cursor contrast adjustment for background or block cursor */
+  if (has_cursor && (phase < 2 || term_cursor_type() == CUR_BLOCK)) {
+    // To extend this heuristics to other cursor styles, 
+    // some tricky interworking needs to be sorted out (#1157);
+    // currently the assumption is that line cursors should be thin enough 
+    // to make this fix less important
     cursor_colour = wv.colours[ime_open ? IME_CURSOR_COLOUR_I : CURSOR_COLOUR_I];
     //printf("cc (ime_open %d) %06X\n", ime_open, cursor_colour);
 
@@ -3114,6 +3278,9 @@ win_text(int tx, int ty,wchar *text, int len, cattr attr, cattr *textattr, ushor
 #endif
 
   uint eto_options = ETO_CLIPPED;
+#ifdef glyph_output
+  // this mode of output processing with unclear purpose used to corrupt
+  // cursor and italic display of right-to-left scripts; disabled
   if (has_rtl) {
    /* We've already done right-to-left processing in the screen buffer,
     * so stop Windows from doing it again (and hence undoing our work).
@@ -3138,6 +3305,7 @@ win_text(int tx, int ty,wchar *text, int len, cattr attr, cattr *textattr, ushor
     trace_line(" >ChrPlc:");
     eto_options |= ETO_GLYPH_INDEX;
   }
+#endif
 
 
   bool combining = attr.attr & TATTR_COMBINING;
@@ -3145,9 +3313,12 @@ win_text(int tx, int ty,wchar *text, int len, cattr attr, cattr *textattr, ushor
 
   bool let_windows_combine = false;
   if (combining) {
+#ifdef substitute_combining_chars
    /* Substitute combining characters by overprinting lookalike glyphs */
+   /* Dropped for unpleasant effects, see comments at function combsubst */
     for (int i = 0; i < len; i++)
       text[i] = combsubst(text[i], attr.attr);
+#endif
    /* Determine characters that should be combined by Windows */
     if (len == 2) {
       if (text[0] == 'i' && (text[1] == 0x030F || text[1] == 0x0311))
@@ -3159,12 +3330,7 @@ win_text(int tx, int ty,wchar *text, int len, cattr attr, cattr *textattr, ushor
   }
 
   wchar * origtext = 0;
-  if (graph && graph < 0xE0) {
-    // clear codes for Block Elements, VT100 Line Drawing and "scanlines"
-    for (int i = 0; i < len; i++)
-      text[i] = ' ';
-  }
-  else if (boxpower) {
+  if (boxpower || boxcoded || dectcs) {
     // keep orig text in separate ref
     origtext = text;
     text = newn(wchar, len);
@@ -3401,10 +3567,14 @@ win_text(int tx, int ty,wchar *text, int len, cattr attr, cattr *textattr, ushor
 
   if (attr.attr & (ATTR_SUBSCR | ATTR_SUPERSCR)) {
     xt += wv.cell_width * 3 / 10;
-    if (attr.attr & ATTR_SUBSCR)
-      yt += wv.cell_height * 3 / 8;
-    else
-      yt += wv.cell_height * 1 / 8;
+    switch (attr.attr & (ATTR_SUBSCR | ATTR_SUPERSCR)) {
+      when ATTR_SUBSCR | ATTR_SUPERSCR:
+        yt += wv.cell_height * 10 / 32;  // 11 fits better but closer to subscr
+      when ATTR_SUBSCR:
+        yt += wv.cell_height * 13 / 32;  // 14 looks better but at some clipping
+      when ATTR_SUPERSCR:
+        yt += wv.cell_height * 1 / 8;
+    }
   }
   if (attr.attr & TATTR_SINGLE)
     yt += wv.cell_height / 4;
@@ -3517,6 +3687,7 @@ draw:;
     }
     DeleteObject(SelectObject(dc, oldpen));
 
+
     SelectClipRgn(dc, ur);
   }
   else
@@ -3554,6 +3725,7 @@ draw:;
       }
     }
     DeleteObject(SelectObject(dc, oldpen));
+
   }
 
  /* Overline */
@@ -3566,6 +3738,7 @@ draw:;
       LineTo(dc, x + ulen * char_width, y + l);
     }
     DeleteObject(SelectObject(dc, oldpen));
+  
   }
 
   int dxs_[len];
@@ -3577,20 +3750,10 @@ draw:;
     goto _return;
   }
 
- /* DEC Tech adjustments */
-  if (graph >= 0xE0) {  // adjust rendering of DEC Technical and VT52 fraction
-    if ((graph & ~1) == 0xE8)  // left square bracket corners
-      xt += line_width + 1;
-    else if ((graph & ~1) == 0xEA)  // right square bracket corners
-      xt -= line_width + 1;
-    else if (graph == 0xE7)  // middle angle: don't display ╳, draw (below)
-      for (int i = 0; i < len; i++)
-        text[i] = ' ';
-    else if (graph == 0xE0)  // square root base: rather draw (partially)
-      for (int i = 0; i < len; i++)
-        text[i] = 0x2502;
-    else if (graph == 0xF7)  // VT52 fraction numerator
-      yt -= line_width;
+ /* Partial glyph adjustments */
+  if (vt52fraction) {
+    // adjust position of VT52 fraction numerator
+    yt -= line_width;
   }
 
  /* Coordinate transformation per character */
@@ -3656,6 +3819,7 @@ draw:;
 
   text_out_start(dc, text, len, dxs);
 
+  // overstrike loop is for shadow or manual bold mode
   for (int xoff = 0; xoff < xwidth; xoff++) {
     if ((combining || combining_double) && !has_sea) {
       // Workaround for mangled display of combining characters;
@@ -3675,8 +3839,14 @@ draw:;
         SetBkMode(dc, TRANSPARENT);
         overwropt = 0;
       }
+
       // combining characters
-      textattr[0] = attr0; // need unmodified colour attributes for combinings
+      //textattr[0] = attr0; // need unmodified colour attributes for combinings
+      // but that spoils separate blinking, so revert commit 736da154
+      textattr[0] = attr;
+      // (which in turn spoiled substituted combined characters 
+      // while combsubst was still in use)
+
       for (int i = ulen; i < len; i += ulen) {
         // separate stacking of combining characters 
         // does not work with Uniscribe
@@ -3757,11 +3927,11 @@ skip_drawing:;
 #endif
 
   HRGN clipr;
-  void setclipr(int x, int y)
+  void setclipr(int x, int y, int n)
   {
     int clip_height = wv.cell_height 
                       * (lattr >= LATTR_TOP && ty < term_allrows - 1 ? 2 : 1);
-    clipr = CreateRectRgn(x, y, x + char_width, y + clip_height);
+    clipr = CreateRectRgn(x, y, x + n * char_width, y + clip_height);
     SelectClipRgn(dc, clipr);
   }
   void clearclipr()
@@ -3770,121 +3940,29 @@ skip_drawing:;
     DeleteObject(clipr);
   }
 
-  if (graph >= 0xE0) {  // fix DEC Technical characters, draw VT52 fraction
-    if ((graph & 0x0C) == 0x08) {
-      // square bracket corners already repositioned above
-    }
-    else {  // Sum segments to be (partially) drawn, 
-            // square root base, pointing triangles, VT52 fraction numerator
-      setclipr(x, y);
+  if (vt52fraction) {  // draw VT52 fraction numerators
+    setclipr(x, y, ulen);
 
-      int sum_width = line_width;
-      int y0 = (lattr == LATTR_BOT) ? y - wv.cell_height : y;
-      int yoff = (wv.cell_height - line_width) * 3 / 5;
-      if (lattr >= LATTR_TOP)
-        yoff *= 2;
-      int xoff = (char_width - line_width) / 2;
-      // 0xE0 square root base
-      // sum segments:
-      // 0xE1 upper left: add diagonal to bottom
-      // 0xE2 lower left: add diagonal to top
-      // 0xE5 upper right: add hook down
-      // 0xE6 lower right: add hook up
-      // 0xE7 middle right angle
-      int yt, yb;
-      int ycellb = y0 + (lattr >= LATTR_TOP ? 2 : 1) * wv.cell_height;
-      if (graph & 1) {  // upper segment: downwards
-        yt = y0 + yoff;
-        yb = ycellb;
-      }
-      else {  // lower segment: upwards
-        yt = y0;
-        yb = y0 + yoff;
-      }
-      int xl = x + xoff;
-      int xr = xl;
-      if (graph <= 0xE2) {  // diagonals
-        sum_width ++;
-        xl += line_width - 1;
-        xr = x + char_width - 1;
-        if (graph == 0xE2) {
-          int xb = xl;
-          xl = xr;
-          xr = xb;
-        }
-      }
-      if (graph == 0xF7) {  // VT52 fraction numerator
-        yt = y + (wv.cell_height - line_width) * 10 / 16;
-        yb = y + (wv.cell_height - line_width) * 8 / 16;
-        xl = x + line_width - 1;
-        xr = xl + char_width - 1;
-      }
-      // adjustments with scaling pen:
-      xl ++; xr ++;
-      int x0 = x;
-      if (graph & 1) {  // upper segment: downwards
-        yt --;
-        yb --;
-      } else {  // lower segment: upwards
-        yt -= 1;
-        yb -= 1;
-      }
-      // pointing triangles:
-      if ((graph & ~1) == 0xEC) {
-        xl = x + line_width;
-        xr = x + char_width - 2 * line_width - 1;
-        x0 = x + (char_width - line_width) / 2;
-        yt = y + wv.cell_height - 2 * line_width - 1;
-        yb = y + line_width;
-        if (graph & 1) {
-          yt ^= yb;
-          yb ^= yt;
-          yt ^= yb;
-        }
-      }
-      // special adjustments:
-      if (graph == 0xE0) {  // square root base
-        xl --;
-      }
-      else if (graph == 0xE7) {  // sum middle right angle
-      }
-      // draw:
-      //HPEN oldpen = SelectObject(dc, CreatePen(PS_SOLID, sum_width, fg));
-      HPEN oldpen = SelectObject(dc, CreatePen(PS_SOLID, line_width, fg));
-      sum_width = 1;  // now handled by pen width
-      for (int i = 0; i < len; i++) {
-        for (int l = 0; l < sum_width; l++) {
-          if (graph == 0xE0) {  // square root base
-            MoveToEx(dc, xl + l, ycellb, null);
-            LineTo(dc, xl - (xl - x0) / 2 + l, yb + l);
-            LineTo(dc, x0, yb + l);
-          }
-          else if (graph == 0xE7) {  // sum middle right angle
-            MoveToEx(dc, x0 + l, y0, null);
-            LineTo(dc, xl + l, yt);
-            LineTo(dc, x0 + l, yb);
-          }
-          else if ((graph & ~1) == 0xEC) {  // pointing triangles
-            MoveToEx(dc, xl + l, yt, null);
-            LineTo(dc, xr + l, yt);
-            LineTo(dc, x0 + l, yb);
-            LineTo(dc, xl + l, yt);
-          }
-          else {
-            MoveToEx(dc, xl + l, yt, null);
-            LineTo(dc, xr + l, yb);
-          }
-        }
-        x0 += char_width;
-        xl += char_width;
-        xr += char_width;
-      }
-      DeleteObject(SelectObject(dc, oldpen));
+    HPEN oldpen = SelectObject(dc, CreatePen(PS_SOLID, line_width, fg));
 
-      clearclipr();
+    int xi = x;
+    for (int i = 0; i < len; i++) {
+      int yt = y + (wv.cell_height - line_width) * 10 / 16;
+      int yb = y + (wv.cell_height - line_width) * 8 / 16;
+      int xl = xi + line_width - 1;
+      int xr = xl + char_width - 1;
+      MoveToEx(dc, xl, yt, null);
+      LineTo(dc, xr, yb);
+
+      xi += char_width;
     }
+
+    oldpen = SelectObject(dc, oldpen);
+    DeleteObject(oldpen);
+
+    clearclipr();
   }
-  else if ((graph >= 0x80 && !graph_vt52) || boxpower) {  // drawn graphics
+  else if (boxpower || dectcs) {  // drawn graphics
     // Box Drawing (U+2500-U+257F)
     // ─━│┃┄┅┆┇┈┉┊┋┌┍┎┏┐┑┒┓└┕┖┗┘┙┚┛├┝┞┟┠┡┢┣┤┥┦┧┨┩┪┫┬┭┮┯┰┱┲┳┴┵┶┷┸┹┺┻┼┽┾┿
     // ╀╁╂╃╄╅╆╇╈╉╊╋╌╍╎╏═║╒╓╔╕╖╗╘╙╚╛╜╝╞╟╠╡╢╣╤╥╦╧╨╩╪╫╬╭╮╯╰╱╲╳╴╵╶╷╸╹╺╻╼╽╾╿
@@ -3959,11 +4037,6 @@ skip_drawing:;
       int _y2 = char_height * y2 / 8;
       int _x3 = char_width * x3 / 8;
       int _y3 = char_height * y3 / 8;
-      if (x1) _x1--;
-      if (x2) _x2--;
-      if (x3) _x3--;
-      if (y2 == 8) _y2--;
-      _y3--;
 
       HPEN oldpen = SelectObject(dc, CreatePen(PS_SOLID, 0, fg));
       HBRUSH oldbrush = SelectObject(dc, CreateSolidBrush(fg));
@@ -4007,7 +4080,7 @@ skip_drawing:;
       ct /= 8;
       cr /= 8;
       cb /= 8;
-      //printf("25%02X <%d%%%d %d%%%d %d%%%d %d%%%d\n", graph, cl, dl, ct, dt, cr, dr, cb, db);
+      //printf("25XX <%d%%%d %d%%%d %d%%%d %d%%%d\n", cl, dl, ct, dt, cr, dr, cb, db);
       int cl_ = cl;
       int ct_ = ct;
       int cr_ = cr;
@@ -4036,7 +4109,7 @@ skip_drawing:;
           cb_++;
         }
       }
-      //printf("25%02X >%d%%%d %d%%%d %d%%%d %d%%%d\n", graph, cl, dl, ct, dt, cr, dr, cb, db);
+      //printf("25XX >%d%%%d %d%%%d %d%%%d %d%%%d\n", cl, dl, ct, dt, cr, dr, cb, db);
       //printf("Rect %d %d %d %d\n", xi + cl_, y0 + ct_, xi + cr_, y0 + cb_);
       HBRUSH br = CreateSolidBrush(c);
       FillRect(dc, &(RECT){xi + cl_, y0 + ct_, xi + cr_, y0 + cb_}, br);
@@ -4071,7 +4144,10 @@ skip_drawing:;
 #define use_extpen
 #ifdef use_extpen
     LOGBRUSH brush = (LOGBRUSH){BS_SOLID, fg, 0};
-    DWORD style = PS_GEOMETRIC | PS_SOLID | PS_ENDCAP_SQUARE;
+    DWORD style = PS_GEOMETRIC | PS_SOLID ;
+    HPEN roundpen = ExtCreatePen(style, penwidth, &brush, 0, 0);
+    if (boxpower)
+      style |= PS_ENDCAP_SQUARE;  // skipped for DEC Technical sum segments
     HPEN pen = ExtCreatePen(style, penwidth, &brush, 0, 0);
     HPEN heavypen = ExtCreatePen(style, heavypenwidth, &brush, 0, 0);
 #else
@@ -4153,6 +4229,16 @@ skip_drawing:;
           x2 += xi;
           if (heavy)
             SelectObject(dc, heavypen);
+          if (y3 == -2) {  // diagonals ╲ ╱ ╳
+            // without adjustment, the diagonals appear clipped from right,
+            // widh adjustment both sides, they appear clipped from left,
+            // with adjustment by penwidth / 2, alignment appears bad;
+            // penwidth / 3 on the right/bottom side is a compromise
+            y2 -= max(penwidth / 3, 1);
+            x2 -= max(penwidth / 3, 1);
+            // also the square pen appears wrong with the diagonals
+            SelectObject(dc, roundpen);
+          }
 
           // draw the line back again to compensate for the missing endpoint
           //Polyline(dc, (POINT[]){{x1, y1}, {x2, y2}, {x1, y1}}, 3);
@@ -4162,7 +4248,7 @@ skip_drawing:;
           if (y3 > -3)  // skip for dashed line segments
             LineTo(dc, x1, y1);
 
-          if (heavy)
+          if (heavy || y3 == -2)
             SelectObject(dc, pen);
           }
       }
@@ -4216,17 +4302,52 @@ skip_drawing:;
       LineTo(dc, xi + x2, y0 + y2);
     }
 
-    for (int i = 0; i < ulen; i++) {
-      setclipr(xi, yclip);
+    for (int i = 0; i < len; i++) {
+      setclipr(xi, yclip, 1);
 
-      if (boxpower && origtext) switch (origtext[i]) {
+      switch (origtext[i]) {
         // Box Drawing (U+2500-U+257F)
+        // ─━│┃┄┅┆┇┈┉┊┋┌┍┎┏┐┑┒┓└┕┖┗┘┙┚┛├┝┞┟┠┡┢┣┤┥┦┧┨┩┪┫┬┭┮┯┰┱┲┳┴┵┶┷┸┹┺┻┼┽┾┿
+        // ╀╁╂╃╄╅╆╇╈╉╊╋╌╍╎╏═║╒╓╔╕╖╗╘╙╚╛╜╝╞╟╠╡╢╣╤╥╦╧╨╩╪╫╬╭╮╯╰╱╲╳╴╵╶╷╸╹╺╻╼╽╾╿
 // tune position and length of double/triple dash segments
 #define sub2 line_width
 #define add2 2 * line_width
 #define sub3 line_width
 #define add3 line_width
 #include "boxdrawing.t"
+
+        // DEC Technical Character Set (TCS)
+        // !1234567DE
+        // ⎷  ╲╱   Δ∇
+        when '!': // RADICAL SYMBOL BOTTOM
+          boxlines(false, 12, 0, 12, 24, -1, -1);
+          boxlines(false, 0, 12, 5, 12, 12, 24);
+        when '"':
+          boxlines(false, 12, 24, 12, 12, 24, 12);
+        when '#':
+          boxlines(false, 0, 12, 24, 12, -1, -1);
+        when '1': // Top Left Sigma
+          boxlines(false, 24, 12, 12, 12, 24, 24);
+        when '2': // Bottom Left Sigma
+          boxlines(false, 24, 12, 12, 12, 24, 0);
+        when '3': // Top Diagonal Sigma
+          boxlines(false, 0, 0, 24, 24, -2, -2);
+        when '4': // Bottom Diagonal Sigma
+          boxlines(false, 0, 24, 24, 0, -2, -2);
+#define sigend 18
+        when '5': // Top Right Sigma
+          boxlines(false, 0, 12, sigend, 12, sigend, 22);
+        when '6': // Bottom Right Sigma
+          boxlines(false, 0, 12, sigend, 12, sigend, 2);
+        when '7': // Middle Sigma
+          boxlines(false, 0, 0, 12, 12, 0, 24);
+#define nabdel 8
+        when 'D': // DELTA
+          boxlines(false, 12, 2, 12 - nabdel, 22, 12 + nabdel, 22);
+          boxlines(false, 12, 2, 12 + nabdel, 22, -1, -1);
+        when 'E': // NABLA
+          boxlines(false, 12, 22, 12 - nabdel, 2, 12 + nabdel, 2);
+          boxlines(false, 12, 22, 12 + nabdel, 2, -1, -1);
 
         // Private Use geometric Powerline symbols (U+E0B0-U+E0BF, not 5, 7)
         // 
@@ -4259,35 +4380,35 @@ skip_drawing:;
           triangle(0, 0, 8, 0, 8, 8);
         when 0xE0BF:
           lines(0, 0, 8, 8, -1, -1);
-      } else switch (graph) {
+
         // Block Elements (U+2580-U+259F)
         // ▀▁▂▃▄▅▆▇█▉▊▋▌▍▎▏▐░▒▓▔▕▖▗▘▙▚▛▜▝▞▟
-        when 0x80: rect(0, 0, 8, 4); // UPPER HALF BLOCK
-        when 0x81 ... 0x88: rect(0, 0x88 - graph, 8, 8); // LOWER EIGHTHS
-        when 0x89 ... 0x8F: rect(0, 0, 0x90 - graph, 8); // LEFT EIGHTHS
-        when 0x90: rect(4, 0, 8, 8); // RIGHT HALF BLOCK
-        when 0x91: rectsolcol(0, 0, 8, 8, 2); // ░ LIGHT SHADE
-        when 0x92: rectsolcol(0, 0, 8, 8, 3); // ▒ MEDIUM SHADE
-        when 0x93: rectsolcol(0, 0, 8, 8, 5); // ▓ DARK SHADE
-        when 0x94: rect(0, 0, 8, 1); // UPPER ONE EIGHTH BLOCK
-        when 0x95: rect(7, 0, 8, 8); // RIGHT ONE EIGHTH BLOCK
-        when 0x96: rect(0, 4, 4, 8);
-        when 0x97: rect(4, 4, 8, 8);
-        when 0x98: rect(0, 0, 4, 4);
+        when 0x2580: rect(0, 0, 8, 4); // UPPER HALF BLOCK
+        when 0x2581 ... 0x2588: rect(0, 0x2588 - origtext[i], 8, 8); // LOWER EIGHTHS
+        when 0x2589 ... 0x258F: rect(0, 0, 0x2590 - origtext[i], 8); // LEFT EIGHTHS
+        when 0x2590: rect(4, 0, 8, 8); // RIGHT HALF BLOCK
+        when 0x2591: rectsolcol(0, 0, 8, 8, 2); // ░ LIGHT SHADE
+        when 0x2592: rectsolcol(0, 0, 8, 8, 3); // ▒ MEDIUM SHADE
+        when 0x2593: rectsolcol(0, 0, 8, 8, 5); // ▓ DARK SHADE
+        when 0x2594: rect(0, 0, 8, 1); // UPPER ONE EIGHTH BLOCK
+        when 0x2595: rect(7, 0, 8, 8); // RIGHT ONE EIGHTH BLOCK
+        when 0x2596: rect(0, 4, 4, 8);
+        when 0x2597: rect(4, 4, 8, 8);
+        when 0x2598: rect(0, 0, 4, 4);
         // solid 0b1111 top right bottom left
-        when 0x99: rectsolid(0, 4, 4, 8, 0xF);
+        when 0x2599: rectsolid(0, 4, 4, 8, 0xF);
                    rectsolid(0, 0, 4, 4, 0xB);
                    rectsolid(4, 4, 8, 8, 0x7);
-        when 0x9A: rect(0, 0, 4, 4); rect(4, 4, 8, 8);
-        when 0x9B: rectsolid(0, 0, 4, 4, 0xF);
+        when 0x259A: rect(0, 0, 4, 4); rect(4, 4, 8, 8);
+        when 0x259B: rectsolid(0, 0, 4, 4, 0xF);
                    rectsolid(4, 0, 8, 4, 0xD);
                    rectsolid(0, 4, 4, 8, 0xB);
-        when 0x9C: rectsolid(4, 0, 8, 4, 0xF);
+        when 0x259C: rectsolid(4, 0, 8, 4, 0xF);
                    rectsolid(0, 0, 4, 4, 0xD);
                    rectsolid(4, 4, 8, 8, 0xE);
-        when 0x9D: rect(4, 0, 8, 4);
-        when 0x9E: rect(4, 0, 8, 4); rect(0, 4, 4, 8);
-        when 0x9F: rectsolid(4, 4, 8, 8, 0xF);
+        when 0x259D: rect(4, 0, 8, 4);
+        when 0x259E: rect(4, 0, 8, 4); rect(0, 4, 4, 8);
+        when 0x259F: rectsolid(4, 4, 8, 8, 0xF);
                    rectsolid(4, 0, 8, 4, 0xE);
                    rectsolid(0, 4, 4, 8, 0x7);
       }
@@ -4300,72 +4421,86 @@ skip_drawing:;
     // remove Box Drawing resources
     SelectObject(dc, oldpen);
     DeleteObject(pen);
+    DeleteObject(roundpen);
     DeleteObject(heavypen);
     DeleteObject(br);
   }
-  else if (graph >> 4) {  // VT100/VT52 horizontal "scanlines"
-    setclipr(x, y);
-
-    int parts = graph_vt52 ? 8 : 5;
+  else if (boxcoded && origtext) {  // VT100/VT52 box drawing and scanlines
     HPEN oldpen = SelectObject(dc, CreatePen(PS_SOLID, 0, fg));
-    int yoff = (wv.cell_height - line_width) * (graph >> 4) / parts;
-    if (lattr >= LATTR_TOP)
-      yoff *= 2;
-    if (lattr == LATTR_BOT)
-      yoff -= wv.cell_height;
-    for (int l = 0; l < line_width; l++) {
-      MoveToEx(dc, x, y + yoff + l, null);
-      LineTo(dc, x + len * char_width, y + yoff + l);
-    }
-    DeleteObject(SelectObject(dc, oldpen));
 
-    clearclipr();
-  }
-  else if (graph) {  // VT100 box drawing characters ┘┐┌└┼ ─ ├┤┴┬│
-    setclipr(x, y);
-
-    HPEN oldpen = SelectObject(dc, CreatePen(PS_SOLID, 0, fg));
-    int y0 = (lattr == LATTR_BOT) ? y - wv.cell_height : y;
-    int yoff = (wv.cell_height - line_width) * 3 / 5;
-    if (lattr >= LATTR_TOP)
-      yoff *= 2;
-    int xoff = (char_width - line_width) / 2;
+    int xi = x;
     for (int i = 0; i < len; i++) {
-      if (graph & DRAW_HORIZ) {
-        int xl, xr;
-        if (graph & DRAW_LEFT)
-          xl = x + i * char_width;
-        else
-          xl = x + i * char_width + xoff;
-        if (graph & DRAW_RIGHT)
-          xr = x + (i + 1) * char_width;
-        else
-          xr = x + i * char_width + xoff + line_width;
-        for (int l = 0; l < line_width; l++) {
-          MoveToEx(dc, xl, y0 + yoff + l, null);
-          LineTo(dc, xr, y0 + yoff + l);
-        }
-      }
-      if (graph & DRAW_VERT) {
-        int xi = x + i * char_width + xoff;
-        int yt, yb;
-        if (graph & DRAW_UP)
-          yt = y0;
-        else
-          yt = y0 + yoff;
-        if (graph & DRAW_DOWN)
-          yb = y0 + (lattr >= LATTR_TOP ? 2 : 1) * wv.cell_height;
-        else
-          yb = y0 + yoff + line_width;
-        for (int l = 0; l < line_width; l++) {
-          MoveToEx(dc, xi + l, yt, null);
-          LineTo(dc, xi + l, yb);
-        }
-      }
-    }
-    DeleteObject(SelectObject(dc, oldpen));
+      setclipr(xi, y, 1);
 
-    clearclipr();
+      int graph = origtext[i];
+      bool graph_vt52 = false;
+      if (graph > 0x500) {
+        graph_vt52 = true;
+        graph &= 0xF;
+        graph <<= 4;  // indicate VT52 scanlines where expected
+      }
+      else {
+        graph -= 0x100;
+      }
+      if (graph >> 4) {  // VT100/VT52 horizontal "scanlines"
+        int parts = graph_vt52 ? 8 : 5;
+        int yoff = (wv.cell_height - line_width) * (graph >> 4) / parts;
+        if (lattr >= LATTR_TOP)
+          yoff *= 2;
+        if (lattr == LATTR_BOT)
+          yoff -= wv.cell_height;
+        for (int l = 0; l < line_width; l++) {
+          MoveToEx(dc, x, y + yoff + l, null);
+          LineTo(dc, x + len * char_width, y + yoff + l);
+        }
+      }
+      else {  // VT100 box drawing characters ┘┐┌└┼ ─ ├┤┴┬│
+        int y0 = (lattr == LATTR_BOT) ? y - wv.cell_height : y;
+        int yoff = (wv.cell_height - line_width) * 3 / 5;
+        if (lattr >= LATTR_TOP)
+          yoff *= 2;
+        int xoff = (char_width - line_width) / 2;
+
+        if (graph & DRAW_HORIZ) {
+          int xl, xr;
+          if (graph & DRAW_LEFT)
+            xl = x + i * char_width;
+          else
+            xl = x + i * char_width + xoff;
+          if (graph & DRAW_RIGHT)
+            xr = x + (i + 1) * char_width;
+          else
+            xr = x + i * char_width + xoff + line_width;
+          for (int l = 0; l < line_width; l++) {
+            MoveToEx(dc, xl, y0 + yoff + l, null);
+            LineTo(dc, xr, y0 + yoff + l);
+          }
+        }
+        if (graph & DRAW_VERT) {
+          int xi = x + i * char_width + xoff;
+          int yt, yb;
+          if (graph & DRAW_UP)
+            yt = y0;
+          else
+            yt = y0 + yoff;
+          if (graph & DRAW_DOWN)
+            yb = y0 + (lattr >= LATTR_TOP ? 2 : 1) * wv.cell_height;
+          else
+            yb = y0 + yoff + line_width;
+          for (int l = 0; l < line_width; l++) {
+            MoveToEx(dc, xi + l, yt, null);
+            LineTo(dc, xi + l, yb);
+          }
+        }
+      }
+
+      clearclipr();
+
+      xi += char_width;
+    }
+
+    oldpen = SelectObject(dc, oldpen);
+    DeleteObject(oldpen);
   }
 
  /* Strikeout */
@@ -4382,7 +4517,10 @@ skip_drawing:;
       LineTo(dc, x + ulen * char_width, y + soff + l);
     }
     DeleteObject(SelectObject(dc, oldpen));
+
   }
+
+  _return:
 
   if (origtext) {
     // we transfered the orig text pointer to origtext, so we free text
@@ -4390,7 +4528,21 @@ skip_drawing:;
   }
 
   show_curchar_info('w');
-  if (has_cursor) {
+
+  if (has_cursor && phase < 2) {
+    int cursor_size(int cell_size)
+    {
+      switch (term.cursor_size) {
+        when 1: return -2;                // invisible
+        when 2: return line_width - 1;    // underscore
+        when 3: return cell_size / 3 - 1; // ⅓
+        when 4: return cell_size / 2;     // ½
+        when 5: return cell_size * 2 / 3; // ⅔
+        when 6: return cell_size - 2;     // full block
+        otherwise: return 0;              // default
+      }
+    }
+
     colour _cc = cursor_colour;
     if (layer)
       _cc = ((_cc & 0xFEFEFEFE) >> 1) + ((win_get_colour(BG_COLOUR_I) & 0xFEFEFEFE) >> 1);
@@ -4399,23 +4551,30 @@ skip_drawing:;
 #endif
     HPEN oldpen = SelectObject(dc, CreatePen(PS_SOLID, 0, _cc));
     switch (term_cursor_type()) {
-      when CUR_BLOCK:
+      when CUR_BLOCK:  // solid block cursor
         if (attr.attr & TATTR_PASCURS) {
           HBRUSH oldbrush = SelectObject(dc, GetStockObject(NULL_BRUSH));
           Rectangle(dc, x, y, x + char_width, y + wv.cell_height);
           SelectObject(dc, oldbrush);
         }
-      when CUR_BOX: {
+      when CUR_BOX: {  // hollow box cursor
         HBRUSH oldbrush = SelectObject(dc, GetStockObject(NULL_BRUSH));
         Rectangle(dc, x, y, x + char_width, y + wv.cell_height);
         SelectObject(dc, oldbrush);
       }
-      when CUR_LINE: {
-        int caret_width = 1;
-        SystemParametersInfo(SPI_GETCARETWIDTH, 0, &caret_width, 0);
-        // limit line cursor width by char_width? rather by line_width (#1101)
-        if (caret_width > line_width)
-          caret_width = line_width;
+      when CUR_LINE: {  // vertical line cursor
+        int caret_width = cursor_size(wv.cell_width);
+        if (caret_width <= 0) {
+          caret_width = (3 + (lattr >= LATTR_WIDE ? 2 : 0)) * wv.cell_width / 40;
+          SystemParametersInfo(SPI_GETCARETWIDTH, 0, &caret_width, 0);
+          caret_width *= wv.cell_width / 8;
+          int min_caret_width = dpi / 72;
+          // limit cursor width (max previously by line_width, #1101)
+          if (caret_width < min_caret_width)
+            caret_width = min_caret_width;
+          else if (caret_width > wv.cell_width)
+            caret_width = wv.cell_width;
+        }
         int xx = x;
         if (attr.attr & TATTR_RIGHTCURS)
           xx += char_width - caret_width;
@@ -4429,7 +4588,12 @@ skip_drawing:;
           DeleteObject(SelectObject(dc, oldbrush));
 #else
           HBRUSH br = CreateSolidBrush(_cc);
+#ifdef simple_inverted_cursor_approach
+          // this does not give us sufficient colour control
+          InvertRect(dc, &(RECT){xx, y, xx + caret_width, y + wv.cell_height});
+#else
           FillRect(dc, &(RECT){xx, y, xx + caret_width, y + wv.cell_height}, br);
+#endif
           DeleteObject(br);
 #endif
         }
@@ -4439,7 +4603,7 @@ skip_drawing:;
               dc, (POINT[]){{xx, y + dy}, {xx + caret_width, y + dy}}, 2);
         }
       }
-      when CUR_UNDERSCORE: {
+      when CUR_UNDERSCORE: {  // horizontal line cursor
         int yy = yt + min(ff->descent, wv.cell_height - 2);
         yy += ff->row_spacing * 3 / 8;
         if (lattr >= LATTR_TOP) {
@@ -4458,15 +4622,7 @@ skip_drawing:;
 		5   two_thirds
 		6   full block
           */
-          int up = 0;
-          switch (term.cursor_size) {
-            when 1: up = -2;
-            when 2: up = line_width - 1;
-            when 3: up = wv.cell_height / 3 - 1;
-            when 4: up = wv.cell_height / 2;
-            when 5: up = wv.cell_height * 2 / 3;
-            when 6: up = wv.cell_height - 2;
-          }
+          int up = cursor_size(wv.cell_height);
           if (up) {
             int yct = max(yy - up, yt);
             HBRUSH oldbrush = SelectObject(dc, CreateSolidBrush(_cc));
@@ -4486,8 +4642,6 @@ skip_drawing:;
     }
     DeleteObject(SelectObject(dc, oldpen));
   }
-
-  _return:
 
   if (bloom && coord_transformed_bloom) {
     bloom--;
@@ -4892,6 +5046,8 @@ win_char_width(xchar c, cattrflags attr)
   }
 
   if (c >= 0x2160 && c <= 0x2179) {  // Roman Numerals
+
+
     ReleaseDC(wv.wnd, dc);
     return 2;
   }
@@ -5030,6 +5186,9 @@ win_combine_chars(wchar c, wchar cc, cattrflags attr)
 
 // Colour settings
 
+
+
+
 void
 win_set_colour(colour_i i, colour c)
 {
@@ -5106,6 +5265,7 @@ win_set_colour(colour_i i, colour c)
             cc(BOLD_FG_COLOUR_I, brighten(c, wv.colours[BG_COLOUR_I], true));
             // renew this too as brighten() may refer to contrast colour:
             cc(BOLD_BG_COLOUR_I, brighten(wv.colours[BG_COLOUR_I], wv.colours[FG_COLOUR_I], true));
+
           }
         }
       when BOLD_FG_COLOUR_I:
@@ -5118,6 +5278,7 @@ win_set_colour(colour_i i, colour c)
             cc(BOLD_BG_COLOUR_I, brighten(c, wv.colours[FG_COLOUR_I], true));
             // renew this too as brighten() may refer to contrast colour:
             cc(BOLD_FG_COLOUR_I, brighten(wv.colours[FG_COLOUR_I], wv.colours[BG_COLOUR_I], true));
+
           }
         }
       when CURSOR_COLOUR_I: {
@@ -5253,7 +5414,6 @@ win_paint(void)
       winimgs_paint();
     }
   }
-
   win_tab_paint(dc);
   if (// check whether no background was configured and successfully loaded
       !bgbrush_bmp &&

@@ -26,6 +26,9 @@ DEBUG ?=0
 #TARGET=x86_64-w64-mingw32
 NAME := mintty
 
+all:	bin 
+mingw:
+	TARGET=x86_64-w64-mingw32 $(MAKE) $(MFLAGS)
 .PHONY: exe src pkg zip pdf clean
 
 ifdef TARGET
@@ -36,7 +39,6 @@ else
   RC := windres
   TARGET := $(shell $(CC) -dumpmachine)
 endif
-
 ifeq ($(TARGET), i686-pc-cygwin)
   platform := cygwin32
   cygport_opts := --32
@@ -122,7 +124,7 @@ ifneq ($(platform), msys)
 endif
 # support cygwin debug package (use += to accept injected options)
 #-Wall 
-CFLAGS += -std=gnu99 -include std.h -Wall -Wextra -Wundef  \
+CFLAGS +=  -std=gnu99  -Wall -Wextra -Wundef  \
 					-Werror  -Wno-stringop-truncation -Wno-stringop-overflow
 # verify additional flags that are also injected into pkg build by cygport
 CFLAGS += -Wformat-security
@@ -163,30 +165,34 @@ endif
 #############################################################################
 # build
 
-all:	bin
+GFLAGS =  -include std.hh -I$(BINDIR)/ 
 
-DEPOPT=-MMD -MP
-#DEPOPT=
+DEPOPT=-MMD 
 
 CCOPT=
 CCFLAGS:=$(CFLAGS) $(CCOPT)
 
+$(BINDIR)/std.hh.gch: std.h
+	$(CC) -c $(DEPOPT) $(CCFLAGS) $(CPPFLAGS) -fstack-check $< -o $@
+
+$(objs): $(BINDIR)/std.hh.gch
+
 $(BINDIR)/term%.o: term%.c
-	$(CC) -c $(DEPOPT) $(CCFLAGS) $(CPPFLAGS) $< -o $(BINDIR)/term$*.o
+	$(CC) -c $(DEPOPT) $(CCFLAGS) $(GFLAGS) $(CPPFLAGS) $< -o $(BINDIR)/term$*.o
 
 $(BINDIR)/term.o: term.c emojibase.t emojiseqs.t
-	$(CC) -c $(DEPOPT) $(CCFLAGS) $(CPPFLAGS) -fstack-check $< -o $(BINDIR)/term.o
+	$(CC) -c $(DEPOPT) $(CCFLAGS) $(GFLAGS) $(CPPFLAGS) -fstack-check $< -o $(BINDIR)/term.o
 
 # do not optimize wintext.c; this causes a mysterious delay if 
 # win_char_width is called with a non-BMP character
-$(BINDIR)/wintext.o: wintext.c
-	$(CC) -c $(DEPOPT) $(CCFLAGS) -O0 $(CPPFLAGS) -fstack-check $< -o $(BINDIR)/wintext.o
+#$(BINDIR)/wintext.o: wintext.c
+#	$(CC) -c $(DEPOPT) $(CCFLAGS) $(GFLAGS) -O0 $(CPPFLAGS) -fstack-check $< -o $(BINDIR)/wintext.o
 
 $(BINDIR)/appinfo.o: appinfo.c appinfo.h appinfo.t
 	$(CC) -c $(DEPOPT) -O0 $(CPPFLAGS) -fstack-check $< -o $(BINDIR)/appinfo.o
 
-$(BINDIR)/%.o: %.c
-	$(CC) -c $(DEPOPT) $(CCFLAGS) $(CPPFLAGS) -fstack-check $< -o $(BINDIR)/$*.o
+$(BINDIR)/%.o: %.c $(BINDIR)/std.hh.gch
+	$(CC) -c $(DEPOPT) $(CCFLAGS) $(GFLAGS) $(CPPFLAGS) -fstack-check $< -o $(BINDIR)/$*.o
 
 $(BINDIR)/%.o: %.rc %.h %.mft
 	#$(RC) -c 65001 --preprocessor '$(CC) -E -xc -DRC_INVOKED $(DEPOPT) $(CPPFLAGS)' $< $(BINDIR)/$*.o
@@ -341,10 +347,16 @@ emoji-data.txt:	Blocks.txt
 emoji-variation-sequences.txt:	Blocks.txt
 	$(WGET) http://www.unicode.org/Public/$(univer)/ucd/emoji/$@
 
-unicodever = `sed -e '/^\# Blocks-/ s,[^0-9]*\([0-9]*\)\.\([0-9]\)\.\([0-9]\)[^0-9]*,\1\2\3,' -e t -e d Blocks.txt`
+unicodever = $(shell sed -e '/^\# Blocks-/ s,[^0-9]*\([0-9]*\)\.\([0-9]\)\.\([0-9]\)[^0-9]*,\1\2\3,' -e t -e d Blocks.txt)
+univer = $(shell sed -e '/^\# Blocks-/ s,[^0-9]*\([0-9]*\)\.\([0-9]\)\.\([0-9]\)[^0-9]*,\1.\2.\3,' -e t -e d Blocks.txt)
+x11ver = $(shell cygcheck -f /usr/share/X11/locale/en_US.UTF-8/Compose | sed -e "s,^[^-]*-,," -e "s,-.*,,")
 
-unicodever.t:	# Blocks.txt
+releasever:
+	sed -e 's,\(Mintty .*\)`.*`,\1`$(srcversion)`,' -i ../wiki/Versions.md
+
+unicodever.t:	Blocks.txt
 	echo "#define UNICODE_VERSION $(unicodever)" > unicodever.t
+	sed -e 's,\(Unicode .*\)`.*`,\1`$(univer)`,' -i ../wiki/Versions.md
 
 univer:	Blocks.txt
 	echo univer: $(univer)
@@ -366,26 +378,34 @@ emojiseqs.t:	# emoji-sequences.txt emoji-zwj-sequences.txt emoji-test.txt
 
 composed.t:	# $(compose_list) $(keysymdefs)
 	sh ./mkcomposedt > composed.t
+	sed -e 's,\(X11 .*\)`.*`,\1`$(x11ver)`,' -i ../wiki/Versions.md
 
 XGETTEXT_OPTS=--package-name=mintty #--package-version=$(srcversion)
 XGETTEXT_OPTS+=--msgid-bugs-address=https://github.com/mintty/mintty/issues/700
+pot_srcs=$(c_srcs) appinfo.h configdef.h funtips.h defkeyfun.h 
+_:	localization #checkloc
+localization:	../lang/messages.pott ../lang/zh_CN.po
 
-_:	localization checkloc
-localization:	pot po
-pot:
-	mkdir -p ../lang
-	xgettext --from-code=UTF-8 -k_ -k_W -k__ -c__ $(XGETTEXT_OPTS) *.c appinfo.h configdef.h -o- | grep -v "^#, c-format" > ../lang/messages.pott
-	cd ../lang; if diff -I POT-Creation-Date messages.pot messages.pott | grep . > /dev/null; then /bin/mv messages.pott messages.pot; else /bin/rm messages.pott; fi
-po:
-	cd ../lang; for po in *.po; do echo -n $$po;[ "$$po" = en.po ] || msgmerge -U "$$po" messages.pot; done
+../lang/messages.pott:$(pot_srcs) 
+	@mkdir -p ../lang
+	xgettext --from-code=UTF-8 -k_ -k_W -k__ -c__ $(XGETTEXT_OPTS) $(pot_srcs) *.c -o- \
+		| grep -v "^#, c-format" > ../lang/messages.pott
+	@cd ../lang; if ! diff -I POT-Creation-Date messages.pot messages.pott > /dev/null; then\
+	 	/bin/cp messages.pott messages.pot;  fi
+
+../lang/zh_CN.po:../lang/messages.pot
+	@cd ../lang; for po in *.po; do if [ "$$po" != en.po ] ;then \
+		printf "%8s " "$$po"; msgmerge -U "$$po" messages.pot; fi;done
+	@touch ../lang/zh_CN.po
+
 checkloc:
-	echo checkloc
-	#cd ../lang; ! grep "^#, fuzzy" *.po
+	@echo checkloc
+	cd ../lang; ! grep "^#, fuzzy" *.po
 
 #############################################################################
 # release targets
 
-DIST := ../release
+DIST := ../rel
 
 ifndef RELEASE
 RELEASE=0
@@ -455,14 +475,14 @@ tags:	*.c *.h
 _wm.t:	# Windows Message names, only for debugging
 #	#define WM_NULL 0x0000
 #	->
-#		{0x0000, "WM_NULL"},
-	sed -e 's/^#define \(WM_[^ ]*\) *\(0x[0-9A-Fa-f]*\)$$/  {\2, "\1"},/' -e t -e d /usr/include/w32api/winuser.h | tr 'abcdef' 'ABCDEF' > _wm.t
-	echo '  {0x02E0, "WM_DPICHANGED"},' >> _wm.t
-	echo '  {0x02E2, "WM_DPICHANGED_BEFOREPARENT"},' >> _wm.t
-	echo '  {0x02E3, "WM_DPICHANGED_AFTERPARENT"},' >> _wm.t
-	echo '  {0x02E4, "WM_GETDPISCALEDSIZE"},' >> _wm.t
-	# or, with include file copied from Windows SDK:
-	#sed -e 's/^#define \(WM_[^ ]*\) *\(0x[0-9A-Fa-f]*\)$$/  {\2, "\1"},/' -e t -e d etc/WinUser.h | tr 'abcdef' 'ABCDEF' > _wm.t
+#		WMN(WM_NULL)
+	sed 's/^#define \(WM_[^ ]*\) *\(0x[0-9A-Fa-f]*\)$$/  WMN(\1)/;t;d' /usr/include/w32api/winuser.h|grep -vE "WM_KEYLAST|WM_KEYFIRST|WM_MOUSEFIRST|WM_MOUSELAST|WM_USER|WM_APP|WM_IME_KEYLAST"  > _wm.t
+#	#	#define WM_NULL 0x0000
+#	#	->
+#	#		{0x0000, "WM_NULL"},
+#	sed -e 's/^#define \(WM_[^ ]*\) *\(0x[0-9A-Fa-f]*\)$$/  {\2, "\1"},/' -e t -e d /usr/include/w32api/winuser.h | tr 'abcdef' 'ABCDEF' > _wm.t
+#	# or, with include file copied from Windows SDK:
+#	#sed -e 's/^#define \(WM_[^ ]*\) *\(0x[0-9A-Fa-f]*\)$$/  {\2, "\1"},/' -e t -e d etc/WinUser.h | tr 'abcdef' 'ABCDEF' > _wm.t
 
 _vk.t:	# Windows Virtual Key Code names, only for debugging
 #	#define VK_TAB 0x09

@@ -2,7 +2,7 @@
 #define TERMSEARCH_H
 
 #include "term.h"
-#include "winpriv.h"
+//G #include "winpriv.h"
 #include "termpriv.h"
 
 #include <commctrl.h>

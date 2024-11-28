@@ -3,10 +3,10 @@
 // Adapted from code from PuTTY-0.60 by Simon Tatham and team.
 // Licensed under the terms of the GNU General Public License v3 or later.
 
-#include "winpriv.h"
+//G #include "winpriv.h"
 #include "termpriv.h"  // term_get_html
-#include "charset.h"
-#include "child.h"
+//G #include "charset.h"
+//G #include "child.h"
 #include "res.h"  // DIALOG_CLASS
 
 #include <winnls.h>
@@ -16,7 +16,7 @@
 #include <objidl.h>
 #include <oleidl.h>
 #ifdef __CYGWIN__
-#include <sys/cygwin.h>  // cygwin_internal
+//G #include <sys/cygwin.h>  // cygwin_internal
 #endif
 
 
@@ -723,15 +723,15 @@ win_copy_as(const wchar *data, cattr *cattrs, int len, char what)
       rtffontname, cfgsize * 2);
     VFREE(rtffontname);
 
-   /*
-    * Add colour palette
-    * {\colortbl;\red255\green0\blue0;\red0\green0\blue128;...}
-    */
+    /*
+     * Add colour palette
+     * {\colortbl;\red255\green0\blue0;\red0\green0\blue128;...}
+     */
 
-   /*
-    * First - Determine all colours in use
-    *    o  Foreground and background colours share the same palette
-    */
+    /*
+     * First - Determine all colours in use
+     *    o  Foreground and background colours share the same palette
+     */
     memset(palette, 0, sizeof(palette));
     for (int i = 0; i < (len - 1); i++) {
       apply_attr_colour_rtf(cattrs[i], ACM_RTF_PALETTE, &fgcolour, &bgcolour);
@@ -739,18 +739,18 @@ win_copy_as(const wchar *data, cattr *cattrs, int len, char what)
       palette[bgcolour]++;
     }
 
-   /*
-    * Next - Create a reduced palette
-    */
+    /*
+     * Next - Create a reduced palette
+     */
     numcolours = 0;
     for (int i = 0; i < COLOUR_NUM; i++) {
       if (palette[i] != 0)
         palette[i] = ++numcolours;
     }
 
-   /*
-    * Finally - Write the colour table
-    */
+    /*
+     * Finally - Write the colour table
+     */
     rtf = renewn(rtf, rtfsize + (numcolours * 25));
     strcat(rtf, "{\\colortbl;");
     rtflen = strlen(rtf);
@@ -767,24 +767,24 @@ win_copy_as(const wchar *data, cattr *cattrs, int len, char what)
     strcpy(&rtf[rtflen], "}");
     rtflen++;
 
-   /*
-    * We want to construct a piece of RTF that specifies the
-    * same Unicode text. To do this we will read back in
-    * parallel from the Unicode data in `udata' and the
-    * non-Unicode data in `tdata'. For each character in
-    * `tdata' which becomes the right thing in `udata' when
-    * looked up in `unitab', we just copy straight over from
-    * tdata. For each one that doesn't, we must WCToMB it
-    * individually and produce a \u escape sequence.
-    * 
-    * It would probably be more robust to just bite the bullet
-    * and WCToMB each individual Unicode character one by one,
-    * then MBToWC each one back to see if it was an accurate
-    * translation; but that strikes me as a horrifying number
-    * of Windows API calls so I want to see if this faster way
-    * will work. If it screws up badly we can always revert to
-    * the simple and slow way.
-    */
+    /*
+     * We want to construct a piece of RTF that specifies the
+     * same Unicode text. To do this we will read back in
+     * parallel from the Unicode data in `udata' and the
+     * non-Unicode data in `tdata'. For each character in
+     * `tdata' which becomes the right thing in `udata' when
+     * looked up in `unitab', we just copy straight over from
+     * tdata. For each one that doesn't, we must WCToMB it
+     * individually and produce a \u escape sequence.
+     * 
+     * It would probably be more robust to just bite the bullet
+     * and WCToMB each individual Unicode character one by one,
+     * then MBToWC each one back to see if it was an accurate
+     * translation; but that strikes me as a horrifying number
+     * of Windows API calls so I want to see if this faster way
+     * will work. If it screws up badly we can always revert to
+     * the simple and slow way.
+     */
     while (tindex < len2 && uindex < len && tdata[tindex] && udata[uindex]) {
 
      /* Skip carriage returns */

@@ -1,9 +1,9 @@
 // windialog.c (part of mintty)
-// Copyright 2008-11 Andy Koppe
+// Copyright 2008-11 Andy Koppe, -2024 Thomas Wolff
 // Based on code from PuTTY-0.60 by Simon Tatham and team.
 // Licensed under the terms of the GNU General Public License v3 or later.
 
-#include "winpriv.h"
+//G #include "winpriv.h"
 
 #include "ctrls.h"
 #include "winctrls.h"
@@ -11,7 +11,7 @@
 #include "res.h"
 #include "appinfo.h"
 
-#include "charset.h"  // nonascii, cs__utftowcs
+//G #include "charset.h"  // nonascii, cs__utftowcs
 extern void setup_config_box(controlbox *);
 
 #include <commctrl.h>
@@ -23,10 +23,33 @@ extern void setup_config_box(controlbox *);
 #endif
 
 #ifdef __CYGWIN__
-#include <sys/cygwin.h>  // cygwin_internal
+//G #include <sys/cygwin.h>  // cygwin_internal
 #endif
 #include <sys/stat.h>  // chmod
 
+
+
+#ifdef debug_handler
+static control *
+trace_ctrl(int line, int ev, control * ctrl)
+{
+static char * debugopt = 0;
+  if (!debugopt) {
+    debugopt = getenv("MINTTY_DEBUG");
+    if (!debugopt)
+      debugopt = "";
+  }
+
+  if (strchr(debugopt, 'o')) {
+    printf("[%d ev %d] type %d (%d %d %d) label %s col %d\n", line, ev,
+           ctrl->type, !!ctrl->handler, !!ctrl->widget, !!ctrl->context,
+           ctrl->label, ctrl->column);
+  }
+  return ctrl;
+}
+// inject trace invocation into calls like ctrl->handler
+#define handler(ctrl, ev)	handler(trace_ctrl(__LINE__, ev, ctrl), ev)
+#endif
 
 /*
  * windlg.c - Dialogs, including the configuration dialog.
@@ -418,6 +441,10 @@ swnd_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR uid, DWORD
       debug("WM_COMMAND: end");
       return ret;
     }
+    when WM_NOTIFY: {
+      winctrl_handle_notify(hwnd,msg, wParam, lParam);
+        //int id=LOWORD(wParam);
+    }
   }
   return DefSubclassProc(hwnd, msg, wParam, lParam);
 }
@@ -444,8 +471,6 @@ tree_proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp, UINT_PTR uid, DWORD_PTR dat
         DeleteObject(br);
         return res;
       }
-    //when 0x1100 or 0x110A or 0x110B or 0x110C or 0x112A or 0x112D or 0x113E or 0x2100:
-      // these also occur
   }
   return DefSubclassProc(hwnd, msg, wp, lp);
 }
@@ -458,30 +483,41 @@ tree_proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp, UINT_PTR uid, DWORD_PTR dat
  * (Being a dialog procedure, in general it returns 0 if the default
  * dialog processing should be performed, and 1 if it should not.)
  */
+extern void win_global_keyboard_hook(bool on,bool autooff);
 static HFONT cfdfont=0;
+char *wm_names[WM_USER]={
+#  include "_wm.t"
+};
+char*get_wmname(UINT msg){
+  char *n;
+  static char buf[64];
+  if(msg == WM_SETCURSOR || msg == WM_NCHITTEST || msg == WM_MOUSEMOVE ||
+    msg == WM_ERASEBKGND || msg == WM_CTLCOLORDLG || msg == WM_PRINTCLIENT ||
+    msg == WM_CTLCOLORBTN || msg == WM_ENTERIDLE 
+    ){
+    return NULL;
+  }
+  if(msg<WM_USER){
+    n=wm_names[msg];
+    if(n)return n;
+    int i;
+    for(i=msg;i;i--){
+      if((n=wm_names[i]))break;
+    }
+    sprintf(buf,"%x %s+%x",i,n,msg-i);
+    return buf;
+  }
+  sprintf(buf,"WM_USER+%x",msg-WM_USER);
+  return buf;
+}
 static INT_PTR CALLBACK
 config_dialog_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 #ifdef debug_messages
-#include <time.h>
-  static struct {
-  uint wm_;
-  char * wm_name;
-  } wm_names[] = {
-#  include "_wm.t"
-  };
-  char * wm_name = "WM_?";
-  if ((msg != WM_SETCURSOR && msg != WM_NCHITTEST && msg != WM_MOUSEMOVE
-       && msg != WM_ERASEBKGND && msg != WM_CTLCOLORDLG && msg != WM_PRINTCLIENT && msg != WM_CTLCOLORBTN
-       && msg != WM_ENTERIDLE
-       && (msg != WM_NOTIFY || (LOWORD(wParam) == IDCX_TREEVIEW && ((LPNMHDR) lParam)->code == TVN_SELCHANGED))
-     )) {
-    for (uint i = 0; i < lengthof(wm_names); i++)
-      if (msg == wm_names[i].wm_ && !strstr(wm_names[i].wm_name, "FIRST")) {
-        wm_name = wm_names[i].wm_name;
-        break;
-      }
-    printf("[%d] dialog_proc %04X %s (%04X %08X)\n", (int)time(0), msg, wm_name, (unsigned)wParam, (unsigned)lParam);
+//G #include <time.h>
+  if(msg != WM_NOTIFY || (LOWORD(wParam) == IDCX_TREEVIEW && ((LPNMHDR) lParam)->code == TVN_SELCHANGED)){
+    char * wm_name = get_wmname(msg);
+    if(wm_name)printf("[%d] dialog_proc %04X %s (%04X %08X)\n", (int)time(0), msg, wm_name, (unsigned)wParam, (unsigned)lParam);
   }
 #endif
 
@@ -494,6 +530,13 @@ config_dialog_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 #endif
 
   switch (msg) {
+    when WM_ACTIVATE:{
+      if ((wParam & 0xF) == WA_INACTIVE) {
+        win_global_keyboard_hook(1,1);
+      } else {
+        win_global_keyboard_hook(1,0);
+      }
+    }
 		when WM_VSCROLL: OnVScroll(dlg.ctlwnd,LOWORD(wParam),HIWORD(wParam));
     when WM_SETFONT: cfdfont=(HFONT)wParam;
     when WM_GETFONT: return (WPARAM)cfdfont;
@@ -514,9 +557,9 @@ config_dialog_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
       windlg_add_tree(&ctrls_base);
       windlg_add_tree(&ctrls_panel);
 
-     /*
-      * Create the actual GUI widgets.
-      */
+      /*
+       * Create the actual GUI widgets.
+       */
       // here we need the correct DIALOG_HEIGHT already
       create_controls(hwnd, W(""));        /* Open and Cancel buttons etc */
 
@@ -529,7 +572,7 @@ config_dialog_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
       y = SC(  3); h = SC(dialog_height - 30);
 #ifdef USECTLWND
       dlg.ctlwnd = CreateWindowExA(WS_EX_CLIENTEDGE, SWND_CLASS , "",
-                       WS_CHILD | WS_VISIBLE|WS_VSCROLL ,x,y,w,h,hwnd, 0, wv.inst, null);
+                                   WS_CHILD | WS_VISIBLE|WS_VSCROLL ,x,y,w,h,hwnd, 0, wv.inst, null);
       SCROLLINFO si = {
         .cbSize = sizeof si,
         .fMask = SIF_ALL ,
@@ -547,57 +590,56 @@ config_dialog_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
       dlg.ctlwnd=hwnd;
 #endif
 
-     /*
-      * Create the tree view.
-      */
+      /*
+       * Create the tree view.
+       */
       x = SC( 3); w = SC(64); 
       y = SC( 3); h = SC(dialog_height - 30);
       HWND treeview =
-        CreateWindowExA(WS_EX_CLIENTEDGE, WC_TREEVIEWA, "",
-                       WS_CHILD | WS_VISIBLE | WS_TABSTOP | TVS_HASLINES |
-                       TVS_DISABLEDRAGDROP | TVS_HASBUTTONS | TVS_LINESATROOT
-                       | TVS_SHOWSELALWAYS, x,y,w,h , hwnd, (HMENU) IDCX_TREEVIEW, wv.inst,
-                       null);
+          CreateWindowExA(WS_EX_CLIENTEDGE, WC_TREEVIEWA, "",
+                          WS_CHILD | WS_VISIBLE | WS_TABSTOP | TVS_HASLINES |
+                          TVS_DISABLEDRAGDROP | TVS_HASBUTTONS | TVS_LINESATROOT
+                          | TVS_SHOWSELALWAYS, x,y,w,h , hwnd, (HMENU) IDCX_TREEVIEW, wv.inst,
+                          null);
       win_set_font(treeview);
       treeview_faff tvfaff;
       tvfaff.treeview = treeview;
       memset(tvfaff.lastat, 0, sizeof(tvfaff.lastat));
 
 #ifdef darken_dialog_elements
-     /*
-      * Apply dark mode to tree menu background and active item
-      */
+      /*
+       * Apply dark mode to tree menu background and active item
+       */
       win_dark_mode(treeview); // active item
-      /// ... passive items?
+                               /// ... passive items?
       SetWindowSubclass(treeview, tree_proc, 0, 0); // background
 #endif
 
-     /*
-      * Set up the tree view contents.
-      */
+      /*
+       * Set up the tree view contents.
+       */
       HTREEITEM hfirst = null;
       const wchar *path = null;
-
+      wstring defpane=_W("HotKeys");
       for (int i = 0; i < ctrlbox->nctrlsets; i++) {
         controlset *s = ctrlbox->ctrlsets[i];
         HTREEITEM item;
-        int j;
+        int j=0;
         const wchar *c;
 
         if (!s->pathname[0])
           continue;
-        j = path ? ctrl_path_compare(s->pathname, path) : 0;
-        if (j == INT_MAX)
+        if (path&&(j=ctrl_path_compare(s->pathname, path)) == -1)
           continue;   /* same path, nothing to add to tree */
 
-       /*
-        * We expect never to find an implicit path component. 
-          For example, we expect never to see A/B/C followed by A/D/E, 
-          because that would _implicitly_ create A/D. 
-          All our path prefixes are expected to contain actual controls 
-          and be selectable in the treeview; so we would expect 
-          to see A/D _explicitly_ before encountering A/D/E.
-        */
+        /*
+         * We expect never to find an implicit path component. 
+         For example, we expect never to see A/B/C followed by A/D/E, 
+         because that would _implicitly_ create A/D. 
+         All our path prefixes are expected to contain actual controls 
+         and be selectable in the treeview; so we would expect 
+         to see A/D _explicitly_ before encountering A/D/E.
+         */
 
         c = wcsrchr(s->pathname, '/');
         if (!c)
@@ -606,21 +648,22 @@ config_dialog_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
           c++;
 
         item = treeview_insert(&tvfaff, j, c, s->pathname);
-        if (!hfirst)
+        if (!hfirst) hfirst = item;
+        if(defpane &&ctrl_path_compare(s->pathname,defpane )==-1){
           hfirst = item;
-
+        }
         path = s->pathname;
-
-       /*
-        * Put the treeview selection on to the Session panel.
-        * This should also cause creation of the relevant controls.
-        */
-        (void)TreeView_SelectItem(treeview, hfirst);
       }
 
-     /*
-      * Set focus into the first available control.
-      */
+      /*
+       * Put the treeview selection on to the Session panel.
+       * This should also cause creation of the relevant controls.
+       */
+      (void)TreeView_SelectItem(treeview, hfirst);
+
+      /*
+       * Set focus into the first available control.
+       */
       for (winctrl *c = ctrls_panel.first; c; c = c->next) {
         if (c->ctrl) {
           dlg_set_focus(c->ctrl);
@@ -644,9 +687,6 @@ config_dialog_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
           SetBkColor(hdc, bg);
           return (INT_PTR)CreateSolidBrush(bg);
         }
-    //when 0x0090 or 0x00F1 or 0x00F4 or 0x0143 or 0x014B:
-      // these also occur
-
 #ifdef draw_dialog_bg
     when WM_ERASEBKGND:      // handled via WM_CTLCOLORDLG above
       if (support_dark_mode) {
@@ -690,6 +730,7 @@ config_dialog_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
         that was particularly introduced for this purpose...)
       */
       control * ctrl = null;
+      int cid=-1;
       for (winctrl *c = ctrls_panel.first; c && !ctrl; c = c->next) {
         if (c->ctrl)
           for (int k = 0; k < c->num_ids; k++) {
@@ -697,6 +738,7 @@ config_dialog_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
             printf(" [->%8p] %8p\n", target, GetDlgItem(hwnd, c->base_id + k));
 #endif
             if (target == GetDlgItem(hwnd, c->base_id + k)) {
+              cid=c->base_id + k;
               ctrl = c->ctrl;
               break;
             }
@@ -704,18 +746,17 @@ config_dialog_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
       }
       debug("WM_USER: lookup");
       if (ctrl) {
-        //dlg_editbox_set_w(ctrl, L"Test");  // may hit unrelated items...
+        //dlg_editbox_setW(ctrl, L"Test");  // may hit unrelated items...
         // drop the drag-and-drop contents here
         dragndrop = (wstring)lParam;
-        ctrl->handler(ctrl, EVENT_DROP);
+        if(ctrl->handler)ctrl->handler(ctrl, cid,EVENT_DROP,0);
         debug("WM_USER: handler");
       }
       debug("WM_USER: end");
     }
 
     when WM_NOTIFY: {
-      if (LOWORD(wParam) == IDCX_TREEVIEW &&
-          ((LPNMHDR) lParam)->code == TVN_SELCHANGED) {
+      if (LOWORD(wParam) == IDCX_TREEVIEW && ((LPNMHDR) lParam)->code == TVN_SELCHANGED) {
         debug("WM_NOTIFY");
         HTREEITEM i = TreeView_GetSelection(((LPNMHDR) lParam)->hwndFrom);
         debug("WM_NOTIFY: GetSelection");
@@ -724,8 +765,7 @@ config_dialog_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
         item.hItem = i;
         item.mask = TVIF_PARAM;
         (void)TreeView_GetItem(((LPNMHDR) lParam)->hwndFrom, &item);
-
-       /* Destroy all controls in the currently visible panel. */
+        /* Destroy all controls in the currently visible panel. */
         for (winctrl *c = ctrls_panel.first; c; c = c->next) {
           for (int k = 0; k < c->num_ids; k++) {
             HWND item = GetDlgItem(dlg.ctlwnd, c->base_id + k);
@@ -742,7 +782,7 @@ config_dialog_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
         debug("WM_NOTIFY: create");
         dlg_refresh(null); /* set up control values */
         debug("WM_NOTIFY: refresh");
-      }
+      }else winctrl_handle_notify(hwnd,msg, wParam, lParam);
     }
 
     when WM_COMMAND or WM_DRAWITEM: {
@@ -863,7 +903,6 @@ win_open_config(void)
   ldpi= GetDeviceCaps(dc, LOGPIXELSY) ;
   ReleaseDC(wv.wnd, dc);
   cfg.opt_font.size = cfg.opt_font.size ?: DIALOG_FONTSIZE;
-  //heightsc=cfg.gui_font_size*100*ldpi/(720);
   heightsc=(cfg.opt_font.size ?: DIALOG_FONTSIZE)*100*ldpi/(720);
   dialog_width  = DLGW*10;
   dialog_height = DLGH*12;
@@ -889,7 +928,7 @@ win_open_config(void)
   win_dark_mode(wv.config_wnd);
 
   ShowWindow(wv.config_wnd, SW_SHOW);
-  win_update_shortcuts();
+  //win_update_shortcuts();
   set_dpi_auto_scaling(false);
 }
 

@@ -1,4 +1,4 @@
-#include <wchar.h>
+//G #include <wchar.h>
 
 // https://vt100.net/docs/vt3xx-gp/chapter13.html#F13-2
 enum tekmode {

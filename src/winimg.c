@@ -1,14 +1,14 @@
 // winimg.c (part of mintty)
 // Licensed under the terms of the GNU General Public License v3 or later.
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <ctype.h>   /* isdigit */
-#include <string.h>  /* memcpy */
-#include <windows.h>
+//G #include <stdlib.h>
+//G #include <stdio.h>
+//G #include <ctype.h>   /* isdigit */
+//G #include <string.h>  /* memcpy */
+//G #include <windows.h>
 
 #include "term.h"
-#include "winpriv.h"
+//G #include "winpriv.h"
 #include "termpriv.h"
 #include "winimg.h"
 #include "sixel.h"
@@ -904,8 +904,8 @@ winimgs_paint(void)
 
 #if CYGWIN_VERSION_API_MINOR >= 74
 
-#include <fcntl.h>
-#include "charset.h"  // path_win_w_to_posix
+//G #include <fcntl.h>
+//G #include "charset.h"  // path_win_w_to_posix
 
 void
 win_emoji_show(int x, int y, const wchar * efn, void * * bufpoi, int * buflen, int elen, ushort lattr, bool italic)

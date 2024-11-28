@@ -1,3 +1,31 @@
+Character rendering
+  * Reenabled distinct blinking for combined characters (broken since 3.5.3).
+  * Fix skipping of accent to next position on background colour.
+  * Fix drawing of Powerline round symbols (mintty/wsltty#358).
+  * Fix rendering of right-to-left scripts on italic or cursor position.
+  * Tweak diagonal box characters for uniform appearance.
+
+Window handling
+  * Show new tab at its target position right away (#1292).
+  * Live changing of reordered tabs while being dragged (#1293).
+  * Change mouse pointer while tab dragging (#1293).
+  * Adapt dynamic tab drag highlighting (~#1293).
+  * New windows/Alt+F2 launches terminal on same monitor (broken since 2.9.5).
+  * Maximise/Restore keeps window on same monitor (broken since 3.6.5, ~#1226).
+
+Misc
+  * Avoid potentially blocking retrieval of printers list (#1295).
+  * Option -RR reports list of available printers.
+
+### 3.7.6 (24 September 2024) ###
+
+Font and character rendering
+  * Fix rendering of repeated DEC graphics (#1288).
+
+Window handling
+  * Tabs can be reordered interactively via drag-and-drop (#1283).
+  * Fix command-line options -B and --Border (#7).
+
 ### 3.7.5 (17 September 2024) ###
 
 Unicode and Emoji data

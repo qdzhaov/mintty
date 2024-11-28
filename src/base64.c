@@ -2,16 +2,16 @@
 // Copyright 2016 Jianbin Kang
 // Licensed under the terms of the GNU General Public License v3 or later.
 
-#include <errno.h>
+//G #include <errno.h>
 #include "base64.h"
 #if CYGWIN_VERSION_API_MINOR >= 74
-#include <stdint.h>
+//G #include <stdint.h>
 #else
 #define uint32_t uint
 #endif
 #ifdef BASE64_TEST
 #include "std.h"
-#include <stdlib.h>
+//G #include <stdlib.h>
 #endif
 
 #define INVALID_CHAR	(-1)
@@ -197,9 +197,9 @@ int base64_decode(const char *input, int ilen, char *out, int olen)
 
 #ifdef BASE64_TEST
 
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
+//G #include <stdio.h>
+//G #include <string.h>
+//G #include <stdlib.h>
 #include "base64.h"
 
 struct base64_test {
