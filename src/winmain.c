@@ -2076,6 +2076,15 @@ win_update_transparency(int trans, bool opaque)
   win_update_blur(opaque);
   win_update_glass(opaque);
 }
+static void
+win_adjust_background(void)
+{
+  if (cfg.backgfile.type) {
+    //term_invalidate(0, 0, term.cols - 1, term.rows - 1);
+    // rather, more smoothly:
+    win_invalidate_all(true);
+  }
+}
 void
 win_update_scrollbar(bool inner)
 {
@@ -3100,6 +3109,7 @@ win_proc(HWND wnd, UINT message, WPARAM wp, LPARAM lp)
       if (win_key_up(wp, lp)) return 0;
     }
     when WM_CHAR or WM_SYSCHAR:{
+      //printf("Char:%x %c\n",(wchar)wp,(wchar)wp);
       provide_input(wp);
       child_sendw(&term,&(wchar){wp}, 1);
       return 0;
@@ -3107,10 +3117,12 @@ win_proc(HWND wnd, UINT message, WPARAM wp, LPARAM lp)
     when WM_UNICHAR:{
       if (wp == UNICODE_NOCHAR) return true;
       else if (wp > 0xFFFF) {
+        //printf("UChar:%x %C\n",(wchar)wp,(wchar)wp);
         provide_input(0xFFFF);
         child_sendw(&term,(wchar[]){high_surrogate(wp), low_surrogate(wp)}, 2);
         return false;
       } else {
+        //printf("uChar:%x %C\n",(wchar)wp,(wchar)wp);
         provide_input(wp);
         child_sendw(&term,&(wchar){wp}, 1);
         return false;
@@ -3165,6 +3177,7 @@ win_proc(HWND wnd, UINT message, WPARAM wp, LPARAM lp)
         if (len > 0) {
           wchar buf[(len + 1) / 2];
           ImmGetCompositionStringW(wv.imc, GCS_RESULTSTR, buf, len);
+          //printf("iChar:%ls\n",buf);
           provide_input(*buf);
           child_sendw(&term,buf, len / 2);
         }
@@ -3172,6 +3185,9 @@ win_proc(HWND wnd, UINT message, WPARAM wp, LPARAM lp)
       }
     }
     when WM_THEMECHANGED or WM_WININICHANGE or WM_SYSCOLORCHANGE:{
+      // keep image background updated while moving/resizing
+      win_adjust_background();
+
       // Size of window border (border, title bar, scrollbar) changed by:
       //   Personalization of window geometry (e.g. Title Bar Size)
       //     -> Windows sends WM_SYSCOLORCHANGE
@@ -3193,6 +3209,9 @@ win_proc(HWND wnd, UINT message, WPARAM wp, LPARAM lp)
         // this will switch from Light to Dark mode immediately but not back!
         //win_dark_mode(wnd);
       }
+    }
+    when WM_DISPLAYCHANGE:{
+      wv.checked_desktop_config = false;
     }
     when WM_FONTCHANGE:{
       font_cs_reconfig(true);
@@ -3522,8 +3541,11 @@ win_proc(HWND wnd, UINT message, WPARAM wp, LPARAM lp)
     when WM_WINDOWPOSCHANGED: {
       wv.poschanging = false;
       if (wv.disable_poschange)
-        // avoid premature Window size adaptation (#649?)
+        // avoid premature Window size adaptation (#649?) during startup
         break;
+
+      // keep image background updated while moving/resizing
+      win_adjust_background();
 
       trace_resize(("# WM_WINDOWPOSCHANGED %3X (resizing %d) %d %d @ %d %d\n", WP->flags, wv.resizing, WP->cy, WP->cx, WP->y, WP->x));
       if (per_monitor_dpi_aware == DPI_AWAREV1) {
@@ -3712,8 +3734,8 @@ win_proc(HWND wnd, UINT message, WPARAM wp, LPARAM lp)
         wv.hotkey = wp & 0xFF;
         ushort mods = wp >> 8;
         /* 
-         * HOTKEYF_CONTROL=0x2;MDK_CONTROL=2
-         * HOTKEYF_ALT    =0x4;MDK_ALT    =4
+         * HOTKEYF_CONTROL=0x2;MDK_CONTROL=4
+         * HOTKEYF_ALT    =0x4;MDK_ALT    =2
          *  */
         wv.hotkey_mods = ((mods & HOTKEYF_SHIFT  ) ? MDK_SHIFT:0)
             | ((mods & HOTKEYF_ALT    ) ? MDK_ALT  :0)
@@ -3733,6 +3755,7 @@ win_proc(HWND wnd, UINT message, WPARAM wp, LPARAM lp)
 }
 #define HKDBG(fmt, ...)	printf(fmt, ##__VA_ARGS__)
 #define UNCAP_INFO (WM_APP + 3195) /* 35963 */
+HWND hwh=NULL;
 static LRESULT CALLBACK hookprockbll(int nCode, WPARAM wParam, LPARAM lParam) {
   LPKBDLLHOOKSTRUCT kbdll = (LPKBDLLHOOKSTRUCT)lParam;
   if(kbdll->dwExtraInfo == UNCAP_INFO){
@@ -3740,6 +3763,7 @@ static LRESULT CALLBACK hookprockbll(int nCode, WPARAM wParam, LPARAM lParam) {
   }
   uint key = kbdll->vkCode;
   HWND hwnd=GetForegroundWindow();
+
   int isself=0;
   if(hwnd== wv.wnd)isself=1;
   else if(hwnd== wv.config_wnd)isself=2;
@@ -3751,6 +3775,13 @@ static LRESULT CALLBACK hookprockbll(int nCode, WPARAM wParam, LPARAM lParam) {
         ShowWindow(wv.wnd, SW_SHOW);  // in case it was started with -w hide
         ShowWindow(wv.wnd, SW_MINIMIZE);
         return 1;
+      }
+    }
+    if(key==VK_LWIN||key==VK_RWIN){
+      char stitle[32];
+      GetWindowTextA(hwnd,stitle,32);
+      if(strcmp(stitle,"min")){
+       return 0; 
       }
     }
     return CallNextHookEx(wv.kb_hook, nCode, wParam, lParam);

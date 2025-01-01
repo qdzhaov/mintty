@@ -172,15 +172,18 @@ DEPOPT=-MMD
 CCOPT=
 CCFLAGS:=$(CFLAGS) $(CCOPT)
 
-$(BINDIR)/std.hh.gch: std.h
-	$(CC) -c $(DEPOPT) $(CCFLAGS) $(CPPFLAGS) -fstack-check $< -o $@
+GCHF=$(BINDIR)/std.hh.gch
 
-$(objs): $(BINDIR)/std.hh.gch
+$(GCHF): std.h $(BINDIR)/cfck.t
+	$(CC) -c $(DEPOPT) $(CCFLAGS) $(CPPFLAGS) -fstack-check $< -o $@.n
+	mv $@.n $@
 
-$(BINDIR)/term%.o: term%.c
+$(objs): $(GCHF)
+
+$(BINDIR)/term%.o: term%.c $(GCHF)
 	$(CC) -c $(DEPOPT) $(CCFLAGS) $(GFLAGS) $(CPPFLAGS) $< -o $(BINDIR)/term$*.o
 
-$(BINDIR)/term.o: term.c emojibase.t emojiseqs.t
+$(BINDIR)/term.o: term.c emojibase.t emojiseqs.t $(GCHF)
 	$(CC) -c $(DEPOPT) $(CCFLAGS) $(GFLAGS) $(CPPFLAGS) -fstack-check $< -o $(BINDIR)/term.o
 
 # do not optimize wintext.c; this causes a mysterious delay if 
@@ -191,7 +194,7 @@ $(BINDIR)/term.o: term.c emojibase.t emojiseqs.t
 $(BINDIR)/appinfo.o: appinfo.c appinfo.h appinfo.t
 	$(CC) -c $(DEPOPT) -O0 $(CPPFLAGS) -fstack-check $< -o $(BINDIR)/appinfo.o
 
-$(BINDIR)/%.o: %.c $(BINDIR)/std.hh.gch
+$(BINDIR)/%.o: %.c  $(GCHF)
 	$(CC) -c $(DEPOPT) $(CCFLAGS) $(GFLAGS) $(CPPFLAGS) -fstack-check $< -o $(BINDIR)/$*.o
 
 $(BINDIR)/%.o: %.rc %.h %.mft
@@ -204,11 +207,19 @@ gitversion := $(shell ./mkvertag "$(srcversion)")
 
 #appinfo.t:	stamp
 
-stamp:cdef.n appinfo.t
+stamp:$(BINDIR)/cfck cdef.n appinfo.t 
+
+cdef.n: configdef.h
+	gcc -DCFGDEFT=DEFVAR -P -E configdef.h|sed '/^ *$$/d'>cdef.n
+	cmp cdef.t cdef.n || /bin/cp cdef.n cdef.t
+
+$(BINDIR)/cfck:Makefile
+	@echo $(DEPOPT) $(CCFLAGS) $(CPPFLAGS) > $@
+	@cmp $@  $@.t || /bin/cp $@  $@.t
 
 appinfo.t:$(c_srcs) $(h_srcs) $(rc_srcs)
 	@echo "#define VERSION_STAMP \"$(gitversion)\"" > appinfo.n
-	@cmp appinfo.n appinfo.t && rm -f appinfo.n || /bin/mv appinfo.n appinfo.t
+	@cmp appinfo.n appinfo.t  || /bin/cp appinfo.n appinfo.t
 
 exe := $(NAME).exe
 exe: $(exe)
@@ -217,7 +228,7 @@ $(exe): $(objs)
 	#-du -b $@
 
 bin := $(BINDIR)/$(NAME).exe
-bin: stamp $(BINDIR) $(bin)
+bin: $(BINDIR) stamp $(bin)
 $(BINDIR):
 	mkdir -p $(BINDIR)
 $(bin): $(bins)
@@ -285,9 +296,6 @@ WIDTH-A:	# UnicodeData.txt Blocks.txt EastAsianWidth.txt
 
 wide.t:	# UnicodeData.txt Blocks.txt EastAsianWidth.txt
 	sh ./mkwide
-cdef.n: configdef.h
-	gcc -DCFGDEFT=DEFVAR -P -E configdef.h|sed '/^ *$$/d'>cdef.n
-	cmp cdef.t cdef.n || /bin/cp cdef.n cdef.t
 
 scripts.t:	# Scripts.txt
 	sh ./mkscripts

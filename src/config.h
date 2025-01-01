@@ -5,12 +5,14 @@
 
 // Enums for various options.
 
-typedef enum { MDK_SHIFT = 1,MDK_CTRL = 2, MDK_ALT = 4,  
-               MDK_WIN = 8, MDK_EXT=16, MDK_SUPER = 32, MDK_HYPER = 64, 
-               MDK_CAPSLOCK = 64  // for Compose key
-             } mod_keys;
-typedef enum { SMDK_SHIFT = 0, SMDK_CTRL  = 1, SMDK_ALT   = 2, 
-               SMDK_WIN   = 3, SMDK_EXT   = 4, SMDK_SUPER = 5, SMDK_HYPER = 6 } smod_keys;
+typedef enum {  MDK_SHIFT   = 1, MDK_ALT  = 2, MDK_CTRL = 4,  
+                MDK_WIN     = 8, MDK_SUPER=16, MDK_HYPER=32, 
+                MDK_CAPSLOCK=64, MDK_EXT  =128 
+} mod_keys;
+typedef enum { SMDK_SHIFT   = 0,SMDK_ALT  = 1,SMDK_CTRL = 2, 
+               SMDK_WIN     = 3,SMDK_SUPER= 4,SMDK_HYPER= 5,
+               SMDK_CAPSLOCK= 6,SMDK_EXT  = 7 
+} smod_keys;
 
 enum { HOLD_NEVER, HOLD_START, HOLD_ERROR, HOLD_ALWAYS };
 enum { CUR_BLOCK, CUR_UNDERSCORE, CUR_LINE, CUR_BOX };

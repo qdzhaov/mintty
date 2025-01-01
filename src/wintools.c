@@ -571,6 +571,10 @@ getlxssinfo(bool list, wstring wslname, uint * wsl_ver,
         wcscat(icon, W("\\WindowsApps\\"));
         wcscat(icon, pfn);
         wcscat(icon, W("\\images\\icon.ico"));
+        // alternatively, icons can also be in Assets/*.png but those
+        // are not in .ico file format, or in *.exe;
+        // however, as the whole directory is not readable for non-admin,
+        // mintty cannot check that here
       }
     }
     else {  // legacy

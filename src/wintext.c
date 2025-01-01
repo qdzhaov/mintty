@@ -15,7 +15,7 @@
 #include <usp10.h>  // Uniscribe
 //winmain
 
-#define dont_debug_bold 1
+//#define dont_debug_bold 1
 
 #define dont_narrow_via_font
 
@@ -1846,6 +1846,31 @@ offset_bg(HDC dc)
   GetWindowRect(wv.wnd, &wr);
   int wx = wr.left + GetSystemMetrics(SM_CXSIZEFRAME);
   int wy = wr.top + GetSystemMetrics(SM_CYSIZEFRAME) + GetSystemMetrics(SM_CYCAPTION);
+
+  // adjust brush to virtual desktop (#1296)
+  if (!wv.checked_desktop_config) {
+    HWND dt = GetDesktopWindow();
+    HDC dtc = GetDC(dt);
+    GetClipBox(dtc, &wr);
+    ReleaseDC(dt, dtc);
+    wv.virtual_desktop_left = wr.left;
+    wv.virtual_desktop_top = wr.top;
+
+    LONG exstyle = GetWindowLong(wv.wnd, GWL_EXSTYLE);
+    if (exstyle & WS_EX_LEFTSCROLLBAR)
+      wv.virtual_desktop_left -= GetSystemMetrics(SM_CXVSCROLL);
+    LONG style = GetWindowLong(wv.wnd, GWL_STYLE);
+    if (!(style & WS_THICKFRAME)) {  // BorderStyle=void
+      wv.virtual_desktop_top += GetSystemMetrics(SM_CYSIZEFRAME);// + GetSystemMetrics(SM_CYCAPTION);
+      wv.virtual_desktop_left += GetSystemMetrics(SM_CXSIZEFRAME);
+    }
+    if (!(style & WS_CAPTION))  // BorderStyle=frame
+      wv.virtual_desktop_top += GetSystemMetrics(SM_CYCAPTION);
+
+    wv.checked_desktop_config = true;
+  }
+  wx -= wv.virtual_desktop_left;
+  wy -= wv.virtual_desktop_top;
 
   // adjust wallpaper origin
 

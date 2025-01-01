@@ -43,6 +43,9 @@ typedef struct {
   bool clipboard_token ;
   bool keep_screen_on ;
   bool force_opaque;
+  bool checked_desktop_config;
+  int virtual_desktop_left;
+  int virtual_desktop_top;
 #ifdef sanitize_min_restore_via_sync
 // multi-tab minimise/restore management:
   bool restoring ;

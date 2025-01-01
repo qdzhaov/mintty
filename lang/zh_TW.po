@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: mintty\n"
 "Report-Msgid-Bugs-To: https://github.com/mintty/mintty/issues/700\n"
-"POT-Creation-Date: 2024-10-14 13:54+0800\n"
+"POT-Creation-Date: 2025-01-02 06:33+0800\n"
 "PO-Revision-Date: 2019-10-16 12:32+0800\n"
 "Last-Translator: lcy0321 <u900011@gmail.com>\n"
 "Language-Team: \n"
@@ -16,7 +16,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: charset.c:228 charset.c:239 winmain.c:4536 winmain.c:4543 winmain.c:4898
+#: charset.c:228 charset.c:239 winmain.c:4405 winmain.c:4412 winmain.c:4768
 msgid "(Default)"
 msgstr "（預設）"
 
@@ -59,7 +59,7 @@ msgstr "%s：Exit %i"
 msgid "TERMINATED"
 msgstr "已終止"
 
-#: child.c:1254
+#: child.c:1253
 msgid "Error: Could not fork child daemon"
 msgstr "錯誤：無法建立子背景程序"
 
@@ -202,7 +202,7 @@ msgstr ""
 msgid "right"
 msgstr "右(&R)"
 
-#: config.c:177 config.c:211 config.c:242 config.c:3413
+#: config.c:177 config.c:211 config.c:242 config.c:316
 msgid "none"
 msgstr ""
 
@@ -352,31 +352,31 @@ msgstr "示粗體字 & 示粗體字"
 msgid "xterm"
 msgstr ""
 
-#: config.c:256 config.c:2228
+#: config.c:256 config.c:2123
 msgid "simple beep"
 msgstr "簡單的嗶聲"
 
-#: config.c:257 config.c:2229
+#: config.c:257 config.c:2124
 msgid "no beep"
 msgstr "無嗶聲"
 
-#: config.c:258 config.c:2230
+#: config.c:258 config.c:2125
 msgid "Default Beep"
 msgstr "預設嗶聲"
 
-#: config.c:259 config.c:2231
+#: config.c:259 config.c:2126
 msgid "Critical Stop"
 msgstr "緊急停止"
 
-#: config.c:260 config.c:2232
+#: config.c:260 config.c:2127
 msgid "Question"
 msgstr "問題"
 
-#: config.c:261 config.c:2233
+#: config.c:261 config.c:2128
 msgid "Exclamation"
 msgstr "驚嘆聲"
 
-#: config.c:262 config.c:2234
+#: config.c:262 config.c:2129
 msgid "Asterisk"
 msgstr "星號"
 
@@ -485,24 +485,44 @@ msgstr ""
 msgid "Progress Scan on all line"
 msgstr ""
 
+#: config.c:317
+msgid "Scale image to term size"
+msgstr ""
+
+#: config.c:318
+msgid "Scale term to image ration"
+msgstr ""
+
+#: config.c:319
+msgid "use Image as titled texture"
+msgstr ""
+
+#: config.c:320
+msgid "Scale image to term size,keep ratio,then titles"
+msgstr ""
+
+#: config.c:321
+msgid "Use desktop background"
+msgstr ""
+
 #. __ %s: unknown option name
-#: config.c:776 config.c:788
+#: config.c:801 config.c:811
 msgid "Ignoring unknown option '%s'"
 msgstr "忽略未知選項「%s」"
 
 #. __ %2$s: option name, %1$s: invalid value
 #. report errors only during initialisation
-#: config.c:893
+#: config.c:898
 msgid "Ignoring invalid value '%s' for option '%s'"
 msgstr "忽略無效值「%s」（「%s」選項）"
 
 #. __ %s: option name
-#: config.c:905
+#: config.c:908
 msgid "Ignoring option '%s' with missing value"
 msgstr "忽略「%s」選項（遺漏值）"
 
 #. __ %1$s: config file name, %2$s: error message
-#: config.c:1531
+#: config.c:1443
 msgid ""
 "Could not save options to '%s':\n"
 "%s."
@@ -510,239 +530,276 @@ msgstr ""
 "無法儲存選項至「%s」：\n"
 "%s。"
 
-#: config.c:2033
+#: config.c:1902
 msgid "◇ None (printing disabled) ◇"
 msgstr "◇ 無（停用列印） ◇"
 
-#: config.c:2035
+#: config.c:1904
 msgid "◆ Default printer ◆"
 msgstr "◆ 預設印表機 ◆"
 
+#. __ UI localization disabled
+#: config.c:1969
+msgid "- None -"
+msgstr "無(&N)"
+
+#. __ UI localization: use Windows desktop setting
+#: config.c:1971
+msgid "@ Windows language @"
+msgstr "@ Windows 語言 @"
+
+#. __ UI localization: use environment variable setting (LANGUAGE, LC_*)
+#: config.c:1973
+msgid "* Locale environm. *"
+msgstr "* Locale 環境變數 *"
+
+#. __ UI localization: use mintty configuration setting (Text - Locale)
+#: config.c:1975
+msgid "= cfg. Text Locale ="
+msgstr "= 已設定的語言 ="
+
 #. __ indicator of unsaved downloaded colour scheme
-#: config.c:2713
+#: config.c:2590
 msgid "downloaded / give me a name!"
 msgstr "已下載／給我個名字！"
 
-#: config.c:2826
+#: config.c:2702
 msgid "Could not load web theme"
 msgstr "無法載入網路主題"
 
-#: config.c:2905 config.c:2913
+#: config.c:2779 config.c:2787
 msgid "Cannot store theme file"
 msgstr "無法儲存主題檔案"
 
-#: config.c:3309
+#: config.c:3268
 msgid "About..."
 msgstr "關於..."
 
-#: config.c:3310
+#: config.c:3269
 msgid "&Save"
 msgstr "儲存"
 
-#: config.c:3312
+#: config.c:3271
 msgid "&Cancel"
 msgstr "取消"
 
-#: config.c:3314
+#: config.c:3273
 msgid "&Apply"
 msgstr "套用(&A)"
 
-#: config.c:3369
+#: config.c:3329
 msgid "Ansi:"
 msgstr ""
 
-#: config.c:3394 configdef.h:291
+#: config.c:3354 configdef.h:292
 msgid "C&urrent size"
 msgstr "目前大小(&U)"
 
-#: config.c:3414
-msgid "Scale image to term size"
-msgstr ""
+#: config.c:3367
+#, fuzzy
+msgid "◄"
+msgstr "◀"
 
-#: config.c:3415
-msgid "Scale term to image ration"
-msgstr ""
+#: config.c:3368
+#, fuzzy
+msgid "►"
+msgstr "▶"
 
-#: config.c:3416
-msgid "use Image as titled texture"
-msgstr ""
-
-#: config.c:3417
-msgid "Scale image to term size,keep ratio,then titles"
-msgstr ""
-
-#: config.c:3418
-msgid "Use desktop background"
-msgstr ""
-
-#: config.c:3421
+#: config.c:3378
 msgid "alpha"
 msgstr ""
 
-#: config.c:3426
+#: config.c:3383
 msgid "T&heme Save"
 msgstr ""
 
-#: config.c:3443
+#: config.c:3400
 msgid "► &Play"
 msgstr "► 播放(&P)"
 
-#: config.c:3452
-msgid "&Ctrl"
-msgstr "&Ctrl"
+#: config.c:3413
+msgid "name"
+msgstr ""
+
+#: config.c:3414
+msgid "describe"
+msgstr ""
+
+#: config.c:3415
+msgid "Hotkey1"
+msgstr ""
+
+#: config.c:3416
+msgid "Hotkey2"
+msgstr ""
+
+#: config.c:3417
+msgid "Hotkey3"
+msgstr ""
+
+#: config.c:3429
+#, fuzzy
+msgid "Left Right"
+msgstr "右(&R)"
+
+#: config.c:3430
+msgid "Set"
+msgstr ""
 
 #: textprint.c:44 textprint.c:128
 msgid "[Printing...] "
 msgstr "［列印中...］"
 
-#: winctrls.c:338
-#, fuzzy
-msgid "Left Right"
-msgstr "右(&R)"
-
-#: winctrls.c:1062 windialog.c:937
+#: winctrls.c:997 windialog.c:977
 msgid "OK"
 msgstr "確認"
 
-#: winctrls.c:1063 windialog.c:938
+#: winctrls.c:998 windialog.c:978
 msgid "Cancel"
 msgstr "取消"
 
 #. __ Font chooser: title bar label
-#: winctrls.c:1069
+#: winctrls.c:1004
 msgid "Font "
 msgstr "字型"
 
 #. __ Font chooser: button
-#: winctrls.c:1072
+#: winctrls.c:1007
 #, fuzzy
 msgid "&ApplyA"
 msgstr "套用(&A)"
 
 #. __ Font chooser:
-#: winctrls.c:1074
+#: winctrls.c:1009
 msgid "&Font:"
 msgstr "字型(&F)："
 
 #. __ Font chooser:
-#: winctrls.c:1076
+#: winctrls.c:1011
 msgid "Font st&yle:"
 msgstr "字型樣式(&Y)"
 
 #. __ Font chooser:
-#: winctrls.c:1078
+#: winctrls.c:1013
 msgid "&Size:"
 msgstr "大小(&S)："
 
 #. __ Font chooser:
-#: winctrls.c:1080
+#: winctrls.c:1015
 msgid "Sample"
 msgstr "範例"
 
 #. __ Font chooser: text sample ("AaBbYyZz" by default)
-#: winctrls.c:1084 winctrls.c:1333 winctrls.c:1518
+#: winctrls.c:1018 winctrls.c:1248 winctrls.c:1427
 msgid "Ferqœm’4€"
 msgstr "ABC abc 文字"
 
 #. __ Font chooser: this field is only shown with FontMenu=1
-#: winctrls.c:1100
+#: winctrls.c:1033
 msgid "Sc&ript:"
 msgstr "字符集(&R)"
 
 #. __ Font chooser: this field is only shown with FontMenu=1
-#: winctrls.c:1102
+#: winctrls.c:1035
 msgid "<A>Show more fonts</A>"
 msgstr "<A>顯示更多字型</A>"
 
 #. __ Colour chooser: title bar label
-#: winctrls.c:1108
+#: winctrls.c:1041
 msgid "Colour "
 msgstr "色彩"
 
 #. __ Colour chooser:
-#: winctrls.c:1122 winctrls.c:1134
+#: winctrls.c:1055 winctrls.c:1066
 msgid "B&asic colours:"
 msgstr "基本色彩(&A)"
 
 #. __ Colour chooser:
-#: winctrls.c:1143
+#: winctrls.c:1075
 msgid "&Custom colours:"
 msgstr "自訂色彩(&C)"
 
 #. __ Colour chooser:
-#: winctrls.c:1150
+#: winctrls.c:1082
 msgid "De&fine Custom Colours >>"
 msgstr "定義自訂色彩(&F) >>"
 
 #. __ Colour chooser:
-#: winctrls.c:1153 configdef.h:73
+#: winctrls.c:1085 configdef.h:73
 msgid "Colour"
 msgstr "色彩"
 
 #. __ Colour chooser:
-#: winctrls.c:1155
+#: winctrls.c:1087
 msgid "|S&olid"
 msgstr "|原色(&O)"
 
 #. __ Colour chooser:
-#: winctrls.c:1157
+#: winctrls.c:1089
 msgid "&Hue:"
 msgstr "色調(&H):"
 
 #. __ Colour chooser:
-#: winctrls.c:1160
+#: winctrls.c:1092
 msgid "&Sat:"
 msgstr "濃度(&S):"
 
 #. __ Colour chooser:
-#: winctrls.c:1162
+#: winctrls.c:1094
 msgid "&Lum:"
 msgstr "亮度(&L):"
 
 #. __ Colour chooser:
-#: winctrls.c:1164
+#: winctrls.c:1096
 msgid "&Red:"
 msgstr "紅(&R):"
 
 #. __ Colour chooser:
-#: winctrls.c:1166
+#: winctrls.c:1098
 msgid "&Green:"
 msgstr "綠(&G):"
 
 #. __ Colour chooser:
-#: winctrls.c:1168
+#: winctrls.c:1100
 msgid "&Blue:"
 msgstr "藍(&B):"
 
 #. __ Colour chooser:
-#: winctrls.c:1171
+#: winctrls.c:1103
 msgid "A&dd to Custom Colours"
 msgstr "新增自訂色彩(&D)"
 
 #. __ Options: dialog title
-#: windialog.c:219 windialog.c:882
+#: windialog.c:242 windialog.c:922
 msgid "Options"
 msgstr "選項"
 
 #. __ Options: dialog title: "mintty <release> available (for download)"
-#: windialog.c:221
+#: windialog.c:244
 msgid "available"
 msgstr "可用"
 
-#: windialog.c:935
+#. __("ShootFoot")                              )
+#. _CFGDEFD(CBOOL    ,old_keyfuncs_keypad    ,0               ,       IS(0),OPT_BOOL         ,OPF_CHK  ,3,0,0,"OldKeyFunctionsKeypad"    ,__("OldKeyFunctionsKeypad")                  )
+#: windialog.c:623 configdef.h:244
+#, fuzzy
+msgid "HotKeys"
+msgstr "按鍵"
+
+#: windialog.c:975
 msgid "I see"
 msgstr "了解"
 
-#: windialog.c:967 windialog.c:994
+#: windialog.c:1007 windialog.c:1034
 msgid "Error"
 msgstr "錯誤"
 
 #. __ Context menu, session switcher ("virtual tabs") menu label
-#: wininput.c:183
+#: wininput.c:198
 msgid "Session switcher"
 msgstr "Session 切換器"
 
-#: wininput.c:193
+#: wininput.c:208
 msgid "Session launcher"
 msgstr "Session 啟動器"
 
@@ -768,220 +825,220 @@ msgstr "複製 → 貼上"
 msgid "&Paste "
 msgstr "貼上(&P)"
 
-#: wininput.c:361
+#: wininput.c:359
 msgid "S&earch"
 msgstr "搜尋(&E)"
 
-#: wininput.c:365
+#: wininput.c:361
 msgid "&Log to File[I]"
 msgstr "記錄至檔案(&L)"
 
-#: wininput.c:366
+#: wininput.c:362
 msgid "&Log to File[O]"
 msgstr "記錄至檔案(&L)"
 
-#: wininput.c:367
+#: wininput.c:363
 msgid "&Log to File[IO]"
 msgstr "記錄至檔案(&L)"
 
-#: wininput.c:369
+#: wininput.c:365
 msgid "&Log to File"
 msgstr "記錄至檔案(&L)"
 
-#: wininput.c:373
+#: wininput.c:369
 msgid "Character &Info"
 msgstr "字元資訊(&I)"
 
-#: wininput.c:375
+#: wininput.c:371
 msgid "VT220 Keyboard"
 msgstr "VT220 鍵盤"
 
-#: wininput.c:376
+#: wininput.c:372
 msgid "&Reset"
 msgstr "重設(&R)"
 
-#: wininput.c:380
+#: wininput.c:375
 msgid "&Default Size"
 msgstr "預設大小(&D)"
 
-#: wininput.c:382
+#: wininput.c:376
 msgid "Tabbar(&H)"
 msgstr ""
 
-#: wininput.c:389
+#: wininput.c:383
 msgid "Scrollbar(&S)"
 msgstr "捲軸"
 
-#: wininput.c:393
+#: wininput.c:387
 msgid "&Border[T]"
 msgstr ""
 
-#: wininput.c:394
+#: wininput.c:388
 msgid "&Border[N]"
 msgstr ""
 
-#: wininput.c:395
+#: wininput.c:389
 msgid "&Border"
 msgstr ""
 
-#: wininput.c:398
+#: wininput.c:392
 msgid "PartLine(&K)"
 msgstr ""
 
-#: wininput.c:399
+#: wininput.c:393
 msgid "Indicator(&J)"
 msgstr ""
 
-#: wininput.c:400
+#: wininput.c:394
 msgid "&Full Screen"
 msgstr "全螢幕(&F)"
 
-#: wininput.c:403
+#: wininput.c:396
 msgid "Flip Screen(&W)"
 msgstr "切換螢幕(&S)"
 
 #. __ Context menu:
-#: wininput.c:409 configdef.h:354
+#: wininput.c:401 configdef.h:355
 msgid "Status Line"
 msgstr ""
 
-#: wininput.c:415 wininput.c:599
+#: wininput.c:407 wininput.c:585
 msgid "Copy T&Itle"
 msgstr "複製標題(&T)"
 
 #. __ Context menu:
-#: wininput.c:416 wininput.c:564 wininput.c:600
+#: wininput.c:408 wininput.c:550 wininput.c:586
 msgid "&Options..."
 msgstr "選項(&O)..."
 
 #. __ Context menu:
-#: wininput.c:493
+#: wininput.c:479
 msgid "Ope&n"
 msgstr "開啟(&N)"
 
-#: wininput.c:494 wininput.c:594
+#: wininput.c:480 wininput.c:580
 msgid "New &Tab\twin+T"
 msgstr "開新分頁(T&)"
 
-#: wininput.c:495 wininput.c:593
+#: wininput.c:481 wininput.c:579
 msgid "&Kill tab\twin+w"
 msgstr ""
 
-#: wininput.c:497 wininput.c:591
+#: wininput.c:483 wininput.c:577
 msgid "&Previous tab\twin+<-"
 msgstr ""
 
-#: wininput.c:498 wininput.c:590
+#: wininput.c:484 wininput.c:576
 msgid "&Next tab\twin+->"
 msgstr ""
 
-#: wininput.c:499 wininput.c:588
+#: wininput.c:485 wininput.c:574
 msgid "Move to &Left\twin+<-"
 msgstr ""
 
-#: wininput.c:500 wininput.c:589
+#: wininput.c:486 wininput.c:575
 msgid "Move to &Right\twin+->"
 msgstr ""
 
-#: wininput.c:504
+#: wininput.c:490
 msgid "Copy as text"
 msgstr "複製text"
 
-#: wininput.c:505 configdef.h:274
+#: wininput.c:491 configdef.h:275
 msgid "Copy with TABs"
 msgstr "以純文字複製（包含 &Tab）"
 
-#: wininput.c:506
+#: wininput.c:492
 msgid "Copy as RTF"
 msgstr "複製RTF"
 
-#: wininput.c:507
+#: wininput.c:493
 msgid "Copy as HTML text"
 msgstr "複製HTML text"
 
-#: wininput.c:508
+#: wininput.c:494
 msgid "Copy as HTML"
 msgstr "複製HTML"
 
-#: wininput.c:509
+#: wininput.c:495
 msgid "Copy as HTML full"
 msgstr "複製HTML完整"
 
-#: wininput.c:515
+#: wininput.c:501
 msgid "Select &All"
 msgstr "全選(&A)"
 
-#: wininput.c:516
+#: wininput.c:502
 msgid "Save as &Image"
 msgstr "儲存成圖片(&I)"
 
 #. __ Context menu: write terminal window contents as HTML file
-#: wininput.c:528
+#: wininput.c:514
 msgid "HTML Screen Dump"
 msgstr "將螢幕內容存為 HTML"
 
 #. __ Context menu: clear scrollback buffer (lines scrolled off the window)
-#: wininput.c:536
+#: wininput.c:522
 msgid "Clear Scrollback"
 msgstr "清除螢幕緩衝區"
 
 #. __ Context menu: generate a TTY BRK condition (tty line interrupt)
-#: wininput.c:551
+#: wininput.c:537
 msgid "Send Break"
 msgstr "傳送 Break"
 
-#: wininput.c:608
+#: wininput.c:594
 msgid "N&Ew Win"
 msgstr ""
 
-#: wininput.c:613
+#: wininput.c:599
 msgid "New T&Ab"
 msgstr "開新分頁(T&)"
 
 #. __ Context menu, user commands
-#: wininput.c:674
+#: wininput.c:660
 msgid "User commands"
 msgstr "使用者指令"
 
-#: wininput.c:3002 wininput.c:3004 wininput.c:3006 wininput.c:3028
-#: wininput.c:3048
+#: wininput.c:2991 wininput.c:2993 wininput.c:2995 wininput.c:3017
+#: wininput.c:3037
 msgid "[NO SCROLL] "
 msgstr "［停用捲動］"
 
-#: wininput.c:3003 wininput.c:3008 wininput.c:3037 wininput.c:3057
+#: wininput.c:2992 wininput.c:2997 wininput.c:3026 wininput.c:3046
 msgid "[SCROLL MODE] "
 msgstr "［捲動模式］"
 
-#: winmain.c:2352
+#: winmain.c:2278
 msgid "Processes are running in session:"
 msgstr "有程式正在執行於 Session："
 
-#: winmain.c:2353
+#: winmain.c:2279
 msgid "Close anyway?"
 msgstr "仍要關閉？"
 
-#: winmain.c:2377
+#: winmain.c:2302
 msgid "Reset terminal?"
 msgstr "重設 終端機？"
 
-#: winmain.c:2587
+#: winmain.c:2501
 msgid "Try '--help' for more information"
 msgstr "嘗試「--help」以獲得更多資訊"
 
-#: winmain.c:2595
+#: winmain.c:2508
 msgid "Could not load icon"
 msgstr "無法載入圖示"
 
-#: winmain.c:4261
+#: winmain.c:4131
 msgid "Usage:"
 msgstr "使用方式："
 
-#: winmain.c:4262
+#: winmain.c:4132
 msgid "[OPTION]... [ PROGRAM [ARG]... | - ]"
 msgstr "[OPTION]... [ PROGRAM [ARG]... | - ]"
 
 #. __ help text (output of -H / --help), after initial line ("synopsis")
-#: winmain.c:4265
+#: winmain.c:4135
 #, fuzzy
 msgid ""
 "Start a new terminal session running the specified program or the user's "
@@ -1113,70 +1170,70 @@ msgstr ""
 "      --sl NUM          设置设置回滚行数\n"
 "參閱說明頁面以取得進一步的命令列選項與設定。\n"
 
-#: winmain.c:4523
+#: winmain.c:4392
 msgid "Duplicate option '%s'"
 msgstr "重複的選項「%s」"
 
-#: winmain.c:4536 winmain.c:4543 winmain.c:4898
+#: winmain.c:4405 winmain.c:4412 winmain.c:4768
 msgid "WSL distribution '%s' not found"
 msgstr "找不到 WSL 發行版 %s"
 
-#: winmain.c:4573 winmain.c:4662
+#: winmain.c:4442 winmain.c:4534
 msgid "Unknown option '%s'"
 msgstr "未知的選項「%s」"
 
-#: winmain.c:4575
+#: winmain.c:4444
 msgid "Option '%s' requires an argument"
 msgstr "選項「%s」需要一個參數"
 
-#: winmain.c:4602
+#: winmain.c:4471
 msgid "Syntax error in position argument '%s'"
 msgstr "Position 參數「%s」有語法錯誤"
 
-#: winmain.c:4613
+#: winmain.c:4482
 msgid "Syntax error in size argument '%s'"
 msgstr "Size 參數「%s」有語法錯誤"
 
-#: winmain.c:4772
+#: winmain.c:4643
 msgid "Syntax error in geometry argument '%s'"
 msgstr "Geometry 參數「%s」有語法錯誤"
 
-#: winmain.c:4960
+#: winmain.c:4828
 msgid "Mintty could not detach from caller, starting anyway"
 msgstr "Mintty 無法自 caller 分離，仍開始啟動"
 
-#: winmain.c:5171
+#: winmain.c:5036
 msgid "Using default title due to invalid characters in program name"
 msgstr "由於程式名稱中有不合法的字元，使用預設標題"
 
 #. __ Options - Text: font properties information: "Leading": total line padding (see option RowSpacing), Bold/Underline modes (font or manual, see options BoldAsFont/UnderlineManual/UnderlineColour)
-#: wintext.c:161
+#: wintext.c:162
 msgid "Leading: %d, Bold: %ls, Underline: %ls"
 msgstr "行距：%d，粗體：%s，底線：%s"
 
 #. __ Options - Text: font properties: value taken from font
-#: wintext.c:163
+#: wintext.c:164
 msgid "font"
 msgstr "字型"
 
 #. __ Options - Text: font properties: value affected by option
-#: wintext.c:165
+#: wintext.c:166
 msgid "manual"
 msgstr "手動"
 
-#: wintext.c:541
+#: wintext.c:542
 msgid "Font not found, using system substitute"
 msgstr "找不到字型，改用系統字型"
 
-#: wintext.c:556
+#: wintext.c:557
 msgid "Font has limited support for character ranges"
 msgstr "字型僅支援部分字元範圍"
 
-#: wintext.c:696
+#: wintext.c:698
 msgid "Font installation corrupt, using system substitute"
 msgstr "字型安裝錯誤，改用系統字型"
 
-#: wintext.c:709
+#: wintext.c:711
 msgid "Font does not support system locale"
 msgstr "字型不支援系統語言"
 
@@ -1536,969 +1593,965 @@ msgstr "示粗體字"
 msgid "Locale"
 msgstr "本地"
 
-#: configdef.h:170
+#: configdef.h:171
 msgid "Charset"
 msgstr "字符集"
 
-#: configdef.h:171
+#: configdef.h:172
 msgid "Emojis"
 msgstr "表情符號"
 
-#: configdef.h:173
+#: configdef.h:174
 msgid "Style"
 msgstr "風格"
 
-#: configdef.h:174
+#: configdef.h:175
 msgid "Placement"
 msgstr "顯示方式"
 
-#: configdef.h:177
+#: configdef.h:178
 msgid "ShowHiddenFonts"
 msgstr ""
 
-#: configdef.h:178
+#: configdef.h:179
 msgid "OldLocale"
 msgstr "本地"
 
-#: configdef.h:180
+#: configdef.h:181
 #, fuzzy
 msgid "FontChoice"
 msgstr "字体大小"
 
-#: configdef.h:181
+#: configdef.h:182
 msgid "FontSample"
 msgstr "字体实例"
 
-#: configdef.h:182
+#: configdef.h:183
 #, fuzzy
 msgid "FontRender"
 msgstr "字体"
 
-#: configdef.h:183
+#: configdef.h:184
 #, fuzzy
 msgid "Charwidth"
 msgstr "字符集"
 
-#: configdef.h:185
+#: configdef.h:186
 msgid "FontMenu"
 msgstr "字体"
 
-#: configdef.h:186
+#: configdef.h:187
 msgid "TekFont"
 msgstr "字体"
 
-#: configdef.h:187
+#: configdef.h:188
 #, fuzzy
 msgid "fonts"
 msgstr "字型"
 
-#: configdef.h:188
+#: configdef.h:189
 msgid "Font1"
 msgstr "字体"
 
-#: configdef.h:189
+#: configdef.h:190
 msgid "Font2"
 msgstr "字体"
 
-#: configdef.h:190
+#: configdef.h:191
 msgid "Font3"
 msgstr "字体"
 
-#: configdef.h:191
+#: configdef.h:192
 msgid "Font4"
 msgstr "字体"
 
-#: configdef.h:192
+#: configdef.h:193
 msgid "Font5"
 msgstr "字体"
 
-#: configdef.h:193
+#: configdef.h:194
 msgid "Font6"
 msgstr "字体"
 
-#: configdef.h:194
+#: configdef.h:195
 msgid "Font7"
 msgstr "字体"
 
-#: configdef.h:195
+#: configdef.h:196
 msgid "Font8"
 msgstr "字体"
 
-#: configdef.h:196
+#: configdef.h:197
 msgid "Font9"
 msgstr "字体"
 
-#: configdef.h:197
+#: configdef.h:198
 msgid "Font10"
 msgstr "字体"
 
-#: configdef.h:198
+#: configdef.h:199
 msgid "FontRTL"
 msgstr "RTL字体"
 
-#: configdef.h:200
+#: configdef.h:201
 msgid "Keys"
 msgstr "按鍵"
 
-#: configdef.h:200
+#: configdef.h:201
 msgid "Keyboard features"
 msgstr "鍵盤功能"
 
-#: configdef.h:203
+#: configdef.h:204
 msgid "&Backarrow sends ^H"
 msgstr "後退鍵傳送^H(&B)"
 
-#: configdef.h:204
+#: configdef.h:205
 msgid "&Delete sends DEL"
 msgstr "刪除鍵傳送DEL(&D)"
 
-#: configdef.h:205
+#: configdef.h:206
 msgid "Ctrl+LeftAlt is Alt&Gr"
 msgstr "Ctrl+左Alt為AltGr(&G)"
 
-#: configdef.h:206
+#: configdef.h:207
 msgid "AltGr is also Alt"
 msgstr "將 AltGr 也視為 Alt"
 
-#: configdef.h:207
+#: configdef.h:208
 msgid "Caplock As Escape"
 msgstr ""
 
-#: configdef.h:208
+#: configdef.h:209
 msgid "&Esc/Enter reset IME to alphanumeric"
 msgstr ""
 
-#: configdef.h:210
+#: configdef.h:211
 msgid "OldAltGrDetection"
 msgstr ""
 
-#: configdef.h:211
+#: configdef.h:212
 msgid "AutoRepeat"
 msgstr ""
 
-#: configdef.h:212
+#: configdef.h:213
 msgid "FormatOtherKeys"
 msgstr ""
 
-#: configdef.h:213
+#: configdef.h:214
 msgid "CtrlAltDelayAltGr"
 msgstr "将 Ctrl+左Alt 设置为 AltGr"
 
-#: configdef.h:214
+#: configdef.h:215
 msgid "OldModifyKeys"
 msgstr ""
 
-#: configdef.h:215
+#: configdef.h:216
 msgid "SupportExternalHotkeys"
 msgstr ""
 
-#: configdef.h:217
+#: configdef.h:218
 msgid "Shortcuts"
 msgstr "快捷鍵"
 
-#: configdef.h:218
+#: configdef.h:219
 msgid "Cop&y and Paste (Ctrl/Shift+Ins)"
 msgstr "複製與貼上（Ctrl/Shift+Ins）(&Y)"
 
-#: configdef.h:219
+#: configdef.h:220
 msgid "&Menu and Full Screen (Alt+Space/Enter)"
 msgstr "選單與全螢幕（Alt+Space/Enter）(&M)"
 
-#: configdef.h:220
+#: configdef.h:221
 msgid "&Switch window (Ctrl+[Shift+]Tab)"
 msgstr "切換視窗（Ctrl+[Shift+]Tab）(&S)"
 
-#: configdef.h:221
+#: configdef.h:222
 msgid "&Zoom (Ctrl+plus/minus/zero)"
 msgstr "縮放（Ctrl+plus/minus/zero）(&Z)"
 
-#: configdef.h:222
+#: configdef.h:223
 msgid "&Alt+Fn shortcuts"
 msgstr "Alt+Fn 快捷鍵(&A)"
 
-#: configdef.h:223
+#: configdef.h:224
 msgid "&Win+x shortcuts"
 msgstr "Alt+Fn 快捷鍵(&A)"
 
-#: configdef.h:224
+#: configdef.h:225
 msgid "&Ctrl+Shift+letter shortcuts"
 msgstr "Ctrl+Shift+字母 快捷鍵(&C)"
 
-#: configdef.h:225
+#: configdef.h:226
 msgid "Compose key"
 msgstr "組合鍵"
 
-#: configdef.h:227
+#: configdef.h:228
 msgid "ZoomFontWithWindow"
 msgstr ""
 
-#: configdef.h:228
+#: configdef.h:229
 msgid "hkwinkeyall"
 msgstr "捕获所有windows键"
 
-#: configdef.h:229
+#: configdef.h:230
 msgid "hook_keyboard"
 msgstr ""
 
-#: configdef.h:230
+#: configdef.h:231
 msgid "CtrlExchangeShift"
 msgstr ""
 
-#: configdef.h:231
+#: configdef.h:232
 msgid "CtrlControls"
 msgstr ""
 
-#: configdef.h:234
+#: configdef.h:235
 msgid "Key_PrintScreen"
 msgstr ""
 
-#: configdef.h:235
+#: configdef.h:236
 msgid "Key_Pause"
 msgstr ""
 
-#: configdef.h:236
+#: configdef.h:237
 msgid "Key_Break"
 msgstr "发送 Break"
 
-#: configdef.h:237
+#: configdef.h:238
 msgid "Key_Menu"
 msgstr "菜单"
 
-#: configdef.h:238
+#: configdef.h:239
 msgid "Key_ScrollLock"
 msgstr "清除滚动历史"
 
-#: configdef.h:239
+#: configdef.h:240
 msgid "ManageLEDs"
 msgstr ""
 
-#. __("ShootFoot")                              )
-#. _CFGDEFD(CBOOL    ,old_keyfuncs_keypad    ,0               ,       IS(0),OPT_BOOL         ,OPF_CHK  ,3,0,0,"OldKeyFunctionsKeypad"    ,__("OldKeyFunctionsKeypad")                  )
-#: configdef.h:243
-#, fuzzy
-msgid "HotKeys"
-msgstr "按鍵"
-
-#: configdef.h:243
+#: configdef.h:244
 msgid "Hotkey Setting"
 msgstr ""
 
-#: configdef.h:245
+#: configdef.h:246
 msgid "KeyFunctions"
 msgstr "鼠标功能"
 
-#: configdef.h:247
+#: configdef.h:248
 msgid "Mouse"
 msgstr "滑鼠"
 
-#: configdef.h:247
+#: configdef.h:248
 msgid "Mouse functions"
 msgstr "滑鼠功能"
 
-#: configdef.h:249
+#: configdef.h:250
 msgid "Clic&ks place command line cursor"
 msgstr "點擊定位游標(&K)"
 
-#: configdef.h:250
+#: configdef.h:251
 msgid "Delimiters:"
 msgstr ""
 
-#: configdef.h:251
+#: configdef.h:252
 msgid "Word Characters:"
 msgstr "字元集(C)"
 
-#: configdef.h:252
+#: configdef.h:253
 msgid "Click actions"
 msgstr "點擊動作"
 
-#: configdef.h:253
+#: configdef.h:254
 msgid "Right mouse button"
 msgstr "滑鼠右鍵"
 
-#: configdef.h:254
+#: configdef.h:255
 msgid "Middle mouse button"
 msgstr "滑鼠中鍵"
 
-#: configdef.h:255
+#: configdef.h:256
 msgid "Clicks Send to App"
 msgstr ""
 
-#: configdef.h:256
+#: configdef.h:257
 msgid "Modifier for overriding default"
 msgstr "覆蓋預設設定的修飾鍵"
 
-#: configdef.h:258
+#: configdef.h:259
 msgid "OpeningClicks"
 msgstr ""
 
-#: configdef.h:259
+#: configdef.h:260
 msgid "OpeningMod"
 msgstr ""
 
-#: configdef.h:261
+#: configdef.h:262
 msgid "ZoomMouse"
 msgstr "鼠标缩放"
 
-#: configdef.h:262
+#: configdef.h:263
 msgid "HideMouse"
 msgstr "隐藏鼠标"
 
-#: configdef.h:263
+#: configdef.h:264
 msgid "ElasticMouse"
 msgstr ""
 
-#: configdef.h:264
+#: configdef.h:265
 msgid "LinesPerMouseWheelNotch"
 msgstr ""
 
-#: configdef.h:266
+#: configdef.h:267
 msgid "MousePointer"
 msgstr "打印机"
 
-#: configdef.h:267
+#: configdef.h:268
 #, fuzzy
 msgid "AppMousePointer"
 msgstr "打印机"
 
-#: configdef.h:269
+#: configdef.h:270
 msgid "Selection"
 msgstr "選取"
 
-#: configdef.h:269
+#: configdef.h:270
 msgid "Selection and clipboard"
 msgstr "選取與剪貼簿"
 
-#: configdef.h:271
+#: configdef.h:272
 msgid "Clear selection on input"
 msgstr "輸入時解除選取"
 
-#: configdef.h:272
+#: configdef.h:273
 msgid "Clipboard"
 msgstr "剪貼簿"
 
-#: configdef.h:273
+#: configdef.h:274
 msgid "Cop&y on select"
 msgstr "選取時複製(&Y)"
 
-#: configdef.h:275
+#: configdef.h:276
 msgid "Copy as &rich text"
 msgstr "以格式化文字複製(&R)"
 
-#: configdef.h:276
+#: configdef.h:277
 msgid "CopyAsHTML"
 msgstr "以 HTML 复制"
 
-#: configdef.h:277
-msgid "CopyAsRTFFont"
-msgstr "以 RTF 复制"
-
 #: configdef.h:278
-#, fuzzy
-msgid "CopyAsRTFFontName"
+msgid "CopyAsRTFFont"
 msgstr "以 RTF 复制"
 
 #: configdef.h:279
 #, fuzzy
-msgid "CopyAsRTFFontHeight"
+msgid "CopyAsRTFFontName"
 msgstr "以 RTF 复制"
 
 #: configdef.h:280
+#, fuzzy
+msgid "CopyAsRTFFontHeight"
+msgstr "以 RTF 复制"
+
+#: configdef.h:281
 msgid "Trim space from selection"
 msgstr "修剪選取範圍前後的空白"
 
-#: configdef.h:281
+#: configdef.h:282
 msgid "Allow setting selection"
 msgstr "允許調整選取的設定值"
 
-#: configdef.h:282
+#: configdef.h:283
 #, fuzzy
 msgid "allow_paste_selection"
 msgstr "允許調整選取的設定值"
 
-#: configdef.h:283
+#: configdef.h:284
 msgid "Show size while selecting (0..12)"
 msgstr "選取時顯示長度"
 
-#: configdef.h:284
+#: configdef.h:285
 msgid "Suspend output while selecting"
 msgstr "選取時暫停輸出"
 
-#: configdef.h:286 configdef.h:369
+#: configdef.h:287 configdef.h:370
 msgid "Window"
 msgstr "視窗"
 
-#: configdef.h:286
+#: configdef.h:287
 #, fuzzy
 msgid "Window Options"
 msgstr "視窗屬性"
 
-#: configdef.h:287
+#: configdef.h:288
 msgid "Default size"
 msgstr "預設大小"
 
-#: configdef.h:289
+#: configdef.h:290
 msgid "Colu&mns"
 msgstr "欄(&M)"
 
-#: configdef.h:290
+#: configdef.h:291
 msgid "Ro&ws"
 msgstr "列(&W)"
 
-#: configdef.h:292
+#: configdef.h:293
 msgid "Re&wrap on resize"
 msgstr "調整大小時調整內容(&W)"
 
-#: configdef.h:293
+#: configdef.h:294
 msgid "Scrollbar"
 msgstr "捲軸"
 
-#: configdef.h:295
+#: configdef.h:296
 msgid "Scroll&back lines"
 msgstr "螢幕緩衝區行數(&B)"
 
-#: configdef.h:296
+#: configdef.h:297
 msgid "MaxScrollbackLines"
 msgstr "最大保存历史行数"
 
-#: configdef.h:297
+#: configdef.h:298
 msgid "Modifier for scrolling"
 msgstr "滾動的修飾鍵"
 
-#: configdef.h:299
+#: configdef.h:300
 msgid "&PgUp and PgDn scroll without modifier"
 msgstr "PgUp 與 PgDn 滾動不需修飾鍵(&P)"
 
-#: configdef.h:300
+#: configdef.h:301
 #, fuzzy
 msgid "BorderStyle"
 msgstr "風格"
 
-#: configdef.h:301
+#: configdef.h:302
 msgid "&AllocConsole ,Some console programs need it."
 msgstr ""
 
-#: configdef.h:304
+#: configdef.h:305
 #, fuzzy
 msgid "Search Bar"
 msgstr "搜索条"
 
-#: configdef.h:305
+#: configdef.h:306
 #, fuzzy
 msgid "SearchContext"
 msgstr "搜尋(&E)"
 
-#: configdef.h:307
+#: configdef.h:308
 msgid "Terminal"
 msgstr "終端機"
 
-#: configdef.h:307
+#: configdef.h:308
 msgid "Terminal features"
 msgstr "終端機功能"
 
-#: configdef.h:310
+#: configdef.h:311
 msgid "Term"
 msgstr "终端"
 
-#: configdef.h:311
+#: configdef.h:312
 msgid "&Answerback"
 msgstr "&Answerback"
 
-#: configdef.h:312
+#: configdef.h:313
 msgid "WrapTab"
 msgstr ""
 
-#: configdef.h:313
+#: configdef.h:314
 msgid "OldWrapModes"
 msgstr ""
 
-#: configdef.h:314
+#: configdef.h:315
 msgid "Enable132ColumnSwitching"
 msgstr ""
 
-#: configdef.h:315
+#: configdef.h:316
 msgid "Bell"
 msgstr "提示音"
 
-#: configdef.h:316
+#: configdef.h:317
 msgid "BellType"
 msgstr "响铃类型"
 
-#: configdef.h:317
+#: configdef.h:318
 #, fuzzy
 msgid "BellFiles"
 msgstr "响铃文件"
 
-#: configdef.h:318
+#: configdef.h:319
 msgid "BellFile"
 msgstr "响铃文件"
 
-#: configdef.h:319
+#: configdef.h:320
 msgid "BellFile2"
 msgstr "响铃文件2"
 
-#: configdef.h:320
+#: configdef.h:321
 msgid "BellFile3"
 msgstr "响铃文件3"
 
-#: configdef.h:321
+#: configdef.h:322
 msgid "BellFile4"
 msgstr "响铃文件4"
 
-#: configdef.h:322
+#: configdef.h:323
 msgid "BellFile5"
 msgstr "响铃文件5"
 
-#: configdef.h:323
+#: configdef.h:324
 msgid "BellFile6"
 msgstr "响铃文件6"
 
-#: configdef.h:324
+#: configdef.h:325
 msgid "BellFile7"
 msgstr "响铃文件7"
 
-#: configdef.h:325
+#: configdef.h:326
 msgid "BellFreq"
 msgstr "响铃频率"
 
-#: configdef.h:326
+#: configdef.h:327
 msgid "BellLen"
 msgstr "响铃时长"
 
-#: configdef.h:328
+#: configdef.h:329
 msgid "&Highlight in taskbar"
 msgstr "於工作列醒目提示(&H)"
 
-#: configdef.h:329
+#: configdef.h:330
 msgid "&Popup"
 msgstr "彈出視窗(&P)"
 
-#: configdef.h:330
+#: configdef.h:331
 msgid "&Flash"
 msgstr "閃爍(&F)"
 
-#: configdef.h:331
+#: configdef.h:332
 msgid "BellFlashStyle"
 msgstr "响铃闪屏类型"
 
-#: configdef.h:333
+#: configdef.h:334
 msgid "BellInterval"
 msgstr "响铃间隔"
 
-#: configdef.h:334
+#: configdef.h:335
 msgid "PlayTone"
 msgstr ""
 
-#: configdef.h:335
+#: configdef.h:336
 msgid "Printer"
 msgstr "印表機"
 
-#: configdef.h:337
+#: configdef.h:338
 msgid "System"
 msgstr ""
 
-#: configdef.h:337
+#: configdef.h:338
 msgid "system setting"
 msgstr ""
 
-#: configdef.h:338
+#: configdef.h:339
 msgid "Dialog"
 msgstr ""
 
-#: configdef.h:340
+#: configdef.h:341
 #, fuzzy
 msgid "Options Level"
 msgstr "選項"
 
-#: configdef.h:341
+#: configdef.h:342
 msgid "Language"
 msgstr "界面语言"
 
-#: configdef.h:342
+#: configdef.h:343
 msgid "scale_options_width"
 msgstr "配置对话框缩放"
 
-#: configdef.h:344
+#: configdef.h:345
 #, fuzzy
 msgid "Options Font"
 msgstr "选项字体"
 
-#: configdef.h:345
+#: configdef.h:346
 #, fuzzy
 msgid "OptionsFontname"
 msgstr "选项字体"
 
-#: configdef.h:346
+#: configdef.h:347
 #, fuzzy
 msgid "OptionsFontHeight"
 msgstr "选项字体"
 
-#: configdef.h:349
+#: configdef.h:350
 msgid "Prompt on &close"
 msgstr ""
 
-#: configdef.h:350
+#: configdef.h:351
 msgid "ConfirmReset"
 msgstr ""
 
-#: configdef.h:351
+#: configdef.h:352
 msgid "ConfirmMultiLinePasting"
 msgstr ""
 
-#: configdef.h:352
+#: configdef.h:353
 #, fuzzy
 msgid "NoAltScreen"
 msgstr "全螢幕(&F)"
 
-#: configdef.h:353
+#: configdef.h:354
 msgid "EraseToScrollback"
 msgstr "清除滚动历史"
 
-#: configdef.h:355
+#: configdef.h:356
 msgid "Bidi"
 msgstr ""
 
-#: configdef.h:356
+#: configdef.h:357
 msgid "DisplaySpeedup"
 msgstr ""
 
-#: configdef.h:358
+#: configdef.h:359
 msgid "Command line Options"
 msgstr ""
 
-#: configdef.h:359
+#: configdef.h:360
 msgid "Class"
 msgstr "玻璃透明"
 
-#: configdef.h:360
+#: configdef.h:361
 msgid "Hold"
 msgstr ""
 
-#: configdef.h:361
+#: configdef.h:362
 msgid "ExitWrite"
 msgstr ""
 
-#: configdef.h:362
+#: configdef.h:363
 #, fuzzy
 msgid "ExitTitle"
 msgstr "标题"
 
-#: configdef.h:363
+#: configdef.h:364
 msgid "Icon"
 msgstr ""
 
-#: configdef.h:364
+#: configdef.h:365
 msgid "Log"
 msgstr ""
 
-#: configdef.h:365
+#: configdef.h:366
 msgid "Logging"
 msgstr ""
 
-#: configdef.h:366
+#: configdef.h:367
 msgid "Utmp"
 msgstr ""
 
-#: configdef.h:367
+#: configdef.h:368
 msgid "Title"
 msgstr "标题"
 
-#: configdef.h:368
+#: configdef.h:369
 msgid "title_settable"
 msgstr ""
 
-#: configdef.h:370
+#: configdef.h:371
 msgid "X"
 msgstr "X"
 
-#: configdef.h:371
+#: configdef.h:372
 msgid "Y"
 msgstr ""
 
-#: configdef.h:372
+#: configdef.h:373
 msgid "Daemonize"
 msgstr ""
 
-#: configdef.h:373
+#: configdef.h:374
 msgid "Daemonize Always"
 msgstr ""
 
-#: configdef.h:375
+#: configdef.h:376
 #, fuzzy
 msgid "Hidden Options"
 msgstr "選項"
 
-#: configdef.h:376
+#: configdef.h:377
 msgid "SuppressSGR"
 msgstr ""
 
-#: configdef.h:377
+#: configdef.h:378
 msgid "SuppressDEC"
 msgstr ""
 
-#: configdef.h:378
+#: configdef.h:379
 msgid "SuppressWIN"
 msgstr ""
 
-#: configdef.h:379
+#: configdef.h:380
 msgid "SuppressOSC"
 msgstr ""
 
-#: configdef.h:380
+#: configdef.h:381
 msgid "SuppressNRC"
 msgstr ""
 
-#: configdef.h:381
+#: configdef.h:382
 msgid "SuppressMouseWheel"
 msgstr ""
 
-#: configdef.h:382
+#: configdef.h:383
 msgid "FilterPasteControls"
 msgstr ""
 
-#: configdef.h:383
+#: configdef.h:384
 msgid "GuardNetworkPaths"
 msgstr ""
 
-#: configdef.h:384
+#: configdef.h:385
 msgid "BracketedPasteByLine"
 msgstr ""
 
-#: configdef.h:385
+#: configdef.h:386
 msgid "PrintableControls"
 msgstr ""
 
-#: configdef.h:386
+#: configdef.h:387
 msgid "CharNarrowing"
 msgstr ""
 
-#: configdef.h:387
+#: configdef.h:388
 msgid "SaveFilename"
 msgstr ""
 
-#: configdef.h:388
+#: configdef.h:389
 msgid "AppID"
 msgstr ""
 
-#: configdef.h:389
+#: configdef.h:390
 msgid "AppName"
 msgstr ""
 
-#: configdef.h:390
+#: configdef.h:391
 msgid "AppLaunchCmd"
 msgstr ""
 
-#: configdef.h:391
+#: configdef.h:392
 #, fuzzy
 msgid "DropCommands"
 msgstr "用户命令"
 
-#: configdef.h:392
+#: configdef.h:393
 #, fuzzy
 msgid "ExitCommands"
 msgstr "用户命令"
 
-#: configdef.h:393
+#: configdef.h:394
 msgid "UserCommands"
 msgstr "用户命令"
 
-#: configdef.h:394
+#: configdef.h:395
 #, fuzzy
 msgid "CtxMenuFunctions"
 msgstr "鼠标功能"
 
-#: configdef.h:395
+#: configdef.h:396
 #, fuzzy
 msgid "SysMenuFunctions"
 msgstr "鼠标功能"
 
-#: configdef.h:396
+#: configdef.h:397
 #, fuzzy
 msgid "UserCommandsPath"
 msgstr "用户命令"
 
-#: configdef.h:397
+#: configdef.h:398
 #, fuzzy
 msgid "SessionCommands"
 msgstr "用户命令"
 
-#: configdef.h:398
+#: configdef.h:399
 #, fuzzy
 msgid "TaskCommands"
 msgstr "用户命令"
 
-#: configdef.h:399
+#: configdef.h:400
 msgid "ConPTY"
 msgstr ""
 
-#: configdef.h:400
+#: configdef.h:401
 #, fuzzy
 msgid "LoginFromShortcut"
 msgstr "缩放快捷键"
 
-#: configdef.h:401
+#: configdef.h:402
 #, fuzzy
 msgid "MenuMouse"
 msgstr "滑鼠"
 
-#: configdef.h:402
+#: configdef.h:403
 msgid "MenuCtrlMouse"
 msgstr ""
 
-#: configdef.h:403
+#: configdef.h:404
 #, fuzzy
 msgid "MenuMouse5"
 msgstr "滑鼠"
 
-#: configdef.h:404
+#: configdef.h:405
 msgid "MenuTitleCtrlLeft"
 msgstr ""
 
-#: configdef.h:405
+#: configdef.h:406
 msgid "MenuTitleCtrlRight"
 msgstr ""
 
-#: configdef.h:406
+#: configdef.h:407
 msgid "SessionGeomSync"
 msgstr ""
 
-#: configdef.h:407
+#: configdef.h:408
 msgid "ColSpacing"
 msgstr ""
 
-#: configdef.h:408
+#: configdef.h:409
 msgid "RowSpacing"
 msgstr ""
 
-#: configdef.h:409
+#: configdef.h:410
 msgid "AutoLeading"
 msgstr ""
 
-#: configdef.h:410
+#: configdef.h:411
 msgid "Ligatures"
 msgstr ""
 
-#: configdef.h:411
+#: configdef.h:412
 msgid "LigaturesSupport"
 msgstr ""
 
-#: configdef.h:412
+#: configdef.h:413
 msgid "BoxDrawing"
 msgstr ""
 
-#: configdef.h:413
+#: configdef.h:414
 msgid "HandleDPI"
 msgstr ""
 
-#: configdef.h:414
+#: configdef.h:415
 msgid "CheckVersionUpdate"
 msgstr ""
 
-#: configdef.h:415
+#: configdef.h:416
 #, fuzzy
 msgid "IMECursorColour"
 msgstr "光标颜色"
 
-#: configdef.h:416
+#: configdef.h:417
 msgid "SixelClipChars"
 msgstr ""
 
-#: configdef.h:417
+#: configdef.h:418
 msgid "OldBold"
 msgstr ""
 
-#: configdef.h:418
+#: configdef.h:419
 #, fuzzy
 msgid "ShortLongOpts"
 msgstr "快捷鍵"
 
-#: configdef.h:419
+#: configdef.h:420
 msgid "BoldAsRainbowSparkles"
 msgstr ""
 
-#: configdef.h:420
+#: configdef.h:421
 #, fuzzy
 msgid "HoverTitle"
 msgstr "标题"
 
-#: configdef.h:421
+#: configdef.h:422
 msgid "ProgressBar"
 msgstr ""
 
-#: configdef.h:422
+#: configdef.h:423
 msgid "ProgressScan"
 msgstr ""
 
-#: configdef.h:423
+#: configdef.h:424
 msgid "DimMargins"
 msgstr ""
 
-#: configdef.h:424
+#: configdef.h:425
 msgid "Baud"
 msgstr ""
 
-#: configdef.h:425
+#: configdef.h:426
 msgid "Bloom"
 msgstr ""
 
-#: configdef.h:426
+#: configdef.h:427
 #, fuzzy
 msgid "OldOptions"
 msgstr "選項"
 
-#: configdef.h:427
+#: configdef.h:428
 msgid "OldXButtons"
 msgstr ""
 
-#: configdef.h:428
+#: configdef.h:429
 msgid "wslbridge version,0:nobridge,1:wslbridge,2:wslbreadge2"
 msgstr ""
 
-#: configdef.h:429
+#: configdef.h:430
 msgid "wslDistribution,null is default"
 msgstr ""
 
-#. __("status_debug")             )
-#. _CFGDEFD(string   ,menu_menu              ,"bs"            ,       IS(0),OPT_STR          ,OPF_STR  ,1,0,5,"MenuMenu"                 ,__("MenuMenu")                 )
+#: configdef.h:432
+msgid "status_debug"
+msgstr ""
+
+#. __("MenuMenu")                 )
 #. _CFGDEFD(string   ,menu_ctrlmenu          ,"e|ls"          ,       IS(0),OPT_STR          ,OPF_STR  ,1,0,5,"MenuCtrlMenu"             ,__("MenuCtrlMenu")             )
-#: configdef.h:434
+#: configdef.h:435
 msgid "FontSize"
 msgstr "字体大小"
 
-#: configdef.h:435
+#: configdef.h:436
 msgid "Break"
 msgstr "发送 Break"
 
-#: configdef.h:436
+#: configdef.h:437
 msgid "Pause"
 msgstr ""
 
-#: configdef.h:437
+#: configdef.h:438
 #, fuzzy
 msgid "CopyAsRTFFontSize"
 msgstr "以 RTF 复制"
 
-#: configdef.h:438
+#: configdef.h:439
 #, fuzzy
 msgid "OldFontMenu"
 msgstr "字体"
 
-#: configdef.h:439
+#: configdef.h:440
 msgid "OptionsFontSize"
 msgstr "选项字体大小"
 
-#: configdef.h:440
+#: configdef.h:441
 msgid "gui_font_size"
 msgstr "配置对话框字体大小"
 
-#: configdef.h:441
+#: configdef.h:442
 msgid "BoldAsBright"
 msgstr ""
 
-#: configdef.h:442
+#: configdef.h:443
 msgid "FontQuality"
 msgstr ""
 
-#: configdef.h:443
+#: configdef.h:444
 msgid "UseSystemColours"
 msgstr "使用系统颜色"
 
@@ -2991,6 +3044,9 @@ msgstr ""
 msgid "Start Unicode Char"
 msgstr ""
 
+#~ msgid "&Ctrl"
+#~ msgstr "&Ctrl"
+
 #, fuzzy
 #~ msgid "resize"
 #~ msgstr "目前大小(&U)"
@@ -3101,18 +3157,6 @@ msgstr ""
 
 #~ msgid "&Select..."
 #~ msgstr "選擇(&S)..."
-
-#~ msgid "- None -"
-#~ msgstr "無(&N)"
-
-#~ msgid "@ Windows language @"
-#~ msgstr "@ Windows 語言 @"
-
-#~ msgid "* Locale environm. *"
-#~ msgstr "* Locale 環境變數 *"
-
-#~ msgid "= cfg. Text Locale ="
-#~ msgstr "= 已設定的語言 ="
 
 #~ msgid "Cannot write theme file"
 #~ msgstr "無法寫入主題檔案"
@@ -3446,9 +3490,3 @@ msgstr ""
 
 #~ msgid "Ctrl+"
 #~ msgstr "Ctrl+"
-
-#~ msgid "◀"
-#~ msgstr "◀"
-
-#~ msgid "▶"
-#~ msgstr "▶"

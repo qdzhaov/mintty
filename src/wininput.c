@@ -1727,7 +1727,7 @@ bool win_key_down(WPARAM wp, LPARAM lp){
   }
   mod_keys mods = get_mods();
 #ifdef debug_virtual_key_codes
-#define IKLR(k) is_key_down(VK_##k), is_key_down(VK_L##k), is_key_down(VK_R##k),
+#define IKLR(k) is_key_down(VK_##k), is_key_down(VK_L##k), is_key_down(VK_R##k)
   printf("-- [%u %c%u] Shift %d:%d/%d Ctrl %d:%d/%d Alt %d:%d/%d Win %d:%d/%d\n",
          (int)message_time , lctrl_time ? '+' : '=', (int)message_time - lctrl_time,
          IKLR(SHIFT), IKLR(CONTROL), IKLR(ALT),
@@ -3270,8 +3270,8 @@ static int modr2s(int moda){
   int r=(moda&0xFF)|((moda>>8)&0xFF)|((moda>>16)&0xFF);
   return r;
 }
-//asume MKD_WIN=8,depend on mdk_keys
-//MKD_WIN is seprated
+//asume MDK_WIN=8,depend on mdk_keys
+//MDK_WIN is seprated
 static int packmod(int mods){
   if(mods&0x70)return 0x8|((mods>>4)&0x7);//<16
   return mods&7;//<8 

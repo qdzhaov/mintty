@@ -3070,25 +3070,37 @@ emoji_show(int x, int y, struct emoji e, int elen, cattr eattr, ushort lattr)
 }
 
 #define dont_debug_win_text_invocation
+#if defined(debug_win_text_modified) && !defined(debug_win_text_invocation)
+#define debug_win_text_invocation
+#endif
 
 #ifdef debug_win_text_invocation
 
 void
 _win_text(int line, int tx, int ty, wchar *text, int len, cattr attr, cattr *textattr, ushort lattr, char has_rtl, char has_sea, bool clearpad, uchar phase)
 {
-  if (*text != ' ') {
-    printf("[<%d] %d:%d(len %d) attr %08llX", line, ty, tx, len, attr.attr);
-    for (int i = 0; i < len && i < 8; i++)
+  int last = len - 1;
+  while (last >= 0 && text[last] == ' ')
+    last --;
+
+  if (last >= 0) {
+    printf("[<%d] %d:%d(len %2d) attr %09llX", line, ty, tx, len, attr.attr);
+    for (int i = 0; i <= last /*&& i < 8*/; i++)
       printf(" %04X", text[i]);
     printf("\n");
   }
+
   win_text(tx, ty, text, len, attr, textattr, lattr, has_rtl, has_sea, clearpad, phase);
-  if (*text != ' ') {
-    printf("[>%d] %d:%d(len %d) attr %08llX", line, ty, tx, len, attr.attr);
-    for (int i = 0; i < len && i < 8; i++)
+
+#ifdef debug_win_text_modified
+  // debug modification by substitute_combining_chars feature, now disabled
+  if (last >= 0) {
+    printf("[>%d] %d:%d(len %2d) attr %09llX", line, ty, tx, len, attr.attr);
+    for (int i = 0; i <= last /*&& i < 8*/; i++)
       printf(" %04X", text[i]);
     printf("\n");
   }
+#endif
 }
 
 #define win_text(tx, ty, text, len, attr, textattr, lattr, has_rtl, has_sea, clearpad, phase) _win_text(__LINE__, tx, ty, text, len, attr, textattr, lattr, has_rtl, has_sea, clearpad, phase)
@@ -4191,10 +4203,16 @@ term_paint(void)
            * combining doubles
            * cursor position, to support underlay cursor painting
          */
+#ifndef phase1_output_after_phase2_copy
+        // phase 1 output for the background
         win_text(x, y, text, len, attr, textattr, lattr, has_rtl, has_sea, false, 1);
         flush_text();
+#endif
+
         // remember actual text for later phase 2 output (flush)
-        // do this before phase 1 output below which may modify text contents
+        // - it used to cause trouble like accent misplacement 
+        // to do this after phase 1 output as win_text could modify contents 
+        // when the combsubst mechanism (wintext) was in effect, now disabled
         ovl_x = x;
         ovl_y = y;
         wcsncpy(ovl_text, text, len);
@@ -4204,9 +4222,14 @@ term_paint(void)
         ovl_lattr = lattr;
         ovl_has_rtl = has_rtl;
         ovl_has_sea = has_sea;
-        // for 2-phase output, now do phase 1 for the background
+
+#ifdef phase1_output_after_phase2_copy
+        // phase 1 output for the background
+        // - it used to cause overhang clipping (#1304)
+        // when this was done after phase 2 output copy above
         win_text(x, y, text, len, attr, textattr, lattr, has_rtl, has_sea, false, 1);
         flush_text();
+#endif
       }
       else {
         win_text(x, y, text, len, attr, textattr, lattr, has_rtl, has_sea, false, 0);

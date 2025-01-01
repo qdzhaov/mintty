@@ -1,17 +1,30 @@
 Character rendering
+  * Fix overhang rendering for some characters, clipped in 3.7.7 (#1304).
+
+### 3.7.7 (21 December 2024) ###
+
+Terminal features
+  * VT52 emulation absolute position keeps row/column if out-of-bounds (#1299).
+
+Character rendering
   * Reenabled distinct blinking for combined characters (broken since 3.5.3).
   * Fix skipping of accent to next position on background colour.
   * Fix drawing of Powerline round symbols (mintty/wsltty#358).
   * Fix rendering of right-to-left scripts on italic or cursor position.
   * Tweak diagonal box characters for uniform appearance.
+  * Limit double-width enforcement by ZWJ to potential emoji base characters.
 
 Window handling
   * Show new tab at its target position right away (#1292).
   * Live changing of reordered tabs while being dragged (#1293).
   * Change mouse pointer while tab dragging (#1293).
   * Adapt dynamic tab drag highlighting (~#1293).
+  * Swipe visualisation of tab reorder dragging (~#1293).
   * New windows/Alt+F2 launches terminal on same monitor (broken since 2.9.5).
   * Maximise/Restore keeps window on same monitor (broken since 3.6.5, ~#1226).
+  * Virtual transparency: fix background offset on multiple monitors (#1296).
+  * Virtual transparency: fix background offset with options Scrollbar=left or BorderStyle=frame/void (#1296).
+  * Image background: keep updated while moving/resizing.
 
 Misc
   * Avoid potentially blocking retrieval of printers list (#1295).
