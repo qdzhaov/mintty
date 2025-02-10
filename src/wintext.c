@@ -1495,13 +1495,11 @@ do_update(void)
   printf("do_update cursor_on %d @%d,%d\n", term.cursor_on, term.curs.y, term.curs.x);
 #endif
 
-  if (update_state == UPDATE_BLOCKED) {
-    update_state = UPDATE_IDLE;
-    return;
-  }
+  if (update_state == UPDATE_BLOCKED) return;
   win_tab_actv();
   update_skipped++;
-  int output_speed = term.lines_scrolled / (term.rows ?: cfg.winsize.y);
+  //int output_speed = term.lines_scrolled / (term.rows ?: cfg.winsize.y);
+  int output_speed = term.lines_scrolled ;
   term.lines_scrolled = 0;
   if ((update_skipped < cfg.display_speedup && cfg.display_speedup < 10
        && output_speed > update_skipped
@@ -1573,9 +1571,10 @@ do_update(void)
       ImmSetCompositionWindow(wv.imc, &cf);
     }
   }
+  update_state = UPDATE_IDLE;
 
   // Schedule next update.
-  win_set_timer(do_update, update_timer);
+  win_set_timer(do_update, update_timer*10);
 }
 
 #include <math.h>
