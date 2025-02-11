@@ -410,7 +410,7 @@ _CFGDEFE: Legacy options for Backward Compatibility
   _CFGDEFD(CTYPE    ,auto_leading           ,2               ,IV( 0,    2),OPT_ALEAD        ,OPF_LSTR ,1,0,0,"AutoLeading"              ,__("AutoLeading")              )
   _CFGDEFD(CBOOL    ,ligatures              ,0               ,       IS(0),OPT_BOOL         ,OPF_CHK  ,1,0,0,"Ligatures"                ,__("Ligatures")                )
   _CFGDEFD(CTYPE    ,ligatures_support      ,0               ,IV( 0,    2),OPT_LIGS         ,OPF_LSTR ,1,0,0,"LigaturesSupport"         ,__("LigaturesSupport")         )
-  _CFGDEFD(CBOOL    ,box_drawing            ,1               ,       IS(0),OPT_BOOL         ,OPF_CHK  ,1,0,0,"BoxDrawing"               ,__("BoxDrawing")               )
+  _CFGDEFD(CBOOL    ,box_drawing            ,0               ,       IS(0),OPT_BOOL         ,OPF_CHK  ,1,0,0,"BoxDrawing"               ,__("BoxDrawing")               )
   _CFGDEFD(CTYPE    ,handle_dpichanged      ,2               ,       IS(0),OPT_DPIA         ,OPF_LSTR ,1,0,0,"HandleDPI"                ,__("HandleDPI")                )
   _CFGDEFD(CBOOL    ,check_version_update   ,0               ,       IS(0),OPT_BOOL         ,OPF_CHK  ,1,0,0,"CheckVersionUpdate"       ,__("CheckVersionUpdate")       )
   _CFGDEFD(colour   ,ime_cursor_colour      ,DEFAULT_COLOUR  ,       IS(0),OPT_CLR          ,OPF_CLR  ,1,0,0,"IMECursorColour"          ,__("IMECursorColour")          )

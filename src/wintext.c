@@ -1495,11 +1495,13 @@ do_update(void)
   printf("do_update cursor_on %d @%d,%d\n", term.cursor_on, term.curs.y, term.curs.x);
 #endif
 
-  if (update_state == UPDATE_BLOCKED) return;
+  if (update_state == UPDATE_BLOCKED) {
+    update_state = UPDATE_IDLE;
+    return;
+  }
   win_tab_actv();
   update_skipped++;
-  //int output_speed = term.lines_scrolled / (term.rows ?: cfg.winsize.y);
-  int output_speed = term.lines_scrolled ;
+  int output_speed = term.lines_scrolled / (term.rows ?: cfg.winsize.y);
   term.lines_scrolled = 0;
   if ((update_skipped < cfg.display_speedup && cfg.display_speedup < 10
        && output_speed > update_skipped
@@ -1571,10 +1573,9 @@ do_update(void)
       ImmSetCompositionWindow(wv.imc, &cf);
     }
   }
-  update_state = UPDATE_IDLE;
 
   // Schedule next update.
-  win_set_timer(do_update, update_timer*10);
+  win_set_timer(do_update, update_timer);
 }
 
 #include <math.h>
@@ -4216,7 +4217,7 @@ skip_drawing:;
         // for dashed lines, use FillRect here
         // for slanted lines ╲ ╳ ╱, use LineTo below
         // for box border lines, use LineTo below
-        //if (y3 != -2) {  // for slanted lines in ╲ ╳ ╱, rather use LineTo
+        //if (y3 != -2)   // for slanted lines in ╲ ╳ ╱, rather use LineTo
         if (y3 < -2) {  // dashed lines
           // apply pen width
           int w = penwidth;
@@ -4331,9 +4332,8 @@ skip_drawing:;
 
       switch (origtext[i]) {
         // Box Drawing (U+2500-U+257F)
-        // ─━│┃┄┅┆┇┈┉┊┋┌┍┎┏┐┑┒┓└┕┖┗┘┙┚┛├┝┞┟┠┡┢┣┤┥┦┧┨┩┪┫┬┭┮┯┰┱┲┳┴┵┶┷┸┹┺┻┼┽┾┿
-        // ╀╁╂╃╄╅╆╇╈╉╊╋╌╍╎╏═║╒╓╔╕╖╗╘╙╚╛╜╝╞╟╠╡╢╣╤╥╦╧╨╩╪╫╬╭╮╯╰╱╲╳╴╵╶╷╸╹╺╻╼╽╾╿
-// tune position and length of double/triple dash segments
+        // Block Elements (U+2580-U+259F)
+        // tune position and length of double/triple dash segments
 #define sub2 line_width
 #define add2 2 * line_width
 #define sub3 line_width
@@ -4363,6 +4363,7 @@ skip_drawing:;
           boxlines(false, 0, 12, sigend, 12, sigend, 22);
         when '6': // Bottom Right Sigma
           boxlines(false, 0, 12, sigend, 12, sigend, 2);
+#undef sigend 
         when '7': // Middle Sigma
           boxlines(false, 0, 0, 12, 12, 0, 24);
 #define nabdel 8
@@ -4372,7 +4373,7 @@ skip_drawing:;
         when 'E': // NABLA
           boxlines(false, 12, 22, 12 - nabdel, 2, 12 + nabdel, 2);
           boxlines(false, 12, 22, 12 + nabdel, 2, -1, -1);
-
+#undef nabdel
         // Private Use geometric Powerline symbols (U+E0B0-U+E0BF, not 5, 7)
         // 
         //      - -
@@ -4405,43 +4406,14 @@ skip_drawing:;
         when 0xE0BF:
           lines(0, 0, 8, 8, -1, -1);
 
-        // Block Elements (U+2580-U+259F)
-        // ▀▁▂▃▄▅▆▇█▉▊▋▌▍▎▏▐░▒▓▔▕▖▗▘▙▚▛▜▝▞▟
-        when 0x2580: rect(0, 0, 8, 4); // UPPER HALF BLOCK
-        when 0x2581 ... 0x2588: rect(0, 0x2588 - origtext[i], 8, 8); // LOWER EIGHTHS
-        when 0x2589 ... 0x258F: rect(0, 0, 0x2590 - origtext[i], 8); // LEFT EIGHTHS
-        when 0x2590: rect(4, 0, 8, 8); // RIGHT HALF BLOCK
-        when 0x2591: rectsolcol(0, 0, 8, 8, 2); // ░ LIGHT SHADE
-        when 0x2592: rectsolcol(0, 0, 8, 8, 3); // ▒ MEDIUM SHADE
-        when 0x2593: rectsolcol(0, 0, 8, 8, 5); // ▓ DARK SHADE
-        when 0x2594: rect(0, 0, 8, 1); // UPPER ONE EIGHTH BLOCK
-        when 0x2595: rect(7, 0, 8, 8); // RIGHT ONE EIGHTH BLOCK
-        when 0x2596: rect(0, 4, 4, 8);
-        when 0x2597: rect(4, 4, 8, 8);
-        when 0x2598: rect(0, 0, 4, 4);
-        // solid 0b1111 top right bottom left
-        when 0x2599: rectsolid(0, 4, 4, 8, 0xF);
-                   rectsolid(0, 0, 4, 4, 0xB);
-                   rectsolid(4, 4, 8, 8, 0x7);
-        when 0x259A: rect(0, 0, 4, 4); rect(4, 4, 8, 8);
-        when 0x259B: rectsolid(0, 0, 4, 4, 0xF);
-                   rectsolid(4, 0, 8, 4, 0xD);
-                   rectsolid(0, 4, 4, 8, 0xB);
-        when 0x259C: rectsolid(4, 0, 8, 4, 0xF);
-                   rectsolid(0, 0, 4, 4, 0xD);
-                   rectsolid(4, 4, 8, 8, 0xE);
-        when 0x259D: rect(4, 0, 8, 4);
-        when 0x259E: rect(4, 0, 8, 4); rect(0, 4, 4, 8);
-        when 0x259F: rectsolid(4, 4, 8, 8, 0xF);
-                   rectsolid(4, 0, 8, 4, 0xE);
-                   rectsolid(0, 4, 4, 8, 0x7);
       }
+#undef dl
+#undef dh
 
       clearclipr();
 
       xi += char_width;
     }
-
     // remove Box Drawing resources
     SelectObject(dc, oldpen);
     DeleteObject(pen);

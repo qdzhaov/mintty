@@ -5162,9 +5162,9 @@ term_do_write(const char *buf, uint len, bool fix_status)
         // Do these before the NRCS switch below as that transforms 
         // some characters into this range which would then get 
         // doubly-transformed
-        if ((cfg.box_drawing && wc >= 0x2500 && wc <= 0x257F)
-         || (wc >= 0x2580 && wc <= 0x259F)
-         || (wc >= 0xE0B0 && wc <= 0xE0BF && wc != 0xE0B5 && wc != 0xE0B7)
+        if ((cfg.box_drawing 
+                && ((wc >= 0x2500 && wc <= 0x257F) || (wc >= 0x2580 && wc <= 0x259F))
+            )|| (wc >= 0xE0B0 && wc <= 0xE0BF && wc != 0xE0B5 && wc != 0xE0B7)
            )
         {
           term.curs.attr.attr &= ~FONTFAM_MASK;

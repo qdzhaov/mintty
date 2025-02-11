@@ -1,3 +1,6 @@
+        // Box Drawing (U+2500-U+257F)
+        // ─━│┃┄┅┆┇┈┉┊┋┌┍┎┏┐┑┒┓└┕┖┗┘┙┚┛├┝┞┟┠┡┢┣┤┥┦┧┨┩┪┫┬┭┮┯┰┱┲┳┴┵┶┷┸┹┺┻┼┽┾┿
+        // ╀╁╂╃╄╅╆╇╈╉╊╋╌╍╎╏═║╒╓╔╕╖╗╘╙╚╛╜╝╞╟╠╡╢╣╤╥╦╧╨╩╪╫╬╭╮╯╰╱╲╳╴╵╶╷╸╹╺╻╼╽╾╿
         when 0x2500:  // ─ BOX DRAWINGS LIGHT HORIZONTAL
           boxlines(false, 0, 12, 24, 12, -1, -1);
         when 0x2501:  // ━ BOX DRAWINGS HEAVY HORIZONTAL
@@ -408,4 +411,33 @@
         when 0x257F:  // ╿ BOX DRAWINGS HEAVY UP AND LIGHT DOW
           boxlines(true, 12, 0, 12, 12, -1, -1);
           boxlines(false, 12, 12, 12, 24, -1, -1);
-
+        // Block Elements (U+2580-U+259F)
+        // ▀▁▂▃▄▅▆▇█▉▊▋▌▍▎▏▐░▒▓▔▕▖▗▘▙▚▛▜▝▞▟
+        when 0x2580: rect(0, 0, 8, 4); // UPPER HALF BLOCK
+        when 0x2581 ... 0x2588: rect(0, 0x2588 - origtext[i], 8, 8); // LOWER EIGHTHS
+        when 0x2589 ... 0x258F: rect(0, 0, 0x2590 - origtext[i], 8); // LEFT EIGHTHS
+        when 0x2590: rect(4, 0, 8, 8); // RIGHT HALF BLOCK
+        when 0x2591: rectsolcol(0, 0, 8, 8, 2); // ░ LIGHT SHADE
+        when 0x2592: rectsolcol(0, 0, 8, 8, 3); // ▒ MEDIUM SHADE
+        when 0x2593: rectsolcol(0, 0, 8, 8, 5); // ▓ DARK SHADE
+        when 0x2594: rect(0, 0, 8, 1); // UPPER ONE EIGHTH BLOCK
+        when 0x2595: rect(7, 0, 8, 8); // RIGHT ONE EIGHTH BLOCK
+        when 0x2596: rect(0, 4, 4, 8);
+        when 0x2597: rect(4, 4, 8, 8);
+        when 0x2598: rect(0, 0, 4, 4);
+        // solid 0b1111 top right bottom left
+        when 0x2599: rectsolid(0, 4, 4, 8, 0xF);
+                   rectsolid(0, 0, 4, 4, 0xB);
+                   rectsolid(4, 4, 8, 8, 0x7);
+        when 0x259A: rect(0, 0, 4, 4); rect(4, 4, 8, 8);
+        when 0x259B: rectsolid(0, 0, 4, 4, 0xF);
+                   rectsolid(4, 0, 8, 4, 0xD);
+                   rectsolid(0, 4, 4, 8, 0xB);
+        when 0x259C: rectsolid(4, 0, 8, 4, 0xF);
+                   rectsolid(0, 0, 4, 4, 0xD);
+                   rectsolid(4, 4, 8, 8, 0xE);
+        when 0x259D: rect(4, 0, 8, 4);
+        when 0x259E: rect(4, 0, 8, 4); rect(0, 4, 4, 8);
+        when 0x259F: rectsolid(4, 4, 8, 8, 0xF);
+                   rectsolid(4, 0, 8, 4, 0xE);
+                   rectsolid(0, 4, 4, 8, 0x7);

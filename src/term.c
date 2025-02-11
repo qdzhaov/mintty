@@ -3156,949 +3156,946 @@ is_comcom(wchar ch)
 void
 term_paint(void)
 {
-  //if (kb_trace) printf("[%ld] term_paint\n", mtime());
+    //if (kb_trace) printf("[%ld] term_paint\n", mtime());
 
 #ifdef use_display_scrolling
-  if (dispscroll_lines) {
-    disp_do_scroll(dispscroll_top, dispscroll_bot, dispscroll_lines);
-    dispscroll_lines = 0;
-  }
-#endif
-
- /* The display line that the cursor is on, or -1 if the cursor is invisible. */
-  int curs_y =
-    term.cursor_on && !term.show_other_screen
-    ? term.curs.y - term.disptop : -1;
-
-  int nlines_progress = 0;
-  int total_progress = 0;
-
-  // Paint all lines, including status area
-  for (int i = 0; i < term_allrows; i++) {
-    pos scrpos;
-    scrpos.y = i + term.disptop;
-    termline *line = fetch_line(scrpos.y);
-    // Prevent nested emoji sequence matching from matching partial subseqs
-    int emoji_col = 0;  // column from which to match for emoji sequences
-
-    //trace_line("loop0", line->chars);
-#if false
-   /*
-    * This was an attempt to support emojis within right-to-left text 
-      introduced in 3.0.1 and removed for 3.5.1 because it spoiled 
-      emoji selection highlighting (#1116), caused some flickering, 
-      and did not even support right-to-left properly anyway.
-      Bidi handling could be tweaked so that this approach would be applied 
-      only in bidi lines, not fixing the other issues however.
-      Previous comment:
-    * Pre-loop: identify emojis and emoji sequences.
-      This is a hacky approach to handling emoji sequences; problems:
-      - temporary attributes are written back into original char matrix 
-        rather than newchars, yielding:
-      - if the emoji sequences gets broken later by partial overwriting,
-        rendering will become inconsistent
-      - rendering of emojis within bidi lines is only partially correct
-      - selection highlighting does not work
-      - rendering is applied repeatedly, resulting in some flickering
-      Moving emoji sequences handling into the first loop below, on the 
-      other hand, would break it even more in bidi lines.
-    */
-    for (int j = 0; j < term.cols; j++) {
-      termchar *d = line->chars + j;
-      cattr tattr = d->attr;
-
-      if (j < term.cols - 1 && d[1].chr == UCSWIDE)
-        tattr.attr |= TATTR_WIDE;
-
-     /* Match emoji sequences
-      * and replace by emoji indicators
-      */
-      if (cfg.emojis && j >= emoji_col) {
-        struct emoji e;
-        if ((tattr.attr & TATTR_EMOJI) && !(tattr.attr & ATTR_FGMASK)) {
-          // previously marked subsequent emoji sequence component
-          e.len = 0;
-        }
-        else
-          e = match_emoji(d, term.cols - j);
-        if (e.len) {  // we have matched an emoji (sequence)
-          // avoid subsequent matching of a partial emoji subsequence
-          emoji_col = j + e.len;
-
-          // check whether emoji graphics exist for the emoji
-          bool ok = check_emoji(e);
-
-          // check whether all emoji components have the same attributes
-          bool equalattrs = true;
-          for (int i = 1; i < e.len && equalattrs; i++) {
-            if ((d[i].attr.attr & ~IGNEMOJATTR) != (d->attr.attr & ~IGNEMOJATTR)
-               || d[i].attr.truebg != d->attr.truebg
-               )
-              equalattrs = false;
-          }
-#if defined(debug_emojis) && debug_emojis > 3
-          printf("paint emoji: matched len %d seq %d idx %d ok %d atr %d\n", e.len, e.seq, e.idx, ok, equalattrs);
-#endif
-
-          // modify character data to trigger later emoji display
-          if (ok && equalattrs) {
-            // Emoji overhang
-            if (e.len == 1 && j + 1 < term.cols
-             // only if followed by space
-             //&& iswspace(d[1].chr) && !d[1].cc_next
-             //&& d[1].chr != 0x1680 && d[1].chr != 0x3000
-             && ((d[1].chr == ' ' && !d[1].cc_next)
-             // ... or with setting EmojiPlacement=full,
-             // to avoid scrolling artefacts (#1261)
-                 || cfg.emoji_placement == EMPL_FULL
-                )
-             // not at cursor position? does not work for emojis
-             //&& !at_cursor_pos(i, j)
-             // and significant attributes are equal
-             && !((d->attr.attr ^ d[1].attr.attr) & ~IGNOVRHANG)
-#ifdef exempt_emoji_components_from_overhang
-#warning drop this for #1261
-             // do not overhang numbers, flag letters etc (~#1104)
-             && d->chr >= 0x80 // exclude #️*️0️..9️
-             //&& !(ch >= 0x1F1E6 || ch <= 0x1F1FF) // exclude 🇦..🇿
-             && !(!e.seq && emoji_bases[e.idx].ch >= 0x1F1E6 && emoji_bases[e.idx].ch <= 0x1F1FF)
-#endif
-               )
-            {
-              d->attr.attr |= TATTR_OVERHANG;
-              // also mark adjacent space to suppress its display
-              d[1].attr.attr |= TATTR_OVERHANG;
-            }
-
-            d->attr.attr &= ~ATTR_FGMASK;
-            d->attr.attr |= TATTR_EMOJI | e.len;
-
-            //d->attr.truefg = (uint)e;
-            struct emoji * ee = &e;
-            uint em = *(uint *)ee;
-            d->attr.truefg = em;
-
-            // refresh cached copy to avoid display delay
-            if (tattr.attr & TATTR_SELECTED) {
-              tattr = d->attr;
-              // need to propagate this to enable emoji highlighting
-              tattr.attr |= TATTR_SELECTED;
-            }
-            else
-              tattr = d->attr;
-
-            // inhibit rendering of subsequent emoji sequence components
-            for (int i = 1; i < e.len; i++) {
-              d[i].attr.attr &= ~ATTR_FGMASK;
-              d[i].attr.attr |= TATTR_EMOJI;
-              d[i].attr.truefg = em;
-            }
-          }
-        }
-#ifdef handle_symbol_overhang_here
-        else {  // not an emoji
-        }
-#endif
-      }
-
-      d->attr = tattr;
+    if (dispscroll_lines) {
+        disp_do_scroll(dispscroll_top, dispscroll_bot, dispscroll_lines);
+        dispscroll_lines = 0;
     }
-
-    //trace_line("loopb", line->chars);
 #endif
 
-   /* Do Arabic shaping and bidi. */
-    termchar *chars = term_bidi_line(line, i);
-    int *backward = chars ? term.post_bidi_cache[i].backward : 0;
-    int *forward = chars ? term.post_bidi_cache[i].forward : 0;
-    chars = chars ?: line->chars;
+    /* The display line that the cursor is on, or -1 if the cursor is invisible. */
+    int curs_y =
+            term.cursor_on && !term.show_other_screen
+            ? term.curs.y - term.disptop : -1;
 
-    termline *displine = term.displines[i];
-    termchar *dispchars = displine->chars;
-    termchar newchars[term.cols];
+    int nlines_progress = 0;
+    int total_progress = 0;
 
-    //trace_line("loop1", chars);
+    // Paint all lines, including status area
+    for (int i = 0; i < term_allrows; i++) {
+        pos scrpos;
+        scrpos.y = i + term.disptop;
+        termline *line = fetch_line(scrpos.y);
+        // Prevent nested emoji sequence matching from matching partial subseqs
+        int emoji_col = 0;  // column from which to match for emoji sequences
 
-   /*
-    * First loop: work along the line deciding what we want
-    * each character cell to look like.
-    */
-    for (int j = 0; j < term.cols; j++) {
-      termchar *d = chars + j;
-      scrpos.x = backward ? backward[j] : j;
-      wchar tchar = d->chr;
-      cattr tattr = d->attr;
+        //trace_line("loop0", line->chars);
+#if false
+        /*
+         * This was an attempt to support emojis within right-to-left text 
+         * introduced in 3.0.1 and removed for 3.5.1 because it spoiled 
+         * emoji selection highlighting (#1116), caused some flickering, 
+         * and did not even support right-to-left properly anyway.
+         * Bidi handling could be tweaked so that this approach would be applied 
+         * only in bidi lines, not fixing the other issues however.
+         * Previous comment:
+         * Pre-loop: identify emojis and emoji sequences.
+         * This is a hacky approach to handling emoji sequences; problems:
+         * - temporary attributes are written back into original char matrix 
+         *   rather than newchars, yielding:
+         * - if the emoji sequences gets broken later by partial overwriting,
+         *   rendering will become inconsistent
+         * - rendering of emojis within bidi lines is only partially correct
+         * - selection highlighting does not work
+         * - rendering is applied repeatedly, resulting in some flickering
+         * Moving emoji sequences handling into the first loop below, on the 
+         * other hand, would break it even more in bidi lines.
+         */
+        for (int j = 0; j < term.cols; j++) {
+            termchar *d = line->chars + j;
+            cattr tattr = d->attr;
 
-     /* Many Windows fonts don't have the Unicode hyphen, but groff
-      * uses it for man pages, so display it as the ASCII version.
-      */
-      if (tchar == 0x2010)
-        tchar = '-';
+            if (j < term.cols - 1 && d[1].chr == UCSWIDE)
+                tattr.attr |= TATTR_WIDE;
 
-      if (cfg.printable_controls) {
-        if (tchar >= 0x80 && tchar < 0xA0)
-          tchar = 0x2592;  // ⌷⎕░▒▓
-        else if (tchar < ' ' && cfg.printable_controls > 1)
-          tchar = 0x2591;  // ⌷⎕░▒▓
-        if (tchar >= 0x2580 && tchar <= 0x259F) {
-          // tag substitutes as Block Elements (U+2580-U+259F)
-          tattr.attr &= ~FONTFAM_MASK;
-          tattr.attr |= (cattrflags)11<< ATTR_FONTFAM_SHIFT;
-        }
-      }
+            /* Match emoji sequences
+             * and replace by emoji indicators
+             */
+            if (cfg.emojis && j >= emoji_col) {
+                struct emoji e;
+                if ((tattr.attr & TATTR_EMOJI) && !(tattr.attr & ATTR_FGMASK)) {
+                    // previously marked subsequent emoji sequence component
+                    e.len = 0;
+                } else e = match_emoji(d, term.cols - j);
+                if (e.len) {  // we have matched an emoji (sequence)
+                              // avoid subsequent matching of a partial emoji subsequence
+                    emoji_col = j + e.len;
 
-      if (j < term.cols - 1 && d[1].chr == UCSWIDE)
-        tattr.attr |= TATTR_WIDE;
+                    // check whether emoji graphics exist for the emoji
+                    bool ok = check_emoji(e);
 
-     /* Video reversing things */
-      bool selected =
-        term.selected &&
-        ( term.sel_rect
-          ? posPle(term.sel_start, scrpos) && posPlt(scrpos, term.sel_end)
-          : posle(term.sel_start, scrpos) && poslt(scrpos, term.sel_end)
-        );
-
-      if (selected) {
-        tattr.attr |= TATTR_SELECTED;
-
-        colour bg = win_get_colour(SEL_COLOUR_I);
-        if (bg != (colour)-1) {
-          tattr.truebg = bg;
-          tattr.attr = (tattr.attr & ~ATTR_BGMASK) | (TRUE_COLOUR << ATTR_BGSHIFT);
-
-          colour fg = win_get_colour(SEL_TEXT_COLOUR_I);
-          if (fg == (colour)-1)
-            fg = apply_attr_colour(tattr, ACM_SIMPLE).truefg;
-          static uint mindist = 22222;
-          bool too_close = colour_dist(fg, tattr.truebg) < mindist;
-          if (too_close)
-            fg = brighten(fg, tattr.truebg, false);
-          tattr.truefg = fg;
-          tattr.attr = (tattr.attr & ~ATTR_FGMASK) | (TRUE_COLOUR << ATTR_FGSHIFT);
-        }
-        else
-          tattr.attr ^= ATTR_REVERSE;
-      }
-
-      if (term.hovering &&
-          (term.hoverlink >= 0
-           ? term.hoverlink == tattr.link
-           : posle(term.hover_start, scrpos) && poslt(scrpos, term.hover_end)
-          )
-         )
-      {
-        tattr.attr &= ~UNDER_MASK;
-        tattr.attr |= ATTR_UNDER;
-        if (cfg.hover_colour != (colour)-1) {
-          tattr.attr |= ATTR_ULCOLOUR;
-          tattr.ulcolr = cfg.hover_colour;
-        }
-      }
-
-      bool flashchar = term.in_vbell &&
-                       ((cfg.bell_flash_style & FLASH_FULL)
-                        ||
-                        ((cfg.bell_flash_style & FLASH_BORDER)
-                         && (i == 0 || j == 0 ||
-                             i == term.rows - 1 || j == term.cols - 1
-                            )
-                        )
-                       );
-
-      if (flashchar) {
-        if (cfg.bell_flash_style & FLASH_REVERSE)
-          tattr.attr ^= ATTR_REVERSE;
-        else {
-          tattr.truebg = apply_attr_colour(tattr, ACM_VBELL_BG).truebg;
-          tattr.attr = (tattr.attr & ~ATTR_BGMASK) | (TRUE_COLOUR << ATTR_BGSHIFT);
-        }
-      }
-
-      int match = in_results(scrpos);
-      if (match > 0) {
-        tattr.attr |= TATTR_RESULT;
-        if (match > 1) {
-          tattr.attr |= TATTR_CURRESULT;
-        }
-      } else {
-        tattr.attr &= ~TATTR_RESULT;
-      }
-      if (term.markpos_valid && (displine->lattr & (LATTR_MARKED | LATTR_UNMARKED))) {
-        tattr.attr |= TATTR_MARKED;
-        if (scrpos.y == term.markpos)
-          tattr.attr |= TATTR_CURMARKED;
-      } else {
-        tattr.attr &= ~TATTR_MARKED;
-      }
-
-     /* Colour indication for blinking ? */
-      if ((tattr.attr & (ATTR_BLINK | ATTR_BLINK2))
-       && term.enable_blink_colour && wv.colours[BLINK_COLOUR_I] != (colour)-1
-       //&& !(tattr.attr & TATTR_EMOJI)
-         )
-      {
-        if (!(tattr.attr & TATTR_EMOJI)) {
-          tattr.truefg = wv.colours[BLINK_COLOUR_I];
-          tattr.attr = (tattr.attr & ~ATTR_FGMASK) | (TRUE_COLOUR << ATTR_FGSHIFT);
-        }
-      }
-     /* Real blinking ? */
-      else if (term.blink_is_real) {
-        if (tattr.attr & ATTR_BLINK2) {
-          if (term.has_focus && term.tblinker2) {
-            tattr.attr |= ATTR_INVISIBLE;
-            tattr.attr &= ~UNBLINK;
-          }
-        }
-        // ATTR_BLINK2 should override ATTR_BLINK to avoid chaotic dual blink
-        else if (tattr.attr & ATTR_BLINK) {
-          if (term.has_focus && term.tblinker) {
-            tattr.attr |= ATTR_INVISIBLE;
-            tattr.attr &= ~UNBLINK;
-          }
-        }
-      }
-
-      if (j < term.cols - 1 && d[1].chr == UCSWIDE)
-        tattr.attr |= TATTR_WIDE;
-
-     /* Match emoji sequences
-      * and replace by emoji indicators
-      */
-      if (cfg.emojis && j >= emoji_col) {
-        struct emoji e;
-        if ((tattr.attr & TATTR_EMOJI) && !(tattr.attr & ATTR_FGMASK)) {
-          // previously marked subsequent emoji sequence component
-          e.len = 0;
-        }
-        else
-          e = match_emoji(d, term.cols - j);
-        if (e.len) {  // we have matched an emoji (sequence)
-          // avoid subsequent matching of a partial emoji subsequence
-          emoji_col = j + e.len;
-
-          // check whether emoji graphics exist for the emoji
-          bool ok = check_emoji(e);
-
-          // check whether all emoji components have the same attributes
-          bool equalattrs = true;
-          for (int i = 1; i < e.len && equalattrs; i++) {
-            if ((d[i].attr.attr & ~IGNEMOJATTR) != (d->attr.attr & ~IGNEMOJATTR)
-               || d[i].attr.truebg != d->attr.truebg
-               )
-              equalattrs = false;
-          }
+                    // check whether all emoji components have the same attributes
+                    bool equalattrs = true;
+                    for (int i = 1; i < e.len && equalattrs; i++) {
+                        if ((d[i].attr.attr & ~IGNEMOJATTR) != (d->attr.attr & ~IGNEMOJATTR)
+                            || d[i].attr.truebg != d->attr.truebg
+                           )
+                            equalattrs = false;
+                    }
 #if defined(debug_emojis) && debug_emojis > 3
-          printf("paint emoji: matched len %d seq %d idx %d ok %d atr %d\n", e.len, e.seq, e.idx, ok, equalattrs);
+                    printf("paint emoji: matched len %d seq %d idx %d ok %d atr %d\n", e.len, e.seq, e.idx, ok, equalattrs);
 #endif
 
-          // modify character data to trigger later emoji display
-          if (ok && equalattrs) {
-            // Emoji overhang
-            if (e.len == 1 && j + 1 < term.cols
-             // only if followed by space
-             //&& iswspace(d[1].chr) && !d[1].cc_next
-             //&& d[1].chr != 0x1680 && d[1].chr != 0x3000
-             && ((d[1].chr == ' ' && !d[1].cc_next)
-             // ... or with setting EmojiPlacement=full,
-             // to avoid scrolling artefacts (#1261)
-                 || cfg.emoji_placement == EMPL_FULL
-                )
-             // not at cursor position? does not work for emojis
-             //&& !at_cursor_pos(i, j)
-             // and significant attributes are equal
-             && !((d->attr.attr ^ d[1].attr.attr) & ~IGNOVRHANG)
+                    // modify character data to trigger later emoji display
+                    if (ok && equalattrs) {
+                        // Emoji overhang
+                        if (e.len == 1 && j + 1 < term.cols
+                            // only if followed by space
+                            //&& iswspace(d[1].chr) && !d[1].cc_next
+                            //&& d[1].chr != 0x1680 && d[1].chr != 0x3000
+                            && ((d[1].chr == ' ' && !d[1].cc_next)
+                                // ... or with setting EmojiPlacement=full,
+                                // to avoid scrolling artefacts (#1261)
+                                || cfg.emoji_placement == EMPL_FULL
+                               )
+                            // not at cursor position? does not work for emojis
+                            //&& !at_cursor_pos(i, j)
+                            // and significant attributes are equal
+                            && !((d->attr.attr ^ d[1].attr.attr) & ~IGNOVRHANG)
 #ifdef exempt_emoji_components_from_overhang
 #warning drop this for #1261
-             // do not overhang numbers, flag letters etc (~#1104)
-             && d->chr >= 0x80 // exclude #️*️0️..9️
-             //&& !(ch >= 0x1F1E6 || ch <= 0x1F1FF) // exclude 🇦..🇿
-             && !(!e.seq && emoji_bases[e.idx].ch >= 0x1F1E6 && emoji_bases[e.idx].ch <= 0x1F1FF)
+                            // do not overhang numbers, flag letters etc (~#1104)
+                            && d->chr >= 0x80 // exclude #️*️0️..9️
+                                              //&& !(ch >= 0x1F1E6 || ch <= 0x1F1FF) // exclude 🇦..🇿
+                            && !(!e.seq && emoji_bases[e.idx].ch >= 0x1F1E6 && emoji_bases[e.idx].ch <= 0x1F1FF)
 #endif
+                           ) {
+                               d->attr.attr |= TATTR_OVERHANG;
+                               // also mark adjacent space to suppress its display
+                               d[1].attr.attr |= TATTR_OVERHANG;
+                           }
+
+                        d->attr.attr &= ~ATTR_FGMASK;
+                        d->attr.attr |= TATTR_EMOJI | e.len;
+
+                        //d->attr.truefg = (uint)e;
+                        struct emoji * ee = &e;
+                        uint em = *(uint *)ee;
+                        d->attr.truefg = em;
+
+                        // refresh cached copy to avoid display delay
+                        if (tattr.attr & TATTR_SELECTED) {
+                            tattr = d->attr;
+                            // need to propagate this to enable emoji highlighting
+                            tattr.attr |= TATTR_SELECTED;
+                        }
+                        else
+                            tattr = d->attr;
+
+                        // inhibit rendering of subsequent emoji sequence components
+                        for (int i = 1; i < e.len; i++) {
+                            d[i].attr.attr &= ~ATTR_FGMASK;
+                            d[i].attr.attr |= TATTR_EMOJI;
+                            d[i].attr.truefg = em;
+                        }
+                    }
+                }
+#ifdef handle_symbol_overhang_here
+                else {  // not an emoji
+                }
+#endif
+            }
+
+            d->attr = tattr;
+        }
+
+        //trace_line("loopb", line->chars);
+#endif
+
+        /* Do Arabic shaping and bidi. */
+        termchar *chars = term_bidi_line(line, i);
+        int *backward = chars ? term.post_bidi_cache[i].backward : 0;
+        int *forward = chars ? term.post_bidi_cache[i].forward : 0;
+        chars = chars ?: line->chars;
+
+        termline *displine = term.displines[i];
+        termchar *dispchars = displine->chars;
+        termchar newchars[term.cols];
+
+        //trace_line("loop1", chars);
+
+        /*
+         * First loop: work along the line deciding what we want
+         * each character cell to look like.
+         */
+        for (int j = 0; j < term.cols; j++) {
+            termchar *d = chars + j;
+            scrpos.x = backward ? backward[j] : j;
+            wchar tchar = d->chr;
+            cattr tattr = d->attr;
+
+            /* Many Windows fonts don't have the Unicode hyphen, but groff
+             * uses it for man pages, so display it as the ASCII version.
+             */
+            if (tchar == 0x2010)
+                tchar = '-';
+
+            if (cfg.printable_controls) {
+                if (tchar >= 0x80 && tchar < 0xA0)
+                    tchar = 0x2592;  // ⌷⎕░▒▓
+                else if (tchar < ' ' && cfg.printable_controls > 1)
+                    tchar = 0x2591;  // ⌷⎕░▒▓
+                if (cfg.box_drawing && tchar >= 0x2580 && tchar <= 0x259F) {
+                    // tag substitutes as Block Elements (U+2580-U+259F)
+                    tattr.attr &= ~FONTFAM_MASK;
+                    tattr.attr |= (cattrflags)11<< ATTR_FONTFAM_SHIFT;
+                }
+            }
+
+            if (j < term.cols - 1 && d[1].chr == UCSWIDE)
+                tattr.attr |= TATTR_WIDE;
+
+            /* Video reversing things */
+            bool selected =
+                    term.selected &&
+                    ( term.sel_rect
+                      ? posPle(term.sel_start, scrpos) && posPlt(scrpos, term.sel_end)
+                      : posle(term.sel_start, scrpos) && poslt(scrpos, term.sel_end)
+                    );
+
+            if (selected) {
+                tattr.attr |= TATTR_SELECTED;
+
+                colour bg = win_get_colour(SEL_COLOUR_I);
+                if (bg != (colour)-1) {
+                    tattr.truebg = bg;
+                    tattr.attr = (tattr.attr & ~ATTR_BGMASK) | (TRUE_COLOUR << ATTR_BGSHIFT);
+
+                    colour fg = win_get_colour(SEL_TEXT_COLOUR_I);
+                    if (fg == (colour)-1)
+                        fg = apply_attr_colour(tattr, ACM_SIMPLE).truefg;
+                    static uint mindist = 22222;
+                    bool too_close = colour_dist(fg, tattr.truebg) < mindist;
+                    if (too_close)
+                        fg = brighten(fg, tattr.truebg, false);
+                    tattr.truefg = fg;
+                    tattr.attr = (tattr.attr & ~ATTR_FGMASK) | (TRUE_COLOUR << ATTR_FGSHIFT);
+                }
+                else
+                    tattr.attr ^= ATTR_REVERSE;
+            }
+
+            if (term.hovering &&
+                (term.hoverlink >= 0
+                 ? term.hoverlink == tattr.link
+                 : posle(term.hover_start, scrpos) && poslt(scrpos, term.hover_end)
+                )
                )
             {
-              d->attr.attr |= TATTR_OVERHANG;
-              // also mark adjacent space to suppress its display
-              d[1].attr.attr |= TATTR_OVERHANG;
+                tattr.attr &= ~UNDER_MASK;
+                tattr.attr |= ATTR_UNDER;
+                if (cfg.hover_colour != (colour)-1) {
+                    tattr.attr |= ATTR_ULCOLOUR;
+                    tattr.ulcolr = cfg.hover_colour;
+                }
             }
 
-            d->attr.attr &= ~ATTR_FGMASK;
-            d->attr.attr |= TATTR_EMOJI | e.len;
+            bool flashchar = term.in_vbell &&
+                    ((cfg.bell_flash_style & FLASH_FULL)
+                     ||
+                     ((cfg.bell_flash_style & FLASH_BORDER)
+                      && (i == 0 || j == 0 ||
+                          i == term.rows - 1 || j == term.cols - 1
+                         )
+                     )
+                    );
 
-            //d->attr.truefg = (uint)e;
-            struct emoji * ee = &e;
-            uint em = *(uint *)ee;
-            d->attr.truefg = em;
+            if (flashchar) {
+                if (cfg.bell_flash_style & FLASH_REVERSE)
+                    tattr.attr ^= ATTR_REVERSE;
+                else {
+                    tattr.truebg = apply_attr_colour(tattr, ACM_VBELL_BG).truebg;
+                    tattr.attr = (tattr.attr & ~ATTR_BGMASK) | (TRUE_COLOUR << ATTR_BGSHIFT);
+                }
+            }
 
-            // refresh cached copy to avoid display delay
-            if (tattr.attr & TATTR_SELECTED) {
-              tattr = d->attr;
-              // need to propagate this to enable emoji highlighting
-              tattr.attr |= TATTR_SELECTED;
+            int match = in_results(scrpos);
+            if (match > 0) {
+                tattr.attr |= TATTR_RESULT;
+                if (match > 1) {
+                    tattr.attr |= TATTR_CURRESULT;
+                }
+            } else {
+                tattr.attr &= ~TATTR_RESULT;
             }
-            else
-              tattr = d->attr;
-            // inhibit rendering of subsequent emoji sequence components
-            for (int i = 1; i < e.len; i++) {
-              d[i].attr.attr &= ~ATTR_FGMASK;
-              d[i].attr.attr |= TATTR_EMOJI;
-              d[i].attr.truefg = em;
+            if (term.markpos_valid && (displine->lattr & (LATTR_MARKED | LATTR_UNMARKED))) {
+                tattr.attr |= TATTR_MARKED;
+                if (scrpos.y == term.markpos)
+                    tattr.attr |= TATTR_CURMARKED;
+            } else {
+                tattr.attr &= ~TATTR_MARKED;
             }
-          }
-        }
-#ifdef handle_symbol_overhang_here
-        else {  // not an emoji
-        }
+
+            /* Colour indication for blinking ? */
+            if ((tattr.attr & (ATTR_BLINK | ATTR_BLINK2))
+                && term.enable_blink_colour && wv.colours[BLINK_COLOUR_I] != (colour)-1
+                //&& !(tattr.attr & TATTR_EMOJI)
+               )
+            {
+                if (!(tattr.attr & TATTR_EMOJI)) {
+                    tattr.truefg = wv.colours[BLINK_COLOUR_I];
+                    tattr.attr = (tattr.attr & ~ATTR_FGMASK) | (TRUE_COLOUR << ATTR_FGSHIFT);
+                }
+            }
+            /* Real blinking ? */
+            else if (term.blink_is_real) {
+                if (tattr.attr & ATTR_BLINK2) {
+                    if (term.has_focus && term.tblinker2) {
+                        tattr.attr |= ATTR_INVISIBLE;
+                        tattr.attr &= ~UNBLINK;
+                    }
+                }
+                // ATTR_BLINK2 should override ATTR_BLINK to avoid chaotic dual blink
+                else if (tattr.attr & ATTR_BLINK) {
+                    if (term.has_focus && term.tblinker) {
+                        tattr.attr |= ATTR_INVISIBLE;
+                        tattr.attr &= ~UNBLINK;
+                    }
+                }
+            }
+
+            if (j < term.cols - 1 && d[1].chr == UCSWIDE)
+                tattr.attr |= TATTR_WIDE;
+
+            /* Match emoji sequences
+             * and replace by emoji indicators
+             */
+            if (cfg.emojis && j >= emoji_col) {
+                struct emoji e;
+                if ((tattr.attr & TATTR_EMOJI) && !(tattr.attr & ATTR_FGMASK)) {
+                    // previously marked subsequent emoji sequence component
+                    e.len = 0;
+                }
+                else
+                    e = match_emoji(d, term.cols - j);
+                if (e.len) {  // we have matched an emoji (sequence)
+                              // avoid subsequent matching of a partial emoji subsequence
+                    emoji_col = j + e.len;
+
+                    // check whether emoji graphics exist for the emoji
+                    bool ok = check_emoji(e);
+
+                    // check whether all emoji components have the same attributes
+                    bool equalattrs = true;
+                    for (int i = 1; i < e.len && equalattrs; i++) {
+                        if ((d[i].attr.attr & ~IGNEMOJATTR) != (d->attr.attr & ~IGNEMOJATTR)
+                            || d[i].attr.truebg != d->attr.truebg
+                           )
+                            equalattrs = false;
+                    }
+#if defined(debug_emojis) && debug_emojis > 3
+                    printf("paint emoji: matched len %d seq %d idx %d ok %d atr %d\n", e.len, e.seq, e.idx, ok, equalattrs);
 #endif
-      }
 
-     /* Mark box drawing, block and some other characters 
-      * that should connect to their neighbour cells and thus 
-      * be zoomed to the actual cell size including spacing (padding);
-      * also, for those, an italic attribute shall be ignored
-      */
-      if (tchar >= 0x2320 &&
-          ((tchar >= 0x2500 && tchar <= 0x259F)
-           || (tchar >= 0x25E2 && tchar <= 0x25E5)
-           || (tchar >= 0x239B && tchar <= 0x23B3)
-           || (tchar >= 0x23B7 && tchar <= 0x23BD)
-           || wcschr(W("〳〴〵⌠⌡⏐"), tchar)
-          )
-         )
-      {
-        tattr.attr |= TATTR_ZOOMFULL;
-        tattr.attr &= ~ATTR_ITALIC;
-      }
+                    // modify character data to trigger later emoji display
+                    if (ok && equalattrs) {
+                        // Emoji overhang
+                        if (e.len == 1 && j + 1 < term.cols
+                            // only if followed by space
+                            //&& iswspace(d[1].chr) && !d[1].cc_next
+                            //&& d[1].chr != 0x1680 && d[1].chr != 0x3000
+                            && ((d[1].chr == ' ' && !d[1].cc_next)
+                                // ... or with setting EmojiPlacement=full,
+                                // to avoid scrolling artefacts (#1261)
+                                || cfg.emoji_placement == EMPL_FULL
+                               )
+                            // not at cursor position? does not work for emojis
+                            //&& !at_cursor_pos(i, j)
+                            // and significant attributes are equal
+                            && !((d->attr.attr ^ d[1].attr.attr) & ~IGNOVRHANG)
+#ifdef exempt_emoji_components_from_overhang
+#warning drop this for #1261
+                            // do not overhang numbers, flag letters etc (~#1104)
+                            && d->chr >= 0x80 // exclude #️*️0️..9️
+                                              //&& !(ch >= 0x1F1E6 || ch <= 0x1F1FF) // exclude 🇦..🇿
+                            && !(!e.seq && emoji_bases[e.idx].ch >= 0x1F1E6 && emoji_bases[e.idx].ch <= 0x1F1FF)
+#endif
+                           )
+                           {
+                               d->attr.attr |= TATTR_OVERHANG;
+                               // also mark adjacent space to suppress its display
+                               d[1].attr.attr |= TATTR_OVERHANG;
+                           }
 
-     /*
-      * Check the font we'll _probably_ be using to see if
-      * the character is wide when we don't want it to be.
-      */
-      // Emoji overhang
-      if (tattr.attr & TATTR_OVERHANG) {
-        // don't tamper with width of overhanging characters
-      }
-      else if (tchar >= 0xE0B0 && tchar < 0xE0C0) {
-        // special handling for geometric "Powerline" symbols
-        tattr.attr |= TATTR_ZOOMFULL;
-        if (cs_ambig_wide) {
-          tattr.attr |= TATTR_EXPAND;
-        }
-      }
+                        d->attr.attr &= ~ATTR_FGMASK;
+                        d->attr.attr |= TATTR_EMOJI | e.len;
+
+                        //d->attr.truefg = (uint)e;
+                        struct emoji * ee = &e;
+                        uint em = *(uint *)ee;
+                        d->attr.truefg = em;
+
+                        // refresh cached copy to avoid display delay
+                        if (tattr.attr & TATTR_SELECTED) {
+                            tattr = d->attr;
+                            // need to propagate this to enable emoji highlighting
+                            tattr.attr |= TATTR_SELECTED;
+                        }
+                        else
+                            tattr = d->attr;
+                        // inhibit rendering of subsequent emoji sequence components
+                        for (int i = 1; i < e.len; i++) {
+                            d[i].attr.attr &= ~ATTR_FGMASK;
+                            d[i].attr.attr |= TATTR_EMOJI;
+                            d[i].attr.truefg = em;
+                        }
+                    }
+                }
+#ifdef handle_symbol_overhang_here
+                else {  // not an emoji
+                }
+#endif
+            }
+
+            /* Mark box drawing, block and some other characters 
+             * that should connect to their neighbour cells and thus 
+             * be zoomed to the actual cell size including spacing (padding);
+             * also, for those, an italic attribute shall be ignored
+             */
+            if (tchar >= 0x2320 &&
+                ((tchar >= 0x2500 && tchar <= 0x259F)
+                 || (tchar >= 0x25E2 && tchar <= 0x25E5)
+                 || (tchar >= 0x239B && tchar <= 0x23B3)
+                 || (tchar >= 0x23B7 && tchar <= 0x23BD)
+                 || wcschr(W("〳〴〵⌠⌡⏐"), tchar)
+                )
+               )
+            {
+                tattr.attr |= TATTR_ZOOMFULL;
+                tattr.attr &= ~ATTR_ITALIC;
+            }
+
+            /*
+             * Check the font we'll _probably_ be using to see if
+             * the character is wide when we don't want it to be.
+             */
+            // Emoji overhang
+            if (tattr.attr & TATTR_OVERHANG) {
+                // don't tamper with width of overhanging characters
+            }
+            else if (tchar >= 0xE0B0 && tchar < 0xE0C0) {
+                // special handling for geometric "Powerline" symbols
+                tattr.attr |= TATTR_ZOOMFULL;
+                if (cs_ambig_wide) {
+                    tattr.attr |= TATTR_EXPAND;
+                }
+            }
 #ifdef ignore_private_use_for_auto_narrowing
 #warning auto-narrowing exemption for private use now handled by Symbol overhang below
-      else if ((tchar >= 0xE000 && tchar < 0xF900)
-            || (tchar >= 0xDB80 && tchar < 0xDC00)
-              )
-      {
-        // don't tamper with width of Private Use characters
-      }
+            else if ((tchar >= 0xE000 && tchar < 0xF900)
+                || (tchar >= 0xDB80 && tchar < 0xDC00)
+                )
+            {
+                // don't tamper with width of Private Use characters
+            }
 #endif
-      else if (tchar != dispchars[j].chr ||
-          tattr.attr != (dispchars[j].attr.attr & ~(TATTR_NARROW | DATTR_MASK))
-              )
-      {
-        xchar xch = tchar;
-        if ((xch & 0xFC00) == 0xD800 && d->cc_next) {
-          termchar * cc = d + d->cc_next;
-          if ((cc->chr & 0xFC00) == 0xDC00) {
-            xch = ((xchar) (xch - 0xD7C0) << 10) | (cc->chr & 0x03FF);
-          }
+            else if (tchar != dispchars[j].chr ||
+                tattr.attr != (dispchars[j].attr.attr & ~(TATTR_NARROW | DATTR_MASK))
+                )
+            {
+                xchar xch = tchar;
+                if ((xch & 0xFC00) == 0xD800 && d->cc_next) {
+                    termchar * cc = d + d->cc_next;
+                    if ((cc->chr & 0xFC00) == 0xDC00) {
+                        xch = ((xchar) (xch - 0xD7C0) << 10) | (cc->chr & 0x03FF);
+                    }
 
-          if ((xch >= 0x1F67C && xch <= 0x1F67F)
-              || (xch >= 0x1FB00 && xch <= 0x1FBB3)
-             )
-          {
-            tattr.attr |= TATTR_ZOOMFULL;
-            tattr.attr &= ~ATTR_ITALIC;
-          }
-        }
+                    if ((xch >= 0x1F67C && xch <= 0x1F67F)
+                        || (xch >= 0x1FB00 && xch <= 0x1FBB3)
+                       )
+                    {
+                        tattr.attr |= TATTR_ZOOMFULL;
+                        tattr.attr &= ~ATTR_ITALIC;
+                    }
+                }
 
-        if ((tattr.attr & TATTR_WIDE) == 0
-            && cfg.char_narrowing < 100
-            && win_char_width(xch, tattr.attr) == 2
-            // && !(line->lattr & LATTR_MODE) ? "do not tamper with graphics"
-            // && is_ambigwide(tchar) ? but then they will be clipped...
-           )
-        {
-          // auto-narrowing of glyphs that don't fit into the cell
+                if ((tattr.attr & TATTR_WIDE) == 0
+                    && cfg.char_narrowing < 100
+                    && win_char_width(xch, tattr.attr) == 2
+                    // && !(line->lattr & LATTR_MODE) ? "do not tamper with graphics"
+                    // && is_ambigwide(tchar) ? but then they will be clipped...
+                   )
+                {
+                    // auto-narrowing of glyphs that don't fit into the cell
 
-          //printf("[%d:%d] narrow? %04X..%04X\n", i, j, tchar, chars[j + 1].chr);
+                    //printf("[%d:%d] narrow? %04X..%04X\n", i, j, tchar, chars[j + 1].chr);
 
-          // mark for later win_text parameter clearpad (#1179)
-          tattr.attr |= TATTR_OVERHANG;
+                    // mark for later win_text parameter clearpad (#1179)
+                    tattr.attr |= TATTR_OVERHANG;
 
-          if (
-              // do not narrow various symbol ranges;
-              // this is a bit redundant with Symbol overhang below
-                 (xch >= 0x2190 && xch <= 0x25FF)
-              || (xch >= 0x27C0 && xch <= 0x2BFF)
-             )
-          {
-            //tattr.attr |= TATTR_NARROW1; // ?
-          }
-          else {
+                    if (
+                        // do not narrow various symbol ranges;
+                        // this is a bit redundant with Symbol overhang below
+                        (xch >= 0x2190 && xch <= 0x25FF)
+                        || (xch >= 0x27C0 && xch <= 0x2BFF)
+                       )
+                    {
+                        //tattr.attr |= TATTR_NARROW1; // ?
+                    }
+                    else {
 #ifdef failed_attempt_to_tame_narrowing
 #warning this is now handled for specific character ranges by Symbol overhang below
-            if (j + 1 < term.cols && chars[j + 1].chr != ' ')
+                        if (j + 1 < term.cols && chars[j + 1].chr != ' ')
 #endif
-            tattr.attr |= TATTR_NARROW;
-            //if (ch != 0x25CC)
-            //printf("char %lc U+%04X narrow %d ambig %d\n", xch, xch, !!(tattr.attr & TATTR_NARROW), is_ambigwide(xch));
-          }
-        }
-        else if ((tattr.attr & TATTR_WIDE)
-                 // guard character expanding properly to avoid 
-                 // false hits as reported for CJK in #570,
-                 // considering that Windows may report width 1 
-                 // for double-width characters 
-                 // (if double-width by font substitution)
-                 && cs_ambig_wide
-                 // the following restriction would be good for
-                 // MS PGothic (but bad non-CJK range anyway)
-                 // but bad for
-                 // MS Mincho: wide Greek/Cyrillic but narrow æ, œ, ...
-                 // SimSun, NSimSun, Yu Gothic
-                 //&& !font_ambig_wide
-                 && win_char_width(xch, tattr.attr) == 1
-                 // and reassure to apply this only to ambiguous width chars
-                 && is_ambigwide(tchar) // is_ambig(tchar) && !is_wide(tchar)
-                 // do not widen Geometric Shapes
-                 // (Geometric Shapes Extended are not ambiguous)
-                 && !(0x25A0 <= tchar && tchar <= 0x25FF)
-                )
-        {
-          tattr.attr |= TATTR_EXPAND;
-        }
-      }
-      else if (dispchars[j].attr.attr & TATTR_NARROW) {
-        tattr.attr |= TATTR_NARROW;
-      }
+                            tattr.attr |= TATTR_NARROW;
+                        //if (ch != 0x25CC)
+                        //printf("char %lc U+%04X narrow %d ambig %d\n", xch, xch, !!(tattr.attr & TATTR_NARROW), is_ambigwide(xch));
+                    }
+                }
+                else if ((tattr.attr & TATTR_WIDE)
+                    // guard character expanding properly to avoid 
+                    // false hits as reported for CJK in #570,
+                    // considering that Windows may report width 1 
+                    // for double-width characters 
+                    // (if double-width by font substitution)
+                    && cs_ambig_wide
+                    // the following restriction would be good for
+                    // MS PGothic (but bad non-CJK range anyway)
+                    // but bad for
+                    // MS Mincho: wide Greek/Cyrillic but narrow æ, œ, ...
+                    // SimSun, NSimSun, Yu Gothic
+                    //&& !font_ambig_wide
+                    && win_char_width(xch, tattr.attr) == 1
+                    // and reassure to apply this only to ambiguous width chars
+                    && is_ambigwide(tchar) // is_ambig(tchar) && !is_wide(tchar)
+                                           // do not widen Geometric Shapes
+                                           // (Geometric Shapes Extended are not ambiguous)
+                    && !(0x25A0 <= tchar && tchar <= 0x25FF)
+                    )
+                {
+                    tattr.attr |= TATTR_EXPAND;
+                }
+            }
+            else if (dispchars[j].attr.attr & TATTR_NARROW) {
+                tattr.attr |= TATTR_NARROW;
+            }
 
-     /* Symbol overhang */
-      /* Note: to consider Visible space indication for overhang
-         (not to be applied then), there are two options:
-         - move this into the second loop below (first attempt failed)
-         - cancel overhang when adjusting next position with indication
-      */
-      //if (tchar >= 0x0900) printf("@%d %08llX %08llX\n", j, tattr.attr, chars[j + 1].attr.attr);
-      if (tchar >= 0x0900 && j + 1 < term.cols
-       // only if followed by space
-       //&& iswspace(chars[j + 1].chr) && !chars[j + 1].cc_next
-       //&& chars[j + 1].chr != 0x1680
-       && chars[j + 1].chr == ' ' && !chars[j + 1].cc_next
-       // not at cursor position? does not seem proper
-       //&& !at_cursor_pos(i, j)
-       // and significant attributes are equal
-       && !((tattr.attr ^ chars[j + 1].attr.attr) & ~IGNOVRHANG)
-         )
-      {
-        //printf("symb @%d:%d overhang %d attr %08llX attr1 %08llX\n", i, j, !!(chars[j].attr.attr & TATTR_OVERHANG), chars[j].attr.attr, chars[j + 1].attr.attr);
-        if (
-             (tchar >= 0x20A0 && tchar < 0x2400)  // Symbols
-          || (tchar >= 0x2460 && tchar < 0x2500)  // Symbols
-          || (tchar >= 0x25A0 && tchar < 0x2800)  // Symbols
-          || (tchar >= 0x2900 && tchar < 0x2C00)  // Symbols
-          || (tchar >= 0xE000 && tchar < 0xF900)  // Private Use
-          || (tchar >= 0xDB80 && tchar <= 0xDBFF)  // Private Use
-          || (tchar >= 0xDB3C && tchar <= 0xD83E)  // Symbols
-          || indicwide(tchar) || extrawide(tchar)
-           )
-        {
-          tattr.attr |= TATTR_OVERHANG;
-          // clear narrowing; this is rather done in the second loop below;
-          // as we still need this information in case the overhang flag 
-          // is reset when handling the subsequent position
-          //tattr.attr &= ~TATTR_NARROW;
-        }
-      }
+            /* Symbol overhang */
+            /* Note: to consider Visible space indication for overhang
+               (not to be applied then), there are two options:
+               - move this into the second loop below (first attempt failed)
+               - cancel overhang when adjusting next position with indication
+               */
+            //if (tchar >= 0x0900) printf("@%d %08llX %08llX\n", j, tattr.attr, chars[j + 1].attr.attr);
+            if (tchar >= 0x0900 && j + 1 < term.cols
+                // only if followed by space
+                //&& iswspace(chars[j + 1].chr) && !chars[j + 1].cc_next
+                //&& chars[j + 1].chr != 0x1680
+                && chars[j + 1].chr == ' ' && !chars[j + 1].cc_next
+                // not at cursor position? does not seem proper
+                //&& !at_cursor_pos(i, j)
+                // and significant attributes are equal
+                && !((tattr.attr ^ chars[j + 1].attr.attr) & ~IGNOVRHANG)
+               )
+            {
+                //printf("symb @%d:%d overhang %d attr %08llX attr1 %08llX\n", i, j, !!(chars[j].attr.attr & TATTR_OVERHANG), chars[j].attr.attr, chars[j + 1].attr.attr);
+                if (
+                    (tchar >= 0x20A0 && tchar < 0x2400)  // Symbols
+                    || (tchar >= 0x2460 && tchar < 0x2500)  // Symbols
+                    || (tchar >= 0x25A0 && tchar < 0x2800)  // Symbols
+                    || (tchar >= 0x2900 && tchar < 0x2C00)  // Symbols
+                    || (tchar >= 0xE000 && tchar < 0xF900)  // Private Use
+                    || (tchar >= 0xDB80 && tchar <= 0xDBFF)  // Private Use
+                    || (tchar >= 0xDB3C && tchar <= 0xD83E)  // Symbols
+                    || indicwide(tchar) || extrawide(tchar)
+                   )
+                {
+                    tattr.attr |= TATTR_OVERHANG;
+                    // clear narrowing; this is rather done in the second loop below;
+                    // as we still need this information in case the overhang flag 
+                    // is reset when handling the subsequent position
+                    //tattr.attr &= ~TATTR_NARROW;
+                }
+            }
 
 #define dont_debug_width_scaling
 #ifdef debug_width_scaling
-      if (tattr.attr & (TATTR_EXPAND | TATTR_NARROW | TATTR_WIDE))
-        printf("%04X w %d enw %02X\n", tchar, win_char_width(tchar, tattr.attr), (uint)(((tattr.attr & (TATTR_EXPAND | TATTR_NARROW | TATTR_WIDE)) >> 24)));
+            if (tattr.attr & (TATTR_EXPAND | TATTR_NARROW | TATTR_WIDE))
+                printf("%04X w %d enw %02X\n", tchar, win_char_width(tchar, tattr.attr), (uint)(((tattr.attr & (TATTR_EXPAND | TATTR_NARROW | TATTR_WIDE)) >> 24)));
 #endif
 
-     /* Visible space indication */
-      if (tchar == ' ') {
-        int disp = 0;
-        if (tattr.attr & TATTR_CLEAR) {
-          // TAB indication
-          if (cfg.disp_tab) {
-            static wchar tab[] = W("▹►"); // ▹▹► ▻▻► ▹▹▶ ▷▷▶ ››» ▸▸▶ ▹▹▷ ▹▹▸
-            if (tattr.attr & ATTR_BOLD) {
-              tchar = tab[1];
-              disp = cfg.disp_tab;
+            /* Visible space indication */
+            if (tchar == ' ') {
+                int disp = 0;
+                if (tattr.attr & TATTR_CLEAR) {
+                    // TAB indication
+                    if (cfg.disp_tab) {
+                        static wchar tab[] = W("▹►"); // ▹▹► ▻▻► ▹▹▶ ▷▷▶ ››» ▸▸▶ ▹▹▷ ▹▹▸
+                        if (tattr.attr & ATTR_BOLD) {
+                            tchar = tab[1];
+                            disp = cfg.disp_tab;
+                        }
+                        else if (tattr.attr & ATTR_DIM) {
+                            tchar = tab[0];
+                            disp = cfg.disp_tab;
+                        }
+                    }
+                    tattr.attr &= ~(ATTR_BOLD | ATTR_DIM);
+
+                    if (!(cfg.disp_clear & 8))
+                        tattr.attr &= ~TATTR_CLEAR;
+                    if (!disp)
+                        disp = cfg.disp_clear & ~8;
+                }
+                else
+                    disp = cfg.disp_space;
+
+                if (disp) {
+                    if (tchar == ' ')
+                        tchar = 0xB7; // ·0x00B7 ⋯0x22EF
+                    if (disp & 1)
+                        tattr.attr |= ATTR_BOLD;
+                    if (disp & 2)
+                        tattr.attr |= ATTR_DIM;
+                    if ((disp & 4) && cfg.underl_colour != (colour)-1) {
+                        tattr.truefg = cfg.underl_colour;
+                        tattr.attr |= TRUE_COLOUR << ATTR_FGSHIFT;
+                    }
+
+                    // Symbol overhang: cancel overhang of previous character
+                    // (reason to keep TATTR_NARROW in this loop)
+                    if (j)
+                        newchars[j - 1].attr.attr &= ~TATTR_OVERHANG;
+                }
             }
-            else if (tattr.attr & ATTR_DIM) {
-              tchar = tab[0];
-              disp = cfg.disp_tab;
+
+            /* FULL-TERMCHAR */
+            newchars[j].attr = tattr;
+            newchars[j].chr = tchar;
+            /* Combining characters are still read from chars */
+            newchars[j].cc_next = 0;
+
+            /* Margin indication */
+            if (term.dim_margins &&
+                (// in normal display:
+                 i < term.marg_top || (i > term.marg_bot && i < term.rows)
+                 // in status display:
+                 || (i >= term.rows && i < term.marg_top + term.rows)
+                 || (i > term.marg_bot + term.rows)
+                 // outside left/right margins:
+                 || j < term.marg_left || j > term.marg_right
+                )
+               )
+            {
+                cattr * ca = &newchars[j].attr;
+                ca->attr |= ATTR_DIM;
+                ca->attr ^= ATTR_REVERSE;
             }
-          }
-          tattr.attr &= ~(ATTR_BOLD | ATTR_DIM);
 
-          if (!(cfg.disp_clear & 8))
-            tattr.attr &= ~TATTR_CLEAR;
-          if (!disp)
-            disp = cfg.disp_clear & ~8;
-        }
-        else
-          disp = cfg.disp_space;
+        }  // end first loop
 
-        if (disp) {
-          if (tchar == ' ')
-            tchar = 0xB7; // ·0x00B7 ⋯0x22EF
-          if (disp & 1)
-            tattr.attr |= ATTR_BOLD;
-          if (disp & 2)
-            tattr.attr |= ATTR_DIM;
-          if ((disp & 4) && cfg.underl_colour != (colour)-1) {
-            tattr.truefg = cfg.underl_colour;
-            tattr.attr |= TRUE_COLOUR << ATTR_FGSHIFT;
-          }
-
-          // Symbol overhang: cancel overhang of previous character
-          // (reason to keep TATTR_NARROW in this loop)
-          if (j)
-            newchars[j - 1].attr.attr &= ~TATTR_OVERHANG;
-        }
-      }
-
-     /* FULL-TERMCHAR */
-      newchars[j].attr = tattr;
-      newchars[j].chr = tchar;
-     /* Combining characters are still read from chars */
-      newchars[j].cc_next = 0;
-
-     /* Margin indication */
-      if (term.dim_margins &&
-          (// in normal display:
-           i < term.marg_top || (i > term.marg_bot && i < term.rows)
-           // in status display:
-           || (i >= term.rows && i < term.marg_top + term.rows)
-           || (i > term.marg_bot + term.rows)
-           // outside left/right margins:
-           || j < term.marg_left || j > term.marg_right
-          )
-         )
-      {
-        cattr * ca = &newchars[j].attr;
-        ca->attr |= ATTR_DIM;
-        ca->attr ^= ATTR_REVERSE;
-      }
-
-    }  // end first loop
-
-    if (i == curs_y) {
-     /* Determine the column the cursor is on, taking bidi into account and
-      * moving it one column to the left when it's on the right half of a
-      * wide character.
-      */
-      int curs_x = term.curs.x;
-      if (forward)
-        curs_x = forward[curs_x];
+        if (i == curs_y) {
+            /* Determine the column the cursor is on, taking bidi into account and
+             * moving it one column to the left when it's on the right half of a
+             * wide character.
+             */
+            int curs_x = term.curs.x;
+            if (forward)
+                curs_x = forward[curs_x];
 #ifdef support_triple_width
-      while (curs_x > 0 && chars[curs_x].chr == UCSWIDE)
-        curs_x--;
+            while (curs_x > 0 && chars[curs_x].chr == UCSWIDE)
+                curs_x--;
 #else
-      if (curs_x > 0 && chars[curs_x].chr == UCSWIDE)
-        curs_x--;
+            if (curs_x > 0 && chars[curs_x].chr == UCSWIDE)
+                curs_x--;
 #endif
 
-     /* Determine cursor cell attributes. */
-      newchars[curs_x].attr.attr |=
-        (!term.has_focus ? TATTR_PASCURS :
-         term.cblinker || !term_cursor_blinks() ? TATTR_ACTCURS : 0) |
-        (term.curs.wrapnext ? TATTR_RIGHTCURS : 0);
+            /* Determine cursor cell attributes. */
+            newchars[curs_x].attr.attr |=
+                    (!term.has_focus ? TATTR_PASCURS :
+                     term.cblinker || !term_cursor_blinks() ? TATTR_ACTCURS : 0) |
+                    (term.curs.wrapnext ? TATTR_RIGHTCURS : 0);
 
-      if (term.cursor_invalid)
+            if (term.cursor_invalid)
 #ifdef debug_dirty
-        printf("INVALID c %d\n", curs_x),
+                printf("INVALID c %d\n", curs_x),
 #endif
-        dispchars[curs_x].attr.attr |= ATTR_INVALID;
+                        dispchars[curs_x].attr.attr |= ATTR_INVALID;
 
-      // try to fix #612 "cursor isn’t hidden right away"
-      if (newchars[curs_x].attr.attr != dispchars[curs_x].attr.attr)
+            // try to fix #612 "cursor isn’t hidden right away"
+            if (newchars[curs_x].attr.attr != dispchars[curs_x].attr.attr)
 #ifdef debug_dirty
-        printf("INVALID c %d\n", curs_x),
+                printf("INVALID c %d\n", curs_x),
 #endif
-        dispchars[curs_x].attr.attr |= ATTR_INVALID;
+                        dispchars[curs_x].attr.attr |= ATTR_INVALID;
 
-     /* Numeric input feedback */
-      uint what;
-      wchar * ifs = char_code_indication(&what);
-      if (ifs) {
-        curs_x = max(min(curs_x, (int)term.cols - (int)wcslen(ifs)), 0);
-        while (*ifs) {
-          newchars[curs_x].chr = *ifs++;
-          newchars[curs_x].attr.attr &= ~(TATTR_WIDE | TATTR_EXPAND);
-          newchars[curs_x].attr = CATTR_DEFAULT;
-          if (what >= 4) {
-            newchars[curs_x].attr.attr |= ATTR_ULCOLOUR | ATTR_BOLD;
-            newchars[curs_x].attr.ulcolr = RGB(255, 0, 0);
-          }
-          else {
-            newchars[curs_x].attr.attr |= ATTR_REVERSE | ATTR_DIM;
-            newchars[curs_x].attr.attr |= ATTR_ULCOLOUR | ATTR_BOLD;
-            newchars[curs_x].attr.ulcolr = RGB(255, 0, 0);
-          }
-          switch (what) {
-            when 16:
-              newchars[curs_x].attr.attr |= ATTR_DOUBLYUND;
-            when 10:
-              newchars[curs_x].attr.attr |= ATTR_CURLYUND;
-            when 8:
-              newchars[curs_x].attr.attr |= ATTR_BROKENUND;
-            when 4:  // ALT_ALONE
-              newchars[curs_x].attr.attr |= ATTR_BLINK2;
-            when 2:  // COMP_ACTIVE
-              newchars[curs_x].attr.attr |= ATTR_OVERL;
-            when 1:
-              newchars[curs_x].attr.attr |= ATTR_OVERL | ATTR_BLINK2;
-          }
-          dispchars[curs_x].attr.attr |= ATTR_INVALID;
-          curs_x++;
-        }
-        term.st_kb_flag = what;
-      }
-      else
-        term.st_kb_flag = 0;
+            /* Numeric input feedback */
+            uint what;
+            wchar * ifs = char_code_indication(&what);
+            if (ifs) {
+                curs_x = max(min(curs_x, (int)term.cols - (int)wcslen(ifs)), 0);
+                while (*ifs) {
+                    newchars[curs_x].chr = *ifs++;
+                    newchars[curs_x].attr.attr &= ~(TATTR_WIDE | TATTR_EXPAND);
+                    newchars[curs_x].attr = CATTR_DEFAULT;
+                    if (what >= 4) {
+                        newchars[curs_x].attr.attr |= ATTR_ULCOLOUR | ATTR_BOLD;
+                        newchars[curs_x].attr.ulcolr = RGB(255, 0, 0);
+                    }
+                    else {
+                        newchars[curs_x].attr.attr |= ATTR_REVERSE | ATTR_DIM;
+                        newchars[curs_x].attr.attr |= ATTR_ULCOLOUR | ATTR_BOLD;
+                        newchars[curs_x].attr.ulcolr = RGB(255, 0, 0);
+                    }
+                    switch (what) {
+                        when 16:
+                                newchars[curs_x].attr.attr |= ATTR_DOUBLYUND;
+                        when 10:
+                                newchars[curs_x].attr.attr |= ATTR_CURLYUND;
+                        when 8:
+                                newchars[curs_x].attr.attr |= ATTR_BROKENUND;
+                        when 4:  // ALT_ALONE
+                                newchars[curs_x].attr.attr |= ATTR_BLINK2;
+                        when 2:  // COMP_ACTIVE
+                                newchars[curs_x].attr.attr |= ATTR_OVERL;
+                        when 1:
+                                newchars[curs_x].attr.attr |= ATTR_OVERL | ATTR_BLINK2;
+                    }
+                    dispchars[curs_x].attr.attr |= ATTR_INVALID;
+                    curs_x++;
+                }
+                term.st_kb_flag = what;
+            }
+            else
+                term.st_kb_flag = 0;
 
-     /* Progress indication on current cursor line (after back positioning) */
-      if (term.detect_progress && term.progress_scan == 1) {
-        int j = term.cols;
-        while (--j > 0) {
-          if (chars[j].chr == '%'
+            /* Progress indication on current cursor line (after back positioning) */
+            if (term.detect_progress && term.progress_scan == 1) {
+                int j = term.cols;
+                while (--j > 0) {
+                    if (chars[j].chr == '%'
 #ifdef detect_percentage_only_at_line_end
-              ||
-              // check empty space indication in chars;
-              // note: TATTR_CLEAR is already cleared in newchars
-              (!(chars[j].attr.attr & TATTR_CLEAR)
-               // accept anything after %
-               && 0
-               // accept termination chars after percentage indication
-               && !wcschr(W(")]."), chars[j].chr)
-              )
+                        ||
+                        // check empty space indication in chars;
+                        // note: TATTR_CLEAR is already cleared in newchars
+                        (!(chars[j].attr.attr & TATTR_CLEAR)
+                         // accept anything after %
+                         && 0
+                         // accept termination chars after percentage indication
+                         && !wcschr(W(")]."), chars[j].chr)
+                        )
 #endif
-             )
-            break;
+                       )
+                        break;
+                }
+                int p = 0;
+                if (chars[j].chr == '%' && (displine->lattr & LATTR_PROGRESS)) {
+                    int f = 1;
+                    while (--j >= 0) {
+                        if (chars[j].chr >= '0' && chars[j].chr <= '9') {
+                            p += f * (chars[j].chr - '0');
+                            f *= 10;
+                        }
+                        else if (chars[j].chr == '.' || chars[j].chr == ',') {
+                            p = 0;
+                            f = 1;
+                        }
+                        else {
+                            j++;
+                            break;
+                        }
+                    }
+                }
+                if (p <= 100) {
+                    taskbar_progress(- term.detect_progress);
+                    taskbar_progress(p);
+                }
+            }
         }
-        int p = 0;
-        if (chars[j].chr == '%' && (displine->lattr & LATTR_PROGRESS)) {
-          int f = 1;
-          while (--j >= 0) {
-            if (chars[j].chr >= '0' && chars[j].chr <= '9') {
-              p += f * (chars[j].chr - '0');
-              f *= 10;
+
+        /* Progress indication accumulated on all lines */
+        if (term.detect_progress && term.progress_scan == 2) {
+            int j = term.cols;
+            while (--j > 0) {
+                if (chars[j].chr == '%') {
+                    int p = 0;
+                    int f = 1;
+                    bool pro = false;
+                    while (--j >= 0) {
+                        if (chars[j].chr >= '0' && chars[j].chr <= '9') {
+                            p += f * (chars[j].chr - '0');
+                            f *= 10;
+                            pro = true;
+                        }
+                        else if (chars[j].chr == '.' || chars[j].chr == ',') {
+                            p = 0;
+                            f = 1;
+                        }
+                        else {
+                            j++;
+                            break;
+                        }
+                    }
+
+                    if (pro && p <= 100) {
+                        nlines_progress ++;
+                        total_progress += p;
+                    }
+                    break;
+                }
             }
-            else if (chars[j].chr == '.' || chars[j].chr == ',') {
-              p = 0;
-              f = 1;
-            }
-            else {
-              j++;
-              break;
-            }
-          }
         }
-        if (p <= 100) {
-          taskbar_progress(- term.detect_progress);
-          taskbar_progress(p);
-        }
-      }
-    }
 
-   /* Progress indication accumulated on all lines */
-    if (term.detect_progress && term.progress_scan == 2) {
-      int j = term.cols;
-      while (--j > 0) {
-        if (chars[j].chr == '%') {
-          int p = 0;
-          int f = 1;
-          bool pro = false;
-          while (--j >= 0) {
-            if (chars[j].chr >= '0' && chars[j].chr <= '9') {
-              p += f * (chars[j].chr - '0');
-              f *= 10;
-              pro = true;
+        //trace_line("loopn", newchars);
+        //trace_line("loopd", dispchars);
+
+        /*
+         * Now loop over the line again, noting where things have changed.
+         *
+         * During this loop, we keep track of where we last saw DATTR_STARTRUN.
+         * Any mismatch automatically invalidates
+         * _all_ of the containing run that was last printed: that is,
+         * any rectangle that was drawn in one go in the
+         * previous update should be either left completely alone
+         * or overwritten in its entirety. This, along with the
+         * expectation that front ends clip all text runs to their
+         * bounding rectangle, should solve any possible problems
+         * with fonts that overflow their character cells.
+         *
+         * For the new italic overhang feature, this had to be extended 
+         * (firstitalicstart) as italic chunks are painted in reverse order.
+         * Also, to clear overhang artefacts after scrolling, a run to the 
+         * right of an italic run needs to be repainted (prevdirtyitalic).
+         * Also, after the loop, overhang into the right padding border 
+         * must be detected and propagated.
+         * And this in a way that does not cause continuous repainting 
+         * of further unchanged cells...
+         */
+        int laststart = 0;
+        int firstitalicstart = -1;
+        bool prevdirtyitalic = false;
+        bool firstdirtyitalic = false;
+        bool dirtyrect = false;
+        for (int j = 0; j < term.cols; j++) {
+            if (dispchars[j].attr.attr & DATTR_STARTRUN) {
+                laststart = j;
+                dirtyrect = false;
+                if (firstitalicstart < 0 && newchars[j].attr.attr & (ATTR_ITALIC | TATTR_OVERHANG))
+                    firstitalicstart = j;
             }
-            else if (chars[j].chr == '.' || chars[j].chr == ',') {
-              p = 0;
-              f = 1;
-            }
-            else {
-              j++;
-              break;
-            }
-          }
 
-          if (pro && p <= 100) {
-            nlines_progress ++;
-            total_progress += p;
-          }
-          break;
-        }
-      }
-    }
+            /* Symbol overhang: clear narrowing */
+            if (newchars[j].attr.attr & TATTR_OVERHANG)
+                newchars[j].attr.attr &= ~TATTR_NARROW;
 
-    //trace_line("loopn", newchars);
-    //trace_line("loopd", dispchars);
-
-   /*
-    * Now loop over the line again, noting where things have changed.
-    *
-    * During this loop, we keep track of where we last saw DATTR_STARTRUN.
-    * Any mismatch automatically invalidates
-    * _all_ of the containing run that was last printed: that is,
-    * any rectangle that was drawn in one go in the
-    * previous update should be either left completely alone
-    * or overwritten in its entirety. This, along with the
-    * expectation that front ends clip all text runs to their
-    * bounding rectangle, should solve any possible problems
-    * with fonts that overflow their character cells.
-    *
-    * For the new italic overhang feature, this had to be extended 
-    * (firstitalicstart) as italic chunks are painted in reverse order.
-    * Also, to clear overhang artefacts after scrolling, a run to the 
-    * right of an italic run needs to be repainted (prevdirtyitalic).
-    * Also, after the loop, overhang into the right padding border 
-    * must be detected and propagated.
-    * And this in a way that does not cause continuous repainting 
-    * of further unchanged cells...
-    */
-    int laststart = 0;
-    int firstitalicstart = -1;
-    bool prevdirtyitalic = false;
-    bool firstdirtyitalic = false;
-    bool dirtyrect = false;
-    for (int j = 0; j < term.cols; j++) {
-      if (dispchars[j].attr.attr & DATTR_STARTRUN) {
-        laststart = j;
-        dirtyrect = false;
-        if (firstitalicstart < 0 && newchars[j].attr.attr & (ATTR_ITALIC | TATTR_OVERHANG))
-          firstitalicstart = j;
-      }
-
-     /* Symbol overhang: clear narrowing */
-      if (newchars[j].attr.attr & TATTR_OVERHANG)
-        newchars[j].attr.attr &= ~TATTR_NARROW;
-
-      if (!dirtyrect  // test this first for potential speed-up
-          && (dispchars[j].chr != newchars[j].chr
-              || (dispchars[j].attr.truefg != newchars[j].attr.truefg)
-              || (dispchars[j].attr.truebg != newchars[j].attr.truebg)
-              || (dispchars[j].attr.ulcolr != newchars[j].attr.ulcolr)
-              || (dispchars[j].attr.attr & ~DATTR_STARTRUN) != newchars[j].attr.attr
-              || (prevdirtyitalic && (dispchars[j].attr.attr & DATTR_STARTRUN))
-             ))
-      {
-        int start = firstitalicstart >= 0 ? firstitalicstart : laststart;
-        firstitalicstart = -1;
+            if (!dirtyrect  // test this first for potential speed-up
+                && (dispchars[j].chr != newchars[j].chr
+                    || (dispchars[j].attr.truefg != newchars[j].attr.truefg)
+                    || (dispchars[j].attr.truebg != newchars[j].attr.truebg)
+                    || (dispchars[j].attr.ulcolr != newchars[j].attr.ulcolr)
+                    || (dispchars[j].attr.attr & ~DATTR_STARTRUN) != newchars[j].attr.attr
+                    || (prevdirtyitalic && (dispchars[j].attr.attr & DATTR_STARTRUN))
+                   ))
+            {
+                int start = firstitalicstart >= 0 ? firstitalicstart : laststart;
+                firstitalicstart = -1;
 #ifdef debug_dirty
-        printf("INVALID %d..%d\n", start, j - 1);
+                printf("INVALID %d..%d\n", start, j - 1);
 #endif
-        for (int k = start; k < j; k++)
-          dispchars[k].attr.attr |= ATTR_INVALID;
-        dirtyrect = true;
-        prevdirtyitalic = false;
-      }
-      if (dirtyrect && dispchars[j].attr.attr & (ATTR_ITALIC | TATTR_OVERHANG))
-        prevdirtyitalic = true;
-      else if (dispchars[j].attr.attr & DATTR_STARTRUN)
-        prevdirtyitalic = false;
-      if (j == 0)
-        firstdirtyitalic = prevdirtyitalic;
+                for (int k = start; k < j; k++)
+                    dispchars[k].attr.attr |= ATTR_INVALID;
+                dirtyrect = true;
+                prevdirtyitalic = false;
+            }
+            if (dirtyrect && dispchars[j].attr.attr & (ATTR_ITALIC | TATTR_OVERHANG))
+                prevdirtyitalic = true;
+            else if (dispchars[j].attr.attr & DATTR_STARTRUN)
+                prevdirtyitalic = false;
+            if (j == 0)
+                firstdirtyitalic = prevdirtyitalic;
 
-      if (dirtyrect)
+            if (dirtyrect)
 #ifdef debug_dirty
-        printf("INVALID %d\n", j),
+                printf("INVALID %d\n", j),
 #endif
-        dispchars[j].attr.attr |= ATTR_INVALID;
-    }
-    if (prevdirtyitalic) {
-      // clear overhang into right padding border
-      win_text(term.cols, i, W(" "), 1, CATTR_DEFAULT, (cattr*)&CATTR_DEFAULT, line->lattr, false, false, true, 0);
-    }
-    if (firstdirtyitalic) {
-      // clear overhang into left padding border
-      win_text(-1, i, W(" "), 1, CATTR_DEFAULT, (cattr*)&CATTR_DEFAULT, line->lattr, false, false, true, 0);
-    }
+                        dispchars[j].attr.attr |= ATTR_INVALID;
+        }
+        if (prevdirtyitalic) {
+            // clear overhang into right padding border
+            win_text(term.cols, i, W(" "), 1, CATTR_DEFAULT, (cattr*)&CATTR_DEFAULT, line->lattr, false, false, true, 0);
+        }
+        if (firstdirtyitalic) {
+            // clear overhang into left padding border
+            win_text(-1, i, W(" "), 1, CATTR_DEFAULT, (cattr*)&CATTR_DEFAULT, line->lattr, false, false, true, 0);
+        }
 
 #define dont_debug_bidi_paragraphs
 #ifdef debug_bidi_paragraphs
-    static cattr CATTR_WRAPPED = {.truebg = RGB(255, 0, 0),
-                             .attr = ATTR_DEFFG | TRUE_COLOUR << ATTR_BGSHIFT,
-                             .truefg = 0, .ulcolr = (colour)-1, .link = -1};
-    static cattr CATTR_CONTD = {.truebg = RGB(0, 0, 255),
-                             .attr = ATTR_DEFFG | TRUE_COLOUR << ATTR_BGSHIFT,
-                             .truefg = 0, .ulcolr = (colour)-1, .link = -1};
-    static cattr CATTR_CONTWRAPD = {.truebg = RGB(255, 0, 255),
-                             .attr = ATTR_DEFFG | TRUE_COLOUR << ATTR_BGSHIFT,
-                             .truefg = 0, .ulcolr = (colour)-1, .link = -1};
-    wchar diag = ((line->lattr & 0x0F00) >> 8) + '0';
-    if (diag > '9')
-      diag += 'A' - '0' - 10;
-    if (line->lattr & (LATTR_WRAPPED | LATTR_WRAPCONTD)) {
-      if ((line->lattr & (LATTR_WRAPPED | LATTR_WRAPCONTD)) == (LATTR_WRAPPED | LATTR_WRAPCONTD))
-        win_text(-1, i, &diag, 1, CATTR_CONTWRAPD, (cattr*)&CATTR_CONTWRAPD, line->lattr, false, true, 0);
-      else if (line->lattr & LATTR_WRAPPED)
-        win_text(-1, i, &diag, 1, CATTR_WRAPPED, (cattr*)&CATTR_WRAPPED, line->lattr, false, true, 0);
-      else
-        win_text(-1, i, &diag, 1, CATTR_CONTD, (cattr*)&CATTR_CONTD, line->lattr, false, true, 0);
-    }
-    else if (displine->lattr & (LATTR_WRAPPED | LATTR_WRAPCONTD))
-      win_text(-1, i, W(" "), 1, CATTR_DEFAULT, (cattr*)&CATTR_DEFAULT, line->lattr, false, true, 0);
+        static cattr CATTR_WRAPPED = {.truebg = RGB(255, 0, 0),
+            .attr = ATTR_DEFFG | TRUE_COLOUR << ATTR_BGSHIFT,
+            .truefg = 0, .ulcolr = (colour)-1, .link = -1};
+        static cattr CATTR_CONTD = {.truebg = RGB(0, 0, 255),
+            .attr = ATTR_DEFFG | TRUE_COLOUR << ATTR_BGSHIFT,
+            .truefg = 0, .ulcolr = (colour)-1, .link = -1};
+        static cattr CATTR_CONTWRAPD = {.truebg = RGB(255, 0, 255),
+            .attr = ATTR_DEFFG | TRUE_COLOUR << ATTR_BGSHIFT,
+            .truefg = 0, .ulcolr = (colour)-1, .link = -1};
+        wchar diag = ((line->lattr & 0x0F00) >> 8) + '0';
+        if (diag > '9')
+            diag += 'A' - '0' - 10;
+        if (line->lattr & (LATTR_WRAPPED | LATTR_WRAPCONTD)) {
+            if ((line->lattr & (LATTR_WRAPPED | LATTR_WRAPCONTD)) == (LATTR_WRAPPED | LATTR_WRAPCONTD))
+                win_text(-1, i, &diag, 1, CATTR_CONTWRAPD, (cattr*)&CATTR_CONTWRAPD, line->lattr, false, true, 0);
+            else if (line->lattr & LATTR_WRAPPED)
+                win_text(-1, i, &diag, 1, CATTR_WRAPPED, (cattr*)&CATTR_WRAPPED, line->lattr, false, true, 0);
+            else
+                win_text(-1, i, &diag, 1, CATTR_CONTD, (cattr*)&CATTR_CONTD, line->lattr, false, true, 0);
+        }
+        else if (displine->lattr & (LATTR_WRAPPED | LATTR_WRAPCONTD))
+            win_text(-1, i, W(" "), 1, CATTR_DEFAULT, (cattr*)&CATTR_DEFAULT, line->lattr, false, true, 0);
 #endif
 
-   /*
-    * Finally, loop once more and actually do the drawing.
-    */
-    // control line overlay; as opposed to character overlay implemented 
-    // by the "pending overlay" buffer below, this works by repeating 
-    // the last line loop and only drawing the overlay characters this time
-    bool overlaying = false;
-    overlay:;
-    bool do_overlay = false;
+        /*
+         * Finally, loop once more and actually do the drawing.
+         */
+        // control line overlay; as opposed to character overlay implemented 
+        // by the "pending overlay" buffer below, this works by repeating 
+        // the last line loop and only drawing the overlay characters this time
+        bool overlaying = false;
+overlay:;
+        bool do_overlay = false;
 
-    int maxtextlen = max(term.cols, 16);
-    wchar text[maxtextlen];
-    cattr textattr[maxtextlen];
-    int textlen = 0;
+        int maxtextlen = max(term.cols, 16);
+        wchar text[maxtextlen];
+        cattr textattr[maxtextlen];
+        int textlen = 0;
 
-    char has_rtl = 0;
-    char has_sea = 0;  // South East Asian script
-    uchar bc = 0;
-    bool dirty_run = (line->lattr != displine->lattr);
-    bool dirty_line = dirty_run;
+        char has_rtl = 0;
+        char has_sea = 0;  // South East Asian script
+        uchar bc = 0;
+        bool dirty_run = (line->lattr != displine->lattr);
+        bool dirty_line = dirty_run;
 #if defined(debug_dirty) && debug_dirty > 1
-    printf("dirty ini %d:* lin %d run %d\n", i, dirty_line, dirty_run);
+        printf("dirty ini %d:* lin %d run %d\n", i, dirty_line, dirty_run);
 #endif
-    cattr attr = CATTR_DEFAULT;
-    int start = 0;
+        cattr attr = CATTR_DEFAULT;
+        int start = 0;
 
-    displine->lattr = line->lattr;
+        displine->lattr = line->lattr;
 
-    // buffer for pending overlay output; for support of character overhang
-    // (italics and wide glyphs), such chunks are output in two steps;
-    // the first output paints the background (and possibly manual underline)
-    // and the second output paints the text, over the adjacent chunks
-    wchar ovl_text[maxtextlen];
-    cattr ovl_textattr[maxtextlen];
-    int ovl_len = 0;
-    int ovl_x, ovl_y;
-    cattr ovl_attr;
-    ushort ovl_lattr;
-    char ovl_has_rtl;
-    char ovl_has_sea;
+        // buffer for pending overlay output; for support of character overhang
+        // (italics and wide glyphs), such chunks are output in two steps;
+        // the first output paints the background (and possibly manual underline)
+        // and the second output paints the text, over the adjacent chunks
+        wchar ovl_text[maxtextlen];
+        cattr ovl_textattr[maxtextlen];
+        int ovl_len = 0;
+        int ovl_x, ovl_y;
+        cattr ovl_attr;
+        ushort ovl_lattr;
+        char ovl_has_rtl;
+        char ovl_has_sea;
 
-    void flush_text()
-    {
-      if (ovl_len) {
-        // now flush the text for 2-phase output
-        win_text(ovl_x, ovl_y, ovl_text, ovl_len, ovl_attr, ovl_textattr, ovl_lattr, ovl_has_rtl, ovl_has_sea, false, 2);
-        ovl_len = 0;
-      }
-    }
+        void flush_text()
+        {
+            if (ovl_len) {
+                // now flush the text for 2-phase output
+                win_text(ovl_x, ovl_y, ovl_text, ovl_len, ovl_attr, ovl_textattr, ovl_lattr, ovl_has_rtl, ovl_has_sea, false, 2);
+                ovl_len = 0;
+            }
+        }
 
 #define dont_debug_run
 
@@ -4108,166 +4105,166 @@ term_paint(void)
 # define debug_out_text
 #endif
 
-    void out_text(int x, int y, wchar *text, int len, cattr attr, cattr *textattr, ushort lattr, char has_rtl, char has_sea)
-    {
+        void out_text(int x, int y, wchar *text, int len, cattr attr, cattr *textattr, ushort lattr, char has_rtl, char has_sea)
+        {
 #ifdef debug_out_text
-      wchar t[len + 1]; wcsncpy(t, text, len); t[len] = 0;
-      for (int i = len - 1; i >= 0 && t[i] == ' '; i--)
-        t[i] = 0;
-      if (*t) {
-        printf("out <%ls>\n", t);
-        for (int i = 0; i < len; i++)
-          printf(" %04X", t[i]);
-        printf("\n");
-      }
-#endif
-      if (attr.attr & TATTR_EMOJI) {
-        int elen = attr.attr & ATTR_FGMASK;
-        cattr eattr = attr;
-        eattr.attr &= ~(TATTR_WIDE | TATTR_COMBINING);
-        wchar esp[] = W("        ");
-        if (elen) {
-          if (!overlaying) {
-            if (newchars[x].attr.attr & TATTR_SELECTED) {
-              // here we handle background colour once more because
-              // somehow the selection highlighting information from above
-              // got lost in the chaos of chars[], newchars[], attr, tattr...
-              // some substantial revision might be good here, in theory...
-
-              // the main problem here is the reuse of truefg as an 
-              // emoji indicator; we have to make sure truefg isn't 
-              // used anymore for an emoji...
-              eattr.attr |= TATTR_SELECTED;
-              colour bg = eattr.attr & ATTR_REVERSE
-                          ? win_get_colour(SEL_TEXT_COLOUR_I)
-                          : win_get_colour(SEL_COLOUR_I);
-              if (bg == (colour)-1)
-                bg = eattr.attr & ATTR_REVERSE
-                          ? win_get_colour(BG_COLOUR_I)
-                          : win_get_colour(FG_COLOUR_I);
-              eattr.truebg = bg;
-              eattr.attr = (eattr.attr & ~ATTR_BGMASK) | (TRUE_COLOUR << ATTR_BGSHIFT);
-              eattr.attr &= ~ATTR_REVERSE;
+            wchar t[len + 1]; wcsncpy(t, text, len); t[len] = 0;
+            for (int i = len - 1; i >= 0 && t[i] == ' '; i--)
+                t[i] = 0;
+            if (*t) {
+                printf("out <%ls>\n", t);
+                for (int i = 0; i < len; i++)
+                    printf(" %04X", t[i]);
+                printf("\n");
             }
+#endif
+            if (attr.attr & TATTR_EMOJI) {
+                int elen = attr.attr & ATTR_FGMASK;
+                cattr eattr = attr;
+                eattr.attr &= ~(TATTR_WIDE | TATTR_COMBINING);
+                wchar esp[] = W("        ");
+                if (elen) {
+                    if (!overlaying) {
+                        if (newchars[x].attr.attr & TATTR_SELECTED) {
+                            // here we handle background colour once more because
+                            // somehow the selection highlighting information from above
+                            // got lost in the chaos of chars[], newchars[], attr, tattr...
+                            // some substantial revision might be good here, in theory...
 
-            // Emoji overhang
-            if (elen == 1 && attr.attr & TATTR_OVERHANG)
-              elen = 2;
-            // fill emoji background
-            win_text(x, y, esp, elen, eattr, textattr, lattr, has_rtl, has_sea, false, 1);
-            flush_text();
-          }
+                            // the main problem here is the reuse of truefg as an 
+                            // emoji indicator; we have to make sure truefg isn't 
+                            // used anymore for an emoji...
+                            eattr.attr |= TATTR_SELECTED;
+                            colour bg = eattr.attr & ATTR_REVERSE
+                                    ? win_get_colour(SEL_TEXT_COLOUR_I)
+                                    : win_get_colour(SEL_COLOUR_I);
+                            if (bg == (colour)-1)
+                                bg = eattr.attr & ATTR_REVERSE
+                                        ? win_get_colour(BG_COLOUR_I)
+                                        : win_get_colour(FG_COLOUR_I);
+                            eattr.truebg = bg;
+                            eattr.attr = (eattr.attr & ~ATTR_BGMASK) | (TRUE_COLOUR << ATTR_BGSHIFT);
+                            eattr.attr &= ~ATTR_REVERSE;
+                        }
+
+                        // Emoji overhang
+                        if (elen == 1 && attr.attr & TATTR_OVERHANG)
+                            elen = 2;
+                        // fill emoji background
+                        win_text(x, y, esp, elen, eattr, textattr, lattr, has_rtl, has_sea, false, 1);
+                        flush_text();
+                    }
 #if defined(debug_emojis) && debug_emojis > 4
-          // add background to some emojis
-          eattr.attr &= ~(ATTR_BGMASK | ATTR_FGMASK);
-          eattr.attr |= 6 << ATTR_BGSHIFT | 4;
-          esp[0] = '0' + elen;
-          win_text(x, y, esp, elen, eattr, textattr, lattr, has_rtl, has_sea, false, 2);
+                    // add background to some emojis
+                    eattr.attr &= ~(ATTR_BGMASK | ATTR_FGMASK);
+                    eattr.attr |= 6 << ATTR_BGSHIFT | 4;
+                    esp[0] = '0' + elen;
+                    win_text(x, y, esp, elen, eattr, textattr, lattr, has_rtl, has_sea, false, 2);
 #endif
-          if (cfg.emoji_placement == EMPL_FULL && !overlaying)
-            do_overlay = true;  // display in overlaying loop
-          else {
-            //struct emoji e = (struct emoji) eattr.truefg;
-            struct emoji * ee = (void *)&eattr.truefg;
-            emoji_show(x, y, *ee, elen, eattr, lattr);
-          }
-        }
+                    if (cfg.emoji_placement == EMPL_FULL && !overlaying)
+                        do_overlay = true;  // display in overlaying loop
+                    else {
+                        //struct emoji e = (struct emoji) eattr.truefg;
+                        struct emoji * ee = (void *)&eattr.truefg;
+                        emoji_show(x, y, *ee, elen, eattr, lattr);
+                    }
+                }
 #if defined(debug_emojis) && debug_emojis > 4
-        else { // mark some emojis
-          eattr.attr &= ~(ATTR_BGMASK | ATTR_FGMASK);
-          eattr.attr |= 4 << ATTR_BGSHIFT | 6;
-          esp[0] = '0';
-          win_text(x, y, esp, 1, eattr, textattr, lattr, has_rtl, has_sea, false, 2);
-        }
+                else { // mark some emojis
+                    eattr.attr &= ~(ATTR_BGMASK | ATTR_FGMASK);
+                    eattr.attr |= 4 << ATTR_BGSHIFT | 6;
+                    esp[0] = '0';
+                    win_text(x, y, esp, 1, eattr, textattr, lattr, has_rtl, has_sea, false, 2);
+                }
 #endif
-      }
-      else if ((attr.attr & TATTR_OVERHANG) && *text == ' ' //iswspace(*text)
-             // skip the skipping if overhanging char was meanwhile changed
-             && start && (newchars[start - 1].attr.attr & TATTR_OVERHANG)
-              )
-      {
-        // Emoji overhang
-        // do not output adjacent space after overhanging emoji;
-        return;
-      }
-      else if (overlaying) {
-        return;
-      }
-      else if (attr.attr
-          & (ATTR_ITALIC | TATTR_COMBDOUBL | TATTR_OVERHANG | TATTR_MARKCURS)
-        )
-      {
-        /* Split output into 2 phases, for background and foreground, 
-           to support overlay display in some cases:
-           * italics and other potential overhang situations (emojis)
-           * combining doubles
-           * cursor position, to support underlay cursor painting
-         */
+            }
+            else if ((attr.attr & TATTR_OVERHANG) && *text == ' ' //iswspace(*text)
+                                                                  // skip the skipping if overhanging char was meanwhile changed
+                && start && (newchars[start - 1].attr.attr & TATTR_OVERHANG)
+                )
+            {
+                // Emoji overhang
+                // do not output adjacent space after overhanging emoji;
+                return;
+            }
+            else if (overlaying) {
+                return;
+            }
+            else if (attr.attr
+                & (ATTR_ITALIC | TATTR_COMBDOUBL | TATTR_OVERHANG | TATTR_MARKCURS)
+                )
+            {
+                /* Split output into 2 phases, for background and foreground, 
+                   to support overlay display in some cases:
+                 * italics and other potential overhang situations (emojis)
+                 * combining doubles
+                 * cursor position, to support underlay cursor painting
+                 */
 #ifndef phase1_output_after_phase2_copy
-        // phase 1 output for the background
-        win_text(x, y, text, len, attr, textattr, lattr, has_rtl, has_sea, false, 1);
-        flush_text();
+                // phase 1 output for the background
+                win_text(x, y, text, len, attr, textattr, lattr, has_rtl, has_sea, false, 1);
+                flush_text();
 #endif
 
-        // remember actual text for later phase 2 output (flush)
-        // - it used to cause trouble like accent misplacement 
-        // to do this after phase 1 output as win_text could modify contents 
-        // when the combsubst mechanism (wintext) was in effect, now disabled
-        ovl_x = x;
-        ovl_y = y;
-        wcsncpy(ovl_text, text, len);
-        ovl_len = len;
-        ovl_attr = attr;
-        memcpy(ovl_textattr, textattr, len * sizeof(cattr));
-        ovl_lattr = lattr;
-        ovl_has_rtl = has_rtl;
-        ovl_has_sea = has_sea;
+                // remember actual text for later phase 2 output (flush)
+                // - it used to cause trouble like accent misplacement 
+                // to do this after phase 1 output as win_text could modify contents 
+                // when the combsubst mechanism (wintext) was in effect, now disabled
+                ovl_x = x;
+                ovl_y = y;
+                wcsncpy(ovl_text, text, len);
+                ovl_len = len;
+                ovl_attr = attr;
+                memcpy(ovl_textattr, textattr, len * sizeof(cattr));
+                ovl_lattr = lattr;
+                ovl_has_rtl = has_rtl;
+                ovl_has_sea = has_sea;
 
 #ifdef phase1_output_after_phase2_copy
-        // phase 1 output for the background
-        // - it used to cause overhang clipping (#1304)
-        // when this was done after phase 2 output copy above
-        win_text(x, y, text, len, attr, textattr, lattr, has_rtl, has_sea, false, 1);
-        flush_text();
+                // phase 1 output for the background
+                // - it used to cause overhang clipping (#1304)
+                // when this was done after phase 2 output copy above
+                win_text(x, y, text, len, attr, textattr, lattr, has_rtl, has_sea, false, 1);
+                flush_text();
 #endif
-      }
-      else {
-        win_text(x, y, text, len, attr, textattr, lattr, has_rtl, has_sea, false, 0);
-        flush_text();
-      }
-    }
+            }
+            else {
+                win_text(x, y, text, len, attr, textattr, lattr, has_rtl, has_sea, false, 0);
+                flush_text();
+            }
+        }
 
-    //trace_line("loop3", newchars);
+        //trace_line("loop3", newchars);
 
-   /*
-    * Third loop, for actual drawing.
-    */
-    for (int j = 0; j < term.cols; j++) {
-      termchar *d = chars + j;
-      cattr tattr = newchars[j].attr;
-      wchar tchar = newchars[j].chr;
+        /*
+         * Third loop, for actual drawing.
+         */
+        for (int j = 0; j < term.cols; j++) {
+            termchar *d = chars + j;
+            cattr tattr = newchars[j].attr;
+            wchar tchar = newchars[j].chr;
 #ifdef support_triple_width
-      if (tchar == UCSWIDE) {
-        continue;
-      }
+            if (tchar == UCSWIDE) {
+                continue;
+            }
 #endif
 
-      // Note: newchars[j].cc_next is always 0; use chars[]
-      xchar xtchar = tchar;
+            // Note: newchars[j].cc_next is always 0; use chars[]
+            xchar xtchar = tchar;
 #ifdef proper_non_BMP_classification
-      // this is the correct way to later check for the bidi_class,
-      // but let's not touch non-BMP here for now because:
-      // - some non-BMP ranges do not align to cell width (e.g. Hieroglyphs)
-      // - right-to-left non-BMP does not work (GetCharacterPlacementW fails)
-      if (is_high_surrogate(tchar) && chars[j].cc_next) {
-        termchar *t1 = &chars[j + chars[j].cc_next];
-        if (is_low_surrogate(t1->chr))
-          xtchar = combine_surrogates(tchar, t1->chr);
-      }
+            // this is the correct way to later check for the bidi_class,
+            // but let's not touch non-BMP here for now because:
+            // - some non-BMP ranges do not align to cell width (e.g. Hieroglyphs)
+            // - right-to-left non-BMP does not work (GetCharacterPlacementW fails)
+            if (is_high_surrogate(tchar) && chars[j].cc_next) {
+                termchar *t1 = &chars[j + chars[j].cc_next];
+                if (is_low_surrogate(t1->chr))
+                    xtchar = combine_surrogates(tchar, t1->chr);
+            }
 #endif
 
-      if ((dispchars[j].attr.attr ^ tattr.attr) & TATTR_WIDE)
-        dirty_line = true;
+            if ((dispchars[j].attr.attr ^ tattr.attr) & TATTR_WIDE)
+                dirty_line = true;
 
 #ifdef debug_run
 #define trace_run(tag)	({if (tchar > '~') printf("break (%s) @%d %04X|%04X\n", tag, j, j > 0 ? newchars[j - 1].chr : 0, tchar);})
@@ -4276,276 +4273,276 @@ term_paint(void)
 #define trace_run(tag)	(void)0
 #endif
 
-      bool break_run = (tattr.attr != attr.attr)
+            bool break_run = (tattr.attr != attr.attr)
                     || (tattr.truefg != attr.truefg)
                     || (tattr.truebg != attr.truebg)
                     || (tattr.ulcolr != attr.ulcolr);
 
-      if (tchar != SIXELCH && (tattr.attr & TATTR_NARROW))
-        trace_run("narrow"), break_run = true;
+            if (tchar != SIXELCH && (tattr.attr & TATTR_NARROW))
+                trace_run("narrow"), break_run = true;
 
-      if (tattr.attr & TATTR_EMOJI)
-        trace_run("emoji"), break_run = true;
+            if (tattr.attr & TATTR_EMOJI)
+                trace_run("emoji"), break_run = true;
 
-      inline bool has_comb(termchar * tc)
-      {
-        if (!tc->cc_next)
-          return false;
-        if (!is_high_surrogate(tc->chr))
-          return true;
-        tc += tc->cc_next;
-        return tc->cc_next;
-      }
+            inline bool has_comb(termchar * tc)
+            {
+                if (!tc->cc_next)
+                    return false;
+                if (!is_high_surrogate(tc->chr))
+                    return true;
+                tc += tc->cc_next;
+                return tc->cc_next;
+            }
 
-     /*
-      * Break on both sides of any combined-character cell.
-      */
-      if (has_comb(d) || (j > 0 && has_comb(&d[-1])))
-        trace_run("cc"), break_run = true;
+            /*
+             * Break on both sides of any combined-character cell.
+             */
+            if (has_comb(d) || (j > 0 && has_comb(&d[-1])))
+                trace_run("cc"), break_run = true;
 
 #ifdef keep_non_BMP_characters_together_in_one_chunk
-      // this was expected to speed up non-BMP display 
-      // but the effect is not significant, if any
-      // also, this spoils two other issues about non-BMP display:
+            // this was expected to speed up non-BMP display 
+            // but the effect is not significant, if any
+            // also, this spoils two other issues about non-BMP display:
 #warning non-BMP RTL will be in wrong order
 #warning some non-BMP ranges (e.g. Egyptian Hieroglyphs) are not cell-adjusted
-     /*
-      * Break when exceeding output buffer length.
-      */
-      if (is_high_surrogate(d->chr) && textlen + 2 >= maxtextlen)
-        trace_run("max"), break_run = true;
-     /*
-      * Break when switching BMP/non-BMP.
-      */
-      if (j > 0 && is_high_surrogate(d->chr) ^ is_high_surrogate(d[-1].chr))
-        trace_run("bmp"), break_run = true;
+            /*
+             * Break when exceeding output buffer length.
+             */
+            if (is_high_surrogate(d->chr) && textlen + 2 >= maxtextlen)
+                trace_run("max"), break_run = true;
+            /*
+             * Break when switching BMP/non-BMP.
+             */
+            if (j > 0 && is_high_surrogate(d->chr) ^ is_high_surrogate(d[-1].chr))
+                trace_run("bmp"), break_run = true;
 #else
-     /*
-      * Break on both sides of non-BMP character.
-      */
-      if (j > 0 && (is_high_surrogate(d->chr) || is_high_surrogate(d[-1].chr)))
-        trace_run("bmp"), break_run = true;
+            /*
+             * Break on both sides of non-BMP character.
+             */
+            if (j > 0 && (is_high_surrogate(d->chr) || is_high_surrogate(d[-1].chr)))
+                trace_run("bmp"), break_run = true;
 #endif
 
-     /*
-      * Break some special ranges to avoid erratic narrow spacing.
-      */
-      if (j > 0 && (d[-1].chr | 1) == 0xFD3F)
-        trace_run("spec"), break_run = true;
+            /*
+             * Break some special ranges to avoid erratic narrow spacing.
+             */
+            if (j > 0 && (d[-1].chr | 1) == 0xFD3F)
+                trace_run("spec"), break_run = true;
 
-      if (!dirty_line) {
-        if (dispchars[j].chr == tchar &&
-            (dispchars[j].attr.attr & ~DATTR_STARTRUN) == tattr.attr)
-          trace_run("str"), break_run = true;
-        else if (!dirty_run && textlen == 1)
-          trace_run("len"), break_run = true;
-      }
+            if (!dirty_line) {
+                if (dispchars[j].chr == tchar &&
+                    (dispchars[j].attr.attr & ~DATTR_STARTRUN) == tattr.attr)
+                    trace_run("str"), break_run = true;
+                else if (!dirty_run && textlen == 1)
+                    trace_run("len"), break_run = true;
+            }
 
-     /*
-      * Output South East Asian script combining characters in one chunk.
-      */
-      if (tchar >= 0x0900 && tchar <= 0x109F) {
-        // South Asian (U+0900-U+0DFF)
-        // South East Asian (U+0E00-U+109F)
-        has_sea |= 1;
-      }
-      if (break_run && is_comcom(tchar)) {
-        // Output composed combining characters with previous in one chunk;
-        // also extend rendering box.
-        has_sea |= 2;
-        trace_run("no-break-run");
-        break_run = false;
-      }
+            /*
+             * Output South East Asian script combining characters in one chunk.
+             */
+            if (tchar >= 0x0900 && tchar <= 0x109F) {
+                // South Asian (U+0900-U+0DFF)
+                // South East Asian (U+0E00-U+109F)
+                has_sea |= 1;
+            }
+            if (break_run && is_comcom(tchar)) {
+                // Output composed combining characters with previous in one chunk;
+                // also extend rendering box.
+                has_sea |= 2;
+                trace_run("no-break-run");
+                break_run = false;
+            }
 
-      uchar tbc = bidi_class(xtchar);
+            uchar tbc = bidi_class(xtchar);
 
-      if (textlen && tbc != bc) {
-        if (is_rtl_class(tbc) != is_rtl_class(bc))
-          // break at RTL to support RTL font fallback
-          trace_run("rtl"), break_run = true;
-        else if (!is_sep_class(tbc) && !is_sep_class(bc))
-          // break at other changes to avoid glyph confusion (#285)
-          trace_run("bcs"), break_run = true;
-        //else if (is_punct_class(tbc) || is_punct_class(bc))
-        else if ((tbc == EN) ^ (bc == EN))
-          // break at digit to avoid adaptation to script style
-          trace_run("bcp"), break_run = true;
-      }
-      bc = tbc;
+            if (textlen && tbc != bc) {
+                if (is_rtl_class(tbc) != is_rtl_class(bc))
+                    // break at RTL to support RTL font fallback
+                    trace_run("rtl"), break_run = true;
+                else if (!is_sep_class(tbc) && !is_sep_class(bc))
+                    // break at other changes to avoid glyph confusion (#285)
+                    trace_run("bcs"), break_run = true;
+                //else if (is_punct_class(tbc) || is_punct_class(bc))
+                else if ((tbc == EN) ^ (bc == EN))
+                    // break at digit to avoid adaptation to script style
+                    trace_run("bcp"), break_run = true;
+            }
+            bc = tbc;
 
-     /* Flush previous output chunk on break_run */
-      if (break_run || cfg.bloom) {
-        if ((dirty_run && textlen) || overlaying)
-          out_text(start, i, text, textlen, attr, textattr, line->lattr, has_rtl, has_sea);
-        start = j;
-        textlen = 0;
-        has_rtl = 0;
-        has_sea = 0;
-        attr = tattr;
-        dirty_run = dirty_line;
+            /* Flush previous output chunk on break_run */
+            if (break_run || cfg.bloom) {
+                if ((dirty_run && textlen) || overlaying)
+                    out_text(start, i, text, textlen, attr, textattr, line->lattr, has_rtl, has_sea);
+                start = j;
+                textlen = 0;
+                has_rtl = 0;
+                has_sea = 0;
+                attr = tattr;
+                dirty_run = dirty_line;
 #if defined(debug_dirty) && debug_dirty > 1
-        printf("dirty brk %d:%d lin %d run %d\n", i, j, dirty_line, dirty_run);
+                printf("dirty brk %d:%d lin %d run %d\n", i, j, dirty_line, dirty_run);
 #endif
-      }
+            }
 
-      bool do_copy =
-        !termchars_equal_override(&dispchars[j], d, tchar, tattr);
-      dirty_run |= do_copy;
+            bool do_copy =
+                    !termchars_equal_override(&dispchars[j], d, tchar, tattr);
+            dirty_run |= do_copy;
 #if defined(debug_dirty) && debug_dirty > 1
-      printf("dirty cop %d:%d lin %d run %d\n", i, j, dirty_line, dirty_run);
+            printf("dirty cop %d:%d lin %d run %d\n", i, j, dirty_line, dirty_run);
 #endif
 
-      if (tchar == SIXELCH) {
-        // displaying region of a SIXEL image before actual graphics display;
-        // this includes selection over a SIXEL image but also moments 
-        // before display of a new image or refreshed image when scrolling 
-        // or otherwise refreshing the screen.
-        // options:
-        // indicate visually that the image will not be copied
-        // (would flicker in other cases)
-        //text[textlen] = 0xFFFD;
-        // or:
-        // blank region of SIXEL image
-        text[textlen] = ' ';  // or any of █░▒▓▚▞, e.g. 0x2591 ?
-      }
-      else
-        text[textlen] = tchar;
-      ///textattr[textlen] = tattr;
-      textlen++;
+            if (tchar == SIXELCH) {
+                // displaying region of a SIXEL image before actual graphics display;
+                // this includes selection over a SIXEL image but also moments 
+                // before display of a new image or refreshed image when scrolling 
+                // or otherwise refreshing the screen.
+                // options:
+                // indicate visually that the image will not be copied
+                // (would flicker in other cases)
+                //text[textlen] = 0xFFFD;
+                // or:
+                // blank region of SIXEL image
+                text[textlen] = ' ';  // or any of █░▒▓▚▞, e.g. 0x2591 ?
+            }
+            else
+                text[textlen] = tchar;
+            ///textattr[textlen] = tattr;
+            textlen++;
 
-      if (is_rtl_class(tbc)) {
-        if (tbc == R)
-          has_rtl |= 1;
-        else if (tbc == AL)
-          has_rtl |= 2;
-        else
-          has_rtl |= 4;
-      }
+            if (is_rtl_class(tbc)) {
+                if (tbc == R)
+                    has_rtl |= 1;
+                else if (tbc == AL)
+                    has_rtl |= 2;
+                else
+                    has_rtl |= 4;
+            }
 
 #define dont_debug_surrogates
 
-     /* Append combining and overstrike characters, combine surrogates */
-      if (d->cc_next) {
-        termchar *dd = d;
-        while (dd->cc_next && textlen < maxtextlen) {
+            /* Append combining and overstrike characters, combine surrogates */
+            if (d->cc_next) {
+                termchar *dd = d;
+                while (dd->cc_next && textlen < maxtextlen) {
 #ifdef debug_surrogates
-          wchar prev = dd->chr;
+                    wchar prev = dd->chr;
 #endif
-          dd += dd->cc_next;
-          wchar tchar = dd->chr;
+                    dd += dd->cc_next;
+                    wchar tchar = dd->chr;
 
-          // mark combining unless pseudo-combining surrogates
-          if (!is_low_surrogate(tchar)) {
-            if (tattr.attr & TATTR_EMOJI)
-              break;
-            attr.attr |= TATTR_COMBINING;
-          }
-          if (combiningdouble(tchar))
-            attr.attr |= TATTR_COMBDOUBL;
+                    // mark combining unless pseudo-combining surrogates
+                    if (!is_low_surrogate(tchar)) {
+                        if (tattr.attr & TATTR_EMOJI)
+                            break;
+                        attr.attr |= TATTR_COMBINING;
+                    }
+                    if (combiningdouble(tchar))
+                        attr.attr |= TATTR_COMBDOUBL;
 
-          // copy attribute, handle blinking
-          cattr tattr = dd->attr;
-          if ((tattr.attr & (ATTR_BLINK | ATTR_BLINK2))
-           && term.enable_blink_colour && wv.colours[BLINK_COLOUR_I] != (colour)-1
-           && !(tattr.attr & TATTR_EMOJI)
-             )
-          {  // colour indication for blinking
-            tattr.truefg = wv.colours[BLINK_COLOUR_I];
-            tattr.attr = (tattr.attr & ~ATTR_FGMASK) | (TRUE_COLOUR << ATTR_FGSHIFT);
-          }
-          else if (term.blink_is_real) {
-            if (tattr.attr & ATTR_BLINK2) {
-              if (term.has_focus && term.tblinker2) {
-                tattr.attr |= ATTR_INVISIBLE;
-                tattr.attr &= ~UNBLINK;
-              }
-              dirty_run = true;  // attempt to optimise this failed
-            }
-            // ATTR_BLINK2 should override ATTR_BLINK to avoid chaotic dual blink
-            else if (tattr.attr & ATTR_BLINK) {
-              if (term.has_focus && term.tblinker) {
-                tattr.attr |= ATTR_INVISIBLE;
-                tattr.attr &= ~UNBLINK;
-              }
-              dirty_run = true;  // attempt to optimise this failed
-            }
-          }
-          textattr[textlen] = tattr;
+                    // copy attribute, handle blinking
+                    cattr tattr = dd->attr;
+                    if ((tattr.attr & (ATTR_BLINK | ATTR_BLINK2))
+                        && term.enable_blink_colour && wv.colours[BLINK_COLOUR_I] != (colour)-1
+                        && !(tattr.attr & TATTR_EMOJI)
+                       )
+                    {  // colour indication for blinking
+                        tattr.truefg = wv.colours[BLINK_COLOUR_I];
+                        tattr.attr = (tattr.attr & ~ATTR_FGMASK) | (TRUE_COLOUR << ATTR_FGSHIFT);
+                    }
+                    else if (term.blink_is_real) {
+                        if (tattr.attr & ATTR_BLINK2) {
+                            if (term.has_focus && term.tblinker2) {
+                                tattr.attr |= ATTR_INVISIBLE;
+                                tattr.attr &= ~UNBLINK;
+                            }
+                            dirty_run = true;  // attempt to optimise this failed
+                        }
+                        // ATTR_BLINK2 should override ATTR_BLINK to avoid chaotic dual blink
+                        else if (tattr.attr & ATTR_BLINK) {
+                            if (term.has_focus && term.tblinker) {
+                                tattr.attr |= ATTR_INVISIBLE;
+                                tattr.attr &= ~UNBLINK;
+                            }
+                            dirty_run = true;  // attempt to optimise this failed
+                        }
+                    }
+                    textattr[textlen] = tattr;
 
-          if (cfg.emojis && tchar == 0xFE0E)
-            ; // skip text style variation selector
-          else if (tchar >= 0x2066 && tchar <= 0x2069)
-            // hide bidi isolate mark glyphs (if handled zero-width)
-            text[textlen++] = 0x200B;  // zero width space
-          else
-            text[textlen++] = tchar;
+                    if (cfg.emojis && tchar == 0xFE0E)
+                        ; // skip text style variation selector
+                    else if (tchar >= 0x2066 && tchar <= 0x2069)
+                        // hide bidi isolate mark glyphs (if handled zero-width)
+                        text[textlen++] = 0x200B;  // zero width space
+                    else
+                        text[textlen++] = tchar;
 #ifdef debug_surrogates
-          ucschar comb = 0xFFFFF;
-          if ((prev & 0xFC00) == 0xD800 && (tchar & 0xFC00) == 0xDC00)
-            comb = ((ucschar) (prev - 0xD7C0) << 10) | (tchar & 0x03FF);
-          printf("comb (%04X) %04X %04X (%05X) %11llX\n", 
-                 d->chr, prev, tchar, comb, attr.attr);
+                    ucschar comb = 0xFFFFF;
+                    if ((prev & 0xFC00) == 0xD800 && (tchar & 0xFC00) == 0xDC00)
+                        comb = ((ucschar) (prev - 0xD7C0) << 10) | (tchar & 0x03FF);
+                    printf("comb (%04X) %04X %04X (%05X) %11llX\n", 
+                           d->chr, prev, tchar, comb, attr.attr);
 #endif
-        }
-      }
+                }
+            }
 
-      if (do_copy) {
-        copy_termchar(displine, j, d);  // may change displine->chars
-        dispchars = displine->chars;
-        dispchars[j].chr = tchar;
-        dispchars[j].attr = tattr;
-        if (start == j)
-          dispchars[j].attr.attr |= DATTR_STARTRUN;
-      }
+            if (do_copy) {
+                copy_termchar(displine, j, d);  // may change displine->chars
+                dispchars = displine->chars;
+                dispchars[j].chr = tchar;
+                dispchars[j].attr = tattr;
+                if (start == j)
+                    dispchars[j].attr.attr |= DATTR_STARTRUN;
+            }
 
-     /* If it's a wide char step along to the next one. */
-      if ((tattr.attr & TATTR_WIDE) && ++j < term.cols) {
-        d++;
-       /*
-        * By construction above, the cursor should not
-        * be on the right-hand half of this character.
-        * Ever.
-        */
-        if (!termchars_equal(&dispchars[j], d)) {
-          dirty_run = true;
+            /* If it's a wide char step along to the next one. */
+            if ((tattr.attr & TATTR_WIDE) && ++j < term.cols) {
+                d++;
+                /*
+                 * By construction above, the cursor should not
+                 * be on the right-hand half of this character.
+                 * Ever.
+                 */
+                if (!termchars_equal(&dispchars[j], d)) {
+                    dirty_run = true;
 #if defined(debug_dirty) && debug_dirty > 1
-          printf("dirty neq %d:%d lin %d run %d\n", i, j, dirty_line, dirty_run);
+                    printf("dirty neq %d:%d lin %d run %d\n", i, j, dirty_line, dirty_run);
 #endif
-        }
-        copy_termchar(displine, j, d);
+                }
+                copy_termchar(displine, j, d);
 #ifdef support_triple_width
 #warning do not handle triple-width here
-        //while (dispchars[j].chr == UCSWIDE) {
-        //  j++;
-        //  start++;
-        //}
+                //while (dispchars[j].chr == UCSWIDE) {
+                //  j++;
+                //  start++;
+                //}
 #endif
-      }
+            }
+        }
+        if (dirty_run && textlen)
+            out_text(start, i, text, textlen, attr, textattr, line->lattr, has_rtl, has_sea);
+        if (!overlaying)
+            flush_text();
+
+        /*
+         * Draw any pending overlay characters in one more loop.
+         */
+        if (do_overlay && !overlaying) {
+            overlaying = true;
+            goto overlay;
+        }
+
+        /*
+         * Release the line data fetched from the screen or scrollback buffer.
+         */
+        release_line(line);
     }
-    if (dirty_run && textlen)
-      out_text(start, i, text, textlen, attr, textattr, line->lattr, has_rtl, has_sea);
-    if (!overlaying)
-      flush_text();
-
-   /*
-    * Draw any pending overlay characters in one more loop.
-    */
-    if (do_overlay && !overlaying) {
-      overlaying = true;
-      goto overlay;
+    if (term.detect_progress && term.progress_scan == 2) {
+        taskbar_progress(- term.detect_progress);
+        taskbar_progress(nlines_progress ? total_progress / nlines_progress : 0);
     }
 
-   /*
-    * Release the line data fetched from the screen or scrollback buffer.
-    */
-    release_line(line);
-  }
-  if (term.detect_progress && term.progress_scan == 2) {
-    taskbar_progress(- term.detect_progress);
-    taskbar_progress(nlines_progress ? total_progress / nlines_progress : 0);
-  }
-
-  term.cursor_invalid = false;
+    term.cursor_invalid = false;
 }
 
 void
