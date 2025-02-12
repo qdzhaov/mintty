@@ -1,5 +1,5 @@
 // termout.c (part of mintty)
-// Copyright 2008-23 Andy Koppe, 2017-2024 Thomas Wolff
+// Copyright 2008-23 Andy Koppe, 2017-2025 Thomas Wolff
 // Adapted from code from PuTTY-0.60 by Simon Tatham and team.
 // Licensed under the terms of the GNU General Public License v3 or later.
 
@@ -892,6 +892,26 @@ could_be_emoji_base(termchar * tc)
          );
 }
 
+/*
+   Determine characters for Arabic Lam/Alef single-cell joining
+   Unicode has presentation forms (isolated and final) only for 
+	U+644 LAM
+   combined with either of
+	U+627 ALEF
+	U+622 ALEF WITH MADDA ABOVE
+	U+623 ALEF WITH HAMZA ABOVE
+	U+625 ALEF WITH HAMZA BELOW
+	U+649 ALEF MAKSURA
+   (where the ligature with ALEF MAKSURA, however, is wider than one cell),
+   but not for any other LAM WITH ... (SMALL V, DOT ABOVE, etc) or
+   any other ALEF (WASLA, WITH WAVY HAMZA, etc);
+   so, lacking more information about Arabic typography, the 
+   assumption is that only the combinations of plain LAM with 
+   ALEF or ALEF WITH MADDA or WITH HAMZA ABOVE or BELOW need to be supported
+ */
+bool isLAM(xchar c) { return c == 0x644; }
+bool isALEF(xchar c) { return c >= 0x622 && c <= 0x627 && c != 0x624 && c != 0x626; }
+
 static wchar last_high = 0;
 static wchar last_char = 0;
 static int last_width = 0;
@@ -952,6 +972,16 @@ write_char(wchar c, int width)
     //TODO: if changed, propagate mode onto paragraph
     if (cfg.ligatures_support)
       term_invalidate(0, curs->y, curs->x, curs->y);
+  }
+
+  // check for Arabic Lam/Alef single-cell joining
+  if (term.join_lam_alef &&
+      curs->x && isALEF(c) && isLAM(line->chars[curs->x - 1].chr)
+     )
+  {
+    // in LAM/ALEF single-cell joining mode, handle ALEF after LAM like a 
+    // combining character, in order to trigger their single-cell rendering
+    width = 0;
   }
 
   if (curs->wrapnext && term.autowrap && width > 0) {
@@ -2504,6 +2534,8 @@ set_modes(bool state)
             term.curs.bidimode &= ~LATTR_BIDISEL;
           else
             term.curs.bidimode |= LATTR_BIDISEL;
+        when 2521:      /* LAM/ALEF single-cell joining */
+          term.join_lam_alef = state;
         when 2026:
           term.suspend_update = state ? 150 : 0;
           if (!state) {
@@ -2681,6 +2713,8 @@ get_mode(bool privatemode, int arg)
         return 2 - !!(term.curs.bidimode & LATTR_BOXMIRROR);
       when 2501: /* bidi direction auto-detection */
         return 2 - !(term.curs.bidimode & LATTR_BIDISEL);
+      when 2521: /* LAM/ALEF single-cell joining */
+        return 2 - term.join_lam_alef;
       when 7723: /* Reflow mode; 2027 is dropped */
         return 2 - term.curs.rewrap_on_resize;
       when 2027 or 7769: /* Emoji 2-cell width mode */
@@ -4997,6 +5031,32 @@ term_do_write(const char *buf, uint len, bool fix_status)
   while (pos < len) {
     uchar c = buf[pos++];
 
+    if (!tek_mode && (c == 0x1A || c == 0x18)) { // SUB or CAN
+      term.state = NORMAL;
+      if (c == 0x1A || strstr(cfg.term, "vt1")) {
+        // display one of ␦ / ⸮ / ▒
+        wchar sub = 0x2592;  // ▒
+        if (!strstr(cfg.term, "vt1")) {
+          wchar subs[] = W("␦⸮");
+          win_check_glyphs(subs, 2, term.curs.attr.attr);
+          if (subs[0])
+            sub = subs[0];
+          else if (subs[1])
+            sub = subs[1];
+        }
+        if (sub == 0x2592) {
+          cattrflags savattr = term.curs.attr.attr;
+          term.curs.attr.attr &= ~FONTFAM_MASK;
+          term.curs.attr.attr |= (cattrflags)11 << ATTR_FONTFAM_SHIFT;
+          write_char(sub, 1);
+          term.curs.attr.attr = savattr;
+        }
+        else
+          write_char(sub, 1);
+      }
+      continue;
+    }
+
     /*
      * If we're printing, add the character to the printer buffer.
      */
@@ -5202,8 +5262,13 @@ term_do_write(const char *buf, uint len, bool fix_status)
                 term.curs.attr.attr &= ~FONTFAM_MASK;
                 term.curs.attr.attr |= (cattrflags)12 << ATTR_FONTFAM_SHIFT;
               }
-              else
+              else {
                 wc = win_linedraw_char(c - 0x60);
+                if (wc >= 0x2500 && wc <= 0x259F) {
+                  term.curs.attr.attr &= ~FONTFAM_MASK;
+                  term.curs.attr.attr |= (cattrflags)11 << ATTR_FONTFAM_SHIFT;
+                }
+              }
             }
             when CSET_TECH:  // DEC Technical Character Set
             if (c > ' ' && c < 0x7F) {

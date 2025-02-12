@@ -149,6 +149,7 @@
   DFDZ(5,"toggle-vt220"        ,toggle_vt220         ,FT_NORM, MF(vt220),      HK0())
   DFDZ(5,"toggle-auto-repeat"  ,toggle_auto_repeat   ,FT_NORM, MF(auto_repeat),HK0())
   DFDZ(5,"toggle-bidi"         ,toggle_bidi          ,FT_NORM, MF(bidi),       HK0())
+  DFDZ(5,"toggle-lam-alef"     ,toggle_bidi          ,FT_NORM, MF(lam_alef),   HK0())
 
 //DFDZ(5,"super"               ,super_down           ,FT_KEY , 0,              HK0())
 //DFDZ(5,"hyper"               ,hyper_down           ,FT_KEY , 0,              HK0())

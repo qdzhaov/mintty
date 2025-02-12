@@ -1836,6 +1836,13 @@ bool win_key_down(WPARAM wp, LPARAM lp){
 
   bool altgr = ralt | ctrl_lalt_altgr;
   //altgr |= is_altgr;  // doesn't appear to be necessary
+  if (!(cfg.old_altgr_detection & 4)) {
+    // enforce Control modifier as detected by VK_ state
+    // unless it could be involved to determine AltGr
+    //printf("-- lctrl %d lctrl0 %d altgr %d altgr0 %d is_ralt %d is_altgr %d\n", lctrl, lctrl0, altgr, altgr0, is_ralt, is_altgr);
+    if (lctrl0 && !altgr)
+      ctrl = true;
+  }
   // While this should more properly reflect the AltGr modifier state, 
   // with the current implementation it has the opposite effect;
   // it spoils Ctrl+AltGr with modify_other_keys mode.
@@ -3133,6 +3140,10 @@ void toggle_auto_repeat() { term.auto_repeat = !term.auto_repeat; }
 static uint mflags_auto_repeat() { return term.auto_repeat ? MF_CHECKED : MF_UNCHECKED; }
 void toggle_bidi() { term.disable_bidi = !term.disable_bidi; }
 static uint mflags_bidi() { return (cfg.bidi == 0 || (cfg.bidi == 1 && (term.on_alt_screen ^ term.show_other_screen))) ? MF_GRAYED : term.disable_bidi ? MF_UNCHECKED : MF_CHECKED; }
+
+void toggle_lam_alef() { term.join_lam_alef = !term.join_lam_alef; }
+static uint mflags_lam_alef() { return term.join_lam_alef ? MF_CHECKED : MF_UNCHECKED; }
+
 
 #if 0
 static void compose_down(uint key, mod_keys mods){
