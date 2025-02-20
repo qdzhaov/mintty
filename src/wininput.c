@@ -815,7 +815,7 @@ mod_keys tagmods(const char * k,const char**pn){
   if(!p)return 0;
   *pn=p+1;
   mod_keys m = 0;
-  int sc=1;
+  int sc=0;
   for (; k<p; k++){
     switch ((*k)|0x20) {
       when 'l': { sc=8; continue;}
@@ -1164,7 +1164,7 @@ string vk_name(uint key){
 }
 static int getvk(const char *n){
   if(n[1]==0){
-    return (int)(unsigned char)n[0];
+    return (int)(unsigned char)(n[0]&0xdf);
   }
   if(n[0]=='\\'){
     if((n[1]|0x20)=='x') return strtol(n+2,NULL,16);
@@ -3600,7 +3600,7 @@ void helpfuncs(){
   for (struct function_def *p=cmd_defs; p->name; p++){
     printf("%s: %s\n",p->name,_(p->tip));
     for(int i=0;i<4;i++){
-      if(p->kr[i].flg){
+      if(p->kd[i].flg){
         printf("\t %s%s %x\n",mod2s(mbuf,p->kr[i].mode,1),vk_name(p->kr[i].key),p->kr[i].mode);
       }
     }

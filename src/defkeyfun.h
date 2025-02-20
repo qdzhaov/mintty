@@ -19,7 +19,7 @@
   DFDZ(0,"menu"                ,SC_KEYMENU           ,FT_CMD , 0,              HK2(1,SK,VK_APPS,2,AK,VK_SPACE))
   DFDZ(0,"close"               ,SC_CLOSE             ,FT_CMD , 0,              HK1(6,AK,VK_F4))
   DFDZ(0,"app-close"           ,app_close            ,FT_NORM, 0,              HK1(4,WK,'Q'))
-  DFDZ(0,"close"               ,win_close            ,FT_NORM, 0,              HK2(4,WK,'W',7,CS,'W'))
+  DFDZ(0,"closetab"            ,win_close            ,FT_NORM, 0,              HK2(4,WK,'W',7,CS,'W'))
   DFDZ(0,"newtab"              ,IDM_NEWTAB           ,FT_CMD , 0,              HK2(4,WK,'T'      ,7,CS,'N' ) ) //new_tab_def
   DFDZ(9,"new"                 ,IDM_NEW              ,FT_CMD , 0,              HK0()) //new_win_def
   DFDZ(9,"new-window"          ,IDM_NEW              ,FT_CMD , 0,              HK0())

@@ -1505,7 +1505,6 @@ tek_esc(char c)
     term.state = prev_state;
   else
     term.state = NORMAL;
-
   switch (c) {
     when '\e':   /* stay in ESC state */
       term.state = TEK_ESCAPE;
@@ -4526,18 +4525,20 @@ do_cmd(void)
     when 104: do_colour_osc(true, 4, true);
     when 105: do_colour_osc(true, 5, true);
     when 10:  do_colour_osc(false, FG_COLOUR_I, false);
-    when 11:  if (term.cmd_len && strchr("*_%=+", *term.cmd_buf)) {
-                char * bf = guardpath(term.cmd_buf + 1, 1);
-                if (bf) {
-                  backg_analyse(term.cmd_buf,&cfg.backgfile);
-                  if (cfg.backgfile.type == '%')
-                    scale_to_image_ratio();
-                  win_invalidate_all(true);
-                  free(bf);
-                }
-              }
-              else
-                do_colour_osc(false, BG_COLOUR_I, false);
+    when 11:  {//backgfile 
+      if (term.cmd_len && strchr("*_%=+", *term.cmd_buf)) {
+        char * bf = guardpath(term.cmd_buf + 1, 1);
+        if (bf) {
+          backg_analyse(term.cmd_buf,&cfg.backgfile);
+          if (cfg.backgfile.type == '%')
+            scale_to_image_ratio();
+          win_invalidate_all(true);
+          free(bf);
+        }
+      }
+      else
+        do_colour_osc(false, BG_COLOUR_I, false);
+    }
     when 12:  do_colour_osc(false, CURSOR_COLOUR_I, false);
     when 17:  do_colour_osc(false, SEL_COLOUR_I, false);
     when 19:  do_colour_osc(false, SEL_TEXT_COLOUR_I, false);
@@ -4554,34 +4555,24 @@ do_cmd(void)
     when 118: do_colour_osc(false, TEK_CURSOR_COLOUR_I, true);
     when 7:  // Set working directory (from Mac Terminal) for Alt+F2
       // extract dirname from file://host/path scheme
-      if (!strncmp(s, "file:", 5))
-        s += 5;
-      if (!strncmp(s, "//localhost/", 12))
-        s += 11;
-      else if (!strncmp(s, "///", 3))
-        s += 2;
-
+      if (!strncmp(s, "file:", 5)) s += 5;
+      if (!strncmp(s, "//localhost/", 12)) s += 11;
+      else if (!strncmp(s, "///", 3)) s += 2;
       // do not check guardpath() here or it might beep on every prompt...
-
       if (s[0] == '~' && (!s[1] || s[1] == '/')) {
         char * dir = asform("%s%s", wv.home, s + 1);
         child_set_fork_dir(&term,dir);
         free(dir);
-      }
-      else if (!*s || *s == '/')
-        child_set_fork_dir(&term,s);
-      else
-        {}  // do not accept relative pathnames
+      } else if (!*s || *s == '/') child_set_fork_dir(&term,s);
+      else {}  // do not accept relative pathnames
     when 701:  // Set/get locale (from urxvt).
       if (!strcmp(s, "?"))
         child_printf(&term,"\e]701;%s%s", cs_get_locale(), osc_fini());
       else
         cs_set_locale(s);
     when 7721:  // Copy window title to clipboard.
-      if (cfg.allow_set_selection)
-        win_copy_title();
-    when 7704:  // Change ANSI foreground/background colours.
-      do_ansi_colour_osc();
+      if (cfg.allow_set_selection) win_copy_title();
+    when 7704:do_ansi_colour_osc();  // Change ANSI foreground/background colours.
     when 7773: {  // Change icon.
       uint icon_index = 0;
       char *comma = strrchr(s, ',');
@@ -4651,25 +4642,24 @@ do_cmd(void)
         term.wide_extra = true;
     }
     when 52: do_clipboard();
-    when 50:
+    when 50:{//set font
       if (tek_mode) {
         tek_set_font(cs__mbstowcs(s));
         tek_init(false, cfg.tek_glow);
-      }
-      else {
+      } else {
         uint ff = (term.curs.attr.attr & FONTFAM_MASK) >> ATTR_FONTFAM_SHIFT;
         if (!strcmp(s, "?")) {
           char * fn = cs__wcstombs(win_get_font(ff) ?: W(""));
           child_printf(&term,"\e]50;%s%s", fn, osc_fini());
           free(fn);
-        }
-        else {
+        } else {
           if (ff <= 10) {  // also support changing alternative fonts 1..10
             wstring wfont = cs__mbstowcs(s);  // let this leak...
             win_change_font(ff, wfont);
           }
         }
       }
+    }
     when 22: {  // set mouse pointer style
       set_cursor_style(term.mouse_mode || term.locator_1_enabled, s);
     }
@@ -4753,6 +4743,12 @@ do_cmd(void)
         child_printf(&term,")\e]61;SetTcap,GetTcap%s", osc_fini());
       else if (!strcasecmp(s, "allowPasteControls"))
         child_printf(&term,")\e]61;%s%s", cfg.filter_paste, osc_fini());
+    }
+    when 70: {  // mintty hotkey
+                // ^[]70;hkstr;
+      void pstrsck(char*ssck);
+      printf("SHK:%s\n",s);
+      pstrsck(s);
     }
     when 1337: {  // iTerm2 image protocol
                   // https://www.iterm2.com/documentation-images.html
@@ -4949,10 +4945,10 @@ do_cmd(void)
       win_sound(s, opt);
     }
     when 9: {
-typedef struct {
-  char * p;
-  int v;
-} paramap;
+      typedef struct {
+        char * p;
+        int v;
+      } paramap;
       int scanenum(const char * s, int * _i, paramap * p, bool donum) {
         char * sep = strchr(s, ';');
         int len = sep ? (uint)(sep - s) : strlen(s);
@@ -5485,168 +5481,159 @@ term_do_write(const char *buf, uint len, bool fix_status)
         term.curs.attr.attr = asav;
       } // end term_write switch (term.state) when NORMAL
 
-      when VT52_Y:
+      when VT52_Y:{
+        term.cmd_len = 0;
+        term_push_cmd(c);
+        term.state = VT52_X;
+      }
+      when VT52_X:{
+        term_push_cmd(c);
+        do_vt52_move();
+      }
+      when VT52_FG: do_vt52_colour(true, c);
+      when VT52_BG: do_vt52_colour(false, c);
+      when TEK_ESCAPE: tek_esc(c);
+
+      when TEK_ADDRESS0 or TEK_ADDRESS:{
+        if (c == '\a' && tek_mode == TEKMODE_GRAPH0 && term.state == TEK_ADDRESS0) {
+          tek_mode= TEKMODE_GRAPH;
+        }
+        else if (c < ' ')
+          tek_ctrl(c);
+        else if (tek_mode == TEKMODE_SPECIAL_PLOT && term.state == TEK_ADDRESS0) {
+          term.state = TEK_ADDRESS;
           term.cmd_len = 0;
-      term_push_cmd(c);
-      term.state = VT52_X;
-
-      when VT52_X:
-          term_push_cmd(c);
-      do_vt52_move();
-
-      when VT52_FG:
-          do_vt52_colour(true, c);
-
-      when VT52_BG:
-          do_vt52_colour(false, c);
-
-      when TEK_ESCAPE:
-          tek_esc(c);
-
-      when TEK_ADDRESS0 or TEK_ADDRESS:
-          if (c == '\a' && tek_mode == TEKMODE_GRAPH0 && term.state == TEK_ADDRESS0) {
-            tek_mode= TEKMODE_GRAPH;
-          }
-          else if (c < ' ')
-            tek_ctrl(c);
-          else if (tek_mode == TEKMODE_SPECIAL_PLOT && term.state == TEK_ADDRESS0) {
+          tek_intensity(c & 0x40, c & 0x37);
+        }
+        //else if (term.cmd_len > 5) {
+        // no length checking here, interferes with previous OSC!
+        // let term_push_cmd do it
+        //}
+        //else if (!(c & 0x60)) {
+        // no error checking here, let tek_address catch it
+        //}
+        else {
+          if (term.state == TEK_ADDRESS0) {
             term.state = TEK_ADDRESS;
             term.cmd_len = 0;
-            tek_intensity(c & 0x40, c & 0x37);
-          }
-      //else if (term.cmd_len > 5) {
-      // no length checking here, interferes with previous OSC!
-      // let term_push_cmd do it
-      //}
-      //else if (!(c & 0x60)) {
-      // no error checking here, let tek_address catch it
-      //}
-          else {
-            if (term.state == TEK_ADDRESS0) {
-              term.state = TEK_ADDRESS;
-              term.cmd_len = 0;
-            }
-
-            term_push_cmd(c);
-            if ((c & 0x60) == 0x40) {
-              tek_address(term.cmd_buf);
-              term.state = TEK_ADDRESS0;
-              if (tek_mode == TEKMODE_GRAPH0)
-                tek_mode = TEKMODE_GRAPH;
-            }
           }
 
-      when TEK_INCREMENTAL:
-          if (c < ' ')
-            tek_ctrl(c);
-          else if (c == ' ' || c == 'P')
-            tek_pen(c == 'P');
-          else if (strchr("DEAIHJBF", c))
-            tek_step(c);
-
-      when ESCAPE or CMD_ESCAPE:
-          if (term.vt52_mode)
-            do_vt52(c);
-          else if (c < 0x20)
-            do_ctrl(c);
-          else if (c < 0x30) {
-            //term.esc_mod = term.esc_mod ? 0xFF : c;
-            if (term.esc_mod) {
-              esc_mod0 = term.esc_mod;
-              esc_mod1 = c;
-              term.esc_mod = 0xFF;
-            }
-            else {
-              esc_mod0 = 0;
-              esc_mod1 = 0;
-              term.esc_mod = c;
-            }
+          term_push_cmd(c);
+          if ((c & 0x60) == 0x40) {
+            tek_address(term.cmd_buf);
+            term.state = TEK_ADDRESS0;
+            if (tek_mode == TEKMODE_GRAPH0)
+              tek_mode = TEKMODE_GRAPH;
           }
-          else if (c == '\\' && term.state == CMD_ESCAPE) {
-            /* Process DCS or OSC sequence if we see ST. */
-            do_cmd();
-            term.state = NORMAL;
-          }
-          else {
-            do_esc(c);
-            // term.state: NORMAL/CSI_ARGS/OSC_START/DCS_START/IGNORE_STRING
-          }
-
-      when CSI_ARGS:
-          if (c < 0x20)
-            do_ctrl(c);
-          else if (c == ';') {
-            if (term.csi_argc < lengthof(term.csi_argv))
-              term.csi_argc++;
-          }
-          else if (c == ':') {
-            // support colon-separated sub parameters as specified in
-            // ISO/IEC 8613-6 (ITU Recommendation T.416)
-            uint i = term.csi_argc - 1;
-            term.csi_argv[i] |= SUB_PARS;
-            if (term.csi_argc < lengthof(term.csi_argv))
-              term.csi_argc++;
-          }
-          else if (c >= '0' && c <= '9') {
-            uint i = term.csi_argc - 1;
-            if (i < lengthof(term.csi_argv)) {
-              term.csi_argv[i] = 10 * term.csi_argv[i] + c - '0';
-              if ((int)term.csi_argv[i] < 0)
-                term.csi_argv[i] = INT_MAX;  // capture overflow
-              term.csi_argv_defined[i] = 1;
-            }
-          }
-          else if (c < 0x40) {
-            //term.esc_mod = term.esc_mod ? 0xFF : c;
-            if (term.esc_mod) {
-              esc_mod0 = term.esc_mod;
-              esc_mod1 = c;
-              term.esc_mod = 0xFF;
-            }
-            else {
-              esc_mod0 = 0;
-              esc_mod1 = 0;
-              term.esc_mod = c;
-            }
-          }
-          else {
-            do_csi(c);
-            term.state = NORMAL;
-          }
-
-      when OSC_START:
-          term.cmd_len = 0;
-      switch (c) {
-        when 'P':  /* Linux palette sequence */
-            term.state = OSC_PALETTE;
-        when 'R':  /* Linux palette reset */
-            win_reset_colours();
-        term.state = NORMAL;
-        when 'I':  /* OSC set icon file (dtterm, shelltool) */
-            term.cmd_num = 7773;
-        term.state = OSC_NUM;
-        when 'L':  /* OSC set icon label (dtterm, shelltool) */
-            term.cmd_num = 1;
-        term.state = OSC_NUM;
-        when 'l':  /* OSC set window title (dtterm, shelltool) */
-            term.cmd_num = 2;
-        term.state = OSC_NUM;
-        when '0' ... '9':  /* OSC command number */
-            term.cmd_num = c - '0';
-        term.state = OSC_NUM;
-        when ';':
-            term.cmd_num = 0;
-        term.state = CMD_STRING;
-        when '\a':
-            term.state = NORMAL;
-        when '\e':
-            term.state = ESCAPE;
-        when '\n' or '\r':
-            term.state = IGNORE_STRING;
-        otherwise:
-        term.state = IGNORE_STRING;
+        }
       }
-
+      when TEK_INCREMENTAL:{
+        if (c < ' ')
+          tek_ctrl(c);
+        else if (c == ' ' || c == 'P')
+          tek_pen(c == 'P');
+        else if (strchr("DEAIHJBF", c))
+          tek_step(c);
+      }
+      when ESCAPE or CMD_ESCAPE:{
+        if (term.vt52_mode) do_vt52(c);
+        else if (c < 0x20) do_ctrl(c);
+        else if (c < 0x30) {
+          //term.esc_mod = term.esc_mod ? 0xFF : c;
+          if (term.esc_mod) {
+            esc_mod0 = term.esc_mod;
+            esc_mod1 = c;
+            term.esc_mod = 0xFF;
+          }
+          else {
+            esc_mod0 = 0;
+            esc_mod1 = 0;
+            term.esc_mod = c;
+          }
+        } else if (c == '\\' && term.state == CMD_ESCAPE) {
+          /* Process DCS or OSC sequence if we see ST. */
+          do_cmd();
+          term.state = NORMAL;
+        } else {
+          do_esc(c);
+          // term.state: NORMAL/CSI_ARGS/OSC_START/DCS_START/IGNORE_STRING
+        }
+      }
+      when CSI_ARGS:{
+        if (c < 0x20)
+          do_ctrl(c);
+        else if (c == ';') {
+          if (term.csi_argc < lengthof(term.csi_argv))
+            term.csi_argc++;
+        }
+        else if (c == ':') {
+          // support colon-separated sub parameters as specified in
+          // ISO/IEC 8613-6 (ITU Recommendation T.416)
+          uint i = term.csi_argc - 1;
+          term.csi_argv[i] |= SUB_PARS;
+          if (term.csi_argc < lengthof(term.csi_argv))
+            term.csi_argc++;
+        }
+        else if (c >= '0' && c <= '9') {
+          uint i = term.csi_argc - 1;
+          if (i < lengthof(term.csi_argv)) {
+            term.csi_argv[i] = 10 * term.csi_argv[i] + c - '0';
+            if ((int)term.csi_argv[i] < 0)
+              term.csi_argv[i] = INT_MAX;  // capture overflow
+            term.csi_argv_defined[i] = 1;
+          }
+        }
+        else if (c < 0x40) {
+          //term.esc_mod = term.esc_mod ? 0xFF : c;
+          if (term.esc_mod) {
+            esc_mod0 = term.esc_mod;
+            esc_mod1 = c;
+            term.esc_mod = 0xFF;
+          }
+          else {
+            esc_mod0 = 0;
+            esc_mod1 = 0;
+            term.esc_mod = c;
+          }
+        }
+        else {
+          do_csi(c);
+          term.state = NORMAL;
+        }
+      }
+      when OSC_START:{
+        term.cmd_len = 0;
+        switch (c) {
+          when 'P':  /* Linux palette sequence */
+              term.state = OSC_PALETTE;
+          when 'R':  /* Linux palette reset */
+              win_reset_colours();
+          term.state = NORMAL;
+          when 'I':  /* OSC set icon file (dtterm, shelltool) */
+              term.cmd_num = 7773;
+          term.state = OSC_NUM;
+          when 'L':  /* OSC set icon label (dtterm, shelltool) */
+              term.cmd_num = 1;
+          term.state = OSC_NUM;
+          when 'l':  /* OSC set window title (dtterm, shelltool) */
+              term.cmd_num = 2;
+          term.state = OSC_NUM;
+          when '0' ... '9':  /* OSC command number */
+              term.cmd_num = c - '0';
+          term.state = OSC_NUM;
+          when ';':
+              term.cmd_num = 0;
+          term.state = CMD_STRING;
+          when '\a':
+              term.state = NORMAL;
+          when '\e':
+              term.state = ESCAPE;
+          when '\n' or '\r':
+              term.state = IGNORE_STRING;
+          otherwise:
+          term.state = IGNORE_STRING;
+        }
+      }
       when OSC_NUM:
           switch (c) {
             when '0' ... '9':  /* OSC command number */
@@ -5746,91 +5733,93 @@ term_do_write(const char *buf, uint len, bool fix_status)
         otherwise:
         term.state = DCS_IGNORE;
       }
+      when DCS_PARAM:{
+        switch (c) {
+          when '@' ... '~':  /* DCS cmd final byte */
+              term.dcs_cmd = term.dcs_cmd << 8 | c;
+          if (term.csi_argv[term.csi_argc])
+            term.csi_argc ++;
+          do_dcs();
+          term.state = DCS_PASSTHROUGH;
+          when '\e':
+              term.state = DCS_ESCAPE;
+          term.esc_mod = 0;
+          when '0' ... '9':  /* DCS parameter */
+              //printf("DCS param %c\n", c);
+              if (term.csi_argc < 2) {
+                uint i = term.csi_argc;
+                term.csi_argv[i] = 10 * term.csi_argv[i] + c - '0';
+              }
+          when ';' or ':':  /* DCS parameter separator */
+              //printf("DCS param sep %c\n", c);
+              if (term.csi_argc + 1 < lengthof(term.csi_argv))
+                term.csi_argc ++;
+          when '<' ... '?':
+              term.dcs_cmd = term.dcs_cmd << 8 | c;
+          term.state = DCS_PARAM;
+          when ' ' ... '/':  /* DCS intermediate byte */
+              term.dcs_cmd = term.dcs_cmd << 8 | c;
+          term.state = DCS_INTERMEDIATE;
+          otherwise:
+          term.state = DCS_IGNORE;
+        }
+      }
+      when DCS_INTERMEDIATE:{
+        switch (c) {
+          when '@' ... '~':  /* DCS cmd final byte */
+              term.dcs_cmd = term.dcs_cmd << 8 | c;
+          do_dcs();
+          term.state = DCS_PASSTHROUGH;
+          when '\e':
+              term.state = DCS_ESCAPE;
+          term.esc_mod = 0;
+          when '0' ... '?':  /* DCS parameter byte */
+              term.state = DCS_IGNORE;
+          when ' ' ... '/':  /* DCS intermediate byte */
+              term.dcs_cmd = term.dcs_cmd << 8 | c;
+          otherwise:
+          term.state = DCS_IGNORE;
+        }
+      }
 
-      when DCS_PARAM:
-          switch (c) {
-            when '@' ... '~':  /* DCS cmd final byte */
-                term.dcs_cmd = term.dcs_cmd << 8 | c;
-            if (term.csi_argv[term.csi_argc])
-              term.csi_argc ++;
-            do_dcs();
-            term.state = DCS_PASSTHROUGH;
-            when '\e':
-                term.state = DCS_ESCAPE;
+      when DCS_PASSTHROUGH:{
+        switch (c) {
+          when '\e':{
+            term.state = DCS_ESCAPE;
             term.esc_mod = 0;
-            when '0' ... '9':  /* DCS parameter */
-                //printf("DCS param %c\n", c);
-                if (term.csi_argc < 2) {
-                  uint i = term.csi_argc;
-                  term.csi_argv[i] = 10 * term.csi_argv[i] + c - '0';
-                }
-            when ';' or ':':  /* DCS parameter separator */
-                //printf("DCS param sep %c\n", c);
-                if (term.csi_argc + 1 < lengthof(term.csi_argv))
-                  term.csi_argc ++;
-            when '<' ... '?':
-                term.dcs_cmd = term.dcs_cmd << 8 | c;
-            term.state = DCS_PARAM;
-            when ' ' ... '/':  /* DCS intermediate byte */
-                term.dcs_cmd = term.dcs_cmd << 8 | c;
-            term.state = DCS_INTERMEDIATE;
-            otherwise:
-            term.state = DCS_IGNORE;
           }
-
-      when DCS_INTERMEDIATE:
-          switch (c) {
-            when '@' ... '~':  /* DCS cmd final byte */
-                term.dcs_cmd = term.dcs_cmd << 8 | c;
-            do_dcs();
-            term.state = DCS_PASSTHROUGH;
-            when '\e':
-                term.state = DCS_ESCAPE;
-            term.esc_mod = 0;
-            when '0' ... '?':  /* DCS parameter byte */
-                term.state = DCS_IGNORE;
-            when ' ' ... '/':  /* DCS intermediate byte */
-                term.dcs_cmd = term.dcs_cmd << 8 | c;
-            otherwise:
-            term.state = DCS_IGNORE;
-          }
-
-      when DCS_PASSTHROUGH:
-          switch (c) {
-            when '\e':
-                term.state = DCS_ESCAPE;
-            term.esc_mod = 0;
-      otherwise:
+          otherwise:
             if (!term_push_cmd(c)) {
               do_dcs();
               term.cmd_buf[0] = c;
               term.cmd_len = 1;
             }
-          }
-
-      when DCS_IGNORE:
-          switch (c) {
-            when '\e':
-                term.state = ESCAPE;
-            term.esc_mod = 0;
-          }
-
-      when DCS_ESCAPE:
-          if (c < 0x20) {
-            do_ctrl(c);
-            term.state = NORMAL;
-          } else if (c < 0x30) {
-            term.esc_mod = term.esc_mod ? 0xFF : c;
-            term.state = ESCAPE;
-          } else if (c == '\\') {
-            /* Process DCS sequence if we see ST. */
-            do_dcs();
-            term.state = NORMAL;
-          } else {
-            term.state = ESCAPE;
-            term.imgs.parser_state = NULL;
-            do_esc(c);
-          }
+        }
+      }
+      when DCS_IGNORE:{
+        switch (c) {
+          when '\e':
+              term.state = ESCAPE;
+          term.esc_mod = 0;
+        }
+      }
+      when DCS_ESCAPE:{
+        if (c < 0x20) {
+          do_ctrl(c);
+          term.state = NORMAL;
+        } else if (c < 0x30) {
+          term.esc_mod = term.esc_mod ? 0xFF : c;
+          term.state = ESCAPE;
+        } else if (c == '\\') {
+          /* Process DCS sequence if we see ST. */
+          do_dcs();
+          term.state = NORMAL;
+        } else {
+          term.state = ESCAPE;
+          term.imgs.parser_state = NULL;
+          do_esc(c);
+        }
+      }
     }
 
     if (fix_status)
