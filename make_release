@@ -2,6 +2,7 @@
 VER=`cat VERSION`;
 reldir=../rel/v$VER;
 cwd=`pwd`
+clear
 echo $reldir
 vcp(){
   mkdir -p $reldir/mintty/$2
