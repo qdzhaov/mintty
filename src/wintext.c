@@ -1493,6 +1493,23 @@ show_curchar_info(char tag)
 
 #define update_timer 16
 
+HDC termbuf(HDC dc,STermbuf*b){
+  if(b->valid)return b->hdcMem ;
+  if (b->hBitmap){ 
+    SelectObject(b->hdcMem, b->hBitmapo);
+    DeleteObject(b->hBitmap);
+  }
+  if (b->hdcMem) 
+    DeleteDC(b->hdcMem);
+  b->hdcMem = CreateCompatibleDC(NULL);
+  RECT cr;
+  GetClientRect(wv.wnd, &cr);
+  b->hBitmap = CreateCompatibleBitmap(dc,cr.right-cr.left ,cr.bottom-cr.top );
+  b->hBitmapo=SelectObject(b->hdcMem, b->hBitmap);
+  DeleteObject(b->hBitmap);
+  b->valid=1;
+  return b->hdcMem;
+}
 void
 do_update(void)
 {
@@ -1667,12 +1684,58 @@ win_update_now(void)
 {
   if (update_state == UPDATE_PENDING)
     update_state = UPDATE_IDLE;
-  win_update(false);
+  win_update(0,8);
 }
-
+/* 
+ * win_change_font
+ * win_set_font_size
+ * do_win_adapt_term_size 
+ * win_set_chars
+ * win_set_pixels_zoom
+ * */
 void
-win_update(bool update_sel_tip)
+win_update(bool update_sel_tip,int id)
 {
+  (void)id;
+/*
+ * 0 cblinker,term.c
+ * 1 tblinker,term.c
+ * 2 tblinker2,term.c
+ * 3 cursor_on=0,term.c
+ * 5 vbell,term.c
+ * 6 show_screen,term.c
+ * 7  term_scroll,term.c
+ * 8  win_update_now,wintext.c
+ * 9  win_set_ime_open,wintext.c
+ * 10 update_mouse,hovering,winput.c
+ * 11 win_key_up,comp_state ,winput.c
+ * 12 cycle_pointer_style,cursor_type ,winput.c
+ * 13 alt_code_key,alt_code,winput.c
+ * 14 win_key_down,comp_state ,winput.c
+ * 15 win_key_down,VK_BACK,winput.c
+ * 16 win_proc,IDM_SELALL,winmain.c
+ * 17 win_proc,IDM_RESET ,winmain.c
+ * 18 win_proc,WM_CLIPBOARDUPDATE,winmain.c
+ * 19 win_proc,WM_SETFOCUS,winmain.c
+ * 20 win_proc,WM_KILLFOCUS,winmain.c
+ *
+ *
+ * 76 term_scroll,hovering,term.c
+ * 77 term_do_scroll,hovering,term.c
+ *      term_erase,term_reset,term_resize,term_set_status_type,
+ *
+ * 78 term_mouse_click,hovering,termmouse.c
+ * 79 mouse_open,hovering,termmouse.c
+ * 80 term_mouse_move,hovering,termmouse.c
+ * 81 term_mouse_wheel,hovering,termmouse.c
+ *
+ * 82 term_mouse_click,sel,termmouse.c
+ * 83 term_mouse_click,sel,termmouse.c
+ * 84 sel_scroll_cb,sel_drag,termmouse.c
+ * 85 term_mouse_move,sel,termmouse.c
+ * 86 term_mouse_move,sel,termmouse.c
+ * 87 win_key_down,sel,winput.c
+*/
   //if (kb_trace) printf("[%ld] win_update state %d (idl/blk/pnd)\n", mtime(), update_state);
   trace_resize(("----- win_update\n"));
 
@@ -1775,7 +1838,7 @@ win_set_ime_open(bool open)
   if (open != ime_open) {
     ime_open = open;
     term.cursor_invalid = true;
-    win_update(false);
+    win_update(0,9);
   }
 }
 
@@ -3044,7 +3107,152 @@ apply_attr_colour(cattr a, attr_colour_mode mode)
   a.attr |= TRUE_COLOUR << ATTR_FGSHIFT | TRUE_COLOUR << ATTR_BGSHIFT;
   return a;
 }
+static void drawcursor(HDC dc,int tx,int ty,cattrflags attr,ushort lattr,colour _cc){
+  //int  tx,ty;
+  //tx = term.curs.x;
+  //ty = term.cursor_on && !term.show_other_screen ? term.curs.y - term.disptop : -1;
+  //tx=term.sc.tx;
+  //ty=term.sc.ty;
+  //cattrflags attr=term.sc.attr;
+  //ushort lattr=term.sc.lattr;
+  //colour _cc = term.sc.clr;
 
+  int findex = (attr & FONTFAM_MASK) >> ATTR_FONTFAM_SHIFT;
+  struct fontfam * ff = &fontfamilies[findex];
+  int line_width = (3
+                    + (attr & ATTR_BOLD ? 1 : 0)
+                    + (lattr >= LATTR_WIDE ? 2 : 0)
+                    + (lattr >= LATTR_TOP ? 2 : 0)
+                   ) * wv.cell_height / 40;
+  if (line_width < 1) line_width = 1;
+  int char_width = wv.cell_width * (1 + (lattr != LATTR_NORM));
+  int x = tx * char_width + PADDING;
+  int y = ty * wv.cell_height + OFFSET + PADDING;
+
+  int yt = y + (ff->row_spacing / 2) - (lattr == LATTR_BOT ? wv.cell_height : 0);
+  if (attr & TATTR_ZOOMFULL) {
+    yt -= ff->row_spacing / 2;
+  }
+
+  int cursor_size(int cell_size) {
+    switch (term.cursor_size) {
+      when 1: return -2;                // invisible
+      when 2: return line_width - 1;    // underscore
+      when 3: return cell_size / 3 - 1; // ⅓
+      when 4: return cell_size / 2;     // ½
+      when 5: return cell_size * 2 / 3; // ⅔
+      when 6: return cell_size - 2;     // full block
+      otherwise: return 0;              // default
+    }
+  }
+
+  int layer = 0;
+  if (attr & ATTR_SHADOW) {
+    layer = 1;
+  }
+  if (layer)
+    _cc = ((_cc & 0xFEFEFEFE) >> 1) + ((win_get_colour(BG_COLOUR_I) & 0xFEFEFEFE) >> 1);
+
+  HPEN oldpen = SelectObject(dc, CreatePen(PS_SOLID, 0, _cc));
+  switch (term_cursor_type()) {
+    when CUR_BLOCK:  // solid block cursor
+        if (attr & TATTR_PASCURS) {
+          HBRUSH oldbrush = SelectObject(dc, GetStockObject(NULL_BRUSH));
+          Rectangle(dc, x, y, x + char_width, y + wv.cell_height);
+          SelectObject(dc, oldbrush);
+        }
+    when CUR_BOX: {  // hollow box cursor
+      HBRUSH oldbrush = SelectObject(dc, GetStockObject(NULL_BRUSH));
+      Rectangle(dc, x, y, x + char_width, y + wv.cell_height);
+      SelectObject(dc, oldbrush);
+    }
+    when CUR_LINE: {  // vertical line cursor
+      int caret_width = cursor_size(wv.cell_width);
+      if (caret_width <= 0) {
+        caret_width = (3 + (lattr >= LATTR_WIDE ? 2 : 0)) * wv.cell_width / 40;
+        SystemParametersInfo(SPI_GETCARETWIDTH, 0, &caret_width, 0);
+        caret_width *= wv.cell_width / 8;
+        int min_caret_width = dpi / 72;
+        // limit cursor width (max previously by line_width, #1101)
+        if (caret_width < min_caret_width)
+          caret_width = min_caret_width;
+        else if (caret_width > wv.cell_width)
+          caret_width = wv.cell_width;
+      }
+      int xx = x;
+      if (attr & TATTR_RIGHTCURS)
+        xx += char_width - caret_width;
+      if (attr & TATTR_ACTCURS) {
+#ifdef cursor_painted_with_rectangle
+        // this would add an additional line, vanishing again but 
+        // leaving a pixel artefact, under some utterly weird interference 
+        // with output of certain characters (mintty/wsltty#255)
+        HBRUSH oldbrush = SelectObject(dc, CreateSolidBrush(_cc));
+        Rectangle(dc, xx, y, xx + caret_width, y + wv.cell_height);
+        DeleteObject(SelectObject(dc, oldbrush));
+#else
+        HBRUSH br = CreateSolidBrush(_cc);
+#ifdef simple_inverted_cursor_approach
+        // this does not give us sufficient colour control
+        InvertRect(dc, &(RECT){xx, y, xx + caret_width, y + wv.cell_height});
+#else
+        FillRect(dc, &(RECT){xx, y, xx + caret_width, y + wv.cell_height}, br);
+#endif
+        DeleteObject(br);
+#endif
+      }
+      else if (attr & TATTR_PASCURS) {
+        for (int dy = 0; dy < wv.cell_height; dy += 2)
+          Polyline(
+                   dc, (POINT[]){{xx, y + dy}, {xx + caret_width, y + dy}}, 2);
+      }
+    }
+    when CUR_UNDERSCORE: {  // horizontal line cursor
+      int yy = yt + min(ff->descent, wv.cell_height - 2);
+      yy += ff->row_spacing * 3 / 8;
+      if (lattr >= LATTR_TOP) {
+        yy += ff->row_spacing / 2;
+        if (lattr == LATTR_BOT)
+          yy += wv.cell_height;
+      }
+      if (attr & TATTR_ACTCURS) {
+        /* cursor size CSI ? N c
+           from linux console https://linuxgazette.net/137/anonymous.html
+           0   default
+           1   invisible
+           2   underscore
+           3   lower_third
+           4   lower_half
+           5   two_thirds
+           6   full block
+           */
+        int up = cursor_size(wv.cell_height);
+        if (up) {
+          int yct = max(yy - up, yt);
+          HBRUSH oldbrush = SelectObject(dc, CreateSolidBrush(_cc));
+          Rectangle(dc, x, yct, x + char_width, yy + 2);
+          DeleteObject(SelectObject(dc, oldbrush));
+        }
+        else
+          Rectangle(dc, x, yy - up, x + char_width, yy + 2);
+      }
+      else if (attr & TATTR_PASCURS) {
+        for (int dx = 0; dx < char_width; dx += 2) {
+          SetPixel(dc, x + dx, yy, _cc);
+          SetPixel(dc, x + dx, yy + 1, _cc);
+        }
+      }
+    }
+  }
+  DeleteObject(SelectObject(dc, oldpen));
+  //fflush(stdout);
+}
+void win_drawcursor(){
+	//HDC dc=GetDC(wv.wnd);
+	//drawcursor(dc);
+  //ReleaseDC(wv.wnd, dc);
+	win_update(0,1);
+}
 /*
  * Draw a line of text in the window, at given character
  * coordinates, in given attributes.
@@ -3124,8 +3332,8 @@ win_text(int tx, int ty,wchar *text, int len, cattr attr, cattr *textattr, ushor
   }
   else
 #endif
-  if (attr.attr & TATTR_WIDE)
-    char_width *= 2;
+    if (attr.attr & TATTR_WIDE)
+      char_width *= 2;
 
   bool wscale_narrow_50 = false;
   if ((attr.attr & (TATTR_NARROW | TATTR_CLEAR)) == (TATTR_NARROW | TATTR_CLEAR)) {
@@ -3152,9 +3360,9 @@ win_text(int tx, int ty,wchar *text, int len, cattr attr, cattr *textattr, ushor
 #ifdef keep_sel_colour_here
   if ((attr.attr & ATTR_BGMASK) >> ATTR_BGSHIFT == SEL_COLOUR_I)
 #else
-  if (attr.attr & TATTR_SELECTED)
+    if (attr.attr & TATTR_SELECTED)
 #endif
-    default_bg = false;
+      default_bg = false;
 
   if (attr.attr & (TATTR_CURRESULT | TATTR_CURMARKED)) {
     bg = cfg.search_current_colour;
@@ -3167,12 +3375,12 @@ win_text(int tx, int ty,wchar *text, int len, cattr attr, cattr *textattr, ushor
     default_bg = false;
   }
 
- /* Suppress graphic background at cursor position */
+  /* Suppress graphic background at cursor position */
   if (has_cursor)
     if (term_cursor_type() == CUR_BLOCK && (attr.attr & TATTR_ACTCURS))
       default_bg = false;
 
- /* Cursor contrast adjustment for background or block cursor */
+  /* Cursor contrast adjustment for background or block cursor */
   if (has_cursor && (phase < 2 || term_cursor_type() == CUR_BLOCK)) {
     // To extend this heuristics to other cursor styles, 
     // some tricky interworking needs to be sorted out (#1157);
@@ -3191,8 +3399,8 @@ win_text(int tx, int ty,wchar *text, int len, cattr attr, cattr *textattr, ushor
       colour ccfg = brighten(cursor_colour, fg, false);
       colour ccbg = brighten(cursor_colour, bg, false);
       if (colour_dist(ccfg, bg) < mindist
-          && colour_dist(ccfg, bg) < colour_dist(ccbg, bg)
-         )
+        && colour_dist(ccfg, bg) < colour_dist(ccbg, bg)
+        )
         cursor_colour = ccbg;
       else
         cursor_colour = ccfg;
@@ -3209,12 +3417,12 @@ win_text(int tx, int ty,wchar *text, int len, cattr attr, cattr *textattr, ushor
     }
   }
 
- /* Now that attributes are (almost) sorted out, select proper font */
+  /* Now that attributes are (almost) sorted out, select proper font */
   uint nfont;
   switch (lattr) {
     when LATTR_NORM: nfont = 0;
     when LATTR_WIDE: nfont = FONT_WIDE;
-    otherwise:       nfont = FONT_WIDE + FONT_HIGH;
+    otherwise :       nfont = FONT_WIDE + FONT_HIGH;
   }
 
   if (dim_font)
@@ -3248,15 +3456,15 @@ win_text(int tx, int ty,wchar *text, int len, cattr attr, cattr *textattr, ushor
   if (ff->bold_mode == BOLD_FONT && (attr.attr & ATTR_BOLD))
     nfont |= FONT_BOLD;
   if (ff->und_mode == UND_FONT && (attr.attr & UNDER_MASK) == ATTR_UNDER
-      && !(attr.attr & ATTR_ULCOLOUR)
-     )
+    && !(attr.attr & ATTR_ULCOLOUR)
+    )
     nfont |= FONT_UNDERLINE;
   if (attr.attr & ATTR_ITALIC)
     nfont |= FONT_ITALIC;
   if (attr.attr & ATTR_STRIKEOUT
-      && !cfg.underl_manual && cfg.underl_colour == (colour)-1
-      && !(attr.attr & ATTR_ULCOLOUR)
-     )
+    && !cfg.underl_manual && cfg.underl_colour == (colour)-1
+    && !(attr.attr & ATTR_ULCOLOUR)
+    )
     nfont |= FONT_STRIKEOUT;
   if (attr.attr & TATTR_ZOOMFULL)
     nfont |= FONT_ZOOMFULL;
@@ -3287,7 +3495,7 @@ win_text(int tx, int ty,wchar *text, int len, cattr attr, cattr *textattr, ushor
   printf("font %02X (%dpt) bold_mode %d attr_bold %d fg %06X <%ls>\n", nfont, font_size, ff->bold_mode, !!(attr.attr & ATTR_BOLD), fg, t);
 #endif
 
- /* With selected font, begin preparing the rendering */
+  /* With selected font, begin preparing the rendering */
   SelectObject(dc, ff->fonts[nfont]);
   SetTextColor(dc, fg);
   SetBkColor(dc, bg);
@@ -3301,7 +3509,7 @@ win_text(int tx, int ty,wchar *text, int len, cattr attr, cattr *textattr, ushor
       printf(" %04X -> no glyph\n", text[i]);
 #endif
 
- /* Check whether the text has any right-to-left characters */
+  /* Check whether the text has any right-to-left characters */
 #ifdef check_rtl_here
 #warning now passed as a parameter to avoid redundant checking
   bool has_rtl = false;
@@ -3314,11 +3522,11 @@ win_text(int tx, int ty,wchar *text, int len, cattr attr, cattr *textattr, ushor
   // this mode of output processing with unclear purpose used to corrupt
   // cursor and italic display of right-to-left scripts; disabled
   if (has_rtl) {
-   /* We've already done right-to-left processing in the screen buffer,
-    * so stop Windows from doing it again (and hence undoing our work).
-    * Don't always use this path because GetCharacterPlacement doesn't
-    * do Windows font linking.
-    */
+    /* We've already done right-to-left processing in the screen buffer,
+     * so stop Windows from doing it again (and hence undoing our work).
+     * Don't always use this path because GetCharacterPlacement doesn't
+     * do Windows font linking.
+     */
     char classes[len];
     memset(classes, GCPCLASS_NEUTRAL, len);
 
@@ -3346,16 +3554,16 @@ win_text(int tx, int ty,wchar *text, int len, cattr attr, cattr *textattr, ushor
   bool let_windows_combine = false;
   if (combining) {
 #ifdef substitute_combining_chars
-   /* Substitute combining characters by overprinting lookalike glyphs */
-   /* Dropped for unpleasant effects, see comments at function combsubst */
+    /* Substitute combining characters by overprinting lookalike glyphs */
+    /* Dropped for unpleasant effects, see comments at function combsubst */
     for (int i = 0; i < len; i++)
       text[i] = combsubst(text[i], attr.attr);
 #endif
-   /* Determine characters that should be combined by Windows */
+    /* Determine characters that should be combined by Windows */
     if (len == 2) {
       if (text[0] == 'i' && (text[1] == 0x030F || text[1] == 0x0311))
         let_windows_combine = true;
-     /* Enforce separate combining characters display if colours differ */
+      /* Enforce separate combining characters display if colours differ */
       if (!termattrs_equal_fg(&textattr[1], &attr))
         let_windows_combine = false;
     }
@@ -3371,10 +3579,10 @@ win_text(int tx, int ty,wchar *text, int len, cattr attr, cattr *textattr, ushor
     // - keeping it in for now just in case; should be cleaned up later
     for (int i = 0; i < len; i++)
       text[i] = ' ';
-      //text[i] = ' ';
+    //text[i] = ' ';
   }
 
- /* Array with offsets between neighbouring characters */
+  /* Array with offsets between neighbouring characters */
   int dxs[len];
   int dx = combining ? 0 : char_width;
   for (int i = 0; i < len; i++) {
@@ -3386,7 +3594,7 @@ win_text(int tx, int ty,wchar *text, int len, cattr attr, cattr *textattr, ushor
       dxs[i] = dx;
   }
 
- /* Character cells length */
+  /* Character cells length */
   int ulen = 0;
   for (int i = 0; i < len; i++) {
     ulen++;
@@ -3394,7 +3602,7 @@ win_text(int tx, int ty,wchar *text, int len, cattr attr, cattr *textattr, ushor
       i++;  // skip low surrogate;
   }
 
- /* Painting box */
+  /* Painting box */
   int width = char_width * (combining ? 1 : ulen);
   RECT box = {
     .top = y, .bottom = y + wv.cell_height,
@@ -3415,7 +3623,7 @@ win_text(int tx, int ty,wchar *text, int len, cattr attr, cattr *textattr, ushor
     box2.right += char_width;
 
 
- /* Uniscribe handling */
+  /* Uniscribe handling */
   use_uniscribe = cfg.font_render == FR_UNISCRIBE && !has_rtl;
   if (combining_double)
     use_uniscribe = false;
@@ -3453,7 +3661,7 @@ win_text(int tx, int ty,wchar *text, int len, cattr attr, cattr *textattr, ushor
   printline();
 #endif
 
- /* Begin text output */
+  /* Begin text output */
   int yt = y + (ff->row_spacing / 2) - (lattr == LATTR_BOT ? wv.cell_height : 0);
   int xt = x + (ff->col_spacing / 2);
   if (attr.attr & TATTR_ZOOMFULL) {
@@ -3469,7 +3677,7 @@ win_text(int tx, int ty,wchar *text, int len, cattr attr, cattr *textattr, ushor
   if (line_width < 1)
     line_width = 1;
 
- /* Determine shadow/overstrike bold or double-width/height width */
+  /* Determine shadow/overstrike bold or double-width/height width */
   int xwidth = 1;
   if (ff->bold_mode == BOLD_SHADOW && (attr.attr & ATTR_BOLD)) {
     // This could be scaled with font size, but at risk of clipping
@@ -3479,7 +3687,7 @@ win_text(int tx, int ty,wchar *text, int len, cattr attr, cattr *textattr, ushor
     }
   }
 
- /* Manual underline */
+  /* Manual underline */
   colour ul = fg;
   int uloff = ff->descent + (wv.cell_height - ff->descent + 1) / 2;
   if (lattr == LATTR_BOT)
@@ -3523,7 +3731,7 @@ win_text(int tx, int ty,wchar *text, int len, cattr attr, cattr *textattr, ushor
     }
   }
 
- /* Graphic background: picture or texture */
+  /* Graphic background: picture or texture */
   if (cfg.backgfile.type&& default_bg) {
     RECT bgbox = box0;
 
@@ -3552,7 +3760,7 @@ win_text(int tx, int ty,wchar *text, int len, cattr attr, cattr *textattr, ushor
   else if (origtext && !ldisp2)
     clear_run();  // clear background for self-drawn characters (#1310)
 
- /* Coordinate transformation per line */
+  /* Coordinate transformation per line */
   int coord_transformed = 0;
   XFORM old_xform;
   if (lpresrtl) {
@@ -3563,7 +3771,7 @@ win_text(int tx, int ty,wchar *text, int len, cattr attr, cattr *textattr, ushor
     }
   }
 
- /* Special underlay */
+  /* Special underlay */
   if (do_special_underlay && !ldisp2) {
     xchar uc = 0x2312;
     int ulaylen = uc > 0xFFFF ? ulen * 2 : ulen;
@@ -3585,7 +3793,7 @@ win_text(int tx, int ty,wchar *text, int len, cattr attr, cattr *textattr, ushor
       RGB(0x00, 0x99, 0xFF), // blue
       RGB(0x44, 0x00, 0xFF), // indigo
       RGB(0x99, 0x00, 0xFF), // violet
-      };
+    };
 
     int dist = wv.cell_height / 20 + 1;
     int leap = wv.cell_height <= 20 ? 3 : wv.cell_height <= 30 ? 2 : 1;
@@ -3609,17 +3817,17 @@ win_text(int tx, int ty,wchar *text, int len, cattr attr, cattr *textattr, ushor
     xt += wv.cell_width * 3 / 10;
     switch (attr.attr & (ATTR_SUBSCR | ATTR_SUPERSCR)) {
       when ATTR_SUBSCR | ATTR_SUPERSCR:
-        yt += wv.cell_height * 10 / 32;  // 11 fits better but closer to subscr
+          yt += wv.cell_height * 10 / 32;  // 11 fits better but closer to subscr
       when ATTR_SUBSCR:
-        yt += wv.cell_height * 13 / 32;  // 14 looks better but at some clipping
+          yt += wv.cell_height * 13 / 32;  // 14 looks better but at some clipping
       when ATTR_SUPERSCR:
-        yt += wv.cell_height * 1 / 8;
+          yt += wv.cell_height * 1 / 8;
     }
   }
   if (attr.attr & TATTR_SINGLE)
     yt += wv.cell_height / 4;
 
- /* Shadow */
+  /* Shadow */
   int layer = 0;
   colour fg0 = fg;
   colour ul0 = ul;
@@ -3643,7 +3851,7 @@ win_text(int tx, int ty,wchar *text, int len, cattr attr, cattr *textattr, ushor
     SetTextColor(dc, fg);
   }
 
-draw:;
+draw:
   if (bloom) {
     if (bloom > 1 || bloom >= 1)
       fg = ((fg & 0xFEFEFEFE) >> 1) + ((win_get_colour(BG_COLOUR_I) & 0xFEFEFEFE) >> 1);
@@ -3663,14 +3871,14 @@ draw:;
 
       float scale = 1.0 + (float)bloom / 7.0;
       /*
-        xt' = xt + wv.cell_width / 2
-        x' - xt' = sc * (x - xt')
-        x' = xt' + sc * x - sc * xt'
-        x' = sc * x + (1 - sc) * xt'
-      */
+         xt' = xt + wv.cell_width / 2
+         x' - xt' = sc * (x - xt')
+         x' = xt' + sc * x - sc * xt'
+         x' = sc * x + (1 - sc) * xt'
+         */
       XFORM xform = (XFORM){scale, 0.0, 0.0, scale, 
-                    ((float)xt + (float)wv.cell_width / 2) * (1.0 - scale), 
-                    ((float)yt + (float)wv.cell_height / 2) * (1.0 - scale)};
+        ((float)xt + (float)wv.cell_width / 2) * (1.0 - scale), 
+        ((float)yt + (float)wv.cell_height / 2) * (1.0 - scale)};
       coord_transformed_bloom = ModifyWorldTransform(dc, &xform, MWT_LEFTMULTIPLY);
     }
   }
@@ -3683,10 +3891,10 @@ draw:;
   int y0 = y;
   int x0 = x;
 
- /* Wavy underline */
+  /* Wavy underline */
   if (!ldisp2 && lattr != LATTR_TOP &&
-      (attr.attr & UNDER_MASK) == ATTR_CURLYUND
-     )
+    (attr.attr & UNDER_MASK) == ATTR_CURLYUND
+    )
   {
     clear_run();
     //printf("curly %d:%d %d:%d (w %d ulen %d cw %d)\n", ty, tx, y, x, width, ulen, char_width);
@@ -3694,14 +3902,14 @@ draw:;
     int step = 4;  // horizontal step width
     int delta = 3; // vertical phase height
     int offset = 1; // offset up from uloff
-    //int x0 = x - PADDING - (x - PADDING) % step + PADDING;
-    //int rep = (ulen * char_width - 1) / step / 3 + 2;
-    // when starting the undercurl at the current text start position,
-    // the transitions between adjacent Bezier waves looks disrupted;
-    // trying to align them by snapping to a previous point (- x... % step)
-    // does not help, maybe Bezier curves should be studied first;
-    // so in order to achieve uniform undercurls, we always start at 
-    // the line beginning position (getting clipped anyway)
+                    //int x0 = x - PADDING - (x - PADDING) % step + PADDING;
+                    //int rep = (ulen * char_width - 1) / step / 3 + 2;
+                    // when starting the undercurl at the current text start position,
+                    // the transitions between adjacent Bezier waves looks disrupted;
+                    // trying to align them by snapping to a previous point (- x... % step)
+                    // does not help, maybe Bezier curves should be studied first;
+                    // so in order to achieve uniform undercurls, we always start at 
+                    // the line beginning position (getting clipped anyway)
     int x0 = PADDING;
     int rep = (x - x0 + width + char_width) / step / 3;
 
@@ -3729,47 +3937,45 @@ draw:;
 
 
     SelectClipRgn(dc, ur);
-  }
-  else
-
- /* Underline */
-  if (!ldisp2 && lattr != LATTR_TOP &&
+  } else{
+    /* Underline */
+    if (!ldisp2 && lattr != LATTR_TOP &&
       (force_manual_underline ||
        nfont & FONT_UNDERLINE ||  // ensure underline of self-drawn characters
        (attr.attr & (ATTR_DOUBLYUND | ATTR_BROKENUND)) ||
        ((attr.attr & UNDER_MASK) == ATTR_UNDER &&
         (ff->und_mode == UND_LINE || (attr.attr & ATTR_ULCOLOUR)))
       )
-     )
-  {
-    clear_run();
+      )
+    {
+      clear_run();
 
-    int penstyle = (attr.attr & ATTR_BROKENUND)
-                   ? (attr.attr & ATTR_DOUBLYUND)
-                     ? PS_DASH
-                     : PS_DOT
-                   : PS_SOLID;
-    HPEN oldpen = SelectObject(dc, CreatePen(penstyle, 0, ul));
-    int gapfrom = 0, gapdone = 0;
-    int _line_width = line_width;
-    if ((attr.attr & UNDER_MASK) == ATTR_DOUBLYUND) {
-      if (line_width < 3)
-        _line_width = 3;
-      int gap = _line_width / 3;
-      gapfrom = (_line_width - gap) / 2;
-      gapdone = _line_width - gapfrom;
-    }
-    for (int l = 0; l < _line_width; l++) {
-      if (l >= gapdone || l < gapfrom) {
-        MoveToEx(dc, x, y + uloff - l, null);
-        LineTo(dc, x + ulen * char_width, y + uloff - l);
+      int penstyle = (attr.attr & ATTR_BROKENUND)
+          ? (attr.attr & ATTR_DOUBLYUND)
+          ? PS_DASH
+          : PS_DOT
+          : PS_SOLID;
+      HPEN oldpen = SelectObject(dc, CreatePen(penstyle, 0, ul));
+      int gapfrom = 0, gapdone = 0;
+      int _line_width = line_width;
+      if ((attr.attr & UNDER_MASK) == ATTR_DOUBLYUND) {
+        if (line_width < 3)
+          _line_width = 3;
+        int gap = _line_width / 3;
+        gapfrom = (_line_width - gap) / 2;
+        gapdone = _line_width - gapfrom;
       }
+      for (int l = 0; l < _line_width; l++) {
+        if (l >= gapdone || l < gapfrom) {
+          MoveToEx(dc, x, y + uloff - l, null);
+          LineTo(dc, x + ulen * char_width, y + uloff - l);
+        }
+      }
+      DeleteObject(SelectObject(dc, oldpen));
     }
-    DeleteObject(SelectObject(dc, oldpen));
-
   }
 
- /* Overline */
+  /* Overline */
   if (!ldisp2 && lattr != LATTR_BOT && attr.attr & ATTR_OVERL) {
     clear_run();
 
@@ -3779,25 +3985,25 @@ draw:;
       LineTo(dc, x + ulen * char_width, y + l);
     }
     DeleteObject(SelectObject(dc, oldpen));
-  
+
   }
 
   int dxs_[len];
 
- /* Background for overhang overlay */
+  /* Background for overhang overlay */
   if (ldisp1) {
     if (!underlaid)
       clear_run();
     goto _return;  // skipping coord_transformed2 set and restore
   }
 
- /* Partial glyph adjustments */
+  /* Partial glyph adjustments */
   if (vt52fraction) {
     // adjust position of VT52 fraction numerator
     yt -= line_width;
   }
 
- /* Coordinate transformation per character */
+  /* Coordinate transformation per character */
   int coord_transformed2 = 0;
   XFORM old_xform2;
   RECT box_, box2_;
@@ -3822,7 +4028,7 @@ draw:;
           box2.right /= scale;
         }
         else { // evolutionary algorithm; don't ask why or how it works :/
-        // extend bounding box by the scaling
+               // extend bounding box by the scaling
           box.right *= scale;
           box2.right *= scale;
         }
@@ -3830,7 +4036,7 @@ draw:;
     }
   }
 
- /* Finally, draw the text */
+  /* Finally, draw the text */
   uint overwropt;
   if (ldisp2 || underlaid) {
     SetBkMode(dc, TRANSPARENT);
@@ -3861,7 +4067,7 @@ draw:;
   if (origtext)
     goto skip_drawing;
 
- /* Now, really draw the text */
+  /* Now, really draw the text */
 
   text_out_start(dc, text, len, dxs);
 
@@ -3921,25 +4127,25 @@ draw:;
     }
 
     /*
-      With image background (-o Background=...png), if output in the 
-      top line begins with reverse or coloured background, 
-      a mysterious rendering bug hides the first chunk of output 
-      in frequent cases at that position.
-      (This was traced down in mintty deeply so the remaining suspicion 
-      is it's a bug in Windows.)
-      As a workaround, we invalidate the top-left cell right away 
-      so it gets printed to the window repeatedly, which effectively 
-      makes it visible from the first retry.
-     */
+       With image background (-o Background=...png), if output in the 
+       top line begins with reverse or coloured background, 
+       a mysterious rendering bug hides the first chunk of output 
+       in frequent cases at that position.
+       (This was traced down in mintty deeply so the remaining suspicion 
+       is it's a bug in Windows.)
+       As a workaround, we invalidate the top-left cell right away 
+       so it gets printed to the window repeatedly, which effectively 
+       makes it visible from the first retry.
+       */
     if (!tx && !ty && cfg.backgfile.type && !default_bg)
       term_invalidate(0, 0, 0, 0);
   }
 
   text_out_end();
 
-skip_drawing:;
+skip_drawing:
 
- /* Reset coordinate transformation */
+  /* Reset coordinate transformation */
   if (coord_transformed2) {
     SetWorldTransform(dc, &old_xform2);
     // restore these in case we're in a shadow loop
@@ -3950,12 +4156,12 @@ skip_drawing:;
   }
 
 
- /* Skip self-drawing to handle invisible attribute on image background */
-  if (fg == bg && default_bg && *cfg.background)
+  /* Skip self-drawing to handle invisible attribute on image background */
+  if (fg == bg && default_bg && cfg.backgfile.type)
     goto _return;
 
 
- /* Self-drawn characters: manual drawing of certain graphics */
+  /* Self-drawn characters: manual drawing of certain graphics */
 
   // line_width already set above for DEC Tech adjustments
 #define dont_debug_vt100_line_drawing_chars
@@ -3983,7 +4189,7 @@ skip_drawing:;
   void setclipr(int x, int y, int n)
   {
     int clip_height = wv.cell_height 
-                      * (lattr >= LATTR_TOP && ty < term_allrows - 1 ? 2 : 1);
+        * (lattr >= LATTR_TOP && ty < term_allrows - 1 ? 2 : 1);
     clipr = CreateRectRgn(x, y, x + n * char_width, y + clip_height);
     SelectClipRgn(dc, clipr);
   }
@@ -4016,14 +4222,14 @@ skip_drawing:;
     clearclipr();
   }
   else if (boxpower || dectcs) {  // drawn graphics
-    // Box Drawing (U+2500-U+257F)
-    // ─━│┃┄┅┆┇┈┉┊┋┌┍┎┏┐┑┒┓└┕┖┗┘┙┚┛├┝┞┟┠┡┢┣┤┥┦┧┨┩┪┫┬┭┮┯┰┱┲┳┴┵┶┷┸┹┺┻┼┽┾┿
-    // ╀╁╂╃╄╅╆╇╈╉╊╋╌╍╎╏═║╒╓╔╕╖╗╘╙╚╛╜╝╞╟╠╡╢╣╤╥╦╧╨╩╪╫╬╭╮╯╰╱╲╳╴╵╶╷╸╹╺╻╼╽╾╿
-    // Block Elements (U+2580-U+259F)
-    // ▀▁▂▃▄▅▆▇█▉▊▋▌▍▎▏▐░▒▓▔▕▖▗▘▙▚▛▜▝▞▟
-    // Private Use geometric Powerline symbols (U+E0B0-U+E0BF, not 5, 7)
-    // 
-    //      - -
+                                  // Box Drawing (U+2500-U+257F)
+                                  // ─━│┃┄┅┆┇┈┉┊┋┌┍┎┏┐┑┒┓└┕┖┗┘┙┚┛├┝┞┟┠┡┢┣┤┥┦┧┨┩┪┫┬┭┮┯┰┱┲┳┴┵┶┷┸┹┺┻┼┽┾┿
+                                  // ╀╁╂╃╄╅╆╇╈╉╊╋╌╍╎╏═║╒╓╔╕╖╗╘╙╚╛╜╝╞╟╠╡╢╣╤╥╦╧╨╩╪╫╬╭╮╯╰╱╲╳╴╵╶╷╸╹╺╻╼╽╾╿
+                                  // Block Elements (U+2580-U+259F)
+                                  // ▀▁▂▃▄▅▆▇█▉▊▋▌▍▎▏▐░▒▓▔▕▖▗▘▙▚▛▜▝▞▟
+                                  // Private Use geometric Powerline symbols (U+E0B0-U+E0BF, not 5, 7)
+                                  // 
+                                  //      - -
     int char_height = wv.cell_height;
     if (lattr >= LATTR_TOP)
       char_height *= 2;
@@ -4036,7 +4242,7 @@ skip_drawing:;
 
     /*
        Mix fg at mix/8 with bg.
-     */
+       */
     colour colmix(char mix)
     {
       uint r = (red(fg) * mix + red(bg) * (8 - mix)) / 8;
@@ -4097,16 +4303,16 @@ skip_drawing:;
         if (lefthalf)
           // Powerline left half circle U+E0B6: trichord(8, 0, 0, 4, 8, 8);
           Chord(dc, xi      , y0 + _y1, xi + 2 * _x1, y0 + _y3,
-                    xi + _x1, y0 + _y1, xi + _x3    , y0 + _y3);
+                xi + _x1, y0 + _y1, xi + _x3    , y0 + _y3);
         else
           // Powerline right half circle U+E0B4: trichord(0, 0, 8, 4, 0, 8);
           Chord(dc, xi - _x2, y0 + _y1, xi + _x2, y0 + _y3,
-                    xi + _x3, y0 + _y3, xi + _x1, y0 + _y1);
+                xi + _x3, y0 + _y3, xi + _x1, y0 + _y1);
       }
       else
         Polygon(dc, (POINT[]){{xi + _x1, y0 + _y1},
-                              {xi + _x2, y0 + _y2},
-                              {xi + _x3, y0 + _y3}}, 3);
+                {xi + _x2, y0 + _y2},
+                {xi + _x3, y0 + _y3}}, 3);
       DeleteObject(SelectObject(dc, oldbrush));
       DeleteObject(SelectObject(dc, oldpen));
     }
@@ -4247,7 +4453,7 @@ skip_drawing:;
         // for box border lines, use LineTo below
         //if (y3 != -2)   // for slanted lines in ╲ ╳ ╱, rather use LineTo
         if (y3 < -2) {  // dashed lines
-          // apply pen width
+                        // apply pen width
           int w = penwidth;
           if (heavy)
             w = heavypenwidth;
@@ -4283,10 +4489,10 @@ skip_drawing:;
           if (heavy)
             SelectObject(dc, heavypen);
           if (y3 == -2) {  // diagonals ╲ ╱ ╳
-            // without adjustment, the diagonals appear clipped from right,
-            // widh adjustment both sides, they appear clipped from left,
-            // with adjustment by penwidth / 2, alignment appears bad;
-            // penwidth / 3 on the right/bottom side is a compromise
+                           // without adjustment, the diagonals appear clipped from right,
+                           // widh adjustment both sides, they appear clipped from left,
+                           // with adjustment by penwidth / 2, alignment appears bad;
+                           // penwidth / 3 on the right/bottom side is a compromise
             y2 -= max(penwidth / 3, 1);
             x2 -= max(penwidth / 3, 1);
             // also the square pen appears wrong with the diagonals
@@ -4303,7 +4509,7 @@ skip_drawing:;
 
           if (heavy || y3 == -2)
             SelectObject(dc, pen);
-          }
+        }
       }
 
       boxline(_x1, _y1, _x2, _y2);
@@ -4318,37 +4524,37 @@ skip_drawing:;
       // adjust endpoint by 1 to compensate for the missing endpoint
       switch (q) {
         when 1:  // upper right quarter ╰ lower left border arc
-          x1 = char_width / 2;
-          y1 = 0;
-          x2 = char_width + 1;
-          y2 = char_height / 2;
-          xc = char_width / 2 + r;
-          yc = char_height / 2 - r;
-          a = 180;
+            x1 = char_width / 2;
+        y1 = 0;
+        x2 = char_width + 1;
+        y2 = char_height / 2;
+        xc = char_width / 2 + r;
+        yc = char_height / 2 - r;
+        a = 180;
         when 2:  // lower right quarter ╭ upper left border arc
-          x1 = char_width;
-          y1 = char_height / 2;
-          x2 = char_width / 2;
-          y2 = char_height + 1;
-          xc = char_width / 2 + r;
-          yc = char_height / 2 + r;
-          a = 90;
+            x1 = char_width;
+        y1 = char_height / 2;
+        x2 = char_width / 2;
+        y2 = char_height + 1;
+        xc = char_width / 2 + r;
+        yc = char_height / 2 + r;
+        a = 90;
         when 3:  // lower left quarter ╮ upper right border arc
-          x1 = char_width / 2;
-          y1 = char_height;
-          x2 = -1;
-          y2 = char_height / 2;
-          xc = char_width / 2 - r;
-          yc = char_height / 2 + r;
-          a = 0;
+            x1 = char_width / 2;
+        y1 = char_height;
+        x2 = -1;
+        y2 = char_height / 2;
+        xc = char_width / 2 - r;
+        yc = char_height / 2 + r;
+        a = 0;
         when 4:  // upper left quarter ╯ lower right border arc
-          x1 = 0;
-          y1 = char_height / 2;
-          x2 = char_width / 2;
-          y2 = -1;
-          xc = char_width / 2 - r;
-          yc = char_height / 2 - r;
-          a = 270;
+            x1 = 0;
+        y1 = char_height / 2;
+        x2 = char_width / 2;
+        y2 = -1;
+        xc = char_width / 2 - r;
+        yc = char_height / 2 - r;
+        a = 270;
       }
       MoveToEx(dc, xi + x1, y0 + y1, null);
       AngleArc(dc, xi + xc, y0 + yc, r, a, 90);
@@ -4372,67 +4578,67 @@ skip_drawing:;
         // !1234567DE
         // ⎷  ╲╱   Δ∇
         when '!': // RADICAL SYMBOL BOTTOM
-          boxlines(false, 12, 0, 12, 24, -1, -1);
-          boxlines(false, 0, 12, 5, 12, 12, 24);
+            boxlines(false, 12, 0, 12, 24, -1, -1);
+        boxlines(false, 0, 12, 5, 12, 12, 24);
         when '"':
-          boxlines(false, 12, 24, 12, 12, 24, 12);
+            boxlines(false, 12, 24, 12, 12, 24, 12);
         when '#':
-          boxlines(false, 0, 12, 24, 12, -1, -1);
+            boxlines(false, 0, 12, 24, 12, -1, -1);
         when '1': // Top Left Sigma
-          boxlines(false, 24, 12, 12, 12, 24, 24);
+            boxlines(false, 24, 12, 12, 12, 24, 24);
         when '2': // Bottom Left Sigma
-          boxlines(false, 24, 12, 12, 12, 24, 0);
+            boxlines(false, 24, 12, 12, 12, 24, 0);
         when '3': // Top Diagonal Sigma
-          boxlines(false, 0, 0, 24, 24, -2, -2);
+            boxlines(false, 0, 0, 24, 24, -2, -2);
         when '4': // Bottom Diagonal Sigma
-          boxlines(false, 0, 24, 24, 0, -2, -2);
+            boxlines(false, 0, 24, 24, 0, -2, -2);
 #define sigend 18
         when '5': // Top Right Sigma
-          boxlines(false, 0, 12, sigend, 12, sigend, 22);
+            boxlines(false, 0, 12, sigend, 12, sigend, 22);
         when '6': // Bottom Right Sigma
-          boxlines(false, 0, 12, sigend, 12, sigend, 2);
+            boxlines(false, 0, 12, sigend, 12, sigend, 2);
 #undef sigend 
         when '7': // Middle Sigma
-          boxlines(false, 0, 0, 12, 12, 0, 24);
+            boxlines(false, 0, 0, 12, 12, 0, 24);
 #define nabdel 8
         when 'D': // DELTA
-          boxlines(false, 12, 2, 12 - nabdel, 22, 12 + nabdel, 22);
-          boxlines(false, 12, 2, 12 + nabdel, 22, -1, -1);
+            boxlines(false, 12, 2, 12 - nabdel, 22, 12 + nabdel, 22);
+        boxlines(false, 12, 2, 12 + nabdel, 22, -1, -1);
         when 'E': // NABLA
-          boxlines(false, 12, 22, 12 - nabdel, 2, 12 + nabdel, 2);
-          boxlines(false, 12, 22, 12 + nabdel, 2, -1, -1);
+            boxlines(false, 12, 22, 12 - nabdel, 2, 12 + nabdel, 2);
+        boxlines(false, 12, 22, 12 + nabdel, 2, -1, -1);
 #undef nabdel
         // Private Use geometric Powerline symbols (U+E0B0-U+E0BF, not 5, 7)
         // 
         //      - -
         when 0xE0B0:
-          triangle(0, 0, 8, 4, 0, 8);
+            triangle(0, 0, 8, 4, 0, 8);
         when 0xE0B1:
-          lines(0, 0, 8, 4, 0, 8);
+            lines(0, 0, 8, 4, 0, 8);
         when 0xE0B2:
-          triangle(8, 0, 0, 4, 8, 8);
+            triangle(8, 0, 0, 4, 8, 8);
         when 0xE0B3:
-          lines(8, 0, 0, 4, 8, 8);
+            lines(8, 0, 0, 4, 8, 8);
         when 0xE0B4:
-          trichord(0, 0, 8, 4, 0, 8);
+            trichord(0, 0, 8, 4, 0, 8);
         when 0xE0B6:
-          trichord(8, 0, 0, 4, 8, 8);
+            trichord(8, 0, 0, 4, 8, 8);
         when 0xE0B8:
-          triangle(0, 0, 0, 8, 8, 8);
+            triangle(0, 0, 0, 8, 8, 8);
         when 0xE0B9:
-          lines(0, 0, 8, 8, -1, -1);
+            lines(0, 0, 8, 8, -1, -1);
         when 0xE0BA:
-          triangle(8, 0, 8, 8, 0, 8);
+            triangle(8, 0, 8, 8, 0, 8);
         when 0xE0BB:
-          lines(8, 0, 0, 8, -1, -1);
+            lines(8, 0, 0, 8, -1, -1);
         when 0xE0BC:
-          triangle(0, 0, 8, 0, 0, 8);
+            triangle(0, 0, 8, 0, 0, 8);
         when 0xE0BD:
-          lines(8, 0, 0, 8, -1, -1);
+            lines(8, 0, 0, 8, -1, -1);
         when 0xE0BE:
-          triangle(0, 0, 8, 0, 8, 8);
+            triangle(0, 0, 8, 0, 8, 8);
         when 0xE0BF:
-          lines(0, 0, 8, 8, -1, -1);
+            lines(0, 0, 8, 8, -1, -1);
 
       }
 #undef dl
@@ -4527,14 +4733,14 @@ skip_drawing:;
     DeleteObject(oldpen);
   }
 
- /* Strikeout */
+  /* Strikeout */
   if ((attr.attr & ATTR_STRIKEOUT)
-      //&& !ldisp1
-      && (cfg.underl_manual || cfg.underl_colour != (colour)-1
-          || (attr.attr & ATTR_ULCOLOUR)
-          || origtext  // apply strikeout to self-drawn characters
-         )
-     )
+    //&& !ldisp1
+    && (cfg.underl_manual || cfg.underl_colour != (colour)-1
+        || (attr.attr & ATTR_ULCOLOUR)
+        || origtext  // apply strikeout to self-drawn characters
+       )
+    )
   {
     int soff = (ff->descent + (ff->row_spacing / 2)) * 2 / 3;
     HPEN oldpen = SelectObject(dc, CreatePen(PS_SOLID, 0, ul));
@@ -4546,7 +4752,7 @@ skip_drawing:;
 
   }
 
-  _return:
+_return:
 
   if (origtext) {
     // we transfered the orig text pointer to origtext, so we free text
@@ -4556,117 +4762,12 @@ skip_drawing:;
   show_curchar_info('w');
 
   if (has_cursor && phase < 2) {
-    int cursor_size(int cell_size)
-    {
-      switch (term.cursor_size) {
-        when 1: return -2;                // invisible
-        when 2: return line_width - 1;    // underscore
-        when 3: return cell_size / 3 - 1; // ⅓
-        when 4: return cell_size / 2;     // ½
-        when 5: return cell_size * 2 / 3; // ⅔
-        when 6: return cell_size - 2;     // full block
-        otherwise: return 0;              // default
-      }
-    }
-
-    colour _cc = cursor_colour;
-    if (layer)
-      _cc = ((_cc & 0xFEFEFEFE) >> 1) + ((win_get_colour(BG_COLOUR_I) & 0xFEFEFEFE) >> 1);
-#if defined(debug_cursor) && debug_cursor > 1
-    printf("painting cursor_type '%c' cursor_on %d\n", "?b_l"[term_cursor_type()+1], term.cursor_on);
-#endif
-    HPEN oldpen = SelectObject(dc, CreatePen(PS_SOLID, 0, _cc));
-    switch (term_cursor_type()) {
-      when CUR_BLOCK:  // solid block cursor
-        if (attr.attr & TATTR_PASCURS) {
-          HBRUSH oldbrush = SelectObject(dc, GetStockObject(NULL_BRUSH));
-          Rectangle(dc, x, y, x + char_width, y + wv.cell_height);
-          SelectObject(dc, oldbrush);
-        }
-      when CUR_BOX: {  // hollow box cursor
-        HBRUSH oldbrush = SelectObject(dc, GetStockObject(NULL_BRUSH));
-        Rectangle(dc, x, y, x + char_width, y + wv.cell_height);
-        SelectObject(dc, oldbrush);
-      }
-      when CUR_LINE: {  // vertical line cursor
-        int caret_width = cursor_size(wv.cell_width);
-        if (caret_width <= 0) {
-          caret_width = (3 + (lattr >= LATTR_WIDE ? 2 : 0)) * wv.cell_width / 40;
-          SystemParametersInfo(SPI_GETCARETWIDTH, 0, &caret_width, 0);
-          caret_width *= wv.cell_width / 8;
-          int min_caret_width = dpi / 72;
-          // limit cursor width (max previously by line_width, #1101)
-          if (caret_width < min_caret_width)
-            caret_width = min_caret_width;
-          else if (caret_width > wv.cell_width)
-            caret_width = wv.cell_width;
-        }
-        int xx = x;
-        if (attr.attr & TATTR_RIGHTCURS)
-          xx += char_width - caret_width;
-        if (attr.attr & TATTR_ACTCURS) {
-#ifdef cursor_painted_with_rectangle
-          // this would add an additional line, vanishing again but 
-          // leaving a pixel artefact, under some utterly weird interference 
-          // with output of certain characters (mintty/wsltty#255)
-          HBRUSH oldbrush = SelectObject(dc, CreateSolidBrush(_cc));
-          Rectangle(dc, xx, y, xx + caret_width, y + wv.cell_height);
-          DeleteObject(SelectObject(dc, oldbrush));
-#else
-          HBRUSH br = CreateSolidBrush(_cc);
-#ifdef simple_inverted_cursor_approach
-          // this does not give us sufficient colour control
-          InvertRect(dc, &(RECT){xx, y, xx + caret_width, y + wv.cell_height});
-#else
-          FillRect(dc, &(RECT){xx, y, xx + caret_width, y + wv.cell_height}, br);
-#endif
-          DeleteObject(br);
-#endif
-        }
-        else if (attr.attr & TATTR_PASCURS) {
-          for (int dy = 0; dy < wv.cell_height; dy += 2)
-            Polyline(
-              dc, (POINT[]){{xx, y + dy}, {xx + caret_width, y + dy}}, 2);
-        }
-      }
-      when CUR_UNDERSCORE: {  // horizontal line cursor
-        int yy = yt + min(ff->descent, wv.cell_height - 2);
-        yy += ff->row_spacing * 3 / 8;
-        if (lattr >= LATTR_TOP) {
-          yy += ff->row_spacing / 2;
-          if (lattr == LATTR_BOT)
-            yy += wv.cell_height;
-        }
-        if (attr.attr & TATTR_ACTCURS) {
-	  /* cursor size CSI ? N c
-	     from linux console https://linuxgazette.net/137/anonymous.html
-		0   default
-		1   invisible
-		2   underscore
-		3   lower_third
-		4   lower_half
-		5   two_thirds
-		6   full block
-          */
-          int up = cursor_size(wv.cell_height);
-          if (up) {
-            int yct = max(yy - up, yt);
-            HBRUSH oldbrush = SelectObject(dc, CreateSolidBrush(_cc));
-            Rectangle(dc, x, yct, x + char_width, yy + 2);
-            DeleteObject(SelectObject(dc, oldbrush));
-          }
-          else
-            Rectangle(dc, x, yy - up, x + char_width, yy + 2);
-        }
-        else if (attr.attr & TATTR_PASCURS) {
-          for (int dx = 0; dx < char_width; dx += 2) {
-            SetPixel(dc, x + dx, yy, _cc);
-            SetPixel(dc, x + dx, yy + 1, _cc);
-          }
-        }
-      }
-    }
-    DeleteObject(SelectObject(dc, oldpen));
+    //term.sc.tx=tx;
+    //term.sc.ty=ty;
+    //term.sc.attr=attr.attr;
+    //term.sc.lattr=lattr;
+    //term.sc.clr=cursor_colour;
+    drawcursor(dc,tx,ty,attr.attr,lattr,cursor_colour);
   }
 
   if (bloom && coord_transformed_bloom) {
@@ -5499,3 +5600,60 @@ win_paint(void)
   EndPaint(wv.wnd, &p);
 }
 
+/*
+A:CreateCompatibleDC  
+B:GetDC(wv.wnd)
+b:GetDC(desktop);
+tek.c:
+  A B:tek_paint(void)
+winimg.c:
+  A B: winimgs_paint(void)
+  A  :save_img(HDC dc, int x, int y, int w, int h, wstring fn)
+wininput.c:
+  A B:icon_bitmap(HICON hIcon){
+wintabz.c:
+  A:win_tab_paint(HDC dc) 
+  win_tab_paint: A
+  B:win_draw_time:B not use
+
+wintext.c:
+  A:win_init_fontfamily
+  B:win_init_fonts: GetDeviceCaps
+  B:win_change_font: win_init_fontfamily
+  B:win_init_fonts: GetDeviceCaps win_init_fontfamily
+  B:do_update:
+  A:alpha_blend_bg:
+  A:load_background_image_brush:
+  B:win_check_glyphs: NODRAW
+  A B:win_char_width:A B 
+  B:win_combine_chars:B GetGlyphIndicesW
+
+winmain.c:
+  term_save_image:B
+  do_win_adapt_term_size:B GetDeviceCaps
+windialog.c:
+  win_open_config:B GetDeviceCaps
+winctrls.c:
+  b:win_set_font(HWND hwnd): GetDeviceCaps
+  B:fonthook(HWND hdlg,...): GetDeviceCaps
+  B:select_font: GetDeviceCaps
+  B:dlg_text_paint: GetDeviceCaps
+cinoptions=:0,=2,b1,l1,g0,+2s,C2,(0,ks
+:0  case 标号
+=2 case 标号之后的语句
+b1:将最后的 "break" 和 case 标号对齐
+l1:和 case 标号对齐
+g0:将 C++ 作用域声明置于其所在代码块的 N 个字符后
++2s:函数之内的续行  缩进增加额外的 N 个字符。(缺省为 'shiftwidth')。
+    函数之外，如果前行以反斜杠结尾，使用 2 * N。
+C2:注释头部  之后的注释行    
+(0:在没有结束的括号内
+win_text(ovl_x, ovl_y, ovl_text, ovl_len, ovl_attr, ovl_textattr, ovl_lattr, ovl_has_rtl, ovl_has_sea, false, 2);
+win_text(x, y, esp, elen,eattr, textattr, lattr, has_rtl, has_sea, false, 1);
+win_text(x, y, esp, elen,eattr, textattr, lattr, has_rtl, has_sea, false, 2);
+win_text(x, y, esp,    1,eattr, textattr, lattr, has_rtl, has_sea, false, 2);
+win_text(x, y, text, len, attr, textattr, lattr, has_rtl, has_sea, false, 1);
+win_text(x, y, text, len, attr, textattr, lattr, has_rtl, has_sea, false, 1);
+win_text(x, y, text, len, attr, textattr, lattr, has_rtl, has_sea, false, 0);
+
+ */

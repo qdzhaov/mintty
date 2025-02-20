@@ -296,12 +296,14 @@ void win_update_menus(bool callback){
     if (key) {
       // append TAB and shortcut to label; localize "Ctrl+Alt+Shift+"
       mod_keys mod = tagmods(key,&key);
-      char buf[128];
-      mod2sl(buf,mod,0);
-      int len1 = wcslen(mi.dwTypeData) + 1+strlen(buf)+ strlen(key) + 1;
-      mi.dwTypeData = renewn(mi.dwTypeData, len1);
-      wchar *p;for(p=mi.dwTypeData;*p;p++);
-      swprintf(p,128,W("%s%s"),buf,key);
+      if(mod!=(mod_keys)-1){
+        char buf[128];
+        mod2sl(buf,mod,0);
+        int len1 = wcslen(mi.dwTypeData) + 1+strlen(buf)+ strlen(key) + 1;
+        mi.dwTypeData = renewn(mi.dwTypeData, len1);
+        wchar *p;for(p=mi.dwTypeData;*p;p++);
+        swprintf(p,128,W("%s%s"),buf,key);
+      }
     }
 #ifdef debug_modify_menu
     if (sysentry)
@@ -758,12 +760,15 @@ mod_keys get_modslr(void){
   GetKeyboardState(kbd);
   return get_modslri();
 }
+static char *MKSHORT="SACWUHPE";
+static char *MKLONG[]={
+  "SHIFT","ALT","CTRL","WIN","SUPER","HYPER","CAPS","EXT"
+};
 char *mod2s(char*pb,int moda,int lr){
   int m0=moda&0xFF;
   int ml=(moda>>8)*0xFF;
   int mr=(moda>>16)*0xFF;
   int ma=m0|ml|mr;
-  static char *MK="SCAWEUH";
   char *p=pb;
   if(ma){
     for(int i=5;i>=0;i--){
@@ -773,7 +778,7 @@ char *mod2s(char*pb,int moda,int lr){
           if(ml&m)*p++='L';
           if(mr&m)*p++='R';
         }
-        *p++=MK[i];
+        *p++=MKSHORT[i];
       }
     }
     *p++='+';
@@ -786,9 +791,6 @@ char *mod2sl(char*pb,int moda,int lr){
   int ml=(moda>>8)*0xFF;
   int mr=(moda>>16)*0xFF;
   int ma=m0|ml|mr;
-  static char *MK[]={
-    "SHIFT","CTRL","ALT","WIN","EXT","SUPER","HYPER"
-  };
   char *p=pb;
   if(ma){
     for(int i=5;i>=0;i--){
@@ -798,7 +800,8 @@ char *mod2sl(char*pb,int moda,int lr){
           if(ml&m)*p++='L';
           if(mr&m)*p++='R';
         }
-        for(char*s=MK[i];*s;)*p++=*s++;
+        for(char*s=MKLONG[i];*s;)*p++=*s++;
+        *p++='+';
       }
     }
   }
@@ -808,7 +811,7 @@ char *mod2sl(char*pb,int moda,int lr){
 
 mod_keys tagmods(const char * k,const char**pn){
   *pn=k; if(!k)return 0;
-  const char*p= strchr(k, '+');
+  const char*p= strrchr(k, '+');
   if(!p)return 0;
   *pn=p+1;
   mod_keys m = 0;
@@ -818,36 +821,56 @@ mod_keys tagmods(const char * k,const char**pn){
       when 'l': { sc=8; continue;}
       when 'r': { sc=16; continue;}
       when 's'  : {
-        if(strncasecmp(k,"SHIFT",5)==0){ 
+        if(strncasecmp(k,"SHIFT+",6)==0){ 
           m |= (MDK_SHIFT<<sc);
-          k+=6; p=strchr(k, '+'); 
-        }else if(strncasecmp(k,"SUPER",4)==0){ 
+          k+=5; 
+        }else if(strncasecmp(k,"SUPER+",6)==0){ 
           m |= (MDK_SUPER<<sc);
-          k+=6; p=strchr(k, '+'); 
+          k+=5; 
         }else m |= (MDK_SHIFT<<sc);
       }
       when 'a':{ 
-        m |= (MDK_ALT  <<sc);
-        if(strncasecmp(k,"ALT",3)==0){ k+=4; p=strchr(k, '+'); }
+        if(strncasecmp(k,"ALT+",4)==0){ 
+          k+=3; 
+          m |= (MDK_ALT  <<sc);
+        }else{
+          m |= (MDK_ALT  <<sc);
+        }
       }
       when 'c':{ 
-        m |= (MDK_CTRL <<sc);
-        if(strncasecmp(k,"CTRL",4)==0){ k+=5; p=strchr(k, '+'); }
+        if(strncasecmp(k,"CTRL+",5)==0){ 
+          k+=4; 
+        }else if(strncasecmp(k,"CAPSLOCK+",9)==0){ 
+          m |= (MDK_CAPSLOCK<<sc);
+          k+=8; 
+        }else if(strncasecmp(k,"CAPS+",5)==0){ 
+          m |= (MDK_CAPSLOCK<<sc);
+          k+=4; 
+        }else m |= (MDK_CTRL <<sc);
       }
       when 'w':{ 
-        m |= (MDK_WIN  <<sc);
-        if(strncasecmp(k,"WIN",3)==0){ k+=4; p=strchr(k, '+'); }
-      }
-      when 'e':{ 
-        m |= (MDK_EXT<<sc);
-        if(strncasecmp(k,"EXT",3)==0){ k+=6; p=strchr(k, '+'); }
+        if(strncasecmp(k,"WIN+",4)==0){ 
+          k+=3; 
+          m |= (MDK_WIN  <<sc);
+        }else m |= (MDK_WIN  <<sc);
       }
       when 'u':{ 
         m |= (MDK_SUPER<<sc);
       }
       when 'h':{ 
-        m |= (MDK_HYPER<<sc);
-        if(strncasecmp(k,"HYPER",5)==0){ k+=6; p=strchr(k, '+'); }
+        if(strncasecmp(k,"HYPER",5)==0){ 
+          k+=6; 
+          m |= (MDK_HYPER<<sc);
+        }else m |= (MDK_HYPER<<sc);
+      }
+      when 'p':{ 
+        m |= (MDK_CAPSLOCK<<sc);
+      }
+      when 'e':{ 
+        if(strncasecmp(k,"EXT+",4)==0){ 
+          k+=3; 
+          m |= (MDK_EXT<<sc);
+        } else m |= (MDK_EXT<<sc);
       }
       otherwise : return -1;
     }
@@ -862,7 +885,7 @@ static void update_mouse(mod_keys mods){
   // unhover (end hovering) if hover modifiers are withdrawn
   if (term.hovering && (char)(mods & ~cfg.click_target_mod) != cfg.opening_mod) {
     term.hovering = false;
-    win_update(false);
+    win_update(0,10);
   }
 
   bool new_app_mouse =
@@ -1289,7 +1312,14 @@ static int win_key_nullify(uchar vk) {
 }
 
 #define dont_debug_def_keys 1
-
+static int ctlkeycode(char c){
+  if (c == '?')
+    return '\177';
+  else if (c == ' ' || (c >= '@' && c <= '_')) {
+    return c & 0x1F;
+  }
+  return ' ';
+}
 static int pick_key_function(wstring key_commands,const char * tag, int n, uint key, mod_keys mods, mod_keys mod0, uint scancode) {
   char * ukey_commands = cs__wcstoutf(key_commands);
   char * cmdp = ukey_commands;
@@ -1374,12 +1404,7 @@ static int pick_key_function(wstring key_commands,const char * tag, int n, uint 
           when '^':
               if(len==2){
                 char cc[2];
-                cc[1] = ' ';
-                if (fct[1] == '?')
-                  cc[1] = '\177';
-                else if (fct[1] == ' ' || (fct[1] >= '@' && fct[1] <= '_')) {
-                  cc[1] = fct[1] & 0x1F;
-                }
+                cc[1]=ctlkeycode(fct[1]);
                 if (cc[1] != ' ') {
                   if (mods & MDK_ALT) {
                     cc[0] = '\e';
@@ -2099,7 +2124,7 @@ bool win_key_down(WPARAM wp, LPARAM lp){
         }
         //printf("->sel %d:%d .. %d:%d\n", term.sel_start.y, term.sel_start.x, term.sel_end.y, term.sel_end.x);
         term.selected = true;
-        win_update(true);
+        win_update(1,87);
       }
       if (term.selection_pending) return true;
       else term.selected = false;
@@ -2215,7 +2240,7 @@ bool win_key_down(WPARAM wp, LPARAM lp){
         if ((signed int)alt_code < 0 || alt_code > 0x10FFFF) {
           win_bell(&cfg);
           alt_state = ALT_NONE;
-        } else win_update(false);
+        } else win_update(0,13);
       } else win_bell(&cfg);
       return true;
     }
@@ -2320,7 +2345,7 @@ bool win_key_down(WPARAM wp, LPARAM lp){
 #endif
       for (int i = 0; i < wlen; i++)
         compose_buf[compose_buflen++] = wbuf[i];
-      win_update(false);
+      win_update(0,14);
 
       uint comp_len = min((uint)compose_buflen, lengthof(composed->kc));
       bool found = false;
@@ -2572,7 +2597,7 @@ bool win_key_down(WPARAM wp, LPARAM lp){
       if (old_alt_state > ALT_ALONE) {
         alt_state = old_alt_state;  // keep alt_state, process key
         alt_code = alt_code / alt_state;
-        win_update(false);
+        win_update(0,15);
       } else if (cfg.old_modify_keys & 1) {
         if (!ctrl)
           esc_if(alt), ch(term.backspace_sends_bs ? '\b' : CDEL);
@@ -2847,7 +2872,7 @@ bool win_key_up(WPARAM wp, LPARAM lp){
        ){
       if (comp_state >= 0){
         comp_state = COMP_ACTIVE;
-        win_update(false);
+        win_update(0,11);
       }
     }
   }
@@ -2909,7 +2934,7 @@ bool win_key_up(WPARAM wp, LPARAM lp){
   // "unhovering" is now handled in update_mouse, based on configured mods
   if (key == VK_CONTROL && term.hovering) {
     term.hovering = false;
-    win_update(false);
+    win_update(0,10);
   }
 #endif
 
@@ -3106,10 +3131,10 @@ void toggle_status_line() {
 }
 static uint mflags_status_line() { return term.st_type == 1 ? MF_CHECKED : term.st_type == 0 ? MF_UNCHECKED : MF_GRAYED; }
 static void cycle_pointer_style() {
-  cfg.cursor_type = (cfg.cursor_type + 1) % 3;
+  cfg.cursor_type = (cfg.cursor_type + 1) % 4;
   term.cursor_invalid = true;
   term_schedule_cblink();
-  win_update(false);
+  win_update(0,12);
 }
 static void transparency_level() {
   if (!transparency_pending) {
@@ -3217,8 +3242,7 @@ struct function_def cmd_defs[] = {
 #include "defkeyfun.h"
   {0}
 };
-static struct function_def *
-function_def(const char * cmd){
+static struct function_def * function_def(const char * cmd){
   struct function_def *p;
   for (p=cmd_defs; p->name; p++)
     if (!strcasecmp(cmd, p->name))
@@ -3256,6 +3280,7 @@ static int fundef_stat(const char*cmd){
 } 
 struct SCKDef{
   int moda,mods;
+  struct function_def *p;
   union {
     WPARAM cmd;
     void *f;
@@ -3294,7 +3319,46 @@ static void desck(struct SCKDef *sckd){
   }
   free(sckd);
 }
-void setsck(int moda,uint key,int ft,void*func){
+
+void setcmdhk(struct function_def *p,int mode,int key,int type,void *func,int set) {
+  int i;
+  if(type>=FT_RAWS)return;
+  if(p&&p->fv!=func) p=NULL;
+  if(set){
+    if(!p){
+      for (p=cmd_defs; p->name; p++)
+        if (p->fv==func)break;
+      if(!p->name)return ;
+    }
+    for(i=0;i<4;i++){
+      if(p->kr[i].key==key&&p->kr[i].mode==mode){
+        return;
+      }
+    }
+    for(i=0;i<4;i++){
+      if(p->kr[i].flg==0){
+        p->kr[i].key=key;
+        p->kr[i].mode=mode;
+        p->kr[i].flg=1;
+      }
+    }
+
+  }else{
+    if(!p){
+      for (p=cmd_defs; p->name; p++)
+        if (p->fv==func)break;
+      if(!p->name)return ;
+    }
+    for(i=0;i<4;i++){
+      if(p->kr[i].key==key&&p->kr[i].mode==mode){
+        p->kr[i].flg=0;
+      }
+    }
+  }
+
+}
+void setsck(struct function_def *p,int moda,uint key,int ft,void*func){
+  if(moda==-1)return;
   struct SCKDef **pp,*n;
   int *pm;
   int mods=modr2s(moda);;
@@ -3316,6 +3380,7 @@ void setsck(int moda,uint key,int ft,void*func){
         m=(n->moda==(moda&0xf));
       }
       if(m){
+        setcmdhk(n->p,n->moda,n->key,n->type,n->f,0);
         *pp=n->next;
         desck(n);  
       }else{
@@ -3343,6 +3408,8 @@ void setsck(int moda,uint key,int ft,void*func){
     n->key=key;
     n->mods=mods;
     n->moda=moda;
+    n->p=p;
+    setcmdhk(p,n->moda,n->key,n->type,n->f,1);
     *pm|=(1<<packmod(mods));
   }
 }
@@ -3449,46 +3516,40 @@ void pstrsck(char*ssck){
           // empty definition (e.g. "A+Enter:;"), shall disable 
           // further shortcut handling for the input key but 
           // trigger fall-back to "normal" key handling (with mods)
-            setsck(mod_cmd,key,FT_NULL,0);
+            setsck(NULL,mod_cmd,key,FT_NULL,0);
       when '"' or '\'' :
           if(fct[len-1]==*fct) {//raww string "xxx" or 'xxx'
             fct[len-1]=0;
             pwstr *s=(pwstr*)malloc(len+2);
             s->len=len-2;
             wcsncpy(s->s,fct+1,len-2);
-            setsck(mod_cmd,key,FT_RAWS,s);
+            setsck(NULL,mod_cmd,key,FT_RAWS,s);
           }
       when '^':
           if(len==2){
-            char cc[2];
-            char c=fct[1];
-            cc[1] = ' ';
-            if (c == '?')
-              cc[1] = '\177';
-            else if (c == ' ' || (c >= '@' && c <= '_')) {
-              cc[1] = fct[1] & 0x1F;
+            char cc;
+            cc=ctlkeycode(fct[1]);
+            if(cc!=' '){
+              pwstr *s=(pwstr*)malloc(3+2);
+              s->len=1; s->s[0]=cc; s->s[1]=0;
+              setsck(NULL,mod_cmd,key,FT_RAWS,s);
             }
-            pwstr *s=(pwstr*)malloc(3+2);
-            s->len=1;
-            s->s[0]=cc[1];
-            s->s[1]=0;
-            setsck(mod_cmd,key,FT_RAWS,s);
           }
       when '`':
           if (fct[len - 1] == '`') {//`shell cmd`
             fct[len - 1] = 0;
             char * cmd = cs__wcstombs(&fct[1]);
             if (*cmd) {
-              setsck(mod_cmd,key,FT_SHEL,cmd);
+              setsck(NULL,mod_cmd,key,FT_SHEL,cmd);
             }
           }
       when '0' ... '9':
           if (sscanf (paramp, "%u%c", & code, &(char){0}) == 1) {//key escape
-            setsck(mod_cmd,key,FT_ESCC,(void*)(long)code);
+            setsck(NULL,mod_cmd,key,FT_ESCC,(void*)(long)code);
           }
       otherwise: {
         struct function_def * fd = function_def(paramp);
-          if(fd)setsck(mod_cmd,key,fd->type,fd->fv);
+          if(fd)setsck(fd,mod_cmd,key,fd->type,fd->fv);
       }
     }
     free(fct);
@@ -3507,15 +3568,11 @@ void win_update_shortcuts(){
     desckk(sckwdef+i);
     desckk(sckdef+i);
   };
-  ;
   for (struct function_def *p=cmd_defs; p->name; p++){
-    int j;
-    for(j=3;j<8;j++){
-      p->k[j]=(struct hkdef){0};
-    }
-    for(int i=0;i<3;i++){
-      int flg=0;
-      switch(p->k[i].flg){
+    for(int i=0;i<4;i++){
+      int flg=p->kr[i].flg;
+      if(flg==0)flg=p->kd[i].flg;
+      switch(flg){
         when 1:flg=1;
         when 2:flg=cfg.window_shortcuts     ;
         when 3:flg=cfg.switch_shortcuts     ;
@@ -3524,15 +3581,11 @@ void win_update_shortcuts(){
         when 6:flg=cfg.alt_fn_shortcuts     ;
         when 7:flg=cfg.ctrl_shift_shortcuts ;
         when 8:flg=cfg.zoom_shortcuts       ;
+        otherwise:flg=0;
       }
       if(flg){
-        for(j=3;j<8;j++){
-          if(p->k[j].flg==0){
-            p->k[j]=p->k[i];
-            break;
-          }
-        }
-        setsck(p->k[i].mode,p->k[i].key,p->type,p->fv);
+        if(p->kr[i].flg==0)p->kr[i]=p->kd[i];
+        setsck(p,p->kr[i].mode,p->kr[i].key,p->type,p->fv);
       }
     }
   }
@@ -3546,9 +3599,9 @@ void helpfuncs(){
   char mbuf[32];
   for (struct function_def *p=cmd_defs; p->name; p++){
     printf("%s: %s\n",p->name,_(p->tip));
-    for(int i=0;i<3;i++){
-      if(p->k[i].flg){
-        printf("\t %s%s\n",mod2s(mbuf,p->k[i].mode,1),vk_name(p->k[i].key));
+    for(int i=0;i<4;i++){
+      if(p->kr[i].flg){
+        printf("\t %s%s %x\n",mod2s(mbuf,p->kr[i].mode,1),vk_name(p->kr[i].key),p->kr[i].mode);
       }
     }
   }

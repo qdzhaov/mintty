@@ -465,7 +465,30 @@ typedef struct SChild {
   int pty_fd;
   struct STerm* pterm;
 }SChild;
+typedef struct SCursor{
+  int tx,ty;
+  cattrflags attr;
+  ushort lattr;
+  colour clr;
+  /*
+  wchar text[16];
+  cattr attr; 
+  cattr textattr[16]; 
+  ushort lattr; 
+  char has_rtl; 
+  char has_sea; 
+  bool clearpad; 
+  */
+}SCursor;
+typedef struct Stermbuf{
+  HDC hdcMem ;
+  HBITMAP hBitmap , hBitmapo ;
+  int valid,w,h;
+}STermbuf;
+
 typedef struct STerm {
+  SCursor sc;
+  STermbuf sb;
   // these used to be in term_cursor, thus affected by cursor restore
   bool decnrc_enabled;  /* DECNRCM: enable NRC */
   bool autowrap;        /* DECAWM: Autowrap mode */

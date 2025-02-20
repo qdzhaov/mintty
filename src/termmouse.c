@@ -527,7 +527,7 @@ term_mouse_click(mouse_button b, mod_keys mods, pos p, int count)
 
   if (term.hovering) {
     term.hovering = false;
-    win_update(true);
+    win_update(1,78);
   }
 
   bool res = true;
@@ -612,7 +612,7 @@ term_mouse_click(mouse_button b, mod_keys mods, pos p, int count)
         term.sel_rect = false;
         term.sel_start = term.sel_end = term.sel_anchor = p;
         sel_spread();
-        win_update(true);
+        win_update(1,82);
       }
       else
         res = false;
@@ -642,7 +642,7 @@ term_mouse_click(mouse_button b, mod_keys mods, pos p, int count)
         sel_spread();
       }
       win_capture_mouse();
-      win_update(true);
+      win_update(1,83);
     }
     else {
       res = false;
@@ -665,7 +665,7 @@ mouse_open(pos p)
     term_open();
   term.selected = false;
   term.hovering = false;
-  win_update(true);
+  win_update(1,79);
 }
 
 void
@@ -813,7 +813,7 @@ sel_scroll_cb(void)
   if (term_selecting() && term.sel_scroll) {
     term_scroll(0, term.sel_scroll);
     sel_drag(get_selpoint(term.sel_pos));
-    win_update(true);
+    win_update(1,84);
     win_set_timer(sel_scroll_cb, 125);
   }
 }
@@ -843,8 +843,7 @@ term_mouse_move(mod_keys mods, pos p)
     bool alt = mods & MDK_ALT;
     term.sel_rect = alt;
     sel_drag(get_selpoint(bp));
-
-    win_update(true);
+    win_update(1,85);
   }
   else if (term.mouse_state == MS_OPENING && 0 == cfg.opening_mod) {
     //printf("term_mouse_move opening mods %X\n", mods);
@@ -871,7 +870,7 @@ term_mouse_move(mod_keys mods, pos p)
 #ifdef link_opening_only_if_unmoved
     term.mouse_state = 0;
     term.selected = false;
-    win_update(true);
+    win_update(1,86);
 #endif
   }
   else if (term.mouse_state > 0) {
@@ -898,12 +897,11 @@ term_mouse_move(mod_keys mods, pos p)
       termline *line = fetch_line(p.y);
       term.hoverlink = line->chars[p.x].attr.link;
       release_line(line);
-      win_update(true);
     }
     else if (term.hovering) {
       term.hovering = false;
-      win_update(true);
     }
+    win_update(1,80);
     //printf("->hovering %d (opening %d)\n", term.hovering, term.mouse_state == MS_OPENING);
     // clear link opening state after hovering out of link area
     if (!term.hovering && term.mouse_state == MS_OPENING)
@@ -918,7 +916,7 @@ term_mouse_wheel(bool horizontal, int delta, int lines_per_notch, mod_keys mods,
 
   if (term.hovering) {
     term.hovering = false;
-    win_update(true);
+    win_update(1,88);
   }
 
   enum { NOTCH_DELTA = 120 };

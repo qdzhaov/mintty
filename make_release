@@ -5,10 +5,10 @@ cwd=`pwd`
 echo $reldir
 vcp(){
   mkdir -p $reldir/mintty/$2
-  cp $1 $reldir/mintty/$2/$3
+  echo copy "$1"
+  cp -pu $1 $reldir/mintty/$2/$3
 }
-set -v
-rm -f $reldir/mintty/share/man/*/*.gz
+rm -f mintty-$VER.*
 vcp cygwin/minttyrc               etc
 vcp bin/mintty.exe                bin
 vcp tools/mintheme                bin
@@ -25,13 +25,15 @@ vcp icon/\*.ico                   usr/share/mintty/icon
 vcp lang/\*.po                    usr/share/mintty/lang
 vcp sounds/\*.wav                 usr/share/mintty/sounds
 vcp themes/\*                     usr/share/mintty/themes
-gzip -r $reldir/mintty/share/man
+gzip -rf $reldir/mintty/usr/share/man
 strip $reldir/mintty/bin/mintty.exe
 cd $reldir
-rm -f mintty-$VER.zip
-zip -r mintty-$VER.zip mintty
+echo zip files
+tar Jcf mintty-$VER.tgz mintty
+zip -qr mintty-$VER.zip mintty
 cd $cwd
 mkdir -p dist
+echo copy to dist
 \cp  $reldir/mintty-$VER.zip dist/mintty.zip
-
-
+\cp  $reldir/mintty-$VER.tgz dist/mintty.tgz
+ls -l dist/mintty*

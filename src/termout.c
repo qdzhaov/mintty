@@ -3420,7 +3420,7 @@ do_csi(uchar c)
         term.modify_other_keys = 0;
     when CPAIR(' ', 'q'):     /* DECSCUSR: set cursor style */
       term.cursor_type = arg0 ? (arg0 - 1) / 2 : -1;
-      term.cursor_blinks = arg0 ? arg0 % 2 : -1;
+      term.cursor_blinks = arg0 ? arg0 & 1 : cfg.cursor_blinks;
       if (term.cursor_blinks)
         term.cursor_blink_interval = arg1;
       term.cursor_invalid = true;
@@ -3930,140 +3930,139 @@ do_dcs(void)
       int status = -1;
 
       switch (term.state) {
-        when DCS_PASSTHROUGH:
-            if (!st)
-              return;
-        status = sixel_parser_parse(st, (unsigned char *)s, term.cmd_len);
-        if (status < 0) {
+        when DCS_PASSTHROUGH:{
+          if (!st) return;
+          status = sixel_parser_parse(st, (unsigned char *)s, term.cmd_len);
+          if (status < 0) {
+            sixel_parser_deinit(st);
+            //printf("free state 1 %p\n", term.imgs.parser_state);
+            free(term.imgs.parser_state);
+            term.imgs.parser_state = NULL;
+            term.state = DCS_IGNORE;
+            return;
+          }
+        }
+        when DCS_ESCAPE:{
+          if (!st) return;
+          status = sixel_parser_parse(st, (unsigned char *)s, term.cmd_len);
+          if (status < 0) {
+            sixel_parser_deinit(st);
+            //printf("free state 2 %p\n", term.imgs.parser_state);
+            free(term.imgs.parser_state);
+            term.imgs.parser_state = NULL;
+            return;
+          }
+
+          unsigned char * pixels = sixel_parser_finalize(st);
+          //printf("sixel_parser_finalize %p\n", pixels);
           sixel_parser_deinit(st);
-          //printf("free state 1 %p\n", term.imgs.parser_state);
-          free(term.imgs.parser_state);
-          term.imgs.parser_state = NULL;
-          term.state = DCS_IGNORE;
-          return;
-        }
+          if (!pixels) {
+            //printf("free state 3 %p\n", term.imgs.parser_state);
+            free(term.imgs.parser_state);
+            term.imgs.parser_state = NULL;
+            return;
+          }
 
-        when DCS_ESCAPE:
-            if (!st)
-              return;
-        status = sixel_parser_parse(st, (unsigned char *)s, term.cmd_len);
-        if (status < 0) {
-          sixel_parser_deinit(st);
-          //printf("free state 2 %p\n", term.imgs.parser_state);
-          free(term.imgs.parser_state);
-          term.imgs.parser_state = NULL;
-          return;
-        }
+          short left = term.curs.x;
+          //zz short top = term.virtuallines + (term.sixel_display ? 0: term.curs.y);
+          short top = term.sixel_display ? 0: term.curs.y;
+          int width = (st->image.width -1 ) / st->grid_width + 1;
+          int height = (st->image.height -1 ) / st->grid_height + 1;
+          int pixelwidth = st->image.width;
+          int pixelheight = st->image.height;
+          //printf("w %d/%d %d h %d/%d %d\n", pixelwidth, st->grid_width, width, pixelheight, st->grid_height, height);
 
-        unsigned char * pixels = sixel_parser_finalize(st);
-        //printf("sixel_parser_finalize %p\n", pixels);
-        sixel_parser_deinit(st);
-        if (!pixels) {
-          //printf("free state 3 %p\n", term.imgs.parser_state);
-          free(term.imgs.parser_state);
-          term.imgs.parser_state = NULL;
-          return;
-        }
+          imglist * img;
+          if (!winimg_new(&img, 0, pixels, 0, left, top, width, height, pixelwidth, pixelheight, false, 0, 0, 0, 0, term.curs.attr.attr & (ATTR_BLINK | ATTR_BLINK2))) {
+            free(pixels);
+            sixel_parser_deinit(st);
+            //printf("free state 4 %p\n", term.imgs.parser_state);
+            free(term.imgs.parser_state);
+            term.imgs.parser_state = NULL;
+            return;
+          }
+          img->cwidth = st->max_x;
+          img->cheight = st->max_y;
 
-        short left = term.curs.x;
-        //zz short top = term.virtuallines + (term.sixel_display ? 0: term.curs.y);
-        short top = term.sixel_display ? 0: term.curs.y;
-        int width = (st->image.width -1 ) / st->grid_width + 1;
-        int height = (st->image.height -1 ) / st->grid_height + 1;
-        int pixelwidth = st->image.width;
-        int pixelheight = st->image.height;
-        //printf("w %d/%d %d h %d/%d %d\n", pixelwidth, st->grid_width, width, pixelheight, st->grid_height, height);
+          fill_image_space(img, false);
 
-        imglist * img;
-        if (!winimg_new(&img, 0, pixels, 0, left, top, width, height, pixelwidth, pixelheight, false, 0, 0, 0, 0, term.curs.attr.attr & (ATTR_BLINK | ATTR_BLINK2))) {
-          free(pixels);
-          sixel_parser_deinit(st);
-          //printf("free state 4 %p\n", term.imgs.parser_state);
-          free(term.imgs.parser_state);
-          term.imgs.parser_state = NULL;
-          return;
-        }
-        img->cwidth = st->max_x;
-        img->cheight = st->max_y;
-
-        fill_image_space(img, false);
-
-        // add image to image list;
-        // replace previous for optimisation in some cases
-        if (term.imgs.first == NULL) {
-          term.imgs.first = term.imgs.last = img;
-        } else {
-          // try some optimization: replace existing images if overwritten
+          // add image to image list;
+          // replace previous for optimisation in some cases
+          if (term.imgs.first == NULL) {
+            term.imgs.first = term.imgs.last = img;
+          } else {
+            // try some optimization: replace existing images if overwritten
 #ifdef debug_sixel_list
-          printf("do_dcs checking imglist\n");
+            printf("do_dcs checking imglist\n");
 #endif
 #ifdef replace_images
 #warning do not replace images in the list anymore
-          // with new flicker-reduce strategy of rendering overlapped images,
-          // new images should always be added to the end of the queue;
-          // completely overlayed images should be collected for removal 
-          // during the rendering loop (winimgs_paint),
-          // or latest when they are scrolled out of the scrollback buffer
-          for (imglist * cur = term.imgs.first; cur; cur = cur->next) {
-            if (cur->pixelwidth == cur->width * st->grid_width &&
-              cur->pixelheight == cur->height * st->grid_height)
-            {
-              // if same size, replace
-              if (img->top == cur->top && img->left == cur->left &&
-                img->width == cur->width &&
-                img->height == cur->height)
+            // with new flicker-reduce strategy of rendering overlapped images,
+            // new images should always be added to the end of the queue;
+            // completely overlayed images should be collected for removal 
+            // during the rendering loop (winimgs_paint),
+            // or latest when they are scrolled out of the scrollback buffer
+            for (imglist * cur = term.imgs.first; cur; cur = cur->next) {
+              if (cur->pixelwidth == cur->width * st->grid_width &&
+                cur->pixelheight == cur->height * st->grid_height)
               {
+                // if same size, replace
+                if (img->top == cur->top && img->left == cur->left &&
+                  img->width == cur->width &&
+                  img->height == cur->height)
+                {
 #ifdef debug_sixel_list
-                printf("img replace\n");
+                  printf("img replace\n");
 #endif
-                memcpy(cur->pixels, img->pixels, img->pixelwidth * img->pixelheight * 4);
-                cur->imgi = img->imgi;
-                winimg_destroy(img);
-                return;
-              }
-              // if new image within area of previous image, ...
+                  memcpy(cur->pixels, img->pixels, img->pixelwidth * img->pixelheight * 4);
+                  cur->imgi = img->imgi;
+                  winimg_destroy(img);
+                  return;
+                }
+                // if new image within area of previous image, ...
 #ifdef handle_overlay_images
 #warning this creates some crash conditions...
-              if (img->top >= cur->top && img->left >= cur->left &&
-                img->left + img->width <= cur->left + cur->width &&
-                img->top + img->height <= cur->top + cur->height)
-              {
-                // inject new img into old structure;
-                // copy img data in stripes, for unknown reason
-                for (y = 0; y < img->pixelheight; ++y) {
-                  memcpy(cur->pixels +
-                         ((img->top - cur->top) * st->grid_height + y) * cur->pixelwidth * 4 +
-                         (img->left - cur->left) * st->grid_width * 4,
-                         img->pixels + y * img->pixelwidth * 4,
-                         img->pixelwidth * 4);
+                if (img->top >= cur->top && img->left >= cur->left &&
+                  img->left + img->width <= cur->left + cur->width &&
+                  img->top + img->height <= cur->top + cur->height)
+                {
+                  // inject new img into old structure;
+                  // copy img data in stripes, for unknown reason
+                  for (y = 0; y < img->pixelheight; ++y) {
+                    memcpy(cur->pixels +
+                           ((img->top - cur->top) * st->grid_height + y) * cur->pixelwidth * 4 +
+                           (img->left - cur->left) * st->grid_width * 4,
+                           img->pixels + y * img->pixelwidth * 4,
+                           img->pixelwidth * 4);
+                  }
+                  cur->imgi = img->imgi;
+                  winimg_destroy(img);
+                  return;
                 }
-                cur->imgi = img->imgi;
-                winimg_destroy(img);
-                return;
+#endif
               }
-#endif
             }
-          }
 #endif
-          // append image to list
-          img->prev = term.imgs.last;
-          term.imgs.last->next = img;
-          term.imgs.last = img;
+            // append image to list
+            img->prev = term.imgs.last;
+            term.imgs.last->next = img;
+            term.imgs.last = img;
+          }
         }
 
-otherwise: {
-             /* parser status initialization */
-             colour fg = win_get_colour(FG_COLOUR_I);
-             colour bg = win_get_colour(BG_COLOUR_I);
-             if (!st) {
-               st = term.imgs.parser_state = calloc(1, sizeof(sixel_state_t));
-               //printf("alloc state %d -> %p\n", (int)sizeof(sixel_state_t), st);
-               sixel_parser_set_default_color(st);
-             }
-             status = sixel_parser_init(st, fg, bg, term.private_color_registers);
-             if (status < 0)
-               return;
-           }
+        otherwise: {
+          /* parser status initialization */
+          colour fg = win_get_colour(FG_COLOUR_I);
+          colour bg = win_get_colour(BG_COLOUR_I);
+          if (!st) {
+            st = term.imgs.parser_state = calloc(1, sizeof(sixel_state_t));
+            //printf("alloc state %d -> %p\n", (int)sizeof(sixel_state_t), st);
+            sixel_parser_set_default_color(st);
+          }
+          status = sixel_parser_init(st, fg, bg, term.private_color_registers);
+          if (status < 0)
+            return;
+        }
       }
     }
 
@@ -4179,7 +4178,7 @@ otherwise: {
             when CPAIR(' ','q'):{  // DECSCUSR (cursor style)
               child_printf(&term,"\eP1$r%u q\e\\", 
                            (term.cursor_type >= 0 ? term.cursor_type * 2 : 0) + 1
-                           + !(term.cursor_blinks & 1));
+                           + !(term.cursor_blinks ));
             } 
             when CPAIR('t',0):
               if (term.rows >= 24) {  // DECSLPP (lines)
@@ -5033,10 +5032,10 @@ term_do_write(const char *buf, uint len, bool fix_status)
 
     if (!tek_mode && (c == 0x1A || c == 0x18)) { // SUB or CAN
       term.state = NORMAL;
-      if (c == 0x1A || strstr(cfg.term, "vt1")) {
+      if (c == 0x1A || strstr(cfg.Term, "vt1")) {
         // display one of ␦ / ⸮ / ▒
         wchar sub = 0x2592;  // ▒
-        if (!strstr(cfg.term, "vt1")) {
+        if (!strstr(cfg.Term, "vt1")) {
           wchar subs[] = W("␦⸮");
           win_check_glyphs(subs, 2, term.curs.attr.attr);
           if (subs[0])

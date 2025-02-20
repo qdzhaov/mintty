@@ -24,7 +24,7 @@
 
 NAME := mintty
 
-exe:
+exe:VERSION
 	#cd src; $(MAKE) exe
 	#cd src; $(MAKE) bin
 	cd src; $(MAKE)
@@ -45,27 +45,38 @@ clean:
 DIST := rel
 TARUSER := --owner=root --group=root --owner=mintty --group=cygwin
 REL := 1
-arch := $(shell uname -m)
 
 #############################################################################
 # release
 
-version := \
-  $(shell echo $(shell echo VERSION | cpp -P $(CPPFLAGS) --include src/appinfo.h))
+#version := $(shell echo VERSION | cpp -P $(CPPFLAGS) --include src/appinfo.h |sed "s/\"//g")
+version := $(shell if test VERSION -nt src/appinfo.h;then  cat VERSION;else echo VERSION | cpp -P $(CPPFLAGS) --include src/appinfo.h |sed "s/\"//g"|tee VERSION ;fi )
 name_ver := $(NAME)-$(version)
 
-changelogversion := $(shell sed -e '1 s,^\#* *\([0-9.]*\).*,\1,' -e t -e d wiki/Changelog.md)
+### 3.7.7 (21 December 2024) ###
 # must not set gitversion via := (would be version before tagging)
-gitversion=$(shell src/mkvertag)
 
+VERSION:src/appinfo.h
+	@if [ -f VERSION ] ;then \
+		mv -f VERSION VERSION.org;\
+		echo $(version) > VERSION ;\
+		if cmp -s VERSION VERSION.org ; then \
+		echo VERSION Update ,need remake ;\
+		rm -f VERSION.org ;\
+			flase;\
+	else ;\
+		echo $(version) > VERSION ;\
+	fi
 ver:
-	echo $(version) > VERSION
 	cd src; $(MAKE) releasever
 
-checkver:
-	echo checking same version in changelog, source, and git
-	test "$(version)" = "$(changelogversion)"
-	test "$(version)" = "$(gitversion)"
+checkver:VERSION
+	@changelogversion = `sed -e '1 s,^\#* *\([0-9.]*\).*,\1,' -e t -e d wiki/Changelog.md` ;\
+		gitversion='git log -n 1  --tags --decorate=short|sed -n "s,^commit .*tag: *\([0-9.]*\).*,\1,p"' ;\
+	echo checking same version in changelog, source, and git ;\
+	echo "$(version)" , "$$changelogversion","$gitversion" ;\
+	test "$(version)" = "$$changelogversion" ;\
+	test "$(version)" = "$$gitversion"
 
 tag:
 	git tag -f $(version)
@@ -91,7 +102,8 @@ cygport := $(name_ver)-$(REL).cygport
 pkg: release checkrelease srcpkg binpkg binver
 
 binver:
-	$(DIST)/$(name_ver)-$(REL).$(arch)/inst/usr/bin/mintty -V | grep "mintty $(version) "
+	arch = ` uname -m` ;\
+	$(DIST)/$(name_ver)-$(REL).$$arch/inst/usr/bin/mintty -V | grep "mintty $(version) "
 
 check:
 	cd src; $(MAKE) check
@@ -161,9 +173,11 @@ binpkg:$(DIST)
 	# but we've already established the explicit archive build,
 	# which records owner/group "mintty/cygwin" in the archives:
 	# binary package:
-	cd $(DIST)/$(name_ver)-$(REL).$(arch)/inst; tar cJf ../$(name_ver)-$(REL).tar.xz $(TARUSER) usr/bin etc usr/share
 	# debug package:
-	cd $(DIST)/$(name_ver)-$(REL).$(arch)/inst; tar cJf ../$(NAME)-debuginfo-$(version)-$(REL).tar.xz $(TARUSER) usr/lib/debug usr/src/debug
+	arch = ` uname -m` ;cwd=`pwd`\
+	cd $$cwd/$(DIST)/$(name_ver)-$(REL).$$arch/inst; \
+	tar cJf ../$(name_ver)-$(REL).tar.xz $(TARUSER) usr/bin etc usr/share;\
+	tar cJf ../$(NAME)-debuginfo-$(version)-$(REL).tar.xz $(TARUSER) usr/lib/debug usr/src/debug 
 
 srcpkg: $(DIST)/$(name_ver)-$(REL)-src.tar.xz
 

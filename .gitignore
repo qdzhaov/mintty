@@ -1,0 +1,16 @@
+.gdbinit
+bin/
+release/
+*.sw[op]
+src/so
+src/po
+*.stackdump
+hotkeydef.txt
+note.txt
+cscope.*
+tags
+cdef
+cdef.*
+appinfo
+appinfo.t
+*~

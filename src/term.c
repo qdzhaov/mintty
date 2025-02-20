@@ -135,7 +135,7 @@ tblink_cb(void)
 {
   term.tblinker = !term.tblinker;
   term_schedule_tblink();
-  win_update(false);
+  win_update(0,1);
 }
 
 static void
@@ -152,7 +152,7 @@ tblink2_cb(void)
 {
   term.tblinker2 = !term.tblinker2;
   term_schedule_tblink2();
-  win_update(false);
+  win_update(0,2);
 }
 
 static void
@@ -176,8 +176,7 @@ term_cursor_type(void)
 static bool
 term_cursor_blinks(void)
 {
-  return term.cursor_blinkmode
-      || (term.cursor_blinks == -1 ? cfg.cursor_blinks : term.cursor_blinks);
+  return term.cursor_blinkmode ||  term.cursor_blinks;
 }
 
 void
@@ -185,7 +184,7 @@ term_hide_cursor(void)
 {
   if (term.cursor_on) {
     term.cursor_on = false;
-    win_update(false);
+    win_update(0,3);
   }
 }
 
@@ -194,7 +193,7 @@ cblink_cb(void)
 {
   term.cblinker = !term.cblinker;
   term_schedule_cblink();
-  win_update(false);
+  win_update(0,0);
 }
 
 void
@@ -210,7 +209,7 @@ static void
 vbell_cb(void)
 {
   term.in_vbell = false;
-  win_update(false);
+	win_update(0,5);
 }
 
 void
@@ -379,7 +378,7 @@ term_reset(bool full)
 
   term.cursor_type = -1;
   term.cursor_size = 0;
-  term.cursor_blinks = -1;
+  term.cursor_blinks = cfg.cursor_blinks ;
   term.cursor_blink_interval = 0;
   if (full) {
     term.blink_is_real = cfg.allow_blinking;
@@ -491,7 +490,7 @@ show_screen(bool other_screen, bool flip)
     term_schedule_cblink();
   }
 
-  win_update(false);
+	win_update(0,6);
 }
 
 /* Return to active screen and reset scrollback */
@@ -2156,7 +2155,7 @@ term_do_scroll(int topline, int botline, int lines, bool sb)
 {
   if (term.hovering) {
     term.hovering = false;
-    win_update(true);
+		win_update(1,77);
   }
 
   // Support scrolling within (multi-line) status area
@@ -3173,6 +3172,7 @@ term_paint(void)
 
     int nlines_progress = 0;
     int total_progress = 0;
+    //printf("P");fflush(stdout);
 
     // Paint all lines, including status area
     for (int i = 0; i < term_allrows; i++) {
@@ -4589,7 +4589,7 @@ term_scroll(int rel, int where)
 {
   if (term.hovering) {
     term.hovering = false;
-    win_update(true);
+		win_update(1,76);
   }
 
   int sbtop = -sblines();
@@ -4621,7 +4621,7 @@ term_scroll(int rel, int where)
     term.disptop = sbtop;
   if (term.disptop > 0)
     term.disptop = 0;
-  win_update(false);
+	win_update(0,7);
 
   if (do_schedule_update) {
     win_schedule_update();

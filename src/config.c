@@ -63,9 +63,8 @@ typedef enum {
   OPT_LIGS   ,    OPT_DPIA,       OPT_PRSC,       OPT_BCKFT,
   OPT_CMT,        OPT_ARR ,       OPT_INT,        OPT_INTP,       
   //0x20 
-  OPT_STR,        OPT_WSTR,       OPT_STRK,       OPT_WSTRK,      
-  OPT_CLR,        OPT_CLRFG,      OPT_FONT,       OPT_STRS,
-  OPT_BFILE,
+  OPT_STR,        OPT_WSTR,       OPT_STRS,       OPT_WSTRS,
+  OPT_CLR,        OPT_CLRFG,      OPT_FONT,       OPT_BFILE,
   OPT_TYPE_MASK = 0x3F,
   OPT_LG = 0x40,
   OPT_THM  = 0x80,
@@ -463,26 +462,12 @@ static int set_opt(int type,void*val_p,const char*val_str,bool from_file){
       }
     }
     when OPT_STR:{
-      ((char *)val_str)[strcspn(val_str, "\r")] = 0;
       strset(val_p, val_str);
     }
-    when OPT_STRK:
-        strset(val_p, val_str);
     when OPT_STRS:{
-      ((char *)val_str)[strcspn(val_str, "\r")] = 0;
       strsadd(val_p,val_str);
     }
     when OPT_WSTR: {
-      wchar * ws;
-      ((char *)val_str)[strcspn(val_str, "\r")] = 0;
-      if (from_file)
-        ws = cs__utforansitowcs(val_str);
-      else
-        ws = cs__mbstowcs(val_str);
-      wstrset(val_p, ws);
-      delete(ws);
-    }
-    when OPT_WSTRK: {
       wchar * ws;
       if (from_file)
         ws = cs__utforansitowcs(val_str);
@@ -555,11 +540,11 @@ static void copy_opt(int type,void*dst_val_p ,void*src_val_p ){
         *(int *)dst_val_p = *(int *)src_val_p;
     when OPT_INTP:
         *(intpair *)dst_val_p = *(intpair *)src_val_p;
-    when OPT_STR or OPT_STRK:
+    when OPT_STR :
         strset(dst_val_p, *(string *)src_val_p);
     when OPT_STRS:
         strscpy(dst_val_p, src_val_p);
-    when OPT_WSTR or OPT_WSTRK:
+    when OPT_WSTR :
         wstrset(dst_val_p, *(wstring *)src_val_p);
     when OPT_CLR:
         *(colour *)dst_val_p = *(colour *)src_val_p;
@@ -603,7 +588,7 @@ static int ischg_opt(int type,const void*val_p,const void*new_val_p){
     when OPT_INTP:
         changed = ((((intpair *)val_p)->x != ((intpair *)new_val_p)->x)||
                    (((intpair *)val_p)->y != ((intpair *)new_val_p)->y));
-    when OPT_STR or OPT_STRK:
+    when OPT_STR :
         changed = strcmp(*(string *)val_p, *(string *)new_val_p);
     when OPT_STRS:{
       strings*p=(strings*)val_p;
@@ -618,7 +603,7 @@ static int ischg_opt(int type,const void*val_p,const void*new_val_p){
         }
       }else changed=1;
     }
-    when OPT_WSTR or OPT_WSTRK:
+    when OPT_WSTR :
         changed = wcscmp(*(wstring *)val_p, *(wstring *)new_val_p);
     when OPT_CLR:
         changed = (*(colour *)val_p != *(colour *)new_val_p);
@@ -658,7 +643,7 @@ static void printOptVar(FILE*file,const char*name,int type,const void*val_p){
         fprintf(file, "%i", *(int *)val_p);
     when OPT_INTP:
         fprintf(file, "%i,%i", ((intpair *)val_p)->x,((intpair *)val_p)->y);
-    when OPT_STR or OPT_STRK:
+    when OPT_STR :
         fprintf(file, "%s", *(string *)val_p);
     when OPT_STRS:{
       strings*p=(strings*)val_p;
@@ -667,7 +652,7 @@ static void printOptVar(FILE*file,const char*name,int type,const void*val_p){
         fprintf(file, "\n%s=%s",name, *(string *)val_p);
       }
     }
-    when OPT_WSTR or OPT_WSTRK: {
+    when OPT_WSTR : {
       char * s = cs__wcstoutf(*(wstring *)val_p);
       fprintf(file, "%s", s);
       delete(s);
@@ -903,7 +888,6 @@ static int set_option(config * p,string name, string val_str, bool from_file) {
 static int parse_option(config * p,string option, bool from_file) {
   const char *eq = strchr(option, '=');
   if (!eq) {
-    ((char *)option)[strcspn(option, "\r")] = 0;
     //__ %s: option name
     opterror(_("Ignoring option '%s' with missing value"), 
              from_file, option, 0);
@@ -1260,47 +1244,45 @@ static void load_messages(config * cfg_p) {
 }
 
 static int load_configr(config * p,string filename,int to_save) {
-  char linebuf[444];
+  char linebuf[4440];
   bool free_filename = false;
   if (*filename == '~' && filename[1] == '/') {
     filename = asform("%s%s", wv.home, filename + 1);
     free_filename = true;
   }
   FILE * file = fopen(filename, "r");
-
   if (free_filename) delete(filename);
   if(!file)return 0;
-
   while (fgets(linebuf, sizeof linebuf, file)) {
-    char * lbuf = linebuf;
+    char *d,*q,*lbuf = linebuf;
     int len;
-    while (len = strlen(lbuf),
-      (len && lbuf[len - 1] != '\n') ||
-      (len > 1 && lbuf[len - 1] == '\n' && lbuf[len - 2] == '\\')
-      ) {
-      if (lbuf == linebuf)lbuf = strdup(lbuf);
-      // append to lbuf
+    while(1){
       len = strlen(lbuf);
-      lbuf = renewn(lbuf, len + sizeof linebuf);
-      if (!fgets(&lbuf[len], sizeof linebuf, file))
-        break;
+      //skip tail space 
+      for(;len;len--) if(!isspace((unsigned char)lbuf[len-1]))break;
+      lbuf[len] = 0;
+      //skip head space 
+      for(q=lbuf;*q;q++)if(!isspace((unsigned char)*q))break;
+      for(d=lbuf;*q;)*d++=*q++;
+      *d=0;
+      if(d[-1]=='\\'){//continue line
+        *--d=0;lbuf=d;
+        if (!fgets(lbuf, sizeof linebuf, file)) break;
+      }else break;
     }
-
-    if (lbuf[len - 1] == '\n') lbuf[len - 1] = 0;
-    if (lbuf[0] == '#' || lbuf[0] == '\0') {
+    if (linebuf[0] == '#' || linebuf[0] == '\0') {
       // preserve comment lines and empty lines
-      if (to_save) remember_file_comment(lbuf);
+      if (to_save) remember_file_comment(linebuf);
     } else {
       // apply config options
-      int i = parse_option(p,lbuf, true);
+      int i = parse_option(p,linebuf, true);
       if (to_save) {
         // remember config options for saving
         if (i >= 0) remember_file_option("load", i);
         // preserve unknown options as comment lines
-        else remember_file_comment(lbuf);
+        else remember_file_comment(linebuf);
       }
     }
-    if (lbuf != linebuf) delete(lbuf);
   }
   fclose(file);
   return 1;
@@ -3162,33 +3144,31 @@ extern string vk_name(uint key);
 extern char *mod2s(char*pb,int moda,int lr);
 struct HotkeyData{
   control *name,*tip;
-  control *hk[3];
+  control *hk[4];
   control *lr,*set;
   control *hkl;
   int lrflg,ind;
-  int hkchged[3];
+  int hkchged[4];
   int mflgs,nflgs;
   int *flgs;
 }hd;
-extern void setsck(int moda,uint key,int ft,void*func);
 extern mod_keys str2key(const char * k,int*key);
 static void hotkey_handlers(control *ctrl,int cid, int event,LPARAM lp) {
   (void)cid;(void)ctrl;(void)lp;
   if (event == EVENT_ACTION){
     struct function_def *p=cmd_defs+hd.ind;
-    for(int i=0;i<3;i++){
-      int i1=i+3;
+    for(int i=0;i<4;i++){
       char mbuf[128];
       if(hd.hkchged[i]){
-        if(p->k[i1].flg){
-          setsck(p->k[i1].mode,p->k[i1].key,0,NULL);
+        if(p->kr[i].flg){
+          setsck(p,p->kr[i].mode,p->kr[i].key,0,NULL);
         }
         dlg_hotkey_get(hd.hk[i],mbuf,128);
-        p->k[i1].flg=1;
+        p->kr[i].flg=1;
         int key;
-        p->k[i1].mode=str2key(mbuf,&key);
-        p->k[i1].key=key;
-        setsck(p->k[i1].mode,p->k[i1].key,p->type,p->fv);
+        p->kr[i].mode=str2key(mbuf,&key);
+        p->kr[i].key=key;
+        setsck(p,p->kr[i].mode,p->kr[i].key,p->type,p->fv);
       }
     }
   }
@@ -3206,13 +3186,12 @@ static void hotkey_handlerl(control *ctrl,int cid, int event,LPARAM lp) {
     dlg_label_setW(hd.name,_W(p->name));
     dlg_label_setW(hd.tip ,_W(p->tip ));
     char mbuf[128];
-    for(int i=0;i<3;i++){
-      int i1=i+3;
+    for(int i=0;i<4;i++){
       hd.hkchged[i]=0;
-      printf("KEY:%s %d %x %s %x%s \n",mbuf,p->k[i1].flg,p->k[i1].mode,mod2s(mbuf,p->k[i1].mode,1),p->k[i1].key,vk_name(p->k[i1].key));
-      if(p->k[i1].flg){
-        mod2s(mbuf,p->k[i1].mode,1);
-        strcat(mbuf,vk_name(p->k[i1].key));
+      printf("KEY:%s %d %x %s %x%s \n",mbuf,p->kr[i].flg,p->kr[i].mode,mod2s(mbuf,p->kr[i].mode,1),p->kr[i].key,vk_name(p->kr[i].key));
+      if(p->kr[i].flg){
+        mod2s(mbuf,p->kr[i].mode,1);
+        strcat(mbuf,vk_name(p->kr[i].key));
         dlg_hotkey_set(hd.hk[i],mbuf);
       }else{
         mbuf[0]=0;
@@ -3223,25 +3202,27 @@ static void hotkey_handlerl(control *ctrl,int cid, int event,LPARAM lp) {
     int j;
     struct function_def *p;
     char mbuf[32];
-    wchar buf[3][128];
-    wstring text[5];
-    for(int i=0;i<3;i++) text[i+2]=buf[i];
+    wchar buf[4][128];
+    wstring text[6];
+    for(int i=0;i<4;i++) text[i+2]=buf[i];
     for (p=cmd_defs,j=0; p->name; p++,j++){
       text[0]=_w(p->name);
       text[1]=_W(p->tip);
-      for(int i=0;i<3;i++){
-        int i1=i+3;
+      for(int i=0;i<4;i++){
         buf[i][0]=0;
-        if(p->k[i1].flg){
-          swprintf(buf[i],128,W("%s%s\n"),mod2s(mbuf,p->k[i1].mode,1),vk_name(p->k[i1].key));
+        if(p->kr[i].flg){
+          swprintf(buf[i],128,W("%s%s\n"),mod2s(mbuf,p->kr[i].mode,1),vk_name(p->kr[i].key));
         }
       }
-      dlg_listview_adds(ctrl,j,5,text,(LPARAM)p);
+      dlg_listview_adds(ctrl,j,6,text,(LPARAM)p);
     }
-    hd.mflgs=j+10; hd.nflgs=j;
-    hd.flgs=newn(int,hd.mflgs);
-    memset(hd.flgs,0,sizeof(int)*hd.mflgs);
-    for(int i=0;i<3;i++)hd.hkchged[i]=0;
+    hd.nflgs=j;
+    if(hd.nflgs>=hd.mflgs){
+      hd.mflgs=j+10; 
+      hd.flgs=newn(int,hd.mflgs);
+      memset(hd.flgs,0,sizeof(int)*hd.mflgs);
+    }
+    for(int i=0;i<4;i++)hd.hkchged[i]=0;
     enable_widget(hd.set,0);
   }
 }
@@ -3249,9 +3230,9 @@ static void hotkey_handlerk(control *ctrl,int cid, int event,LPARAM lp) {
   (void)cid;(void)ctrl;(void)lp;
   if (event == EVENT_VALCHANGE){
     int ind=0;
-    for(int i=0;i<3;i++) if(ctrl==hd.hk[i])ind=i;
+    for(int i=0;i<4;i++) if(ctrl==hd.hk[i])ind=i;
     printf("val_change %d\n",ind);
-    for(int i=0;i<3;i++) if(ctrl==hd.hk[i])hd.hkchged[i]=1;
+    for(int i=0;i<4;i++) if(ctrl==hd.hk[i])hd.hkchged[i]=1;
     enable_widget(hd.set,1);
   }
 }
@@ -3422,7 +3403,7 @@ void setup_config_box(controlbox * b) {
         hd.name=ctrl_label(s,0,W(""),0);
         hd.tip=ctrl_label(s,1,W(""),0);
         ctrl_columns(s, 3, 33,33,33);
-        for(int i=0;i<3;i++){
+        for(int i=0;i<4;i++){
           swprintf(buf,6,W("%d:"),i);
           hd.hk[i]=ctrl_hotkey( s,i, buf,0,80, hotkey_handlerk, &hd.lrflg);
         }

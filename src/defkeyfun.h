@@ -10,7 +10,7 @@
 #define HK2(f,m,k,f1,m1,k1) {{m,f,k},{m1,f1,k1},{0}}
 #define HK3(f,m,k,f1,m1,k1,f2,m2,k2) {{m,f,k},{m1,f1,k1},{m2,f2,k2}}
 #define MF(a) mflags_##a
-#define DFDZ(l,n,f,t,s,K) {l,n,t,.fv=(void*)f,s,tip_##f,K},
+#define DFDZ(l,n,f,t,s,K) {l,n,t,.fv=(void*)f,s,tip_##f,K,HK0()},
 //Window Oprator
   DFDZ(5,"move"                ,SC_MOVE              ,FT_CMD , 0,              HK0())
   DFDZ(5,"resize"              ,SC_SIZE              ,FT_CMD , 0,              HK0())

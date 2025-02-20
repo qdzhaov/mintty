@@ -67,6 +67,10 @@ typedef struct {
 #ifdef CFGDEFT  
 #undef CFGDEFT  
 #endif
+struct HKDef{
+    int mode;
+    unsigned char flg,key;
+};
 struct function_def {
   int level;
   string name;
@@ -84,10 +88,8 @@ struct function_def {
   uint (*fct_status)(void);
   char*tip;
   //int p0,p1;
-  struct hkdef{
-    int mode;
-    unsigned char flg,key;
-  }k[8];
+  struct HKDef kd[4];
+  struct HKDef kr[4];
   /*type :
    * 1: cmd;
    * 2: fct();

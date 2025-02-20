@@ -3,7 +3,7 @@
 # parameter: version extraced from source
 version="$*"
 # time stamp
-date=`date +%Y-%m-%d_%H:%M`
+date=`date +%Y-%m-%d_%H:00`
 
 # if building inside git, derive build tag from git status
 if git rev-parse	# --git-dir or --is-inside-work-tree, not needed

@@ -201,7 +201,7 @@ extern void provide_input(wchar);
 extern bool win_key_down(WPARAM, LPARAM);
 extern bool win_whotkey(WPARAM, LPARAM);
 extern void win_update_shortcuts();
-extern void setsck(int moda,uint key,int ft,void*func);
+extern void setsck(struct function_def *p,int moda,uint key,int ft,void*func);
 extern bool win_key_up(WPARAM, LPARAM);
 extern void do_win_key_toggle(int vk, bool on);
 extern void win_csi_seq(const char * pre, const char * suf);

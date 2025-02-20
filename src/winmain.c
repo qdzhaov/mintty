@@ -2745,12 +2745,12 @@ win_proc(HWND wnd, UINT message, WPARAM wp, LPARAM lp)
           when IDM_TOGCHARINFO: toggle_charinfo();
           when IDM_TOGVT220KB: toggle_vt220();
           when IDM_PASTE: win_paste();
-          when IDM_SELALL: term_select_all(); win_update(false);
+          when IDM_SELALL: term_select_all(); win_update(0,16);
           when IDM_RESET or IDM_RESET_NOASK:
               if ((wp & ~0xF) == IDM_RESET_NOASK || !cfg.confirm_reset || confirm_reset()) {
                 winimgs_clear();
                 term_reset(true);
-                win_update(false);
+                win_update(0,17);
                 if (tek_mode)
                   tek_reset();
               }
@@ -3144,7 +3144,7 @@ win_proc(HWND wnd, UINT message, WPARAM wp, LPARAM lp)
         wv.clipboard_token = false;
       else {
         term.selected = false;
-        win_update(false);
+        win_update(0,18);
       }
       return 0;
     }
@@ -3263,7 +3263,7 @@ win_proc(HWND wnd, UINT message, WPARAM wp, LPARAM lp)
       term_set_focus(true, false);
       win_sys_style(true);
       CreateCaret(wnd, caretbm, 0, 0);
-      win_update(false);
+      win_update(0,19);
       ShowCaret(wnd);
       wv.zoom_token = -4;
     }
@@ -3273,7 +3273,7 @@ win_proc(HWND wnd, UINT message, WPARAM wp, LPARAM lp)
       win_sys_style(false);
       win_hide_tip();
       DestroyCaret();
-      win_update(false);
+      win_update(0,20);
     }
     when WM_INITMENU:{
       // win_update_menus is already called before calling TrackPopupMenu

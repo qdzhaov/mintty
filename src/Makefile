@@ -24,6 +24,7 @@
 #############################################################################
 DEBUG ?=0
 #TARGET=x86_64-w64-mingw32
+#TARGET ?= x86_64-pc-cygwin
 NAME := mintty
 
 all:	bin 
@@ -93,8 +94,7 @@ ifndef RELEASE
   endif
 endif
 
-srcversion := \
-  $(shell echo $(shell echo VERSION | cpp -P $(CPPFLAGS) --include appinfo.h))
+srcversion := $(shell if test ../VERSION -nt appinfo.h;then  cat ../VERSION;else echo VERSION | cpp -P $(CPPFLAGS) --include src/appinfo.h |sed "s/\"//g"| tee ../VERSION ;fi )
 name_ver := $(NAME)-$(srcversion)
 DDBG=
 #-include ddbg
@@ -129,9 +129,10 @@ CFLAGS +=  -std=gnu99  -Wall -Wextra -Wundef  \
 # verify additional flags that are also injected into pkg build by cygport
 CFLAGS += -Wformat-security
 
-ifeq ($(shell VER=`$(CC) -dumpversion`; expr $${VER%%.*} '>=' 5), 1)
-  CFLAGS += -mtune=atom $(SECUR)
-endif
+#ifeq ($(shell VER=`$(CC) -dumpversion`; expr $${VER%%.*} '>=' 5), 1)
+#  CFLAGS += -mtune=atom $(SECUR)
+#endif
+CFLAGS += -mtune=atom $(SECUR)
 
 scriptlib=-lusp10
 #downldlib=-lurlmon
@@ -141,9 +142,8 @@ ifneq ($(platform), msys)
   emojilib=-lgdiplus
 endif
 extralibs=$(scriptlib) $(downldlib) $(emojilib) -lshlwapi
-LDFLAGS := -L$(shell $(CC) -print-file-name=w32api) -static-libgcc
+LDFLAGS := -L$(shell cd `$(CC) -print-file-name=w32api`;pwd ) $(LDFLAGS) -static-libgcc
 LDLIBS := -mwindows $(extralibs) $(MWLIB) -lcomctl32 -limm32 -lwinmm -lwinspool -lole32 -luuid -lmpr
-#override LDFLAGS += -L$(shell $(CC) -print-file-name=w32api) -static-libgcc
 #override LDLIBS += -mwindows $(extralibs) -lcomctl32 -limm32 -lwinmm -lwinspool -lole32 -luuid
 
 ifeq ($(DEBUG), 1)
@@ -174,9 +174,8 @@ CCFLAGS:=$(CFLAGS) $(CCOPT)
 
 GCHF=$(BINDIR)/std.hh.gch
 
-$(GCHF): std.h $(BINDIR)/cfck.t
-	$(CC) -c $(DEPOPT) $(CCFLAGS) $(CPPFLAGS) -fstack-check $< -o $@.n
-	mv $@.n $@
+$(GCHF): std.h stamp $(BINDIR)/cfck.t
+	$(CC) -c $(DEPOPT) $(CCFLAGS) $(CPPFLAGS) -fstack-check $< -o $@
 
 $(objs): $(GCHF)
 
@@ -203,29 +202,39 @@ $(BINDIR)/%.o: %.rc %.h %.mft
 	$(CC) -E -xc -DRC_INVOKED $(DEPOPT) $(CPPFLAGS) $< | $(RC) -c 65001 -o $(BINDIR)/$*.o
 	-mv $*.d $(BINDIR)/
 
-gitversion := $(shell ./mkvertag "$(srcversion)")
 
-#appinfo.t:	stamp
 
-stamp:$(BINDIR)/cfck cdef.n appinfo.t 
+stamp:$(BINDIR)/cfck.t cdef.t appinfo.t 
+cdef.t:cdef
+cdef: configdef.h
+	gcc -DCFGDEFT=DEFVAR -P -E $<|sed '/^ *$$/d'>$@ ;\
+	[ -e $@.t ] || /bin/cp $@  $@.t ;\
+	cmp -s $@  $@.t || /bin/cp $@  $@.t
 
-cdef.n: configdef.h
-	gcc -DCFGDEFT=DEFVAR -P -E configdef.h|sed '/^ *$$/d'>cdef.n
-	cmp cdef.t cdef.n || /bin/cp cdef.n cdef.t
-
+$(BINDIR)/cfck.t:$(BINDIR)/cfck
 $(BINDIR)/cfck:Makefile
-	@echo $(DEPOPT) $(CCFLAGS) $(CPPFLAGS) > $@
-	@cmp $@  $@.t || /bin/cp $@  $@.t
+	@echo $(DEPOPT) $(CCFLAGS) $(CPPFLAGS) > $@ ;\
+	[ -e $@.t ] || /bin/cp $@  $@.t ;\
+	cmp -s $@  $@.t || /bin/cp $@  $@.t
 
-appinfo.t:$(c_srcs) $(h_srcs) $(rc_srcs)
-	@echo "#define VERSION_STAMP \"$(gitversion)\"" > appinfo.n
-	@cmp appinfo.n appinfo.t  || /bin/cp appinfo.n appinfo.t
+../VERSION:appinfo.h
+	echo VERSION | cpp -P $(CPPFLAGS) --include $< |sed "s/\"//g" > $@
+appinfo.t:appinfo
+#gitversion := $(shell ./mkvertag "$(srcversion)")
+#		"$(cat VERSION) $$(date +%Y-%m-%d_%H:00)" 
+appinfo:$(c_srcs) $(h_srcs) $(rc_srcs) ../VERSION
+	@gv=`./mkvertag $(srcversion)` ;\
+	echo "#define VERSION_STAMP \"$$gv\"" > $@ ;\
+	[ -e $@.t ] || /bin/cp $@  $@.t ;\
+	cmp -s $@  $@.t || /bin/cp $@  $@.t
+
+
+$(BINDIR)/cfck.t:$(BINDIR)/cfck
 
 exe := $(NAME).exe
 exe: $(exe)
 $(exe): $(objs)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) $(LDOPT) -o $@
-	#-du -b $@
 
 bin := $(BINDIR)/$(NAME).exe
 bin: $(BINDIR) stamp $(bin)
@@ -233,13 +242,8 @@ $(BINDIR):
 	mkdir -p $(BINDIR)
 $(bin): $(bins)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) $(LDOPT) -o $@
-	cp -f $@ $(BINFOLDER)/		# for 'dobin' install in .cygport
-	# support simpler debugging:
-	-test -f `basename $@` && cp -fp $@ ./ || true
-	# report size of exe:
-	#-type du && du -b $@ || true
+	cp -f $@ $(BINFOLDER)/		
 
-#-include $(wildcard *.d)
 -include $(wildcard $(BINDIR)/*.d)
 
 #############################################################################
@@ -286,9 +290,9 @@ ambiguous.t:	# WIDTH-A # UnicodeData.txt Blocks.txt
 	sh ./mkwidthA
 	uniset +WIDTH-A -cat=Me -cat=Mn -cat=Cf c > ambiguous.t
 
-combdouble=$(shell sed -e "s,^\([^;]*\);.*Mn;23[34];.*, +\1," -e t -e d UnicodeData.txt )
 
 combdouble.t:	# UnicodeData.txt Blocks.txt
+	combdouble=$(sed -e "s,^\([^;]*\);.*Mn;23[34];.*, +\1," -e t -e d UnicodeData.txt );\
 	uniset $(combdouble) c > combdouble.t
 
 WIDTH-A:	# UnicodeData.txt Blocks.txt EastAsianWidth.txt
@@ -329,8 +333,7 @@ unicode:	UnicodeData.txt Blocks.txt EastAsianWidth.txt
 #full-emoji-list.html:
 #	$(WGET) http://www.unicode.org/emoji/charts/$@
 
-univer = `sed -e '/^\# Blocks-/ s,[^0-9]*\([0-9]*\)\.\([0-9]\)\.\([0-9]\)[^0-9]*,\1.\2.\3,' -e t -e d Blocks.txt`
-unibasever = `sed -e '/^\# Blocks-/ s,[^0-9]*\([0-9]*\)\..*,\1.0,' -e t -e d Blocks.txt`
+univer = $(shell sed -e '/^\# Blocks-/ s,[^0-9]*\([0-9]*\)\.\([0-9]\)\.\([0-9]\)[^0-9]*,\1.\2.\3,' -e t -e d Blocks.txt)
 
 # Emoji version may advance Unicode version
 #emojiver = $(unibasever)
@@ -341,6 +344,7 @@ emojiver = `sed -e 's,^\#.*Emoji Version \([0-9][0-9.]*\).*,\1,' -e t -e d emoji
 
 
 # until 12.0:
+#unibasever = `echo $(univer )|sed -e 's,[^0-9]*\([0-9]*\)\..*,\1.0,'`
 #emoji-%.txt:	Blocks.txt
 #	$(WGET) http://www.unicode.org/Public/emoji/$(unibasever)/$@
 # from 13.0:
@@ -354,24 +358,21 @@ emoji-data.txt:	Blocks.txt
 	$(WGET) http://www.unicode.org/Public/$(univer)/ucd/emoji/$@
 emoji-variation-sequences.txt:	Blocks.txt
 	$(WGET) http://www.unicode.org/Public/$(univer)/ucd/emoji/$@
-
-unicodever = $(shell sed -e '/^\# Blocks-/ s,[^0-9]*\([0-9]*\)\.\([0-9]\)\.\([0-9]\)[^0-9]*,\1\2\3,' -e t -e d Blocks.txt)
-univer = $(shell sed -e '/^\# Blocks-/ s,[^0-9]*\([0-9]*\)\.\([0-9]\)\.\([0-9]\)[^0-9]*,\1.\2.\3,' -e t -e d Blocks.txt)
-x11ver = $(shell cygcheck -f /usr/share/X11/locale/en_US.UTF-8/Compose | sed -e "s,^[^-]*-,," -e "s,-.*,,")
+#Blocks.txt:	
+#	$(WGET) http://www.unicode.org/Public/$(univer)/ucd/$@
 
 releasever:
 	sed -e 's,\(Mintty .*\)`.*`,\1`$(srcversion)`,' -i ../wiki/Versions.md
 
 unicodever.t:	Blocks.txt
-	echo "#define UNICODE_VERSION $(unicodever)" > unicodever.t
+	echo $(univer)|sed -e 's,[^0-9]*\([0-9]*\)\.\([0-9]\)\.\([0-9]\)[^0-9]*,#define UNICODE_VERSION \1\2\3,'` >$@
 	sed -e 's,\(Unicode .*\)`.*`,\1`$(univer)`,' -i ../wiki/Versions.md
 
 univer:	Blocks.txt
-	echo univer: $(univer)
-	echo unibasever: $(unibasever)
-	echo unicodever: $(unicodever)
-	echo emojiver: $(emojiver)
-
+	@echo univer: $(univer)
+	@echo unicodever: $(univer)
+	@echo emojiver: $(emojiver)
+att:
 %.txt:
 	$(WGET) http://www.unicode.org/Public/UNIDATA/$@
 
@@ -386,20 +387,22 @@ emojiseqs.t:	# emoji-sequences.txt emoji-zwj-sequences.txt emoji-test.txt
 
 composed.t:	# $(compose_list) $(keysymdefs)
 	sh ./mkcomposedt > composed.t
-	sed -e 's,\(X11 .*\)`.*`,\1`$(x11ver)`,' -i ../wiki/Versions.md
+	x11ver = `cygcheck -f /usr/share/X11/locale/en_US.UTF-8/Compose | sed -e "s,^[^-]*-,," -e "s,-.*,,"`;\
+	sed -e 's,\(X11 .*\)`.*`,\1`$$x11ver`,' -i ../wiki/Versions.md
 
 XGETTEXT_OPTS=--package-name=mintty #--package-version=$(srcversion)
 XGETTEXT_OPTS+=--msgid-bugs-address=https://github.com/mintty/mintty/issues/700
 pot_srcs=$(c_srcs) appinfo.h configdef.h funtips.h defkeyfun.h 
-_:	localization #checkloc
-localization:	../lang/messages.pott ../lang/zh_CN.po
 
-../lang/messages.pott:$(pot_srcs) 
+_:	localization #checkloc
+localization:	../lang/messages ../lang/zh_CN.po
+
+../lang/messages:$(pot_srcs) 
 	@mkdir -p ../lang
 	xgettext --from-code=UTF-8 -k_ -k_W -k__ -c__ $(XGETTEXT_OPTS) $(pot_srcs) *.c -o- \
-		| grep -v "^#, c-format" > ../lang/messages.pott
-	@cd ../lang; if ! diff -I POT-Creation-Date messages.pot messages.pott > /dev/null; then\
-	 	/bin/cp messages.pott messages.pot;  fi
+		| grep -v "^#, c-format" > $@ 
+	@cd ../lang; if ! diff -I POT-Creation-Date $@.pot $@ > /dev/null; then\
+	 	/bin/cp $@ $@.pot;  fi
 
 ../lang/zh_CN.po:../lang/messages.pot
 	@cd ../lang; for po in *.po; do if [ "$$po" != en.po ] ;then \
@@ -513,12 +516,13 @@ target:
 getappinfo=$(shell echo "$(1)" ; echo "$(1)" | cpp -P $(CPPFLAGS) --include appinfo.h)
 
 ver:
-	echo "$(call getappinfo,VERSION)"
-	echo "$(call getappinfo,POINT_VERSION)"
-	echo "$(call getappinfo,COMMA_VERSION)"
-	echo "$(call getappinfo,DECIMAL_VERSION)"
-	echo src version $(srcversion)
-	echo version_stamp $(gitversion)
+	echo $(getappinfo)
+	@echo "$(call getappinfo,VERSION)";\
+	echo "$(call getappinfo,POINT_VERSION)";\
+	echo "$(call getappinfo,COMMA_VERSION)";\
+	echo "$(call getappinfo,DECIMAL_VERSION)";\
+	echo src version $(srcversion);\
+	echo version_stamp `./mkvertag "$(srcversion)"`
 
 #############################################################################
 # end
