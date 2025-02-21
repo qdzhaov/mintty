@@ -2169,7 +2169,7 @@ void
 win_reconfig(void)
 {
   trace_resize(("--- win_reconfig\n"));
- /* Pass new config data to the terminal */
+  /* Pass new config data to the terminal */
   term_reconfig();
 
   bool font_changed =
@@ -4305,6 +4305,7 @@ void pcygargv(int login){
 static char * lappdata = 0;
 static STARTUPINFOW sui;
 extern void initvkname();
+extern void init_emoji();
 int LoadConfig(){
   // Load config files
   // try global config file
@@ -4376,6 +4377,7 @@ int LoadConfig(){
       fprintf(stderr,"WSL distribution '%s' not found\n", cfg.wslname);
   }
   initvkname();
+  init_emoji();
   for (;;) {
     int opt = cfg.short_long_opts
       ? getopt_long_only(argc, (char**)argv, short_opts, opts, 0)

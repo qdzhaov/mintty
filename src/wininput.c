@@ -3601,7 +3601,7 @@ void helpfuncs(){
     printf("%s: %s\n",p->name,_(p->tip));
     for(int i=0;i<4;i++){
       if(p->kd[i].flg){
-        printf("\t %s%s %x\n",mod2s(mbuf,p->kr[i].mode,1),vk_name(p->kr[i].key),p->kr[i].mode);
+        printf("\t %s%s \n",mod2s(mbuf,p->kd[i].mode,1),vk_name(p->kd[i].key));
       }
     }
   }

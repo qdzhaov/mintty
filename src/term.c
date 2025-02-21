@@ -639,7 +639,6 @@ static struct {
 #define init_case_folding()
 
 #endif
-
 static uint
 case_fold(uint ch)
 {
@@ -2401,6 +2400,7 @@ term_erase(bool selective, bool line_only, bool from_begin, bool to_end)
 #define EM_emoj 8
 #define EM_base 16
 
+#define EMOSHORT
 struct emoji_base {
   wchar * efn;  // image filename
   void * buf;  // cached image
@@ -2410,17 +2410,44 @@ struct emoji_base {
     uint tags: 11;
   } __attribute__((packed));
 };
-
-struct emoji_base emoji_bases[] = {
+#ifndef EMOSHORT
+static struct emoji_base emoji_bases[]={
+#define EMOBASE(ch,tags) {0,0,0,{ch,tags}},
 #include "emojibase.t"
+#undef EMOBASE
 };
-
+#define nemoji_bases lengthof(emoji_bases)
+#define init_emoji_bases()
+#else
+static struct Semoji_base {
+    xchar ch: 21;
+    uint tags: 11;
+} __attribute__((packed)) semoji_bases[] = {
+#define EMOBASE(ch,tags) {ch,tags},
+#include "emojibase.t"
+#undef EMOBASE
+};
+static uint nemoji_bases=0;
+static struct emoji_base *emoji_bases;
+void init_emoji_bases(){
+  if(nemoji_bases>0)return;
+  nemoji_bases= lengthof(semoji_bases);
+  emoji_bases=newn(struct emoji_base,nemoji_bases);
+  memset(emoji_bases,0,sizeof(*emoji_bases)*nemoji_bases);
+  uint i;
+  for(i=0;i<nemoji_bases;i++){
+    emoji_bases[i].ch=semoji_bases[i].ch;
+    emoji_bases[i].tags=semoji_bases[i].tags;
+  }
+}
+#endif
 static int
 emoji_idx(xchar ch)
 {
   // binary search in table
+  init_emoji_bases();
   int min = 0;
-  int max = lengthof(emoji_bases);
+  int max = nemoji_bases;
   int mid;
   while (max >= min) {
     mid = (min + max) / 2;
@@ -2466,12 +2493,55 @@ struct emoji_seq {
   echar chs[10]; // code points
   char * name;   // short name in emoji-sequences.txt, emoji-zwj-sequences.txt
 };
-
-struct emoji_seq emoji_seqs[] = {
-// Note that shorter sequences are expected to be sorted behind longer ones!
+#ifndef EMOSHORT
+static struct emoji_seq emoji_seqs[]={
+#define EC(V, ...) {V, ##__VA_ARGS__}
+#define EMJSEQ(A,N) {0,0,0,A,N},
 #include "emojiseqs.t"
+#undef EC 
+#undef EMJSEQ
+}
+#define init_emoji_seqs()
+#define nemoji_seqs lengthof(emoji_seq)
+#else
+uint nemoji_seqs=0;
+static struct emoji_seq *emoji_seqs;
+static echar semoji_seq[]={
+#define EC(V, ...) V, ##__VA_ARGS__,0
+#define EMJSEQ(A,N) A,
+#include "emojiseqs.t"
+#undef EC 
+#undef EMJSEQ
 };
+#ifdef EMOJI_NAME
+static char *semoji_name[]={
+#define EMJSEQ(A,N) N,
+#include "emojiseqs.t"
+#undef EMJSEQ
+};
+#endif
+static void init_emoji_seqs(){
+  if(nemoji_seqs!=0)return;
+  uint i,j,k,nn=lengthof(semoji_seq);
+  for(i=0;i<nn;i++){
+    if(semoji_seq[i]==0)nemoji_seqs++;
+  }
 
+  emoji_seqs=newn(struct emoji_seq ,nemoji_seqs);
+  memset(emoji_seqs,0,sizeof(*emoji_seqs)*nemoji_seqs);
+  for(i=0,j=0,k=0;i<nn;i++){
+    if(semoji_seq[i]==0){
+#ifdef EMOJI_NAME
+      emoji_seqs[j].name=semoji_name[i];
+#else
+      emoji_seqs[j].name="NONAME";
+#endif
+      j++;k=0;continue;
+    }
+    emoji_seqs[j].chs[k++]=semoji_seq[i];
+  }
+}
+#endif
 struct emoji_dyn {
   wchar * efn;   // image filename
   void * buf;    // cached image
@@ -2479,7 +2549,10 @@ struct emoji_dyn {
   uint len;      // code points
   echar * chs;   // code points
 };
-
+void init_emoji(){
+  init_emoji_bases();
+  init_emoji_seqs();
+}
 struct emoji_dyn * emoji_dyns = 0;
 static uint nemoji_dyns = 0;
 
@@ -2496,7 +2569,9 @@ struct emoji {
 void
 clear_emoji_data()
 {
-  for (uint i = 0; i < lengthof(emoji_bases); i++) {
+  init_emoji_bases();
+  init_emoji_seqs();
+  for (uint i = 0; i < nemoji_bases; i++) {
     if (emoji_bases[i].efn) {
       delete(emoji_bases[i].efn);
       emoji_bases[i].efn = 0;
@@ -2507,7 +2582,7 @@ clear_emoji_data()
       emoji_bases[i].buflen = 0;
     }
   }
-  for (uint i = 0; i < lengthof(emoji_seqs); i++) {
+  for (uint i = 0; i < nemoji_seqs; i++) {
     if (emoji_seqs[i].efn) {
       delete(emoji_seqs[i].efn);
       emoji_seqs[i].efn = 0;
@@ -2830,7 +2905,8 @@ match_emoji(termchar * d, int maxlen)
     struct emoji longest = {0, 0, 0};
     bool foundseq = false;
     if (tags & EM_base) {
-      for (uint i = 0; i < lengthof(emoji_seqs); i++) {
+      init_emoji_seqs();
+      for (uint i = 0; i < nemoji_seqs; i++) {
         int len = match_emoji_seq(d, maxlen, emoji_seqs[i].chs, lengthof(emoji_seqs->chs));
         if (len) {
 #if defined(debug_emojis) && debug_emojis > 1

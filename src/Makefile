@@ -69,15 +69,6 @@ warn=[30;48;5;11m
 norm=[m
   $(warning $(warn) Target '$(TARGET)' not supported $(norm))
 endif
-BINFOLDER = ../bin
-#BINDIR = $(BINFOLDER)/$(TARGET)
-ifeq ($(DEBUG), 1)
-BINDIR = $(BINFOLDER)/$(platform)g
-NAME := minttyg
-else
-BINDIR = $(BINFOLDER)/$(platform)
-NAME := mintty
-endif
 CPPFLAGS := -DTARGET=$(TARGET)
 ifdef VERSION_SUFFIX
 CPPFLAGS += -DVERSION_SUFFIX="$(VERSION_SUFFIX)"
@@ -96,9 +87,19 @@ endif
 
 srcversion := $(shell if test ../VERSION -nt appinfo.h;then  cat ../VERSION;else echo VERSION | cpp -P $(CPPFLAGS) --include src/appinfo.h |sed "s/\"//g"| tee ../VERSION ;fi )
 name_ver := $(NAME)-$(srcversion)
-DDBG=
-#-include ddbg
-CPPFLAGS +=$(DDBG)
+BINFOLDER = ../bin
+ifeq ($(DEBUG), 1)
+	BINDIR = $(BINFOLDER)/$(platform)g
+	NAME := minttyg
+	CPPFLAGS += #-Wno-trampolines
+  CFLAGS += -g -Wno-error
+else
+	BINDIR = $(BINFOLDER)/$(platform)
+	NAME := mintty
+  CPPFLAGS += -DNDEBUG
+  CFLAGS += -fomit-frame-pointer -O2 -g
+	LDOPT= -g
+endif
 #############################################################################
 # compilation parameters
 
@@ -146,16 +147,6 @@ LDFLAGS := -L$(shell cd `$(CC) -print-file-name=w32api`;pwd ) $(LDFLAGS) -static
 LDLIBS := -mwindows $(extralibs) $(MWLIB) -lcomctl32 -limm32 -lwinmm -lwinspool -lole32 -luuid -lmpr
 #override LDLIBS += -mwindows $(extralibs) -lcomctl32 -limm32 -lwinmm -lwinspool -lole32 -luuid
 
-ifeq ($(DEBUG), 1)
-#  CPPFLAGS += -Wno-trampolines
-  CFLAGS += -g -Wno-error
-else
-  CPPFLAGS += -DNDEBUG
-  CFLAGS += -fomit-frame-pointer -O2 -g
-# support cygwin debug package:
-#  CFLAGS += -g # not needed; -ggdb and more injected by cygport
-#  do not LDFLAGS += -s
-endif
 
 ifdef DMALLOC
   CPPFLAGS += -DDMALLOC
@@ -333,7 +324,7 @@ unicode:	UnicodeData.txt Blocks.txt EastAsianWidth.txt
 #full-emoji-list.html:
 #	$(WGET) http://www.unicode.org/emoji/charts/$@
 
-univer = $(shell sed -e '/^\# Blocks-/ s,[^0-9]*\([0-9]*\)\.\([0-9]\)\.\([0-9]\)[^0-9]*,\1.\2.\3,' -e t -e d Blocks.txt)
+univer=$(shell cat univer)
 
 # Emoji version may advance Unicode version
 #emojiver = $(unibasever)
@@ -358,8 +349,11 @@ emoji-data.txt:	Blocks.txt
 	$(WGET) http://www.unicode.org/Public/$(univer)/ucd/emoji/$@
 emoji-variation-sequences.txt:	Blocks.txt
 	$(WGET) http://www.unicode.org/Public/$(univer)/ucd/emoji/$@
-#Blocks.txt:	
-#	$(WGET) http://www.unicode.org/Public/$(univer)/ucd/$@
+Blocks.txt:	
+	vert = `sed -e '/^\# Blocks-/ s,[^0-9]*\([0-9]*\)\.\([0-9]\)\.\([0-9]\)[^0-9]*,\1.\2.\3,' -e t -e d Blocks.txt`;\
+	if[ $(univer) != $$vert ];then\
+		$(WGET) http://www.unicode.org/Public/$(univer)/ucd/$@ \
+	fi
 
 releasever:
 	sed -e 's,\(Mintty .*\)`.*`,\1`$(srcversion)`,' -i ../wiki/Versions.md
@@ -376,10 +370,10 @@ att:
 %.txt:
 	$(WGET) http://www.unicode.org/Public/UNIDATA/$@
 
-emojibase.t:	# emoji-data.txt emoji-variation-sequences.txt emoji-sequences.txt emoji-zwj-sequences.txt
+emojibase.t: $(unicodeemoji)	
 	bash ./mkemojis base > $@
 
-emojiseqs.t:	# emoji-sequences.txt emoji-zwj-sequences.txt emoji-test.txt
+emojiseqs.t: $(unicodeemoji)	
 	bash ./mkemojis seqs > $@
 
 #compose_list=/usr/share/X11/locale/en_US.UTF-8/Compose
@@ -495,10 +489,10 @@ _wm.t:	# Windows Message names, only for debugging
 #	# or, with include file copied from Windows SDK:
 #	#sed -e 's/^#define \(WM_[^ ]*\) *\(0x[0-9A-Fa-f]*\)$$/  {\2, "\1"},/' -e t -e d etc/WinUser.h | tr 'abcdef' 'ABCDEF' > _wm.t
 
-_vk.t:	# Windows Virtual Key Code names, only for debugging
 #	#define VK_TAB 0x09
 #	->
 #		{0x09, "VK_TAB"},
+_vk.t:	# Windows Virtual Key Code names, only for debugging
 	sed -e 's/^#define \(VK_[^ ]*\) \(0x[0-9A-Fa-f]*\)$$/	{\2, "\1"},/' -e t -e d /usr/include/w32api/winuser.h > _vk.t
 
 _winidm.t:	winids.h
