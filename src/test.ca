@@ -1,0 +1,53 @@
+
+#include <wchar.h>
+#include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <windef.h>
+#include <winbase.h>
+#include <windows.h>
+#include <windowsx.h>
+void (*phookglb)(int id,bool on)=NULL;
+void (*phookset)(HWND wnd,int hotkey,int hkmod);
+static HMODULE hookdll=NULL;
+static void ErrMsg(unsigned int err,const char *tag){
+  if(err){
+    LPWSTR lpMsgBuf = NULL;
+    DWORD dwFlags = FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS;
+    FormatMessageW( dwFlags, 0, err, 0, (LPWSTR)&lpMsgBuf, 0, 0);
+    printf("%s %ls\n", tag, lpMsgBuf);
+    LocalFree(lpMsgBuf);
+  }
+}
+void HookGlb(int id,bool on){
+  if(phookglb==NULL){
+    hookdll=LoadLibraryA("minttyhook.dll");
+    if(hookdll==NULL){
+      DWORD err=GetLastError();
+        ErrMsg(err,"LoadLibraryA:");
+        printf("err Load Lib %x %d %p\n",err,err,hookdll);
+      return ;
+    }
+    printf("A Load Lib %p\n",hookdll);
+    phookglb= (void *)GetProcAddress(hookdll, "hookglb");
+    phookset= (void *)GetProcAddress(hookdll, "hookset");
+    printf(" %p %p \n",phookglb,phookset);
+    if(phookglb==NULL)return;
+    printf("hookdll %p\n",hookdll);
+  }
+  phookglb(id,on);
+}
+//int _stdcall WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
+int main()
+{
+  HookGlb(1,1);
+  int i;
+  for(i=0;i<30;i++){
+    printf("%d \n",i);
+    Sleep(1000);
+  }
+  HookGlb(0,1);
+  return 0;
+}

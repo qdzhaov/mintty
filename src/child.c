@@ -572,7 +572,7 @@ trace_line(char * tag, int n, const char * s, int len)
 #else
 #define trace_line(tag, n, s, len)	
 #endif
-static void vprocclose(STerm* pterm){
+static int vprocclose(STerm* pterm){
   if (pterm->child.pid) {
     int status,tc=0 ;
     if (waitpid(pterm->child.pid, &status, WNOHANG) == pterm->child.pid) {
@@ -620,12 +620,13 @@ static void vprocclose(STerm* pterm){
       }
       if (cfg.exit_title && *cfg.exit_title)
         win_prefix_title(cfg.exit_title);
-      if(tc) win_tab_clean();
+      if(tc) return win_tab_clean();
     }
   }
+  return 0;
 }
 
-void
+int 
 child_proc(void)
 {
   // need patch if (term.no_scroll) return;
@@ -639,21 +640,28 @@ child_proc(void)
     }
     struct timeval timeout = {0, 100000}, *timeout_p = 0;
     fd_set fds;
-    FD_ZERO(&fds);
-    FD_SET(win_fd, &fds);
-    int highfd = win_fd;
-    for (STab**t=win_tabs();*t;t++){
-      win_tab_v(*t);
-      STerm *pterm=(*t)->terminal;
-  	  int pty_fd=pterm->child.pty_fd;
-      if ( pty_fd> highfd) highfd = pty_fd;
-      if (pty_fd >= 0)
-        FD_SET(pty_fd, &fds);
-      vprocclose(pterm);
-      if (pterm->child.pid != 0 && pty_fd < 0) // Pty gone, but process still there: keep checking
-        timeout_p = &timeout;
+    int highfd ,tabchanged;
+    for(tabchanged=1;tabchanged;){
+      FD_ZERO(&fds);
+      FD_SET(win_fd, &fds);
+      highfd = win_fd;tabchanged=0;
+      for (STab**t=win_tabs();*t;t++){
+        win_tab_v(*t);
+        STerm *pterm=(*t)->terminal;
+        if(vprocclose(pterm)){
+          if(!*t)break;
+          pterm=(*t)->terminal;
+        }
+        int pty_fd=pterm->child.pty_fd;
+        if (pty_fd >= 0){
+          FD_SET(pty_fd, &fds);
+          if ( pty_fd> highfd) highfd = pty_fd;
+        }
+        if (pterm->child.pid != 0 && pty_fd < 0) // Pty gone, but process still there: keep checking
+          timeout_p = &timeout;
+      }
     }
-
+    if(*win_tabs()==NULL)return 0;
     if (select(highfd + 1, &fds, 0, 0, timeout_p) > 0) {
       for (STab**t=win_tabs();*t;t++){
         STerm *pterm=(*t)->terminal;
@@ -736,9 +744,10 @@ child_proc(void)
           }
         }
       }
-      if (FD_ISSET(win_fd, &fds)) return;
+      if (FD_ISSET(win_fd, &fds)) return 1;
     }
   }
+  return 1;
 }
 void child_terminate(STerm* pterm) {
   kill(-(pterm->child.pid      ), SIGKILL);

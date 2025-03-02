@@ -228,7 +228,7 @@ void win_tab_create(SessDef*sd){
   set_tab_bar_visibility();
 }
 
-void win_tab_clean() {
+int win_tab_clean() {
   bool invalidate = false;
   STab**p,**pd;
   for(pd=p=tabs;*p;p++){
@@ -250,9 +250,7 @@ void win_tab_clean() {
     set_tab_bar_visibility();
     win_invalidate_all(1);
   }
-  if(*tabs==NULL){
-    exit_mintty();
-  }
+  return invalidate ;
 }
 
 //======== painting ======================

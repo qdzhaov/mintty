@@ -1686,13 +1686,8 @@ void sync_scroll_lock(bool locked){
 static void clear_scroll_lock();
 static void cycle_transparency(void);
 static void set_transparency(int t);
-static int packmod(int mods);
 static int kb_select(uint key, mod_keys mods);
 static void cycle_pointer_style();
-static int  sckmask[256]={0};
-static int  sckwmask[256]={0};
-int sckw_run(uint key,int moda);
-int sck_run(uint key,int moda);
 
 static int previous_transparency;
 static bool transparency_tuned;
@@ -1705,6 +1700,81 @@ static void zoom_font_reset (){ win_zoom_font( 0, 0);}
 static void zoom_font_sout  (){ win_zoom_font(-1, 1);}
 static void zoom_font_sin   (){ win_zoom_font( 1, 1);}
 static void zoom_font_sreset(){ win_zoom_font( 0, 1);}
+
+int sckw_run(uint key,int moda);
+int sck_run(uint key,int moda);
+struct SCKDef{
+  int moda,mods;
+  union{
+    struct function_def *p;
+    wstring appname;
+    wstring title;
+  };
+  union {
+    WPARAM cmd;
+    void *f;
+    void (*fct)(void);
+    int  (*fctv)(void);
+    void (*fct_key)(uint key, mod_keys mods);
+    int  (*fct_keyv)(uint key, mod_keys mods);
+    void (*fct_par1)(int p0);
+    void (*fct_par2)(int p0,int p1);
+    int rmkey;
+    wstring rmstr;
+    struct HKDef rmhk;
+  };
+  short key,type;
+  int p0,p1,p2;
+  struct SCKDef*next;
+};
+static struct SCKDef *sckdef[256]={0};
+static struct SCKDef *sckwdef[256]={0};
+static int  sckmask[256]={0};
+static int  sckwmask[256]={0};
+//asume MDK_WIN=8,depend on mdk_keys
+//MDK_WIN is seprated
+static int packmod(int mods){
+  // pack MDK_SUPER=16, MDK_HYPER=32, MDK_CAPSLOCK=64, MDK_EXT  =128 
+  // to 0x8,0x1X mean global KEY
+  if(mods&0x70)return 0x8|(mods&0x7);//<16
+  return mods&7;//<8 
+}
+bool win_hotkey(int mods,WPARAM wp, LPARAM lp){
+  uint key = wp; (void)lp;
+  int kmask=sckmask[key];//assume winkey not to here 
+  int modt=packmod(mods);
+  if(kmask&(1<<modt)){
+    bool lshift = is_key_down(VK_RSHIFT);
+    bool rshift = is_key_down(VK_RSHIFT);
+    bool lalt = is_key_down(VK_LALT );
+    bool ralt = is_key_down(VK_RALT );
+    bool rctrl = is_key_down(VK_RCONTROL);
+    mod_keys modl = lshift* MDK_SHIFT
+        | lalt  * MDK_ALT
+        | lctrl * MDK_CTRL
+        ;
+    mod_keys modr = rshift* MDK_SHIFT
+        | ralt  * MDK_ALT
+        | rctrl * MDK_CTRL
+        ;
+    int moda=mods|(modl<<8)|(modr<<16);
+    if(sck_run(key,moda))return 1;
+  }
+  return 0;
+}
+bool win_whotkey(WPARAM wp, LPARAM lp){
+  (void)lp;
+  uint key = wp;
+  //last_key_down = key; last_key_up = 0;
+  if(!wv.winkey)return 0;
+  int moda=get_modslr();
+  int kmask=sckwmask[key];//assume winkey not to here 
+  int modt=packmod(moda);
+  if(kmask&(1<<modt)){
+    if(sckw_run(key,moda))return 1;
+  }
+  return 0;
+}
 bool win_key_down(WPARAM wp, LPARAM lp){
   uint scancode = HIWORD(lp) & (KF_EXTENDED | 0xFF);
   bool extended = HIWORD(lp) & KF_EXTENDED;
@@ -1857,6 +1927,7 @@ bool win_key_down(WPARAM wp, LPARAM lp){
     trace_alt("ralt = false\n");
     ralt = false;
     if (cfg.external_hotkeys > 1) external_hotkey = true;
+    (void)external_hotkey ;
   }
 
   bool altgr = ralt | ctrl_lalt_altgr;
@@ -2168,24 +2239,7 @@ bool win_key_down(WPARAM wp, LPARAM lp){
 
   bool allow_shortcut = true;
   if (!term.shortcut_override && old_alt_state <= ALT_ALONE) {
-    int kmask=sckmask[key];//assume winkey not to here 
-    int modt=packmod(mods);
-    if(kmask&(1<<modt)){
-      bool lshift = is_key_down(VK_RSHIFT);
-      bool rshift = is_key_down(VK_RSHIFT);
-      (void)external_hotkey ;// todo:external_hotkey is not process now
-      //assume winkey not to here 
-      mod_keys modl = lshift* MDK_SHIFT
-          | lalt  * MDK_ALT
-          | lctrl * MDK_CTRL
-          ;
-      mod_keys modr = rshift* MDK_SHIFT
-          | ralt  * MDK_ALT
-          | rctrl * MDK_CTRL
-          ;
-      int moda=mods|(modl<<8)|(modr<<16);
-      if(sck_run(key,moda))return 1;
-    }
+    if(win_hotkey(mods,key,lp))return 1;
   }
   //==========================================
   // process key ,do not check shortcut here
@@ -2950,19 +3004,6 @@ bool win_key_up(WPARAM wp, LPARAM lp){
   }
   return false;
 }
-bool win_whotkey(WPARAM wp, LPARAM lp){
-  (void)lp;
-  uint key = wp;
-  //last_key_down = key; last_key_up = 0;
-  if(!wv.winkey)return 0;
-  int moda=get_modslr();
-  int kmask=sckwmask[key];//assume winkey not to here 
-  int modt=packmod(moda);
-  if(kmask&(1<<modt)){
-    if(sckw_run(key,moda))return 1;
-  }
-  return 0;
-}
 
 /* ===================  Funcs and Hotkey ===============*/
 /* Some auxiliary functions for user-defined key assignments.  */
@@ -3235,7 +3276,7 @@ static void shellcmd(const char*cmd){//FT_SHEL
 typedef void(*QFT)(int,int);
 enum funct_type{
   FT_NULL=0,FT_CMD,FT_NORM,FT_NORV,FT_KEY,FT_KEYV,FT_PAR1,FT_PAR2,
-  FT_RAWS,FT_ESCC,FT_SHEL
+  FT_RAWS,FT_ESCC,FT_SHEL,FT_RMSK,FT_RMSTR,FT_HK
 };
 #include "funtips.h"
 struct function_def cmd_defs[] = {
@@ -3278,25 +3319,6 @@ static int fundef_stat(const char*cmd){
   }
   return 0;
 } 
-struct SCKDef{
-  int moda,mods;
-  struct function_def *p;
-  union {
-    WPARAM cmd;
-    void *f;
-    void (*fct)(void);
-    int  (*fctv)(void);
-    void (*fct_key)(uint key, mod_keys mods);
-    int  (*fct_keyv)(uint key, mod_keys mods);
-    void (*fct_par1)(int p0);
-    void (*fct_par2)(int p0,int p1);
-  };
-  short key,type;
-  int p0,p1,p2;
-  struct SCKDef*next;
-};
-static struct SCKDef *sckdef[256]={0};
-static struct SCKDef *sckwdef[256]={0};
 //modkey < 7,
 // 0- 7 bits SMDK_SHIFT, SMDK_ALT,SMDK_CTRL,SMDK_WIN, SMDK_SUPER, SMDK_HYPER 
 // 8-17 bits Left
@@ -3305,12 +3327,6 @@ static struct SCKDef *sckwdef[256]={0};
 static int modr2s(int moda){
   int r=(moda&0xFF)|((moda>>8)&0xFF)|((moda>>16)&0xFF);
   return r;
-}
-//asume MDK_WIN=8,depend on mdk_keys
-//MDK_WIN is seprated
-static int packmod(int mods){
-  if(mods&0x70)return 0x8|((mods>>4)&0x7);//<16
-  return mods&7;//<8 
 }
 static void desck(struct SCKDef *sckd){
   switch(sckd->type){

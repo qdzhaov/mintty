@@ -1,0 +1,246 @@
+#include <wchar.h>
+#include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdarg.h>
+#ifndef NDEBUG
+#include <stdio.h>
+#endif
+#include <windef.h>
+#include <winbase.h>
+#include <windows.h>
+#include <windowsx.h>
+//must use share memory,for gcc not surport share section
+//set share variable in struct in share memory
+//share Memory size,advised n*512
+#define SSIZE 512
+struct sharevar{
+  //share hook for CallNextHookEx
+  HHOOK cbt_hook ;
+  HHOOK kll_hook ;
+  //save hadle for main windows
+  HWND mwnd;
+  //save hotkey
+  int  hotkey_mods,hotkey;
+  //add other var here
+}*pv=NULL;
+
+HANDLE hMapFile;
+int mainprog=0;
+//for debug,between cygwin&windows,console is diffrent
+// so printf can not be used.
+// this function is slow,so it can break other explorer
+#ifdef NDEBUG
+static void fvlog(const char *fmt, ...){ }
+const char*gpath(){ return ""; }
+void vclose(){}
+static void ErrMsg(unsigned int err,const char *tag){}
+#else
+FILE*fo=NULL;
+AAA;
+static void fvlog(const char *fmt, ...){
+  va_list va;
+  va_start(va, fmt);
+  if(!fo)fo=fopen("d:\\tlog.txt","a+b");
+  if(fo){
+     vfprintf(fo, fmt, va);
+  }
+}
+void vclose(){
+  if(fo){
+    fclose(fo);
+    fo=NULL;
+  }
+}
+const char*gpath(){
+  static char path[MAX_PATH];
+  path[0]=0; GetModuleFileNameA(NULL,path,MAX_PATH);
+  return path;
+}
+static void ErrMsg(unsigned int err,const char *tag){
+  if(err){
+    //int wmlen = 1024;  // size of heap-allocated array
+    //char winmsg[wmlen];  // constant and < 1273 or 1705 => issue #530
+    LPWSTR lpMsgBuf = NULL;
+    DWORD dwFlags = FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS;
+
+    FormatMessageW( dwFlags, 0, err, 0, (LPWSTR)&lpMsgBuf, 0, 0);
+    fvlog("%s %ls\n", tag, lpMsgBuf);
+    LocalFree(lpMsgBuf);
+  }
+}
+#endif
+int initShareVar(int init){
+  if(init){
+    if(pv)return 0;
+    hMapFile = CreateFileMapping( INVALID_HANDLE_VALUE, NULL,PAGE_READWRITE,0,SSIZE, "minttyhooksharemem");
+    int stat=GetLastError();
+    if (hMapFile == NULL) {
+      fvlog("CreateFileMapping failed: %d\n", GetLastError());
+      return 1;
+    }
+    pv = (struct sharevar*)MapViewOfFile( hMapFile,FILE_MAP_ALL_ACCESS,0,0,SSIZE);                  
+    if (pv == NULL) {
+      fvlog("MapViewOfFile failed: %d\n", GetLastError());
+      CloseHandle(hMapFile);
+      return 2;
+    }
+    if(stat!=ERROR_ALREADY_EXISTS){ //first use
+      memset(pv,0,SSIZE);
+      mainprog=1;
+    }
+    return 0;
+  }else{
+    if(pv){
+      UnmapViewOfFile(pv);
+      CloseHandle(hMapFile);
+      pv=NULL;hMapFile=NULL;
+    }
+  }
+  return 0;
+}
+__declspec(dllexport) void hookglb(int id,bool on);
+BOOL WINAPI DllMain( HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved )
+{
+  switch(fdwReason){
+    case DLL_PROCESS_ATTACH:{
+      initShareVar(1);
+      if(!pv){
+        fvlog("dllmain attach error:%p %p %s %x\n",hinstDLL,pv,gpath(),GetCurrentProcessId()); 
+        return 0;
+      }
+      //fvlog("dllmain attach:%p %p %s %x\n",hinstDLL,pv->cbt_hook,gpath(),GetCurrentProcessId()); 
+    } break;
+    case DLL_PROCESS_DETACH:
+      //fvlog("dllmain detach:%p %s %x\n",hinstDLL,gpath(),GetCurrentProcessId()); 
+      if(mainprog)hookglb(-1,0);
+      initShareVar(0);
+    break;
+  }
+  return 1;
+}
+__declspec(dllexport) void hookset(HWND wnd,int hkey,int hkmod){
+  ULONG64 *p;
+  int i,n;n=SSIZE/8;
+  for(p=(ULONG64*)pv,i=n;i;i--)*p++=0;
+  pv->mwnd=wnd;pv->hotkey=hkey;pv->hotkey_mods=hkmod;
+  fvlog("hookset %p %x %x\n",wnd,hkmod,hkey); 
+}
+#define is_key_down(vk) ( GetKeyState(vk) >>7 )
+#define VK_ALT   VK_MENU
+typedef enum { SMDK_SHIFT   = 0,SMDK_ALT  = 1,SMDK_CTRL = 2, 
+               SMDK_WIN     = 3
+} smod_keys;
+static int get_mods(void){
+  return is_key_down(VK_SHIFT   ) << ( 0+SMDK_SHIFT  )
+      | is_key_down(VK_ALT     ) << ( 0+SMDK_ALT    )
+      | is_key_down(VK_CONTROL ) << ( 0+SMDK_CTRL   )
+    ;
+}
+int isDst=0;
+int checkWinTitle(LPCWSTR wstr,int *pDst){
+  HWND hwnd=GetForegroundWindow();
+  wchar_t stitle[32];
+  GetWindowTextW(hwnd,stitle,32);
+  if(lstrcmpiW(stitle,wstr)==0){
+    *pDst=1; return 1;
+  }
+  *pDst=-1; return 0;
+}
+#ifdef HOOKCBT
+static LRESULT CALLBACK hookcbtproc(int nCode, WPARAM wParam, LPARAM lParam) {
+  if(!pv||!pv->cbt_hook)return 0;
+  //Mainwindow is destroyed
+  //if(!IsWindow(pv->mwnd))hookglb(-1,0);
+  /*
+     HCBT_MOVESIZE=0,HCBT_MINMAX=1,
+     HCBT_QS=2,//系统已从系统消息队列中取到一个WM_QUEUESYNC 消息
+     HCBT_CREATEWND=3,HCBT_DESTROYWND=4,
+     HCBT_ACTIVATE=5, HCBT_CLICKSKIPPED=6,
+     HCBT_KEYSKIPPED=7, HCBT_SYSCOMMAND=8,
+     HCBT_SETFOCUS=9
+  */
+  if(!isDst){
+    if(nCode== HCBT_SETFOCUS) checkWinTitle(L"Min"),&isDst);
+  }
+  if(isDst>0){
+    if(nCode== HCBT_MOVESIZE||nCode== HCBT_MINMAX  ){ 
+      fvlog("CBT:%p %ls %s\n",pv->cbt_hook,stitle,gpath()); 
+      return 1;
+    }
+  }
+  return CallNextHookEx(pv->cbt_hook, nCode, wParam, lParam);
+}
+#endif
+static LRESULT CALLBACK hookkllproc(int nCode, WPARAM wParam, LPARAM lParam) {
+  //share Memory is not valid,
+  if(!pv||!pv->kll_hook)return 0;
+  LPKBDLLHOOKSTRUCT kbdll = (LPKBDLLHOOKSTRUCT)lParam;
+  int key = kbdll->vkCode;
+  if(pv->hotkey&&key == pv->hotkey&&wParam==WM_KEYDOWN ){
+    if(get_mods()== pv->hotkey_mods){
+      ShowWindow(pv->mwnd, SW_SHOW);  
+      ShowWindow(pv->mwnd, SW_MINIMIZE);
+      return 1;
+    }
+  }
+  HWND hwnd=GetForegroundWindow();
+  //not hook self
+  if(hwnd==pv->mwnd) return CallNextHookEx(pv->kll_hook, nCode, wParam, lParam);
+  if(wParam==WM_KEYDOWN){
+    if(key==VK_LWIN||key==VK_RWIN){
+      wchar_t stitle[32];
+      GetWindowTextW(hwnd,stitle,32);
+      fvlog("kll %d %x %ls %x %p\n",nCode,key,stitle,GetCurrentProcessId(),gpath()); 
+    }
+  }
+  if(!isDst) checkWinTitle(L"Min",&isDst);
+  if(isDst>0){
+    if(key==VK_LWIN||key==VK_RWIN){
+      return 0; 
+    }
+  }
+  return CallNextHookEx(pv->kll_hook, nCode, wParam, lParam);
+}
+
+__declspec(dllexport) void hookglb(int id,bool on){
+  if(on)mainprog=1;
+  HMODULE hmodule=NULL;
+  DWORD dwid=0,dwpid=0;
+  HWND hd=FindWindowA("Chrome_WidgetWin_1","Min");
+  if(hd) {
+    dwid=GetWindowThreadProcessId(hd,&dwpid);
+  }
+  GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT|GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS,
+                     (LPCSTR)hookglb,&hmodule);
+  fvlog("%p %p %p %p %p\n",pv->mwnd,hd,dwpid,dwid,hmodule);
+#ifdef HOOKCBT
+  if(id&1){
+    if (on){
+      if(!pv->cbt_hook){
+        pv->cbt_hook = SetWindowsHookExW(WH_CBT, hookcbtproc,hmodule,  0 );
+        if(!pv->cbt_hook)ErrMsg(GetLastError(),"SetWindowsHookExW:");
+        fvlog("hook cbt %p\n",pv->cbt_hook);
+      }
+    }else if (pv->cbt_hook){
+      UnhookWindowsHookEx(pv->cbt_hook);
+      fvlog("unhook cbt %p\n",pv->cbt_hook);
+      pv->cbt_hook=NULL;
+    }
+  }
+  return ;
+#endif
+  if(id&2) {
+    if (on){
+      if(!pv->kll_hook){
+        pv->kll_hook = SetWindowsHookExW(WH_KEYBOARD_LL, hookkllproc,hmodule,  0 );
+        if(!pv->kll_hook)ErrMsg(GetLastError(),"SetWindowsHookExW:");
+        fvlog("hook kll %p\n",pv->kll_hook);
+      }
+    }else if (pv->kll_hook){
+      UnhookWindowsHookEx(pv->kll_hook);
+      fvlog("unhook kll %p\n",pv->kll_hook);
+      pv->kll_hook=NULL;
+    }
+  }
+}

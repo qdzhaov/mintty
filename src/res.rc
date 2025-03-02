@@ -4,12 +4,12 @@
 
 #include <winresrc.h>
 
-IDI_MAINICON     ICON "../icon/terminal.ico"
-IDI_CYGWIN       ICON "../icon/cygwin.ico"
-IDI_CMD          ICON "../icon/cmd.ico"
-IDI_POWERSHELL   ICON "../icon/powershell.ico"
-IDI_WSL          ICON "../icon/wsl.ico"
-IDI_UBUNTU       ICON "../icon/ubuntu.ico"
+IDI_MAINICON     ICON "../icon/iterminal.ico"
+IDI_CYGWIN       ICON "../icon/icygwin.ico"
+IDI_CMD          ICON "../icon/icmd.ico"
+IDI_POWERSHELL   ICON "../icon/ipowershell.ico"
+IDI_WSL          ICON "../icon/iwsl.ico"
+IDI_UBUNTU       ICON "../icon/iubuntu.ico"
 
 IDD_MAINBOX DIALOGEX DISCARDABLE 32, 8, DIALOG_WIDTH, DIALOG_HEIGHT
 STYLE DS_SHELLFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU

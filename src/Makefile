@@ -69,12 +69,25 @@ warn=[30;48;5;11m
 norm=[m
   $(warning $(warn) Target '$(TARGET)' not supported $(norm))
 endif
+BINFOLDER = ../bin
+#BINDIR = $(BINFOLDER)/$(TARGET)
+ifeq ($(DEBUG), 1)
+	BINDIR = $(BINFOLDER)/$(platform)g
+	NAME := minttyg
+  CFLAGS += -Wno-error
+	DFLAGS =-DDEBUG -g
+else
+	BINDIR = $(BINFOLDER)/$(platform)
+	NAME := mintty
+  CFLAGS += -fomit-frame-pointer 
+	DFLAGS =-DNDEBUG -O2
+endif
 CPPFLAGS := -DTARGET=$(TARGET)
 ifdef VERSION_SUFFIX
-CPPFLAGS += -DVERSION_SUFFIX="$(VERSION_SUFFIX)"
+	CPPFLAGS += -DVERSION_SUFFIX="$(VERSION_SUFFIX)"
 endif
 ifdef WSLTTY_VERSION
-CPPFLAGS += -DWSLTTY_VERSION="$(WSLTTY_VERSION)"
+	CPPFLAGS += -DWSLTTY_VERSION="$(WSLTTY_VERSION)"
 endif
 
 ifndef RELEASE
@@ -87,19 +100,6 @@ endif
 
 srcversion := $(shell if test ../VERSION -nt appinfo.h;then  cat ../VERSION;else echo VERSION | cpp -P $(CPPFLAGS) --include src/appinfo.h |sed "s/\"//g"| tee ../VERSION ;fi )
 name_ver := $(NAME)-$(srcversion)
-BINFOLDER = ../bin
-ifeq ($(DEBUG), 1)
-	BINDIR = $(BINFOLDER)/$(platform)g
-	NAME := minttyg
-	CPPFLAGS += #-Wno-trampolines
-  CFLAGS += -g -Wno-error
-else
-	BINDIR = $(BINFOLDER)/$(platform)
-	NAME := mintty
-  CPPFLAGS += -DNDEBUG
-  CFLAGS += -fomit-frame-pointer -O2 -g
-	LDOPT= -g
-endif
 #############################################################################
 # compilation parameters
 
@@ -161,7 +161,7 @@ GFLAGS =  -include std.hh -I$(BINDIR)/
 DEPOPT=-MMD 
 
 CCOPT=
-CCFLAGS:=$(CFLAGS) $(CCOPT)
+CCFLAGS:=$(CFLAGS) $(DFLAGS) $(CCOPT)
 
 GCHF=$(BINDIR)/std.hh.gch
 
@@ -228,13 +228,18 @@ $(exe): $(objs)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) $(LDOPT) -o $@
 
 bin := $(BINDIR)/$(NAME).exe
-bin: $(BINDIR) stamp $(bin)
+bin: $(BINDIR) stamp $(bin) $(BINFOLDER)/minttyhook.dll
 $(BINDIR):
 	mkdir -p $(BINDIR)
 $(bin): $(bins)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) $(LDOPT) -o $@
 	cp -f $@ $(BINFOLDER)/		
-
+#must use mingw32-gcc ,otherwise ,cannot hook normal program
+#src file cannot use .c ,for c_srcs := $(wildcard *.c)
+# so need option "-x c"
+$(BINFOLDER)/minttyhook.dll:minttyhook.ca
+	x86_64-w64-mingw32-gcc --share $(DFLAGS) -s -x c $^ -o $@
+	#x86_64-w64-mingw32-gcc --share -DNDEBUG -nostartfiles -s -Os -Wl,-e,DllMain -x c $^ -o $@
 -include $(wildcard $(BINDIR)/*.d)
 
 #############################################################################

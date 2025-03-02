@@ -1,4 +1,5 @@
 // winmain.c (part of mintty)
+// return 0;
 // Copyright 2008-13 Andy Koppe, 2015-2024 Thomas Wolff
 // Based on code from PuTTY-0.60 by Simon Tatham and team.
 // Licensed under the terms of the GNU General Public License v3 or later.
@@ -104,12 +105,11 @@ mtime(void)
 #endif
 }
 void ErrMsg(uint err,char *tag){
-  if(err){
-    int wmlen = 1024;  // size of heap-allocated array
-    char winmsg[wmlen];  // constant and < 1273 or 1705 => issue #530
-    FormatMessageA( FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_MAX_WIDTH_MASK, 0, err, 0, winmsg, wmlen, 0);
-    printf("%s %s\n", tag, winmsg);
-  }
+    LPWSTR lpMsgBuf = NULL;
+    DWORD dwFlags = FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS;
+    FormatMessageW( dwFlags, 0, err, 0, (LPWSTR)&lpMsgBuf, 0, 0);
+    printf("%s %ls\n", tag, lpMsgBuf);
+    LocalFree(lpMsgBuf);
 }
 #define dont_debug_dir
 
@@ -3247,7 +3247,7 @@ win_proc(HWND wnd, UINT message, WPARAM wp, LPARAM lp)
       } else {
         flash_taskbar(false);  /* stop */
         term_set_focus(true, true);
-        win_global_keyboard_hook(1,0);
+        win_global_keyboard_hook(0,1);
       }
       win_update_transparency(cfg.transparency, cfg.opaque_when_focused);
       win_key_reset();
@@ -3755,7 +3755,6 @@ win_proc(HWND wnd, UINT message, WPARAM wp, LPARAM lp)
 }
 #define HKDBG(fmt, ...)	printf(fmt, ##__VA_ARGS__)
 #define UNCAP_INFO (WM_APP + 3195) /* 35963 */
-HWND hwh=NULL;
 static LRESULT CALLBACK hookprockbll(int nCode, WPARAM wParam, LPARAM lParam) {
   LPKBDLLHOOKSTRUCT kbdll = (LPKBDLLHOOKSTRUCT)lParam;
   if(kbdll->dwExtraInfo == UNCAP_INFO){
@@ -3767,21 +3766,11 @@ static LRESULT CALLBACK hookprockbll(int nCode, WPARAM wParam, LPARAM lParam) {
   int isself=0;
   if(hwnd== wv.wnd)isself=1;
   else if(hwnd== wv.config_wnd)isself=2;
-  //printf("HK %d %p %p %p \n",isself,hwnd,wv.config_wnd);
-  //Hotkey 
-  if(!isself){
-    if(wv.hotkey&&key == wv.hotkey&&wParam==WM_KEYDOWN ){
-      if(get_mods()== wv.hotkey_mods){
-        ShowWindow(wv.wnd, SW_SHOW);  // in case it was started with -w hide
-        ShowWindow(wv.wnd, SW_MINIMIZE);
-        return 1;
-      }
-    }
-    if(key==VK_LWIN||key==VK_RWIN){
-      char stitle[32];
-      GetWindowTextA(hwnd,stitle,32);
-      if(strcmp(stitle,"min")){
-       return 0; 
+  if(!isself) {
+    if(wParam==WM_KEYDOWN){
+      if(key==VK_LWIN||key==VK_RWIN||key==VK_LCONTROL||key=='K'){
+        wchar_t stitle[32];
+        GetWindowTextW(hwnd,stitle,32);
       }
     }
     return CallNextHookEx(wv.kb_hook, nCode, wParam, lParam);
@@ -3828,6 +3817,7 @@ static LRESULT CALLBACK hookprockbll(int nCode, WPARAM wParam, LPARAM lParam) {
         if(isself==2) return 0;
         LPARAM lp = 1|(LPARAM)kbdll->flags << 24 | (LPARAM)kbdll->scanCode << 16;
         win_tab_actv();
+        printf("wk %x\n",key);
         if((!win_whotkey(key, lp))&&(cfg.hkwinkeyall==0)){
           keybd_event(wv.pwinkey,0,2,UNCAP_INFO);
           keybd_event(key,kbdll->scanCode,0,UNCAP_INFO);
@@ -3859,11 +3849,39 @@ static LRESULT CALLBACK hookprockbll(int nCode, WPARAM wParam, LPARAM lParam) {
   }
   return CallNextHookEx(wv.kb_hook, nCode, wParam, lParam);
 }
+void (*phookglb)(int id,bool on)=NULL;
+void (*phookset)(HWND wnd,int hotkey,int hkmod);
+static HMODULE hookdll=NULL;
+void HookGlb(int id,bool on){
+  return ;
+  if(phookglb==NULL){
+    hookdll=LoadLibraryA("minttyhook.dll");
+    if(hookdll==NULL){
+      int err=GetLastError();
+        ErrMsg(err,"LoadLibraryA:");
+        printf("err Load Lib %x %d %p\n",err,err,hookdll);
+      return ;
+    }
+    phookglb= (void *)GetProcAddress(hookdll, "hookglb");
+    phookset= (void *)GetProcAddress(hookdll, "hookset");
+    printf("PROC  %p %p \n",phookglb,phookset);
+    if(phookglb==NULL)return;
+    if(phookset){
+      phookset(wv.wnd,wv.hotkey,wv.hotkey_mods);
+    };
+  }
+  printf("hookglb %d\n",on);
+  phookglb(id,on);
+  if(id==-1&&on==0){
+    phookglb=NULL;
+    FreeLibrary(hookdll);
+  }
+}
 void
 win_global_keyboard_hook(bool on,bool autooff)
 {
   int global=1;
-  (void)autooff;
+  (void)autooff;(void)global;
   //spid=getpid(); stid=GetCurrentThreadId();
   if(IsDebuggerPresent()){
     if (wv.kb_hook){
@@ -3879,7 +3897,11 @@ win_global_keyboard_hook(bool on,bool autooff)
   }
   if (on){
     if(!wv.kb_hook){
-      wv.kb_hook = SetWindowsHookExW(WH_KEYBOARD_LL, hookprockbll,0, global ? 0 : GetCurrentThreadId());
+      // must be global for WH_KEYBOARD_LL,and hmodule maybe NULL
+      // but hook funcion not in dll,so cann't hook another process
+      wv.kb_hook = SetWindowsHookExW(WH_KEYBOARD_LL, hookprockbll,0,  0);
+      if(!wv.kb_hook)ErrMsg(GetLastError(),"in win_global_keyboard_hook,SetWindowsHookExW:");
+
     }
   }else if (wv.kb_hook){
     UnhookWindowsHookEx(wv.kb_hook);
@@ -3954,6 +3976,9 @@ win_to_top(HWND top_wnd)
 void
 exit_mintty(void)
 {
+  HookGlb(3,0);
+  win_global_keyboard_hook(0,0);
+  win_destroy_tip();
   report_pos();
   // could there be a lag until the window is actually destroyed?
   // so we'd have to add a safeguard here...
@@ -5519,7 +5544,8 @@ main(int argc, const char *argv[])
   SetWindowLong(wv.wnd, GWL_USERDATA, mtime() & GWL_TIMEMASK);
 
   win_update_shortcuts();
-  win_global_keyboard_hook(true,0);
+  win_global_keyboard_hook(1,0);
+  HookGlb(3,1);
   if (wv.report_winpid) {
     DWORD wpid = -1;
     DWORD parent = GetWindowThreadProcessId(wv.wnd, &wpid);
@@ -5551,12 +5577,11 @@ main(int argc, const char *argv[])
       }
     }
     if (msg.message == WM_QUIT) break;
-    child_proc();
+    if(!child_proc())break;
     if(win_tab_should_die())break;
   }
   win_tab_clean();
-  win_global_keyboard_hook(0,0);
-  win_destroy_tip();
+  exit_mintty();
 }
 void new_tab(int idss){
   if(idss<0){
