@@ -3800,6 +3800,9 @@ static LRESULT CALLBACK hookprockbll(int nCode, WPARAM wParam, LPARAM lParam) {
   if(kbdll->dwExtraInfo == UNCAP_INFO){
     return CallNextHookEx(wv.kb_hook, nCode, wParam, lParam);
   }
+  if (nCode != HC_ACTION ){
+    return CallNextHookEx(wv.kb_hook, nCode, wParam, lParam);
+  }
   uint key = kbdll->vkCode;
   HWND hwnd=GetForegroundWindow();
 
@@ -3807,12 +3810,12 @@ static LRESULT CALLBACK hookprockbll(int nCode, WPARAM wParam, LPARAM lParam) {
   if(hwnd== wv.wnd)isself=1;
   else if(hwnd== wv.config_wnd)isself=2;
   if(!isself) {
-    if(wParam==WM_KEYDOWN){
-      if(key==VK_LWIN||key==VK_RWIN||key==VK_LCONTROL||key=='K'){
-        wchar_t stitle[32];
-        GetWindowTextW(hwnd,stitle,32);
-      }
-    }
+    //if(wParam==WM_KEYDOWN){
+    //  if(key==VK_LWIN||key==VK_RWIN||key==VK_LCONTROL||key=='K'){
+    //    wchar_t stitle[32];
+    //    GetWindowTextW(hwnd,stitle,32);
+    //  }
+    //}
     return CallNextHookEx(wv.kb_hook, nCode, wParam, lParam);
   }
   //Map key
@@ -3827,7 +3830,7 @@ static LRESULT CALLBACK hookprockbll(int nCode, WPARAM wParam, LPARAM lParam) {
     SendInput(1, &inputs, sizeof (inputs));
     return 1;
   }
-  if (nCode != HC_ACTION ||term.shortcut_override ||(kbdll->flags&0x10)){
+  if (term.shortcut_override ||(kbdll->flags&0x10)){
     return CallNextHookEx(wv.kb_hook, nCode, wParam, lParam);
   }
   ULONG msgt=kbdll->time;
@@ -3939,7 +3942,7 @@ win_global_keyboard_hook(bool on,bool autooff)
     if(!wv.kb_hook){
       // must be global for WH_KEYBOARD_LL,and hmodule maybe NULL
       // but hook funcion not in dll,so cann't hook another process
-      wv.kb_hook = SetWindowsHookExW(WH_KEYBOARD_LL, hookprockbll,0,  0);
+      wv.kb_hook = SetWindowsHookExW(WH_KEYBOARD_LL, hookprockbll,0,  GetCurrentThreadId());
       if(!wv.kb_hook)ErrMsg(GetLastError(),"in win_global_keyboard_hook,SetWindowsHookExW:");
 
     }
