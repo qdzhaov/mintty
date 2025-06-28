@@ -1561,7 +1561,12 @@ term_reflow(int newrows, int newcols, bool quick_reflow)
 #endif
     freeline(line);
   }
-  term.virtuallines = term.sblines - newrows;
+
+  // What was the idea of this assignment?
+  // It spoils graphics references and makes graphics vanish 
+  // on resize with reflow.
+  //term.virtuallines = term.sblines - newrows;
+
 #ifdef debug_reflow
   ulong t2 = mtime();
 #endif
@@ -3141,6 +3146,23 @@ emoji_show(int x, int y, struct emoji e, int elen, cattr eattr, ushort lattr)
   if (elen == 1 && (eattr.attr & TATTR_OVERHANG))
     elen = 2;
   //printf("emoj @%d:%d len %d\n", y, x, elen);
+
+  // invisible
+  if (eattr.attr & ATTR_INVISIBLE)
+    return;
+  // blink blanking
+  if (eattr.attr & (ATTR_BLINK | ATTR_BLINK2))
+    if (term.blink_is_real && term.has_focus) {
+      if (eattr.attr & ATTR_BLINK2) {
+        if (term.tblinker2)
+          return;
+      }
+      else if (eattr.attr & ATTR_BLINK) {
+        if (term.tblinker)
+          return;
+      }
+    }
+
   if (efn && *efn)
     win_emoji_show(x, y, efn, bufpoi, buflen, elen, lattr, eattr.attr & ATTR_ITALIC);
 }

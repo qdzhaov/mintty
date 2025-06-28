@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: mintty\n"
 "Report-Msgid-Bugs-To: https://github.com/mintty/mintty/issues/700\n"
-"POT-Creation-Date: 2025-01-02 06:33+0800\n"
+"POT-Creation-Date: 2025-06-28 19:47+0800\n"
 "PO-Revision-Date: 2016-12-19 04:18+0500\n"
 "Last-Translator: \n"
 "Language-Team: \n"
@@ -16,7 +16,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: charset.c:228 charset.c:239 winmain.c:4405 winmain.c:4412 winmain.c:4768
+#: charset.c:228 charset.c:239 winmain.c:4472 winmain.c:4479 winmain.c:4837
 msgid "(Default)"
 msgstr "(по умолчанию)"
 
@@ -60,482 +60,482 @@ msgstr "%s остановлено: %i"
 msgid "TERMINATED"
 msgstr "ЗАВЕРШЕНИЕ"
 
-#: child.c:1253
+#: child.c:1262
 msgid "Error: Could not fork child daemon"
 msgstr "Ошибка: не удалось запустить фоновый дочерний процесс"
 
-#: config.c:114
+#: config.c:113
 msgid "no"
 msgstr ""
 
-#: config.c:115
+#: config.c:114
 msgid "yes"
 msgstr ""
 
-#: config.c:116
+#: config.c:115
 msgid "false"
 msgstr ""
 
-#: config.c:117
+#: config.c:116
 msgid "true"
 msgstr ""
 
-#: config.c:118 config.c:123 config.c:134 config.c:226
+#: config.c:117 config.c:122 config.c:133 config.c:225
 msgid "off"
 msgstr ""
 
-#: config.c:119
+#: config.c:118
 msgid "on"
 msgstr ""
 
-#: config.c:124 config.c:227
+#: config.c:123 config.c:226
 msgid "shift"
 msgstr ""
 
-#: config.c:125 config.c:228
+#: config.c:124 config.c:227
 #, fuzzy
 msgid "alt"
 msgstr "Система"
 
-#: config.c:126 config.c:229
+#: config.c:125 config.c:228
 msgid "ctrl"
 msgstr ""
 
-#: config.c:127
+#: config.c:126
 #, fuzzy
 msgid "win"
 msgstr "Окно"
 
-#: config.c:128 config.c:230
+#: config.c:127 config.c:229
 msgid "super"
 msgstr ""
 
-#: config.c:129 config.c:231
+#: config.c:128 config.c:230
 msgid "hyper"
 msgstr ""
 
-#: config.c:130
+#: config.c:129
 msgid "capslock"
 msgstr ""
 
-#: config.c:135
+#: config.c:134
 msgid "low"
 msgstr ""
 
-#: config.c:136
+#: config.c:135
 #, fuzzy
 msgid "medium"
 msgstr "Средняя"
 
-#: config.c:137
+#: config.c:136
 msgid "high"
 msgstr ""
 
-#: config.c:138
+#: config.c:137
 msgid "glass"
 msgstr ""
 
-#: config.c:142
+#: config.c:141
 msgid "line"
 msgstr ""
 
-#: config.c:143
+#: config.c:142
 msgid "block"
 msgstr ""
 
-#: config.c:144
+#: config.c:143
 msgid "box"
 msgstr ""
 
-#: config.c:145
+#: config.c:144
 #, fuzzy
 msgid "underscore"
 msgstr "Подчеркивание"
 
-#: config.c:149
+#: config.c:148
 #, fuzzy
 msgid "Default"
 msgstr "Система"
 
-#: config.c:150
+#: config.c:149
 #, fuzzy
 msgid "None"
 msgstr "Нет"
 
-#: config.c:151
+#: config.c:150
 #, fuzzy
 msgid "Partial"
 msgstr "Среднее"
 
-#: config.c:152
+#: config.c:151
 #, fuzzy
 msgid "Full"
 msgstr "Полное"
 
-#: config.c:156
+#: config.c:155
 msgid "textout"
 msgstr ""
 
-#: config.c:157
+#: config.c:156
 msgid "uniscribe"
 msgstr ""
 
-#: config.c:161 config.c:168
+#: config.c:160 config.c:167
 #, fuzzy
 msgid "enter"
 msgstr "Принтер"
 
-#: config.c:162 config.c:169
+#: config.c:161 config.c:168
 #, fuzzy
 msgid "paste"
 msgstr "Вставка"
 
-#: config.c:163 config.c:170
+#: config.c:162 config.c:169
 #, fuzzy
 msgid "extend"
 msgstr "Выбрать"
 
-#: config.c:164
+#: config.c:163
 msgid "void"
 msgstr ""
 
-#: config.c:171
+#: config.c:170
 msgid "menu"
 msgstr ""
 
-#: config.c:175
+#: config.c:174
 msgid "left"
 msgstr ""
 
-#: config.c:176
+#: config.c:175
 #, fuzzy
 msgid "right"
 msgstr "Справа"
 
-#: config.c:177 config.c:211 config.c:242 config.c:316
+#: config.c:176 config.c:210 config.c:241 config.c:315
 msgid "none"
 msgstr ""
 
-#: config.c:187
+#: config.c:186
 msgid "hide"
 msgstr ""
 
-#: config.c:188
+#: config.c:187
 msgid "normal"
 msgstr ""
 
-#: config.c:189
+#: config.c:188
 msgid "min"
 msgstr ""
 
-#: config.c:190
+#: config.c:189
 msgid "max"
 msgstr ""
 
-#: config.c:191
+#: config.c:190
 msgid "FULL"
 msgstr ""
 
-#: config.c:195
+#: config.c:194
 msgid "never"
 msgstr ""
 
-#: config.c:196
+#: config.c:195
 msgid "start"
 msgstr ""
 
-#: config.c:197
+#: config.c:196
 #, fuzzy
 msgid "error"
 msgstr "Ошибка"
 
-#: config.c:198
+#: config.c:197
 msgid "always"
 msgstr ""
 
-#: config.c:202
+#: config.c:201
 #, fuzzy
 msgid "locale"
 msgstr "Формат"
 
-#: config.c:203
+#: config.c:202
 msgid "unicode"
 msgstr ""
 
-#: config.c:204
+#: config.c:203
 msgid "ambig-wide"
 msgstr ""
 
-#: config.c:205
+#: config.c:204
 msgid "ambig-narrow"
 msgstr ""
 
-#: config.c:206
+#: config.c:205
 msgid "single"
 msgstr ""
 
-#: config.c:207
+#: config.c:206
 msgid "single-unicode"
 msgstr ""
 
-#: config.c:212
+#: config.c:211
 msgid "openmoji"
 msgstr ""
 
-#: config.c:213
+#: config.c:212
 msgid "noto"
 msgstr ""
 
-#: config.c:214
+#: config.c:213
 msgid "joypixels"
 msgstr ""
 
-#: config.c:215
+#: config.c:214
 msgid "emojione"
 msgstr ""
 
-#: config.c:216
+#: config.c:215
 msgid "apple"
 msgstr ""
 
-#: config.c:217
+#: config.c:216
 msgid "google"
 msgstr ""
 
-#: config.c:218
+#: config.c:217
 msgid "twitter"
 msgstr ""
 
-#: config.c:219
+#: config.c:218
 msgid "facebook"
 msgstr ""
 
-#: config.c:220
+#: config.c:219
 msgid "samsung"
 msgstr ""
 
-#: config.c:221
+#: config.c:220
 #, fuzzy
 msgid "windows"
 msgstr "Окно"
 
-#: config.c:222
+#: config.c:221
 msgid "zoom"
 msgstr ""
 
-#: config.c:235
+#: config.c:234
 msgid "stretch"
 msgstr "растянуть"
 
-#: config.c:236
+#: config.c:235
 msgid "align"
 msgstr "выровнять"
 
-#: config.c:237
+#: config.c:236
 msgid "middle"
 msgstr "по центру"
 
-#: config.c:238 config.c:245
+#: config.c:237 config.c:244
 msgid "full"
 msgstr "заполнить"
 
-#: config.c:243
+#: config.c:242
 #, fuzzy
 msgid "partial"
 msgstr "Среднее"
 
-#: config.c:244
+#: config.c:243
 #, fuzzy
 msgid "default"
 msgstr "Система"
 
-#: config.c:249
+#: config.c:248
 msgid "as font"
 msgstr "шрифты"
 
-#: config.c:250
+#: config.c:249
 msgid "as colour"
 msgstr "цветной текст"
 
-#: config.c:251
+#: config.c:250
 msgid "as font & as colour"
 msgstr "шрифты и цветной текст"
 
-#: config.c:252
+#: config.c:251
 msgid "xterm"
 msgstr ""
 
-#: config.c:256 config.c:2123
+#: config.c:255 config.c:2048
 msgid "simple beep"
 msgstr "Простой сигнал"
 
-#: config.c:257 config.c:2124
+#: config.c:256 config.c:2049
 msgid "no beep"
 msgstr "Без звука"
 
-#: config.c:258 config.c:2125
+#: config.c:257 config.c:2050
 msgid "Default Beep"
 msgstr "Стандартный звук"
 
-#: config.c:259 config.c:2126
+#: config.c:258 config.c:2051
 msgid "Critical Stop"
 msgstr "Критическая ошибка"
 
-#: config.c:260 config.c:2127
+#: config.c:259 config.c:2052
 msgid "Question"
 msgstr "Вопрос"
 
-#: config.c:261 config.c:2128
+#: config.c:260 config.c:2053
 msgid "Exclamation"
 msgstr "Восклицание"
 
-#: config.c:262 config.c:2129
+#: config.c:261 config.c:2054
 msgid "Asterisk"
 msgstr "Звездочка"
 
-#: config.c:266
+#: config.c:265
 msgid "Flash Frame  "
 msgstr ""
 
-#: config.c:267
+#: config.c:266
 msgid "Flash Border "
 msgstr ""
 
-#: config.c:268
+#: config.c:267
 msgid "Flash Full   "
 msgstr ""
 
-#: config.c:269
+#: config.c:268
 msgid "Flash Reverse"
 msgstr ""
 
-#: config.c:273
+#: config.c:272
 msgid "No Log   "
 msgstr ""
 
-#: config.c:274
+#: config.c:273
 msgid "Input Log"
 msgstr ""
 
-#: config.c:275
+#: config.c:274
 msgid "Output Log"
 msgstr ""
 
-#: config.c:276
+#: config.c:275
 msgid "I/O Log"
 msgstr ""
 
-#: config.c:280
+#: config.c:279
 msgid "No Split Bracketed"
 msgstr ""
 
-#: config.c:281
+#: config.c:280
 #, fuzzy
 msgid "Split no Alt Screen"
 msgstr "На весь экран"
 
-#: config.c:282
+#: config.c:281
 msgid "Split Bracketed All"
 msgstr ""
 
-#: config.c:286
+#: config.c:285
 msgid "No Print Controls"
 msgstr ""
 
-#: config.c:287
+#: config.c:286
 msgid "Print High Controls"
 msgstr ""
 
-#: config.c:288
+#: config.c:287
 msgid "Print All Controls"
 msgstr ""
 
-#: config.c:292
+#: config.c:291
 msgid "No Auto Leading"
 msgstr ""
 
-#: config.c:293
+#: config.c:292
 msgid "Auto Leading 1"
 msgstr ""
 
-#: config.c:294
+#: config.c:293
 msgid "Auto Leading 2"
 msgstr ""
 
-#: config.c:298
+#: config.c:297
 msgid "No ligatures support"
 msgstr ""
 
-#: config.c:299
+#: config.c:298
 msgid "ligatures support 1"
 msgstr ""
 
-#: config.c:300
+#: config.c:299
 msgid "ligatures support 2"
 msgstr ""
 
-#: config.c:304
+#: config.c:303
 msgid "DPI Unaware"
 msgstr ""
 
-#: config.c:305
+#: config.c:304
 msgid "DPI Aware ver 1"
 msgstr ""
 
-#: config.c:306
+#: config.c:305
 msgid "DPI Aware ver 2"
 msgstr ""
 
-#: config.c:310
+#: config.c:309
 msgid "No Progress Scan"
 msgstr ""
 
-#: config.c:311
+#: config.c:310
 msgid "Progress Scan on current cursor line"
 msgstr ""
 
-#: config.c:312
+#: config.c:311
 msgid "Progress Scan on all line"
 msgstr ""
 
-#: config.c:317
+#: config.c:316
 msgid "Scale image to term size"
 msgstr ""
 
-#: config.c:318
+#: config.c:317
 msgid "Scale term to image ration"
 msgstr ""
 
-#: config.c:319
+#: config.c:318
 msgid "use Image as titled texture"
 msgstr ""
 
-#: config.c:320
+#: config.c:319
 msgid "Scale image to term size,keep ratio,then titles"
 msgstr ""
 
-#: config.c:321
+#: config.c:320
 msgid "Use desktop background"
 msgstr ""
 
 #. __ %s: unknown option name
-#: config.c:801 config.c:811
+#: config.c:786 config.c:796
 msgid "Ignoring unknown option '%s'"
 msgstr "Игнорирование неизвестного параметра '%s'"
 
 #. __ %2$s: option name, %1$s: invalid value
 #. report errors only during initialisation
-#: config.c:898
+#: config.c:883
 msgid "Ignoring invalid value '%s' for option '%s'"
 msgstr "Игнорирование неправильного значения '%s' для параметра '%s'"
 
 #. __ %s: option name
-#: config.c:908
+#: config.c:892
 msgid "Ignoring option '%s' with missing value"
 msgstr "Игнорирование параметра '%s' отсутствует значение"
 
 #. __ %1$s: config file name, %2$s: error message
-#: config.c:1443
+#: config.c:1425
 msgid ""
 "Could not save options to '%s':\n"
 "%s."
@@ -543,120 +543,120 @@ msgstr ""
 "Не удалось сохранить параметр '%s':\n"
 "%s."
 
-#: config.c:1902
+#: config.c:1827
 msgid "◇ None (printing disabled) ◇"
 msgstr "◇ Нет (печать выключена) ◇"
 
-#: config.c:1904
+#: config.c:1829
 msgid "◆ Default printer ◆"
 msgstr "◆ Принтер по умолчанию ◆"
 
 #. __ UI localization disabled
-#: config.c:1969
+#: config.c:1894
 #, fuzzy
 msgid "- None -"
 msgstr "Нет"
 
 #. __ UI localization: use Windows desktop setting
-#: config.c:1971
+#: config.c:1896
 msgid "@ Windows language @"
 msgstr "@ Из Windows @"
 
 #. __ UI localization: use environment variable setting (LANGUAGE, LC_*)
-#: config.c:1973
+#: config.c:1898
 msgid "* Locale environm. *"
 msgstr "* Из окружения *"
 
 #. __ UI localization: use mintty configuration setting (Text - Locale)
-#: config.c:1975
+#: config.c:1900
 msgid "= cfg. Text Locale ="
 msgstr "= Файл конфигурации ="
 
 #. __ indicator of unsaved downloaded colour scheme
-#: config.c:2590
+#: config.c:2515
 msgid "downloaded / give me a name!"
 msgstr "загружено / сохранить как"
 
-#: config.c:2702
+#: config.c:2627
 msgid "Could not load web theme"
 msgstr "Не удалось загрузить веб-тему"
 
-#: config.c:2779 config.c:2787
+#: config.c:2704 config.c:2712
 msgid "Cannot store theme file"
 msgstr "Не удается сохранить файл темы"
 
-#: config.c:3268
+#: config.c:3192
 msgid "About..."
 msgstr "О нас"
 
-#: config.c:3269
+#: config.c:3193
 #, fuzzy
 msgid "&Save"
 msgstr "Сохранить"
 
-#: config.c:3271
+#: config.c:3195
 #, fuzzy
 msgid "&Cancel"
 msgstr "Отмена"
 
-#: config.c:3273
+#: config.c:3197
 msgid "&Apply"
 msgstr "Применить"
 
-#: config.c:3329
+#: config.c:3253
 msgid "Ansi:"
 msgstr ""
 
-#: config.c:3354 configdef.h:292
+#: config.c:3278 configdef.h:295
 msgid "C&urrent size"
 msgstr "Текущие"
 
-#: config.c:3367
+#: config.c:3291
 msgid "◄"
 msgstr ""
 
-#: config.c:3368
+#: config.c:3292
 msgid "►"
 msgstr ""
 
-#: config.c:3378
+#: config.c:3302
 msgid "alpha"
 msgstr ""
 
-#: config.c:3383
+#: config.c:3307
 msgid "T&heme Save"
 msgstr ""
 
-#: config.c:3400
+#: config.c:3324
 msgid "► &Play"
 msgstr "► Воспр."
 
-#: config.c:3413
+#: config.c:3337
 msgid "name"
 msgstr ""
 
-#: config.c:3414
+#: config.c:3338
 msgid "describe"
 msgstr ""
 
-#: config.c:3415
+#: config.c:3339
 msgid "Hotkey1"
 msgstr ""
 
-#: config.c:3416
+#: config.c:3340
 msgid "Hotkey2"
 msgstr ""
 
-#: config.c:3417
+#: config.c:3341
 msgid "Hotkey3"
 msgstr ""
 
-#: config.c:3429
+#: config.c:3353
 #, fuzzy
 msgid "Left Right"
 msgstr "Справа"
 
-#: config.c:3430
+#: config.c:3354
 msgid "Set"
 msgstr ""
 
@@ -795,7 +795,7 @@ msgstr "доступен"
 
 #. __("ShootFoot")                              )
 #. _CFGDEFD(CBOOL    ,old_keyfuncs_keypad    ,0               ,       IS(0),OPT_BOOL         ,OPF_CHK  ,3,0,0,"OldKeyFunctionsKeypad"    ,__("OldKeyFunctionsKeypad")                  )
-#: windialog.c:623 configdef.h:244
+#: windialog.c:623 configdef.h:245
 #, fuzzy
 msgid "HotKeys"
 msgstr "Клавиатура"
@@ -817,251 +817,251 @@ msgstr "Параллельные сеансы"
 msgid "Session launcher"
 msgstr "Новый сеанс"
 
-#: wininput.c:327
+#: wininput.c:329
 msgid "&Close"
 msgstr "Закрыть"
 
 #. __ System menu:
-#: wininput.c:337
+#: wininput.c:339
 #, fuzzy
 msgid "New &Win"
 msgstr "Новое окно"
 
 #. __ Context menu:
-#: wininput.c:340
+#: wininput.c:342
 msgid "&Copy"
 msgstr "Копировать"
 
-#: wininput.c:350
+#: wininput.c:352
 msgid "Copy → Paste"
 msgstr "Копировать → Вставить"
 
-#: wininput.c:356
+#: wininput.c:358
 msgid "&Paste "
 msgstr "Вставить"
 
-#: wininput.c:359
+#: wininput.c:361
 msgid "S&earch"
 msgstr "Поиск"
 
-#: wininput.c:361
+#: wininput.c:363
 #, fuzzy
 msgid "&Log to File[I]"
 msgstr "Сохранять логи в файл"
 
-#: wininput.c:362
+#: wininput.c:364
 #, fuzzy
 msgid "&Log to File[O]"
 msgstr "Сохранять логи в файл"
 
-#: wininput.c:363
+#: wininput.c:365
 #, fuzzy
 msgid "&Log to File[IO]"
 msgstr "Сохранять логи в файл"
 
-#: wininput.c:365
+#: wininput.c:367
 msgid "&Log to File"
 msgstr "Сохранять логи в файл"
 
-#: wininput.c:369
+#: wininput.c:371
 msgid "Character &Info"
 msgstr "Информация символов"
 
-#: wininput.c:371
+#: wininput.c:373
 msgid "VT220 Keyboard"
 msgstr "VT220 Клавиатура"
 
-#: wininput.c:372
+#: wininput.c:374
 msgid "&Reset"
 msgstr "Сброс"
 
-#: wininput.c:375
+#: wininput.c:377
 msgid "&Default Size"
 msgstr "Стандартный размер"
 
-#: wininput.c:376
+#: wininput.c:378
 msgid "Tabbar(&H)"
 msgstr ""
 
-#: wininput.c:383
+#: wininput.c:385
 #, fuzzy
 msgid "Scrollbar(&S)"
 msgstr "Полоса прокрутки"
 
-#: wininput.c:387
+#: wininput.c:389
 msgid "&Border[T]"
 msgstr ""
 
-#: wininput.c:388
+#: wininput.c:390
 msgid "&Border[N]"
 msgstr ""
 
-#: wininput.c:389
+#: wininput.c:391
 msgid "&Border"
 msgstr ""
 
-#: wininput.c:392
+#: wininput.c:394
 msgid "PartLine(&K)"
 msgstr ""
 
-#: wininput.c:393
+#: wininput.c:395
 msgid "Indicator(&J)"
 msgstr ""
 
-#: wininput.c:394
+#: wininput.c:396
 msgid "&Full Screen"
 msgstr "На весь экран"
 
-#: wininput.c:396
+#: wininput.c:398
 #, fuzzy
 msgid "Flip Screen(&W)"
 msgstr "Альтернативный экран"
 
 #. __ Context menu:
-#: wininput.c:401 configdef.h:355
+#: wininput.c:403 configdef.h:358
 msgid "Status Line"
 msgstr ""
 
-#: wininput.c:407 wininput.c:585
+#: wininput.c:409 wininput.c:587
 #, fuzzy
 msgid "Copy T&Itle"
 msgstr "Копировать заголовок"
 
 #. __ Context menu:
-#: wininput.c:408 wininput.c:550 wininput.c:586
+#: wininput.c:410 wininput.c:552 wininput.c:588
 msgid "&Options..."
 msgstr "Настройки ..."
 
 #. __ Context menu:
-#: wininput.c:479
+#: wininput.c:481
 msgid "Ope&n"
 msgstr "Открыть"
 
-#: wininput.c:480 wininput.c:580
+#: wininput.c:482 wininput.c:582
 #, fuzzy
 msgid "New &Tab\twin+T"
 msgstr "Новая вкладка"
 
-#: wininput.c:481 wininput.c:579
+#: wininput.c:483 wininput.c:581
 msgid "&Kill tab\twin+w"
 msgstr ""
 
-#: wininput.c:483 wininput.c:577
+#: wininput.c:485 wininput.c:579
 msgid "&Previous tab\twin+<-"
 msgstr ""
 
-#: wininput.c:484 wininput.c:576
+#: wininput.c:486 wininput.c:578
 msgid "&Next tab\twin+->"
 msgstr ""
 
-#: wininput.c:485 wininput.c:574
+#: wininput.c:487 wininput.c:576
 msgid "Move to &Left\twin+<-"
 msgstr ""
 
-#: wininput.c:486 wininput.c:575
+#: wininput.c:488 wininput.c:577
 msgid "Move to &Right\twin+->"
 msgstr ""
 
-#: wininput.c:490
+#: wininput.c:492
 msgid "Copy as text"
 msgstr "Копировать как текст"
 
-#: wininput.c:491 configdef.h:275
+#: wininput.c:493 configdef.h:278
 msgid "Copy with TABs"
 msgstr "Копировать с вкладками"
 
-#: wininput.c:492
+#: wininput.c:494
 msgid "Copy as RTF"
 msgstr "Копировать как RTF"
 
-#: wininput.c:493
+#: wininput.c:495
 msgid "Copy as HTML text"
 msgstr "Копировать текст как HTML"
 
-#: wininput.c:494
+#: wininput.c:496
 msgid "Copy as HTML"
 msgstr "Копировать как HTML"
 
-#: wininput.c:495
+#: wininput.c:497
 msgid "Copy as HTML full"
 msgstr "Копировать все как HTML"
 
-#: wininput.c:501
+#: wininput.c:503
 msgid "Select &All"
 msgstr "Выбрать все"
 
-#: wininput.c:502
+#: wininput.c:504
 msgid "Save as &Image"
 msgstr "Сохранить снимок экрана"
 
 #. __ Context menu: write terminal window contents as HTML file
-#: wininput.c:514
+#: wininput.c:516
 msgid "HTML Screen Dump"
 msgstr "Сохранить снимок экрана в HTML"
 
 #. __ Context menu: clear scrollback buffer (lines scrolled off the window)
-#: wininput.c:522
+#: wininput.c:524
 msgid "Clear Scrollback"
 msgstr "Сброс полосы прокрутки"
 
 #. __ Context menu: generate a TTY BRK condition (tty line interrupt)
-#: wininput.c:537
+#: wininput.c:539
 msgid "Send Break"
 msgstr "Прервать текущую задачу"
 
-#: wininput.c:594
+#: wininput.c:596
 msgid "N&Ew Win"
 msgstr ""
 
-#: wininput.c:599
+#: wininput.c:601
 #, fuzzy
 msgid "New T&Ab"
 msgstr "Новая вкладка"
 
 #. __ Context menu, user commands
-#: wininput.c:660
+#: wininput.c:662
 msgid "User commands"
 msgstr "Пользовательские команды"
 
-#: wininput.c:2991 wininput.c:2993 wininput.c:2995 wininput.c:3017
-#: wininput.c:3037
+#: wininput.c:3067 wininput.c:3069 wininput.c:3071 wininput.c:3093
+#: wininput.c:3113
 msgid "[NO SCROLL] "
 msgstr ""
 
-#: wininput.c:2992 wininput.c:2997 wininput.c:3026 wininput.c:3046
+#: wininput.c:3068 wininput.c:3073 wininput.c:3102 wininput.c:3122
 msgid "[SCROLL MODE] "
 msgstr ""
 
-#: winmain.c:2278
+#: winmain.c:2282
 msgid "Processes are running in session:"
 msgstr "Имеются запущенные процессы:"
 
-#: winmain.c:2279
+#: winmain.c:2283
 msgid "Close anyway?"
 msgstr "Закрыть все равно?"
 
-#: winmain.c:2302
+#: winmain.c:2306
 msgid "Reset terminal?"
 msgstr "Сброс консоль?"
 
-#: winmain.c:2501
+#: winmain.c:2533
 msgid "Try '--help' for more information"
 msgstr "Используйте '--help' для получения дополнительной информации"
 
-#: winmain.c:2508
+#: winmain.c:2540
 msgid "Could not load icon"
 msgstr "Не удалось загрузить иконку"
 
-#: winmain.c:4131
+#: winmain.c:4196
 msgid "Usage:"
 msgstr "Применение:"
 
-#: winmain.c:4132
+#: winmain.c:4197
 msgid "[OPTION]... [ PROGRAM [ARG]... | - ]"
 msgstr "[ОПЦИЙ]... [ ПРОГРАММА [АРГУМЕНТЫ]... | - ]"
 
 #. __ help text (output of -H / --help), after initial line ("synopsis")
-#: winmain.c:4135
+#: winmain.c:4200
 msgid ""
 "Start a new terminal session running the specified program or the user's "
 "shell.\n"
@@ -1133,78 +1133,78 @@ msgid ""
 "See manual page for further command line options and configuration.\n"
 msgstr ""
 
-#: winmain.c:4392
+#: winmain.c:4459
 msgid "Duplicate option '%s'"
 msgstr "Дублирование параметра '%s'"
 
-#: winmain.c:4405 winmain.c:4412 winmain.c:4768
+#: winmain.c:4472 winmain.c:4479 winmain.c:4837
 msgid "WSL distribution '%s' not found"
 msgstr "Подсистема WSL '%s' не найдена"
 
-#: winmain.c:4442 winmain.c:4534
+#: winmain.c:4509 winmain.c:4601
 msgid "Unknown option '%s'"
 msgstr "Неизвестный параметр '%s'"
 
-#: winmain.c:4444
+#: winmain.c:4511
 msgid "Option '%s' requires an argument"
 msgstr "Параметр '%s' требует аргумент"
 
-#: winmain.c:4471
+#: winmain.c:4538
 msgid "Syntax error in position argument '%s'"
 msgstr "Ошибка синтаксиса в позиции аргумента '%s'"
 
-#: winmain.c:4482
+#: winmain.c:4549
 msgid "Syntax error in size argument '%s'"
 msgstr "Ошибка синтаксиса в размере аргумента '%s'"
 
-#: winmain.c:4643
+#: winmain.c:4710
 msgid "Syntax error in geometry argument '%s'"
 msgstr "Ошибка синтаксиса в размере аргумента '%s'"
 
-#: winmain.c:4828
+#: winmain.c:4897
 msgid "Mintty could not detach from caller, starting anyway"
 msgstr ""
 "Mintty не может отключится от вызывающего метода, запуск в любом случае"
 
-#: winmain.c:5036
+#: winmain.c:5111
 msgid "Using default title due to invalid characters in program name"
 msgstr ""
 "Использование заголовка по умолчанию из-за недопустимых символов в имени "
 "программы"
 
 #. __ Options - Text: font properties information: "Leading": total line padding (see option RowSpacing), Bold/Underline modes (font or manual, see options BoldAsFont/UnderlineManual/UnderlineColour)
-#: wintext.c:162
+#: wintext.c:164
 #, fuzzy
 msgid "Leading: %d, Bold: %ls, Underline: %ls"
 msgstr "Интервал:%d жирный:%s андерскор:%s"
 
 #. __ Options - Text: font properties: value taken from font
-#: wintext.c:164
+#: wintext.c:166
 msgid "font"
 msgstr "шрифт"
 
 #. __ Options - Text: font properties: value affected by option
-#: wintext.c:166
+#: wintext.c:168
 msgid "manual"
 msgstr "особый"
 
-#: wintext.c:542
+#: wintext.c:544
 msgid "Font not found, using system substitute"
 msgstr "Шрифт не найден, используя систему замены"
 
-#: wintext.c:557
+#: wintext.c:559
 msgid "Font has limited support for character ranges"
 msgstr "Шрифт имеет ограниченную поддержку диапазонов символов"
 
-#: wintext.c:698
+#: wintext.c:702
 msgid "Font installation corrupt, using system substitute"
 msgstr "Установка шрифта прервана, используя систему замены"
 
-#: wintext.c:711
+#: wintext.c:756
 msgid "Font does not support system locale"
 msgstr "Шрифт не поддерживает язык системы"
 
-#: wintools.c:480
+#: wintools.c:554
 msgid "WSL"
 msgstr ""
 
@@ -1236,7 +1236,7 @@ msgstr "Вид"
 msgid "Looks in Terminal"
 msgstr "Внешний вид"
 
-#: configdef.h:71 configdef.h:124
+#: configdef.h:71 configdef.h:125
 msgid "Colours"
 msgstr "Цвета"
 
@@ -1258,1314 +1258,1332 @@ msgstr "Каретка"
 msgid "ThemeFile"
 msgstr "Тема"
 
-#: configdef.h:78 configdef.h:79
+#: configdef.h:78
+#, fuzzy
+msgid "ThemeDark"
+msgstr "Тема"
+
+#: configdef.h:79 configdef.h:80
 #, fuzzy
 msgid "ansi_colours"
 msgstr "цветной текст"
 
-#: configdef.h:80
+#: configdef.h:81
 msgid "Black"
 msgstr ""
 
-#: configdef.h:81
+#: configdef.h:82
 #, fuzzy
 msgid "Red"
 msgstr "Красный:"
 
-#: configdef.h:82
+#: configdef.h:83
 #, fuzzy
 msgid "Green"
 msgstr "Зеленый:"
 
-#: configdef.h:83
+#: configdef.h:84
 msgid "Yellow"
 msgstr ""
 
-#: configdef.h:84
+#: configdef.h:85
 #, fuzzy
 msgid "Blue"
 msgstr "Синий:"
 
-#: configdef.h:85
+#: configdef.h:86
 msgid "Magenta"
 msgstr ""
 
-#: configdef.h:86
+#: configdef.h:87
 msgid "Cyan"
 msgstr ""
 
-#: configdef.h:87
+#: configdef.h:88
 msgid "White"
 msgstr ""
 
-#: configdef.h:88
+#: configdef.h:89
 msgid "BoldBlack"
 msgstr ""
 
-#: configdef.h:89
+#: configdef.h:90
 msgid "BoldRed"
 msgstr ""
 
-#: configdef.h:90
+#: configdef.h:91
 #, fuzzy
 msgid "BoldGreen"
 msgstr "Зеленый:"
 
-#: configdef.h:91
+#: configdef.h:92
 msgid "BoldYellow"
 msgstr ""
 
-#: configdef.h:92
+#: configdef.h:93
 msgid "BoldBlue"
 msgstr ""
 
-#: configdef.h:93
+#: configdef.h:94
 msgid "BoldMagenta"
 msgstr ""
 
-#: configdef.h:94
+#: configdef.h:95
 msgid "BoldCyan"
 msgstr ""
 
-#: configdef.h:95
+#: configdef.h:96
 msgid "BoldWhite"
 msgstr ""
 
-#: configdef.h:96
+#: configdef.h:97
 #, fuzzy
 msgid "ColourScheme"
 msgstr "Онлайн генератор тем"
 
-#: configdef.h:97
+#: configdef.h:98
 msgid "Transparency"
 msgstr "Прозрачность"
 
-#: configdef.h:100
+#: configdef.h:101
 msgid "Opa&que when focused"
 msgstr "Непрозрачно при фокусировке"
 
-#: configdef.h:101
+#: configdef.h:102
 msgid "Blu&r"
 msgstr "Размытие"
 
-#: configdef.h:102
-msgid "Cursor"
-msgstr "Каретка"
-
 #: configdef.h:103
-#, fuzzy
-msgid "CursorType"
+msgid "Cursor"
 msgstr "Каретка"
 
 #: configdef.h:104
 #, fuzzy
+msgid "CursorType"
+msgstr "Каретка"
+
+#: configdef.h:105
+#, fuzzy
 msgid "CursorBlinks"
 msgstr "Каретка"
 
-#: configdef.h:106
+#: configdef.h:107
 msgid "Disp"
 msgstr ""
 
-#: configdef.h:108
+#: configdef.h:109
 msgid "UnderlineManual"
 msgstr ""
 
-#: configdef.h:109
+#: configdef.h:110
 msgid "usepartline"
 msgstr ""
 
-#: configdef.h:110
+#: configdef.h:111
 msgid "partline"
 msgstr ""
 
-#: configdef.h:111
+#: configdef.h:112
 msgid "Padding"
 msgstr ""
 
-#: configdef.h:112
+#: configdef.h:113
 msgid "DispClear"
 msgstr ""
 
-#: configdef.h:113
+#: configdef.h:114
 msgid "DispTab"
 msgstr ""
 
-#: configdef.h:114
+#: configdef.h:115
 msgid "DispSpace"
 msgstr ""
 
-#: configdef.h:116
+#: configdef.h:117
 #, fuzzy
 msgid "Looks1"
 msgstr "Вид"
 
-#: configdef.h:116
+#: configdef.h:117
 #, fuzzy
 msgid "Looks in Terminal1"
 msgstr "Внешний вид"
 
-#: configdef.h:117
+#: configdef.h:118
 #, fuzzy
 msgid "background"
 msgstr "Фон..."
 
-#: configdef.h:118
+#: configdef.h:119
 #, fuzzy
 msgid "Background"
 msgstr "Фон..."
 
-#: configdef.h:120
+#: configdef.h:121
 #, fuzzy
 msgid "BoldColour"
 msgstr "Цвет"
 
-#: configdef.h:121
+#: configdef.h:122
 #, fuzzy
 msgid "BlinkColour"
 msgstr "Цвет"
 
-#: configdef.h:122
+#: configdef.h:123
 msgid "UnderlineColour"
 msgstr ""
 
-#: configdef.h:123
+#: configdef.h:124
 #, fuzzy
 msgid "HoverColour"
 msgstr "Цвет"
 
-#: configdef.h:126
+#: configdef.h:127
 msgid "HighlightBackgroundColour"
 msgstr ""
 
-#: configdef.h:127
+#: configdef.h:128
 msgid "HighlightForegroundColour"
 msgstr ""
 
-#: configdef.h:129
+#: configdef.h:130
 msgid "SearchForegroundColour"
 msgstr ""
 
-#: configdef.h:130
+#: configdef.h:131
 msgid "SearchBackgroundColour"
 msgstr ""
 
-#: configdef.h:131
+#: configdef.h:132
 msgid "SearchCurrentColour"
 msgstr ""
 
-#: configdef.h:132
+#: configdef.h:133
 #, fuzzy
 msgid "Tek Colour"
 msgstr "Цвет"
 
-#: configdef.h:134
+#: configdef.h:135
 #, fuzzy
 msgid "TekForegroundColour"
 msgstr "Текст..."
 
-#: configdef.h:135
+#: configdef.h:136
 #, fuzzy
 msgid "TekBackgroundColour"
 msgstr "Фон..."
 
-#: configdef.h:136
+#: configdef.h:137
 msgid "TekCursorColour"
 msgstr ""
 
-#: configdef.h:137
+#: configdef.h:138
 msgid "TekWriteThruColour"
 msgstr ""
 
-#: configdef.h:138
+#: configdef.h:139
 msgid "TekDefocusedColour"
 msgstr ""
 
-#: configdef.h:140
+#: configdef.h:141
 msgid "TekGlow"
 msgstr ""
 
-#: configdef.h:141
+#: configdef.h:142
 msgid "TekStrap"
 msgstr ""
 
-#: configdef.h:143
+#: configdef.h:144
 #, fuzzy
 msgid "Tab"
 msgstr "Копировать"
 
-#: configdef.h:144
+#: configdef.h:145
 msgid "tab_bar_show"
 msgstr ""
 
-#: configdef.h:146
+#: configdef.h:147
 #, fuzzy
 msgid "TabForegroundColour"
 msgstr "Текст..."
 
-#: configdef.h:147
+#: configdef.h:148
 #, fuzzy
 msgid "TabBackgroundColour"
 msgstr "Фон..."
 
-#: configdef.h:148
+#: configdef.h:149
 msgid "TabAttentionColour"
 msgstr ""
 
-#: configdef.h:150
+#: configdef.h:151
 msgid "TabActiveColour"
 msgstr ""
 
-#: configdef.h:151
+#: configdef.h:152
 msgid "tab_font_size"
 msgstr ""
 
-#: configdef.h:153
+#: configdef.h:154
 msgid "indicator"
 msgstr ""
 
-#: configdef.h:154
+#: configdef.h:155
 msgid "indicatorx"
 msgstr ""
 
-#: configdef.h:155
+#: configdef.h:156
 msgid "indicatory"
 msgstr ""
 
-#: configdef.h:157
+#: configdef.h:158
 msgid "Text"
 msgstr "Текст"
 
-#: configdef.h:157
+#: configdef.h:158
 msgid "Text and Font properties"
 msgstr "Свойства текста и шрифта"
 
-#: configdef.h:158 configdef.h:159
+#: configdef.h:159 configdef.h:160
 msgid "Font"
 msgstr "Шрифт"
 
-#: configdef.h:160
+#: configdef.h:161
 msgid "Font smoothing"
 msgstr "Сглаживание шрифта"
 
-#: configdef.h:162
+#: configdef.h:163
 #, fuzzy
 msgid "AllowBlinking"
 msgstr "Разрешить мерцание"
 
-#: configdef.h:163
+#: configdef.h:164
 #, fuzzy
 msgid "Dim as font"
 msgstr "шрифты"
 
-#: configdef.h:165
+#: configdef.h:166
 #, fuzzy
 msgid "Bold as font"
 msgstr "шрифты"
 
-#: configdef.h:166
+#: configdef.h:167
 #, fuzzy
 msgid "Bold as colour"
 msgstr "цветной текст"
 
-#: configdef.h:167 configdef.h:169
+#: configdef.h:168 configdef.h:170
 #, fuzzy
 msgid "Locale"
 msgstr "Формат"
 
-#: configdef.h:171
+#: configdef.h:172
 #, fuzzy
 msgid "Charset"
 msgstr "Набор символов"
 
-#: configdef.h:172
+#: configdef.h:173
 msgid "Emojis"
 msgstr "Эмодзи"
 
-#: configdef.h:174
+#: configdef.h:175
 msgid "Style"
 msgstr "Стиль"
 
-#: configdef.h:175
+#: configdef.h:176
 msgid "Placement"
 msgstr "Свойства"
 
-#: configdef.h:178
+#: configdef.h:179
 msgid "ShowHiddenFonts"
 msgstr ""
 
-#: configdef.h:179
+#: configdef.h:180
 #, fuzzy
 msgid "OldLocale"
 msgstr "Формат"
 
-#: configdef.h:181
+#: configdef.h:182
 msgid "FontChoice"
 msgstr ""
 
-#: configdef.h:182
+#: configdef.h:183
 #, fuzzy
 msgid "FontSample"
 msgstr "Образец"
 
-#: configdef.h:183
+#: configdef.h:184
 msgid "FontRender"
 msgstr ""
 
-#: configdef.h:184
+#: configdef.h:185
 msgid "Charwidth"
 msgstr ""
 
-#: configdef.h:186
+#: configdef.h:187
 #, fuzzy
 msgid "FontMenu"
 msgstr "Шрифт"
 
-#: configdef.h:187
+#: configdef.h:188
 #, fuzzy
 msgid "TekFont"
 msgstr "Шрифт"
 
-#: configdef.h:188
+#: configdef.h:189
 #, fuzzy
 msgid "fonts"
 msgstr "шрифт"
 
-#: configdef.h:189
+#: configdef.h:190
 #, fuzzy
 msgid "Font1"
 msgstr "Шрифт"
 
-#: configdef.h:190
+#: configdef.h:191
 #, fuzzy
 msgid "Font2"
 msgstr "Шрифт"
 
-#: configdef.h:191
+#: configdef.h:192
 #, fuzzy
 msgid "Font3"
 msgstr "Шрифт"
 
-#: configdef.h:192
+#: configdef.h:193
 #, fuzzy
 msgid "Font4"
 msgstr "Шрифт"
 
-#: configdef.h:193
+#: configdef.h:194
 #, fuzzy
 msgid "Font5"
 msgstr "Шрифт"
 
-#: configdef.h:194
+#: configdef.h:195
 #, fuzzy
 msgid "Font6"
 msgstr "Шрифт"
 
-#: configdef.h:195
+#: configdef.h:196
 #, fuzzy
 msgid "Font7"
 msgstr "Шрифт"
 
-#: configdef.h:196
+#: configdef.h:197
 #, fuzzy
 msgid "Font8"
 msgstr "Шрифт"
 
-#: configdef.h:197
+#: configdef.h:198
 #, fuzzy
 msgid "Font9"
 msgstr "Шрифт"
 
-#: configdef.h:198
+#: configdef.h:199
 #, fuzzy
 msgid "Font10"
 msgstr "Шрифт"
 
-#: configdef.h:199
+#: configdef.h:200
 #, fuzzy
 msgid "FontRTL"
 msgstr "Шрифт"
 
-#: configdef.h:201
+#: configdef.h:202
 msgid "Keys"
 msgstr "Клавиатура"
 
-#: configdef.h:201
+#: configdef.h:202
 msgid "Keyboard features"
 msgstr "Клавиатура"
 
-#: configdef.h:204
+#: configdef.h:205
 msgid "&Backarrow sends ^H"
 msgstr "&Backarrow как ^H"
 
-#: configdef.h:205
+#: configdef.h:206
 msgid "&Delete sends DEL"
 msgstr "DEL удаляет слева"
 
-#: configdef.h:206
+#: configdef.h:207
 msgid "Ctrl+LeftAlt is Alt&Gr"
 msgstr "Ctrl+LeftAlt заменяет Alt&Gr"
 
-#: configdef.h:207
+#: configdef.h:208
 msgid "AltGr is also Alt"
 msgstr "AltGr заменяет или Alt"
 
-#: configdef.h:208
+#: configdef.h:209
 msgid "Caplock As Escape"
 msgstr ""
 
-#: configdef.h:209
+#: configdef.h:210
 msgid "&Esc/Enter reset IME to alphanumeric"
 msgstr ""
 
-#: configdef.h:211
+#: configdef.h:212
 msgid "OldAltGrDetection"
 msgstr ""
 
-#: configdef.h:212
+#: configdef.h:213
 msgid "AutoRepeat"
 msgstr ""
 
-#: configdef.h:213
+#: configdef.h:214
 msgid "FormatOtherKeys"
 msgstr ""
 
-#: configdef.h:214
+#: configdef.h:215
 #, fuzzy
 msgid "CtrlAltDelayAltGr"
 msgstr "Ctrl+LeftAlt заменяет Alt&Gr"
 
-#: configdef.h:215
+#: configdef.h:216
 msgid "OldModifyKeys"
 msgstr ""
 
-#: configdef.h:216
+#: configdef.h:217
 msgid "SupportExternalHotkeys"
 msgstr ""
 
-#: configdef.h:218
+#: configdef.h:219
 msgid "Shortcuts"
 msgstr "Клавиши быстрого доступа"
 
-#: configdef.h:219
+#: configdef.h:220
 msgid "Cop&y and Paste (Ctrl/Shift+Ins)"
 msgstr "Копировать и Вставить (Ctrl/Shift+Ins)"
 
-#: configdef.h:220
+#: configdef.h:221
 msgid "&Menu and Full Screen (Alt+Space/Enter)"
 msgstr "Меню и полный экран (Alt+Space/Enter)"
 
-#: configdef.h:221
+#: configdef.h:222
 msgid "&Switch window (Ctrl+[Shift+]Tab)"
 msgstr "Переключить окно (Ctrl+[Shift+]Tab)"
 
-#: configdef.h:222
+#: configdef.h:223
 msgid "&Zoom (Ctrl+plus/minus/zero)"
 msgstr "Масштаб (Ctrl+plus/minus/zero)"
 
-#: configdef.h:223
+#: configdef.h:224
 msgid "&Alt+Fn shortcuts"
 msgstr "&Alt+F(n) сочетания"
 
-#: configdef.h:224
+#: configdef.h:225
 #, fuzzy
 msgid "&Win+x shortcuts"
 msgstr "&Alt+F(n) сочетания"
 
-#: configdef.h:225
+#: configdef.h:226
 msgid "&Ctrl+Shift+letter shortcuts"
 msgstr "&Ctrl+Shift+(n) сочетания"
 
-#: configdef.h:226
+#: configdef.h:227
 msgid "Compose key"
 msgstr "Модификатор клавиатуры"
 
-#: configdef.h:228
+#: configdef.h:229
 msgid "ZoomFontWithWindow"
 msgstr ""
 
-#: configdef.h:229
+#: configdef.h:230
 msgid "hkwinkeyall"
 msgstr ""
 
-#: configdef.h:230
+#: configdef.h:231
 msgid "hook_keyboard"
 msgstr ""
 
-#: configdef.h:231
+#: configdef.h:232
 msgid "CtrlExchangeShift"
 msgstr ""
 
-#: configdef.h:232
+#: configdef.h:233
 msgid "CtrlControls"
 msgstr ""
 
-#: configdef.h:235
+#: configdef.h:236
 msgid "Key_PrintScreen"
 msgstr ""
 
-#: configdef.h:236
+#: configdef.h:237
 msgid "Key_Pause"
 msgstr ""
 
-#: configdef.h:237
+#: configdef.h:238
 #, fuzzy
 msgid "Key_Break"
 msgstr "Прервать текущую задачу"
 
-#: configdef.h:238
+#: configdef.h:239
 #, fuzzy
 msgid "Key_Menu"
 msgstr "Меню"
 
-#: configdef.h:239
+#: configdef.h:240
 #, fuzzy
 msgid "Key_ScrollLock"
 msgstr "Сброс полосы прокрутки"
 
-#: configdef.h:240
+#: configdef.h:241
 msgid "ManageLEDs"
 msgstr ""
 
-#: configdef.h:244
+#: configdef.h:245
 msgid "Hotkey Setting"
 msgstr ""
 
-#: configdef.h:246
+#: configdef.h:247
 #, fuzzy
 msgid "KeyFunctions"
 msgstr "Свойства мыши"
 
 #: configdef.h:248
+msgid "Keyremap"
+msgstr ""
+
+#: configdef.h:250
 msgid "Mouse"
 msgstr "Мышь"
 
-#: configdef.h:248
+#: configdef.h:250
 msgid "Mouse functions"
 msgstr "Свойства мыши"
 
-#: configdef.h:250
+#: configdef.h:252
 msgid "Clic&ks place command line cursor"
 msgstr "Устанавливать каретку мышкой"
 
-#: configdef.h:251
+#: configdef.h:253
 msgid "Delimiters:"
 msgstr ""
 
-#: configdef.h:252
+#: configdef.h:254
 #, fuzzy
 msgid "Word Characters:"
 msgstr "Набор символов"
 
-#: configdef.h:253
+#: configdef.h:255
 msgid "Click actions"
 msgstr "Действия при нажатии кнопок"
 
-#: configdef.h:254
+#: configdef.h:256
 msgid "Right mouse button"
 msgstr "Правая кнопка мыши"
 
-#: configdef.h:255
+#: configdef.h:257
 msgid "Middle mouse button"
 msgstr "Средняя кнопка мыши"
 
-#: configdef.h:256
+#: configdef.h:258
 msgid "Clicks Send to App"
 msgstr ""
 
-#: configdef.h:257
+#: configdef.h:259
 msgid "Modifier for overriding default"
 msgstr "Модификатор отмены захвата мыши"
 
-#: configdef.h:259
+#: configdef.h:261
 msgid "OpeningClicks"
 msgstr ""
 
-#: configdef.h:260
+#: configdef.h:262
 msgid "OpeningMod"
 msgstr ""
 
-#: configdef.h:262
+#: configdef.h:264
 #, fuzzy
 msgid "ZoomMouse"
 msgstr "Мышь"
 
-#: configdef.h:263
+#: configdef.h:265
 #, fuzzy
 msgid "HideMouse"
 msgstr "Мышь"
 
-#: configdef.h:264
+#: configdef.h:266
 msgid "ElasticMouse"
 msgstr ""
 
-#: configdef.h:265
+#: configdef.h:267
 msgid "LinesPerMouseWheelNotch"
 msgstr ""
 
-#: configdef.h:267
+#: configdef.h:269
 #, fuzzy
 msgid "MousePointer"
 msgstr "Принтер"
 
-#: configdef.h:268
+#: configdef.h:270
 msgid "AppMousePointer"
 msgstr ""
 
-#: configdef.h:270
+#: configdef.h:271
+#, fuzzy
+msgid "PixMousePointer"
+msgstr "Принтер"
+
+#: configdef.h:273
 msgid "Selection"
 msgstr "Правка"
 
-#: configdef.h:270
+#: configdef.h:273
 msgid "Selection and clipboard"
 msgstr "Выделение текста и буфер обмена"
 
-#: configdef.h:272
+#: configdef.h:275
 msgid "Clear selection on input"
 msgstr "Отменить выделение текста при вводе"
 
-#: configdef.h:273
+#: configdef.h:276
 msgid "Clipboard"
 msgstr "Буфер обмена"
 
-#: configdef.h:274
+#: configdef.h:277
 msgid "Cop&y on select"
 msgstr "Копировать при выборе"
 
-#: configdef.h:276
+#: configdef.h:279
 msgid "Copy as &rich text"
 msgstr "Копировать как таблицу"
 
-#: configdef.h:277
+#: configdef.h:280
 #, fuzzy
 msgid "CopyAsHTML"
 msgstr "Копировать как HTML"
 
-#: configdef.h:278
+#: configdef.h:281
 #, fuzzy
 msgid "CopyAsRTFFont"
 msgstr "Копировать как RTF"
 
-#: configdef.h:279
+#: configdef.h:282
 #, fuzzy
 msgid "CopyAsRTFFontName"
 msgstr "Копировать как RTF"
 
-#: configdef.h:280
+#: configdef.h:283
 msgid "CopyAsRTFFontHeight"
 msgstr ""
 
-#: configdef.h:281
+#: configdef.h:284
 msgid "Trim space from selection"
 msgstr "Убирать табы и пробелы в конце"
 
-#: configdef.h:282
+#: configdef.h:285
 msgid "Allow setting selection"
 msgstr "Разрешить нвстройку выделенного текста"
 
-#: configdef.h:283
+#: configdef.h:286
 #, fuzzy
 msgid "allow_paste_selection"
 msgstr "Разрешить нвстройку выделенного текста"
 
-#: configdef.h:284
+#: configdef.h:287
 msgid "Show size while selecting (0..12)"
 msgstr "Размер выделенного текста (0..12)"
 
-#: configdef.h:285
+#: configdef.h:288
 msgid "Suspend output while selecting"
 msgstr "Приостановить вывод при выделении текста"
 
-#: configdef.h:287 configdef.h:370
+#: configdef.h:290 configdef.h:373
 msgid "Window"
 msgstr "Окно"
 
-#: configdef.h:287
+#: configdef.h:290
 #, fuzzy
 msgid "Window Options"
 msgstr "Свойства окна"
 
-#: configdef.h:288
+#: configdef.h:291
 msgid "Default size"
 msgstr "Размер по умолчанию"
 
-#: configdef.h:290
+#: configdef.h:293
 msgid "Colu&mns"
 msgstr "Колонны"
 
-#: configdef.h:291
+#: configdef.h:294
 msgid "Ro&ws"
 msgstr "Ряды"
 
-#: configdef.h:293
+#: configdef.h:296
 msgid "Re&wrap on resize"
 msgstr "Переносить при изменении размера"
 
-#: configdef.h:294
+#: configdef.h:297
 msgid "Scrollbar"
 msgstr "Полоса прокрутки"
 
-#: configdef.h:296
+#: configdef.h:299
 msgid "Scroll&back lines"
 msgstr "Буфер строк"
 
-#: configdef.h:297
+#: configdef.h:300
 #, fuzzy
 msgid "MaxScrollbackLines"
 msgstr "Буфер строк"
 
-#: configdef.h:298
+#: configdef.h:301
 msgid "Modifier for scrolling"
 msgstr "Модификатор прокрутки"
 
-#: configdef.h:300
+#: configdef.h:303
 msgid "&PgUp and PgDn scroll without modifier"
 msgstr "&PgUp и PgDn прокрутка без модификатора"
 
-#: configdef.h:301
+#: configdef.h:304
 #, fuzzy
 msgid "BorderStyle"
 msgstr "Стиль"
 
-#: configdef.h:302
+#: configdef.h:305
 msgid "&AllocConsole ,Some console programs need it."
 msgstr ""
 
-#: configdef.h:305
+#: configdef.h:308
 #, fuzzy
 msgid "Search Bar"
 msgstr "Поиск"
 
-#: configdef.h:306
+#: configdef.h:309
 #, fuzzy
 msgid "SearchContext"
 msgstr "Поиск"
 
-#: configdef.h:308
+#: configdef.h:311
 msgid "Terminal"
 msgstr "Консоль"
 
-#: configdef.h:308
+#: configdef.h:311
 msgid "Terminal features"
 msgstr "Свойства консоли"
 
-#: configdef.h:311
+#: configdef.h:314
 #, fuzzy
 msgid "Term"
 msgstr "Консоль"
 
-#: configdef.h:312
+#: configdef.h:315
 msgid "&Answerback"
 msgstr "Автоответ "
 
-#: configdef.h:313
+#: configdef.h:316
 msgid "WrapTab"
 msgstr ""
 
-#: configdef.h:314
+#: configdef.h:317
 msgid "OldWrapModes"
 msgstr ""
 
-#: configdef.h:315
+#: configdef.h:318
 msgid "Enable132ColumnSwitching"
 msgstr ""
 
-#: configdef.h:316
-msgid "Bell"
-msgstr "Оповещения"
-
-#: configdef.h:317
-#, fuzzy
-msgid "BellType"
-msgstr "Оповещения"
-
-#: configdef.h:318
-#, fuzzy
-msgid "BellFiles"
-msgstr "Оповещения"
-
 #: configdef.h:319
-#, fuzzy
-msgid "BellFile"
+msgid "Bell"
 msgstr "Оповещения"
 
 #: configdef.h:320
 #, fuzzy
-msgid "BellFile2"
+msgid "BellType"
 msgstr "Оповещения"
 
 #: configdef.h:321
 #, fuzzy
-msgid "BellFile3"
+msgid "BellFiles"
 msgstr "Оповещения"
 
 #: configdef.h:322
 #, fuzzy
-msgid "BellFile4"
+msgid "BellFile"
 msgstr "Оповещения"
 
 #: configdef.h:323
 #, fuzzy
-msgid "BellFile5"
+msgid "BellFile2"
 msgstr "Оповещения"
 
 #: configdef.h:324
 #, fuzzy
-msgid "BellFile6"
+msgid "BellFile3"
 msgstr "Оповещения"
 
 #: configdef.h:325
 #, fuzzy
-msgid "BellFile7"
+msgid "BellFile4"
 msgstr "Оповещения"
 
 #: configdef.h:326
 #, fuzzy
-msgid "BellFreq"
+msgid "BellFile5"
 msgstr "Оповещения"
 
 #: configdef.h:327
+#, fuzzy
+msgid "BellFile6"
+msgstr "Оповещения"
+
+#: configdef.h:328
+#, fuzzy
+msgid "BellFile7"
+msgstr "Оповещения"
+
+#: configdef.h:329
+#, fuzzy
+msgid "BellFreq"
+msgstr "Оповещения"
+
+#: configdef.h:330
 #, fuzzy
 msgid "BellLen"
 msgstr "Оповещения"
 
 # msgstr "Всплывающее"
-#: configdef.h:329
+#: configdef.h:332
 msgid "&Highlight in taskbar"
 msgstr "Подсветка"
 
 # msgstr "Статус в панели"
-#: configdef.h:330
+#: configdef.h:333
 msgid "&Popup"
 msgstr "Всплывающее"
 
-#: configdef.h:331
+#: configdef.h:334
 msgid "&Flash"
 msgstr "Вспл."
 
-#: configdef.h:332
+#: configdef.h:335
 msgid "BellFlashStyle"
 msgstr ""
 
-#: configdef.h:334
+#: configdef.h:337
 msgid "BellInterval"
 msgstr ""
 
-#: configdef.h:335
+#: configdef.h:338
 msgid "PlayTone"
 msgstr ""
 
-#: configdef.h:336
+#: configdef.h:339
 msgid "Printer"
 msgstr "Принтер"
 
-#: configdef.h:338
+#: configdef.h:341
 msgid "System"
 msgstr ""
 
-#: configdef.h:338
+#: configdef.h:341
 msgid "system setting"
 msgstr ""
 
-#: configdef.h:339
+#: configdef.h:342
 msgid "Dialog"
 msgstr ""
 
-#: configdef.h:341
+#: configdef.h:344
 #, fuzzy
 msgid "Options Level"
 msgstr "Настройки"
 
-#: configdef.h:342
+#: configdef.h:345
 #, fuzzy
 msgid "Language"
 msgstr "Язык интерфейса"
 
-#: configdef.h:343
+#: configdef.h:346
 msgid "scale_options_width"
 msgstr ""
 
-#: configdef.h:345
+#: configdef.h:348
 #, fuzzy
 msgid "Options Font"
 msgstr "Настройки"
 
-#: configdef.h:346
+#: configdef.h:349
 #, fuzzy
 msgid "OptionsFontname"
 msgstr "Настройки"
 
-#: configdef.h:347
+#: configdef.h:350
 msgid "OptionsFontHeight"
 msgstr ""
 
-#: configdef.h:350
+#: configdef.h:353
 msgid "Prompt on &close"
 msgstr ""
 
-#: configdef.h:351
+#: configdef.h:354
 msgid "ConfirmReset"
 msgstr ""
 
-#: configdef.h:352
+#: configdef.h:355
 msgid "ConfirmMultiLinePasting"
 msgstr ""
 
-#: configdef.h:353
+#: configdef.h:356
 #, fuzzy
 msgid "NoAltScreen"
 msgstr "На весь экран"
 
-#: configdef.h:354
+#: configdef.h:357
 #, fuzzy
 msgid "EraseToScrollback"
 msgstr "Сброс полосы прокрутки"
 
-#: configdef.h:356
+#: configdef.h:359
 msgid "Bidi"
 msgstr ""
 
-#: configdef.h:357
+#: configdef.h:360
 msgid "DisplaySpeedup"
 msgstr ""
 
-#: configdef.h:359
+#: configdef.h:362
 msgid "Command line Options"
 msgstr ""
 
-#: configdef.h:360
+#: configdef.h:363
 msgid "Class"
 msgstr ""
 
-#: configdef.h:361
+#: configdef.h:364
 msgid "Hold"
 msgstr ""
 
-#: configdef.h:362
+#: configdef.h:365
 msgid "ExitWrite"
 msgstr ""
 
-#: configdef.h:363
+#: configdef.h:366
 msgid "ExitTitle"
 msgstr ""
 
-#: configdef.h:364
+#: configdef.h:367
 msgid "Icon"
 msgstr ""
 
-#: configdef.h:365
+#: configdef.h:368
 msgid "Log"
 msgstr ""
 
-#: configdef.h:366
+#: configdef.h:369
 msgid "Logging"
 msgstr ""
 
-#: configdef.h:367
+#: configdef.h:370
 msgid "Utmp"
 msgstr ""
 
-#: configdef.h:368
+#: configdef.h:371
 msgid "Title"
 msgstr ""
 
-#: configdef.h:369
+#: configdef.h:372
 msgid "title_settable"
 msgstr ""
 
-#: configdef.h:371
+#: configdef.h:374
 msgid "X"
 msgstr ""
 
-#: configdef.h:372
+#: configdef.h:375
 msgid "Y"
 msgstr ""
 
-#: configdef.h:373
+#: configdef.h:376
 msgid "Daemonize"
 msgstr ""
 
-#: configdef.h:374
+#: configdef.h:377
 msgid "Daemonize Always"
 msgstr ""
 
-#: configdef.h:376
+#: configdef.h:379
 #, fuzzy
 msgid "Hidden Options"
 msgstr "Настройки"
 
-#: configdef.h:377
+#: configdef.h:380
 msgid "SuppressSGR"
 msgstr ""
 
-#: configdef.h:378
+#: configdef.h:381
 msgid "SuppressDEC"
 msgstr ""
 
-#: configdef.h:379
+#: configdef.h:382
 msgid "SuppressWIN"
 msgstr ""
 
-#: configdef.h:380
+#: configdef.h:383
 msgid "SuppressOSC"
 msgstr ""
 
-#: configdef.h:381
+#: configdef.h:384
 msgid "SuppressNRC"
 msgstr ""
 
-#: configdef.h:382
+#: configdef.h:385
 msgid "SuppressMouseWheel"
 msgstr ""
 
-#: configdef.h:383
+#: configdef.h:386
 msgid "FilterPasteControls"
 msgstr ""
 
-#: configdef.h:384
+#: configdef.h:387
 msgid "GuardNetworkPaths"
 msgstr ""
 
-#: configdef.h:385
+#: configdef.h:388
 msgid "BracketedPasteByLine"
 msgstr ""
 
-#: configdef.h:386
+#: configdef.h:389
 msgid "PrintableControls"
 msgstr ""
 
-#: configdef.h:387
+#: configdef.h:390
 msgid "CharNarrowing"
 msgstr ""
 
-#: configdef.h:388
+#: configdef.h:391
 msgid "SaveFilename"
 msgstr ""
 
-#: configdef.h:389
+#: configdef.h:392
 msgid "AppID"
 msgstr ""
 
-#: configdef.h:390
+#: configdef.h:393
 msgid "AppName"
 msgstr ""
 
-#: configdef.h:391
+#: configdef.h:394
 msgid "AppLaunchCmd"
 msgstr ""
 
-#: configdef.h:392
+#: configdef.h:395
 #, fuzzy
 msgid "DropCommands"
 msgstr "Пользовательские команды"
 
-#: configdef.h:393
+#: configdef.h:396
 msgid "ExitCommands"
 msgstr ""
 
-#: configdef.h:394
+#: configdef.h:397
 #, fuzzy
 msgid "UserCommands"
 msgstr "Пользовательские команды"
 
-#: configdef.h:395
+#: configdef.h:398
 #, fuzzy
 msgid "CtxMenuFunctions"
 msgstr "Свойства мыши"
 
-#: configdef.h:396
+#: configdef.h:399
 #, fuzzy
 msgid "SysMenuFunctions"
 msgstr "Свойства мыши"
 
-#: configdef.h:397
+#: configdef.h:400
 #, fuzzy
 msgid "UserCommandsPath"
 msgstr "Пользовательские команды"
 
-#: configdef.h:398
+#: configdef.h:401
 msgid "SessionCommands"
 msgstr ""
 
-#: configdef.h:399
+#: configdef.h:402
 #, fuzzy
 msgid "TaskCommands"
 msgstr "Пользовательские команды"
 
-#: configdef.h:400
-msgid "ConPTY"
-msgstr ""
-
-#: configdef.h:401
-#, fuzzy
-msgid "LoginFromShortcut"
-msgstr "Клавиши быстрого доступа"
-
-#: configdef.h:402
-#, fuzzy
-msgid "MenuMouse"
-msgstr "Мышь"
-
 #: configdef.h:403
-msgid "MenuCtrlMouse"
+msgid "ConPTY"
 msgstr ""
 
 #: configdef.h:404
 #, fuzzy
-msgid "MenuMouse5"
-msgstr "Мышь"
+msgid "LoginFromShortcut"
+msgstr "Клавиши быстрого доступа"
 
 #: configdef.h:405
-msgid "MenuTitleCtrlLeft"
-msgstr ""
+#, fuzzy
+msgid "MenuMouse"
+msgstr "Мышь"
 
 #: configdef.h:406
-msgid "MenuTitleCtrlRight"
+msgid "MenuCtrlMouse"
 msgstr ""
 
 #: configdef.h:407
-msgid "SessionGeomSync"
-msgstr ""
+#, fuzzy
+msgid "MenuMouse5"
+msgstr "Мышь"
 
 #: configdef.h:408
-msgid "ColSpacing"
+msgid "MenuTitleCtrlLeft"
 msgstr ""
 
 #: configdef.h:409
-msgid "RowSpacing"
+msgid "MenuTitleCtrlRight"
 msgstr ""
 
 #: configdef.h:410
-msgid "AutoLeading"
+msgid "SessionGeomSync"
 msgstr ""
 
 #: configdef.h:411
-msgid "Ligatures"
+msgid "ColSpacing"
 msgstr ""
 
 #: configdef.h:412
-msgid "LigaturesSupport"
+msgid "RowSpacing"
 msgstr ""
 
 #: configdef.h:413
-msgid "BoxDrawing"
+msgid "AutoLeading"
 msgstr ""
 
 #: configdef.h:414
-msgid "HandleDPI"
+msgid "Ligatures"
 msgstr ""
 
 #: configdef.h:415
-msgid "CheckVersionUpdate"
+msgid "LigaturesSupport"
 msgstr ""
 
 #: configdef.h:416
-msgid "IMECursorColour"
+msgid "BoxDrawing"
 msgstr ""
 
 #: configdef.h:417
-msgid "SixelClipChars"
+msgid "HandleDPI"
 msgstr ""
 
 #: configdef.h:418
-msgid "OldBold"
+msgid "CheckVersionUpdate"
 msgstr ""
 
 #: configdef.h:419
+msgid "IMECursorColour"
+msgstr ""
+
+#: configdef.h:420
+msgid "MaxImageSize"
+msgstr ""
+
+#: configdef.h:421
+msgid "SixelClipChars"
+msgstr ""
+
+#: configdef.h:422
+msgid "OldBold"
+msgstr ""
+
+#: configdef.h:423
 #, fuzzy
 msgid "ShortLongOpts"
 msgstr "Клавиши быстрого доступа"
 
-#: configdef.h:420
+#: configdef.h:424
 msgid "BoldAsRainbowSparkles"
 msgstr ""
 
-#: configdef.h:421
+#: configdef.h:425
 msgid "HoverTitle"
 msgstr ""
 
-#: configdef.h:422
+#: configdef.h:426
 msgid "ProgressBar"
 msgstr ""
 
-#: configdef.h:423
+#: configdef.h:427
 msgid "ProgressScan"
 msgstr ""
 
-#: configdef.h:424
+#: configdef.h:428
 msgid "DimMargins"
 msgstr ""
 
-#: configdef.h:425
+#: configdef.h:429
 msgid "Baud"
 msgstr ""
 
-#: configdef.h:426
+#: configdef.h:430
 msgid "Bloom"
 msgstr ""
 
-#: configdef.h:427
+#: configdef.h:431
 #, fuzzy
 msgid "OldOptions"
 msgstr "Настройки"
 
-#: configdef.h:428
+#: configdef.h:432
 msgid "OldXButtons"
 msgstr ""
 
-#: configdef.h:429
+#: configdef.h:433
 msgid "wslbridge version,0:nobridge,1:wslbridge,2:wslbreadge2"
 msgstr ""
 
-#: configdef.h:430
+#: configdef.h:434
 msgid "wslDistribution,null is default"
 msgstr ""
 
-#: configdef.h:432
+#: configdef.h:436
 msgid "status_debug"
 msgstr ""
 
 #. __("MenuMenu")                 )
 #. _CFGDEFD(string   ,menu_ctrlmenu          ,"e|ls"          ,       IS(0),OPT_STR          ,OPF_STR  ,1,0,5,"MenuCtrlMenu"             ,__("MenuCtrlMenu")             )
-#: configdef.h:435
+#: configdef.h:439
 #, fuzzy
 msgid "FontSize"
 msgstr "Шрифт"
 
-#: configdef.h:436
+#: configdef.h:440
 #, fuzzy
 msgid "Break"
 msgstr "Прервать текущую задачу"
 
-#: configdef.h:437
+#: configdef.h:441
 msgid "Pause"
 msgstr ""
 
-#: configdef.h:438
+#: configdef.h:442
 msgid "CopyAsRTFFontSize"
 msgstr ""
 
-#: configdef.h:439
+#: configdef.h:443
 msgid "OldFontMenu"
 msgstr ""
 
-#: configdef.h:440
+#: configdef.h:444
 #, fuzzy
 msgid "OptionsFontSize"
 msgstr "Настройки"
 
-#: configdef.h:441
+#: configdef.h:445
 msgid "gui_font_size"
 msgstr ""
 
-#: configdef.h:442
+#: configdef.h:446
 msgid "BoldAsBright"
 msgstr ""
 
-#: configdef.h:443
+#: configdef.h:447
 msgid "FontQuality"
 msgstr ""
 
-#: configdef.h:444
+#: configdef.h:448
 #, fuzzy
 msgid "UseSystemColours"
 msgstr "Цвета"
@@ -3190,9 +3208,6 @@ msgstr ""
 
 #~ msgid "&Cursor..."
 #~ msgstr "Каретка..."
-
-#~ msgid "&Theme"
-#~ msgstr "Тема"
 
 #~ msgid "&Off"
 #~ msgstr "Нет"

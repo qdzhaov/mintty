@@ -1,6 +1,6 @@
 // winmain.c (part of mintty)
 // return 0;
-// Copyright 2008-13 Andy Koppe, 2015-2024 Thomas Wolff
+// Copyright 2008-13 Andy Koppe, 2015-2025 Thomas Wolff
 // Based on code from PuTTY-0.60 by Simon Tatham and team.
 // Licensed under the terms of the GNU General Public License v3 or later.
 
@@ -694,6 +694,8 @@ horex(char tag)
 static void
 do_horflush(void)
 {
+  force_imgs = true;  // override suppression of repetitive image painting
+
   // could limit this to newly visible columns
   term_invalidate(0, 0, term.cols - 1, term.rows - 1);
   win_schedule_update();
@@ -727,6 +729,8 @@ horflush(void)
 static void
 horflush(void)
 {
+  force_imgs = true;  // override suppression of repetitive image painting
+
   // could limit this to newly visible columns
   term_invalidate(0, 0, term.cols - 1, term.rows - 1);
   win_schedule_update();
@@ -2358,20 +2362,37 @@ struct cursor_style cursorstyles[] = {
     {0,0}
 };
 
-static HCURSOR cursors[2] = {0, 0};
+static HCURSOR cursors[3] = {0, 0, 0};
+
+bool
+is_mouse_mode_by_pixels(void)
+{
+  return (term.mouse_mode && term.mouse_enc == ME_PIXEL_CSI)
+         || (term.locator_by_pixels && 
+             (term.mouse_mode == MM_LOCATOR || term.locator_1_enabled));
+}
 
 HCURSOR
 win_get_cursor(bool appmouse)
 {
-  return cursors[appmouse];
+  int cursidx = appmouse;
+  if (cursidx && is_mouse_mode_by_pixels())
+    cursidx = 2;
+  return cursors[cursidx];
 }
 void set_cursor(bool appmouse,HCURSOR c){
   if (!c)
-    c = LoadCursor(null, appmouse ? IDC_ARROW : IDC_IBEAM);
+    c = LoadCursor(null, appmouse 
+                         ? (is_mouse_mode_by_pixels() ? IDC_CROSS : IDC_ARROW)
+                         : IDC_IBEAM);
 
-  if (!IS_INTRESOURCE(cursors[appmouse]))
-    DestroyCursor(cursors[appmouse]);
-  cursors[appmouse] = c;
+  int cursidx = appmouse;
+  if (cursidx && is_mouse_mode_by_pixels())
+    cursidx = 2;
+
+  if (!IS_INTRESOURCE(cursors[cursidx]))
+    DestroyCursor(cursors[cursidx]);
+  cursors[cursidx] = c;
   SetClassLongPtr(wv.wnd, GCLP_HCURSOR, (LONG_PTR)c);
   SetCursor(c);
 }
@@ -2382,7 +2403,7 @@ set_cursor_stylet(bool appmouse, void* tag)
   set_cursor(appmouse,c);
 }
 void
-set_cursor_style(bool appmouse, const char * style)
+set_cursor_style(int  appmouse, const char * style)
 {
   HCURSOR c = 0;
   if (strchr(style, '.')) {
@@ -2412,8 +2433,19 @@ set_cursor_style(bool appmouse, const char * style)
 static void
 win_init_cursors()
 {
-  set_cursor_stylet(true, IDC_ARROW);
-  set_cursor_stylet(false,IDC_IBEAM);
+  if (*cfg.appmouse_pointer)
+    set_cursor_style(1, cfg.appmouse_pointer);
+  else
+    set_cursor_style(1, "arrow");
+  if (*cfg.pixmouse_pointer)
+    set_cursor_style(2, cfg.pixmouse_pointer);
+  else
+    set_cursor_style(2, "cross");
+  // this must be last:
+  if (*cfg.mouse_pointer)
+    set_cursor_style(0, cfg.mouse_pointer);
+  else
+    set_cursor_style(0, "ibeam");
 }
 /*
    Diagnostic functions.
@@ -3204,10 +3236,17 @@ win_proc(HWND wnd, UINT message, WPARAM wp, LPARAM lp)
       // win_update_tabbar();
       // update dark mode
       if (message == WM_WININICHANGE) {
-        // SetWindowTheme will cause an asynchronous WM_THEMECHANGED message,
-        // so guard it by WM_WININICHANGE;
-        // this will switch from Light to Dark mode immediately but not back!
-        //win_dark_mode(wnd);
+        // adapt window frame colours
+        win_dark_mode(wnd);  // causes WM_THEMECHANGED sent
+
+        // adapt mintty theme (do not apply_config(false); it would crash)
+        if (*cfg.dark_theme && is_win_dark_mode())
+          load_theme(cfg.dark_theme);
+        else if (*cfg.theme_file)
+          load_theme(cfg.theme_file);
+        // do not win_reset_colours(), in order to
+        // keep dynamic OSC colour definitions
+        win_invalidate_all(false);
       }
     }
     when WM_DISPLAYCHANGE:{
@@ -3217,6 +3256,7 @@ win_proc(HWND wnd, UINT message, WPARAM wp, LPARAM lp)
       font_cs_reconfig(true);
     }
     when WM_PAINT:{
+      force_imgs = true;  // override suppression of repetitive image painting
       win_paint();
 
 #ifdef handle_default_size_asynchronously
@@ -3817,7 +3857,7 @@ static LRESULT CALLBACK hookprockbll(int nCode, WPARAM wParam, LPARAM lParam) {
         if(isself==2) return 0;
         LPARAM lp = 1|(LPARAM)kbdll->flags << 24 | (LPARAM)kbdll->scanCode << 16;
         win_tab_actv();
-        printf("wk %x\n",key);
+        //printf("wk %x\n",key);
         if((!win_whotkey(key, lp))&&(cfg.hkwinkeyall==0)){
           keybd_event(wv.pwinkey,0,2,UNCAP_INFO);
           keybd_event(key,kbdll->scanCode,0,UNCAP_INFO);
@@ -4682,6 +4722,8 @@ int LoadConfig(){
   copy_config("main after -o", &file_cfg, &cfg);
   if (*cfg.colour_scheme)
     load_scheme(cfg.colour_scheme);
+  else if (*cfg.dark_theme && is_win_dark_mode())
+    load_theme(cfg.dark_theme);
   else if (*cfg.theme_file)
     load_theme(cfg.theme_file);
 
@@ -4893,8 +4935,14 @@ main(int argc, const char *argv[])
       }
     }
 #if 0
+#ifdef propagate_TERM_to_WSL
     *pargv++ = "-e";
     *pargv++ = "TERM";
+#else
+    setenv("HOSTTERM", cfg.term, true);
+    *pargv++ = "-e";
+    *pargv++ = "HOSTTERM";
+#endif
     *pargv++ = "-e";
     *pargv++ = "APPDATA";
     if (!cfg.old_locale) {

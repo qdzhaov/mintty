@@ -43,6 +43,8 @@ clean:
 #############################################################################
 
 DIST := rel
+# --mtime would stamp all files the same
+#TARTIME := --mtime="$(shell date +%Y-%m-%d) 00:00:00"
 TARUSER := --owner=root --group=root --owner=mintty --group=cygwin
 REL := 1
 
@@ -91,7 +93,8 @@ norm=\e[m
 $(DIST):
 	mkdir -p $(DIST)
 
-release: $(DIST) check-x11 cop check _ ver
+release: check-x11 cop check _ ver
+	mkdir -p $(DIST)
 	@echo -e "$(hint)Now: git commit -a; make tag;$(norm)"
 	@echo -e "$(hint)Then: make pkg and git push; git push --tags;$(norm)"
 	@echo -e "$(hint)Last: make upload; make ann; mail cygwin-announce$(norm)"

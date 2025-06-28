@@ -24,6 +24,8 @@ static size_t const TEMPFILE_MAX_NUM = 16;
 // if we'd create ~10000 "CompatibleDCs", handle handling will fail...
 static int cdc = 999;
 
+// override suppression of repetitive image painting
+bool force_imgs = true;
 
 
 #if CYGWIN_VERSION_API_MINOR >= 74
@@ -240,6 +242,8 @@ winimg_len(imglist *img)
   return img->len ?: img->pixelwidth * img->pixelheight * 4;
 }
 
+#define maxval(type)	((unsigned type)-1 >> 1)
+
 bool
 winimg_new(imglist **ppimg, const char * id, unsigned char * pixels, uint len,
            int left, int scrtop, int width, int height,
@@ -274,6 +278,8 @@ winimg_new(imglist **ppimg, const char * id, unsigned char * pixels, uint len,
   img->prev = NULL;
   img->strage = NULL;
   img->attr = attr;
+  img->x = maxval(short);
+  img->y = maxval(short);
 
   img->len = len;
   if (len) {  // image format, not sixel
@@ -558,6 +564,8 @@ draw_img(HDC dc, imglist * img)
     int height = img->pixelheight;
     left += PADDING;
     top += OFFSET + PADDING;
+    // adjust horizontal scrolling
+    left -= horclip();
 
     int coord_transformed = 0;
     XFORM old_xform;
@@ -698,7 +706,17 @@ winimgs_paint(void)
 #endif
     } else {
       int left = img->left;
+      // do not adjust horizontal scrolling here
+
       int top = img->top - term.virtuallines - term.disptop;
+
+      // suppress repetitive image painting
+      if (left == img->x && top == img->y && !force_imgs)
+        continue;
+      img->x = left;
+      img->y = top;
+      //printf("disp @%d/%d\n", left, top);
+
       if (top + img->height < 0 || top > term.rows) {
         // if the image is scrolled out, serialize it into a temp file
 #ifdef debug_img_list
@@ -778,6 +796,11 @@ winimgs_paint(void)
         int ybot = min(top + img->height, term.rows) * wv.cell_height + OFFSET + PADDING;
         int xlft = left * wv.cell_width + PADDING;
         int xrgt = min(left + img->width, term.cols) * wv.cell_width + PADDING;
+
+        // adjust horizontal scrolling
+        xlft -= horclip();
+        xrgt -= horclip();
+
         if (img->len) {
           // better background handling implemented below; this version 
           // would expose artefacts if a transparent image is scrolled
@@ -849,6 +872,9 @@ winimgs_paint(void)
             ExcludeClipRect(dc, xlft, ytop, xrgt, ybot);
           }
           else {
+            // adjust horizontal scrolling
+            left -= horclip() / wv.cell_width;
+
             StretchBlt(dc,
                        left * wv.cell_width + PADDING, top * wv.cell_height + OFFSET + PADDING,
                        img->width * wv.cell_width, img->height * wv.cell_height,
@@ -899,6 +925,9 @@ winimgs_paint(void)
   }
 
   ReleaseDC(wv.wnd, dc);
+
+  // suppress repetitive image painting
+  force_imgs = false;
 }
 
 
@@ -908,7 +937,7 @@ winimgs_paint(void)
 //G #include "charset.h"  // path_win_w_to_posix
 
 void
-win_emoji_show(int x, int y, const wchar * efn, void * * bufpoi, int * buflen, int elen, ushort lattr, bool italic)
+win_emoji_show(int x0, int y, const wchar * efn, void * * bufpoi, int * buflen, int elen, ushort lattr, bool italic)
 {
   gdiplus_init();
 
@@ -960,7 +989,7 @@ win_emoji_show(int x, int y, const wchar * efn, void * * bufpoi, int * buflen, i
     gpcheck("load file", s);
   }
 
-  int col = PADDING + x * wv.cell_width;
+  int col = PADDING + x0 * wv.cell_width - horclip();
   int row = OFFSET + PADDING + y * wv.cell_height;
   if ((lattr & LATTR_MODE) >= LATTR_BOT)
     row -= wv.cell_height;
@@ -968,7 +997,7 @@ win_emoji_show(int x, int y, const wchar * efn, void * * bufpoi, int * buflen, i
   if ((lattr & LATTR_MODE) != LATTR_NORM) {
     w *= 2;
     // fix position in double-width line
-    col += x * wv.cell_width;
+    col += x0 * wv.cell_width;
   }
   int h = wv.cell_height;
   if ((lattr & LATTR_MODE) >= LATTR_TOP)

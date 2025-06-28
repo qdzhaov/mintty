@@ -1,19 +1,21 @@
-# re-localize system-localized items (system menu, chooser dialogs)
-# to English; use built-in defaults for msgs not listed here
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the mintty package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: mintty\n"
 "Report-Msgid-Bugs-To: https://github.com/mintty/mintty/issues/700\n"
-"POT-Creation-Date: 2025-06-28 19:47+0800\n"
-"PO-Revision-Date: 2022-06-20 23:00+0800\n"
-"Last-Translator: GeekDuanLian <dl@pbstu.com>\n"
-"Language-Team: \n"
-"Language: zh_CN\n"
+"POT-Creation-Date: 2025-06-28 20:03+0800\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Generator: Poedit 2.0.3\n"
-"Plural-Forms: nplurals=1; plural=0;\n"
 
 #: charset.c:228 charset.c:239 winmain.c:4472 winmain.c:4479 winmain.c:4837
 msgid "(Default)"
@@ -336,12 +338,11 @@ msgstr ""
 
 #: config.c:249
 msgid "as colour"
-msgstr "as color"
+msgstr ""
 
 #: config.c:250
-#, fuzzy
 msgid "as font & as colour"
-msgstr "Show &bold as color"
+msgstr ""
 
 #: config.c:251
 msgid "xterm"
@@ -572,13 +573,12 @@ msgid "&Save"
 msgstr ""
 
 #: config.c:3195
-#, fuzzy
 msgid "&Cancel"
-msgstr "Cancel"
+msgstr ""
 
 #: config.c:3197
 msgid "&Apply"
-msgstr "&Apply"
+msgstr ""
 
 #: config.c:3253
 msgid "Ansi:"
@@ -642,122 +642,121 @@ msgstr ""
 
 #: winctrls.c:997 windialog.c:977
 msgid "OK"
-msgstr "OK"
+msgstr ""
 
 #: winctrls.c:998 windialog.c:978
 msgid "Cancel"
-msgstr "Cancel"
+msgstr ""
 
 #. __ Font chooser: title bar label
 #: winctrls.c:1004
 msgid "Font "
-msgstr "Font"
+msgstr ""
 
 #. __ Font chooser: button
 #: winctrls.c:1007
-#, fuzzy
 msgid "&ApplyA"
-msgstr "&Apply"
+msgstr ""
 
 #. __ Font chooser:
 #: winctrls.c:1009
 msgid "&Font:"
-msgstr "&Font:"
+msgstr ""
 
 #. __ Font chooser:
 #: winctrls.c:1011
 msgid "Font st&yle:"
-msgstr "Font st&yle:"
+msgstr ""
 
 #. __ Font chooser:
 #: winctrls.c:1013
 msgid "&Size:"
-msgstr "&Size:"
+msgstr ""
 
 #. __ Font chooser:
 #: winctrls.c:1015
 msgid "Sample"
-msgstr "Sample"
+msgstr ""
 
 #. __ Font chooser: text sample ("AaBbYyZz" by default)
 #: winctrls.c:1018 winctrls.c:1248 winctrls.c:1427
 msgid "Ferqœm’4€"
-msgstr "Ferqœm’4€"
+msgstr ""
 
 #. __ Font chooser: this field is only shown with FontMenu=1
 #: winctrls.c:1033
 msgid "Sc&ript:"
-msgstr "Sc&ript:"
+msgstr ""
 
 #. __ Font chooser: this field is only shown with FontMenu=1
 #: winctrls.c:1035
 msgid "<A>Show more fonts</A>"
-msgstr "<A>Show more fonts</A>"
+msgstr ""
 
 #. __ Colour chooser: title bar label
 #: winctrls.c:1041
 msgid "Colour "
-msgstr "Color"
+msgstr ""
 
 #. __ Colour chooser:
 #: winctrls.c:1055 winctrls.c:1066
 msgid "B&asic colours:"
-msgstr "B&asic colors:"
+msgstr ""
 
 #. __ Colour chooser:
 #: winctrls.c:1075
 msgid "&Custom colours:"
-msgstr "&Custom colors:"
+msgstr ""
 
 #. __ Colour chooser:
 #: winctrls.c:1082
 msgid "De&fine Custom Colours >>"
-msgstr "De&fine Custom Colors >>"
+msgstr ""
 
 #. __ Colour chooser:
 #: winctrls.c:1085 configdef.h:73
 msgid "Colour"
-msgstr "Color"
+msgstr ""
 
 #. __ Colour chooser:
 #: winctrls.c:1087
 msgid "|S&olid"
-msgstr "|S&olid"
+msgstr ""
 
 #. __ Colour chooser:
 #: winctrls.c:1089
 msgid "&Hue:"
-msgstr "&Hue:"
+msgstr ""
 
 #. __ Colour chooser:
 #: winctrls.c:1092
 msgid "&Sat:"
-msgstr "&Sat:"
+msgstr ""
 
 #. __ Colour chooser:
 #: winctrls.c:1094
 msgid "&Lum:"
-msgstr "&Lum:"
+msgstr ""
 
 #. __ Colour chooser:
 #: winctrls.c:1096
 msgid "&Red:"
-msgstr "&Red:"
+msgstr ""
 
 #. __ Colour chooser:
 #: winctrls.c:1098
 msgid "&Green:"
-msgstr "&Green:"
+msgstr ""
 
 #. __ Colour chooser:
 #: winctrls.c:1100
 msgid "&Blue:"
-msgstr "&Blue:"
+msgstr ""
 
 #. __ Colour chooser:
 #: winctrls.c:1103
 msgid "A&dd to Custom Colours"
-msgstr "A&dd to Custom Colors"
+msgstr ""
 
 #. __ Options: dialog title
 #: windialog.c:242 windialog.c:922
@@ -777,7 +776,7 @@ msgstr ""
 
 #: windialog.c:975
 msgid "I see"
-msgstr "I see"
+msgstr ""
 
 #: windialog.c:1007 windialog.c:1034
 msgid "Error"
@@ -794,7 +793,7 @@ msgstr ""
 
 #: wininput.c:329
 msgid "&Close"
-msgstr "&Close"
+msgstr ""
 
 #. __ System menu:
 #: wininput.c:339
@@ -843,9 +842,8 @@ msgid "VT220 Keyboard"
 msgstr ""
 
 #: wininput.c:374
-#, fuzzy
 msgid "&Reset"
-msgstr "&Restore"
+msgstr ""
 
 #: wininput.c:377
 msgid "&Default Size"
@@ -1196,7 +1194,7 @@ msgstr ""
 
 #: configdef.h:71 configdef.h:125
 msgid "Colours"
-msgstr "Colors"
+msgstr ""
 
 #: configdef.h:74
 msgid "&Foreground..."
@@ -1207,9 +1205,8 @@ msgid "&Background..."
 msgstr ""
 
 #: configdef.h:76
-#, fuzzy
 msgid "CursorColour"
-msgstr "Color"
+msgstr ""
 
 #: configdef.h:77
 msgid "ThemeFile"
@@ -1220,32 +1217,28 @@ msgid "ThemeDark"
 msgstr ""
 
 #: configdef.h:79 configdef.h:80
-#, fuzzy
 msgid "ansi_colours"
-msgstr "as color"
+msgstr ""
 
 #: configdef.h:81
 msgid "Black"
 msgstr ""
 
 #: configdef.h:82
-#, fuzzy
 msgid "Red"
-msgstr "&Red:"
+msgstr ""
 
 #: configdef.h:83
-#, fuzzy
 msgid "Green"
-msgstr "&Green:"
+msgstr ""
 
 #: configdef.h:84
 msgid "Yellow"
 msgstr ""
 
 #: configdef.h:85
-#, fuzzy
 msgid "Blue"
-msgstr "&Blue:"
+msgstr ""
 
 #: configdef.h:86
 msgid "Magenta"
@@ -1268,9 +1261,8 @@ msgid "BoldRed"
 msgstr ""
 
 #: configdef.h:91
-#, fuzzy
 msgid "BoldGreen"
-msgstr "&Green:"
+msgstr ""
 
 #: configdef.h:92
 msgid "BoldYellow"
@@ -1293,9 +1285,8 @@ msgid "BoldWhite"
 msgstr ""
 
 #: configdef.h:97
-#, fuzzy
 msgid "ColourScheme"
-msgstr "Color"
+msgstr ""
 
 #: configdef.h:98
 msgid "Transparency"
@@ -1370,23 +1361,20 @@ msgid "Background"
 msgstr ""
 
 #: configdef.h:121
-#, fuzzy
 msgid "BoldColour"
-msgstr "Color"
+msgstr ""
 
 #: configdef.h:122
-#, fuzzy
 msgid "BlinkColour"
-msgstr "Color"
+msgstr ""
 
 #: configdef.h:123
 msgid "UnderlineColour"
 msgstr ""
 
 #: configdef.h:124
-#, fuzzy
 msgid "HoverColour"
-msgstr "Color"
+msgstr ""
 
 #: configdef.h:127
 msgid "HighlightBackgroundColour"
@@ -1409,9 +1397,8 @@ msgid "SearchCurrentColour"
 msgstr ""
 
 #: configdef.h:133
-#, fuzzy
 msgid "Tek Colour"
-msgstr "Color"
+msgstr ""
 
 #: configdef.h:135
 msgid "TekForegroundColour"
@@ -1490,9 +1477,8 @@ msgid "Text and Font properties"
 msgstr ""
 
 #: configdef.h:159 configdef.h:160
-#, fuzzy
 msgid "Font"
-msgstr "Font"
+msgstr ""
 
 #: configdef.h:161
 msgid "Font smoothing"
@@ -1511,9 +1497,8 @@ msgid "Bold as font"
 msgstr ""
 
 #: configdef.h:167
-#, fuzzy
 msgid "Bold as colour"
-msgstr "as color"
+msgstr ""
 
 #: configdef.h:168 configdef.h:170
 msgid "Locale"
@@ -1548,9 +1533,8 @@ msgid "FontChoice"
 msgstr ""
 
 #: configdef.h:183
-#, fuzzy
 msgid "FontSample"
-msgstr "Sample"
+msgstr ""
 
 #: configdef.h:184
 msgid "FontRender"
@@ -1561,73 +1545,60 @@ msgid "Charwidth"
 msgstr ""
 
 #: configdef.h:187
-#, fuzzy
 msgid "FontMenu"
-msgstr "Font"
+msgstr ""
 
 #: configdef.h:188
-#, fuzzy
 msgid "TekFont"
-msgstr "Font"
+msgstr ""
 
 #: configdef.h:189
 msgid "fonts"
 msgstr ""
 
 #: configdef.h:190
-#, fuzzy
 msgid "Font1"
-msgstr "Font"
+msgstr ""
 
 #: configdef.h:191
-#, fuzzy
 msgid "Font2"
-msgstr "Font"
+msgstr ""
 
 #: configdef.h:192
-#, fuzzy
 msgid "Font3"
-msgstr "Font"
+msgstr ""
 
 #: configdef.h:193
-#, fuzzy
 msgid "Font4"
-msgstr "Font"
+msgstr ""
 
 #: configdef.h:194
-#, fuzzy
 msgid "Font5"
-msgstr "Font"
+msgstr ""
 
 #: configdef.h:195
-#, fuzzy
 msgid "Font6"
-msgstr "Font"
+msgstr ""
 
 #: configdef.h:196
-#, fuzzy
 msgid "Font7"
-msgstr "Font"
+msgstr ""
 
 #: configdef.h:197
-#, fuzzy
 msgid "Font8"
-msgstr "Font"
+msgstr ""
 
 #: configdef.h:198
-#, fuzzy
 msgid "Font9"
-msgstr "Font"
+msgstr ""
 
 #: configdef.h:199
-#, fuzzy
 msgid "Font10"
-msgstr "Font"
+msgstr ""
 
 #: configdef.h:200
-#, fuzzy
 msgid "FontRTL"
-msgstr "Font"
+msgstr ""
 
 #: configdef.h:202
 msgid "Keys"
@@ -2432,9 +2403,8 @@ msgstr ""
 #. __("MenuMenu")                 )
 #. _CFGDEFD(string   ,menu_ctrlmenu          ,"e|ls"          ,       IS(0),OPT_STR          ,OPF_STR  ,1,0,5,"MenuCtrlMenu"             ,__("MenuCtrlMenu")             )
 #: configdef.h:439
-#, fuzzy
 msgid "FontSize"
-msgstr "&Size"
+msgstr ""
 
 #: configdef.h:440
 msgid "Break"
@@ -2469,9 +2439,8 @@ msgid "FontQuality"
 msgstr ""
 
 #: configdef.h:448
-#, fuzzy
 msgid "UseSystemColours"
-msgstr "Colors"
+msgstr ""
 
 #: funtips.h:2
 msgid "Begin move window"
@@ -2482,14 +2451,12 @@ msgid "Resize window"
 msgstr ""
 
 #: funtips.h:4 funtips.h:21
-#, fuzzy
 msgid "Minimize Window"
-msgstr "Mi&nimize"
+msgstr ""
 
 #: funtips.h:5 funtips.h:18
-#, fuzzy
 msgid "Maximize Window"
-msgstr "Ma&ximize"
+msgstr ""
 
 #: funtips.h:6
 msgid "Sysmenu"
@@ -2500,14 +2467,12 @@ msgid "Close Window"
 msgstr ""
 
 #: funtips.h:8
-#, fuzzy
 msgid "Close App"
-msgstr "&Close"
+msgstr ""
 
 #: funtips.h:9
-#, fuzzy
 msgid "Close Tab"
-msgstr "&Close"
+msgstr ""
 
 #: funtips.h:10
 msgid "New Tab for current"
@@ -2927,6 +2892,3 @@ msgstr ""
 #: funtips.h:121
 msgid "Start Unicode Char"
 msgstr ""
-
-#~ msgid "&Move"
-#~ msgstr "&Move"

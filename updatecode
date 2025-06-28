@@ -3,11 +3,11 @@ rdir=~/dev/mintty
 ndir=$rdir/mintty_org
 odir=$rdir/minttyo
 sdir=$rdir/mintty
-vd(){vimdiff $sdir/$1 $ndir/$1 $odir/$1}
-ve(){vimdiff $ndir/$1 $odir/$1}
-pd(){ \cp $ndir/$1 $sdir/$1 ;\cp $ndir/$1 $odir/$1 }
-pe(){ \cp $ndir/$1 $odir/$1 }
-dfs(){diff -r $ndir/$1 $odir/$1}
+vd(){ vimdiff $sdir/$1 $ndir/$1 $odir/$1; }
+ve(){ vimdiff $ndir/$1 $odir/$1; }
+pd(){ \cp $ndir/$1 $sdir/$1 ;\cp $ndir/$1 $odir/$1; }
+pe(){ \cp $ndir/$1 $odir/$1; }
+dfs(){ diff -r $ndir/$1 $odir/$1; }
 DD=.
 diff -r $ndir/$DD $odir/$DD >diffs
 echo diff End >>diffs

@@ -43,7 +43,7 @@ BOOL (WINAPI * pSystemParametersInfo)(UINT, UINT, PVOID, UINT) = 0;
 
 BOOLEAN (WINAPI * pShouldAppsUseDarkMode)(void) = 0; /* undocumented */
 DWORD (WINAPI * pSetPreferredAppMode)(DWORD) = 0; /* undocumented */
-HRESULT (WINAPI * pSetWindowTheme)(HWND, const wchar_t *, const wchar_t *) = 0;
+HRESULT (WINAPI * pSetWindowTheme)(HWND, const wchar *, const wchar *) = 0;
 
 #define HTHEME HANDLE
 COLORREF (WINAPI * pGetThemeSysColor)(HTHEME hth, int colid) = 0;
@@ -54,6 +54,7 @@ DPI_AWARENESS_CONTEXT (WINAPI * pSetThreadDpiAwarenessContext)(DPI_AWARENESS_CON
 HRESULT (WINAPI * pEnableNonClientDpiScaling)(HWND win) = 0;
 BOOL (WINAPI * pAdjustWindowRectExForDpi)(LPRECT lpRect, DWORD dwStyle, BOOL bMenu, DWORD dwExStyle, UINT dpi) = 0;
 INT (WINAPI * pGetSystemMetricsForDpi)(INT index, UINT dpi) = 0;
+
 // Helper for loading a system library. Using LoadLibrary() directly is insecure
 // because Windows might be searching the current working directory first.
 static HMODULE
@@ -158,6 +159,79 @@ load_library_func(string lib, string func)
     return GetProcAddress(hm, func);
   return 0;
 }
+
+wchar *
+getregstr(HKEY key, wstring subkey, wstring attribute)
+{
+#if CYGWIN_VERSION_API_MINOR < 74
+  (void)key;
+  (void)subkey;
+  (void)attribute;
+  return 0;
+#else
+  // RegGetValueW is easier but not supported on Windows XP
+  HKEY sk = 0;
+  RegOpenKeyW(key, subkey, &sk);
+  if (!sk)
+    return 0;
+  DWORD type;
+  DWORD len;
+  int res = RegQueryValueExW(sk, attribute, 0, &type, 0, &len);
+  if (res)
+    return 0;
+  if (!(type == REG_SZ || type == REG_EXPAND_SZ || type == REG_MULTI_SZ))
+    return 0;
+  wchar * val = malloc (len);
+  res = RegQueryValueExW(sk, attribute, 0, &type, (void *)val, &len);
+  RegCloseKey(sk);
+  if (res) {
+    free(val);
+    return 0;
+  }
+  return val;
+#endif
+}
+
+uint
+getregval(HKEY key, wstring subkey, wstring attribute, uint def)
+{
+#if CYGWIN_VERSION_API_MINOR < 74
+  (void)key;
+  (void)subkey;
+  (void)attribute;
+  return def;
+#else
+  // RegGetValueW is easier but not supported on Windows XP
+  HKEY sk = 0;
+  RegOpenKeyW(key, subkey, &sk);
+  if (!sk)
+    return def;
+  DWORD type;
+  DWORD len;
+  int res = RegQueryValueExW(sk, attribute, 0, &type, 0, &len);
+  if (res)
+    return def;
+  if (type == REG_DWORD) {
+    DWORD val;
+    len = sizeof(DWORD);
+    res = RegQueryValueExW(sk, attribute, 0, &type, (void *)&val, &len);
+    RegCloseKey(sk);
+    if (!res)
+      return (uint)val;
+  }
+  return def;
+#endif
+}
+
+bool
+is_win_dark_mode(void)
+{
+  // or return pShouldAppsUseDarkMode && pShouldAppsUseDarkMode()
+  return 0 == getregval(HKEY_CURRENT_USER, 
+              W("Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize"),
+              W("AppsUseLightTheme"), -1);
+}
+
 
 // WSL path conversion, using wsl.exe
 static char *
@@ -616,7 +690,7 @@ getlxssinfo(bool list, wstring wslname, uint * wsl_ver,
     if (list) {
       printf("WSL distribution name [7m%ls[m\n", name);
       printf("-- guid %ls\n", guid);
-      printf("-- flag %u\n", getregval(lxss, guid, W("Flags")));
+      printf("-- flag %u\n", getregval(lxss, guid, W("Flags"), -1));
       printf("-- root %ls\n", rootfs);
       if (pn)
         printf("-- pack %ls\n", pn);
@@ -626,7 +700,7 @@ getlxssinfo(bool list, wstring wslname, uint * wsl_ver,
     }
 
     *wsl_icon = icon;
-    *wsl_ver = 1 + ((getregval(lxss, guid, W("Flags")) >> 3) & 1);
+    *wsl_ver = 1 + ((getregval(lxss, guid, W("Flags"), 0) >> 3) & 1);
     *wsl_guid = cs__wcstoutf(guid);
     char * rootdir = path_win_w_to_posix(rootfs);
     struct stat fstat_buf;
@@ -939,21 +1013,23 @@ win_update_glass(bool opaque)
 void
 win_dark_mode(HWND w)
 {
-  if (pShouldAppsUseDarkMode) {
-    HIGHCONTRASTW hc;
-    hc.cbSize = sizeof hc;
-    pSystemParametersInfo(SPI_GETHIGHCONTRAST, sizeof hc, &hc, 0);
-    //printf("High Contrast scheme <%ls>\n", hc.lpszDefaultScheme);
+  if (pDwmSetWindowAttribute) {
+    BOOL dark = is_win_dark_mode();
 
-    if (!(hc.dwFlags & HCF_HIGHCONTRASTON) && pShouldAppsUseDarkMode()) {
-      pSetWindowTheme(w, W("DarkMode_Explorer"), NULL);
+    // DwmSetWindowAttribute needs to be called to adjust the title bar
+    // set DWMWA_USE_IMMERSIVE_DARK_MODE (20)
+    if (S_OK != pDwmSetWindowAttribute(w, 20, &dark, sizeof dark)) {
+      // this would be the call before Windows build 18362
+      pDwmSetWindowAttribute(w, 19, &dark, sizeof dark);
+    }
 
-      // set DWMWA_USE_IMMERSIVE_DARK_MODE; needed for titlebar
-      BOOL dark = 1;
-      if (S_OK != pDwmSetWindowAttribute(w, 20, &dark, sizeof dark)) {
-        // this would be the call before Windows build 18362
-        pDwmSetWindowAttribute(w, 19, &dark, sizeof dark);
-      }
+    // SetWindowTheme needs to be called to adjust the scrollbar
+    // it causes WM_THEMECHANGED sent
+    if (pSetWindowTheme) {
+      if (dark)
+        pSetWindowTheme(w, W("DarkMode_Explorer"), NULL);
+      else
+        pSetWindowTheme(w, 0, NULL);
     }
   }
 }

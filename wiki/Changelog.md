@@ -1,21 +1,46 @@
 Terminal features
+  * Fix darkmode/wakeup refresh to not override dynamic OSC colour settings.
+  * Fix emoji invisible and blinking attributes.
+  * Accept (but ignore) XTMODKEYS subparameters (xterm 398).
+  * Fix doubled underline (since 3.7.8).
+  * Avoid repetitive painting of images.
+
+Configuration
+  * Changing default setting UnderlineManual=true for consistent line placement.
+
+### 3.7.8 (22 March 2025) ###
+
+Terminal features
   * SUB and CAN controls terminate ESC sequences and are displayed (DEC, xterm 397).
   * LAM/ALEF single-cell joining mode (DECSET 2521).
+  * Arabic joining considers ZWJ and ZWNJ formatters.
+  * Fix graphics (image/sixel) and emoji display to adapt to horizontal scrolling.
+  * Fix mouse position click coordinates to adapt to horizontal scrolling.
+  * Fix reflow to avoid vanishing graphics on terminal resizing.
+  * Changed image size limit from 1MB to configurable value, default > 4MB.
 
 Character rendering
   * Fix overhang rendering for some characters, clipped in 3.7.7 (#1304).
   * Optional single-cell rendering of Arabic LAM/ALEF ligatures.
   * Revise background clearing to catch border cases (#1310).
-  * Option to adjust position of smaller CJK ranges (#1313).
+  * Option to center position of smaller glyphs in CJK ranges (#1313).
 
 Keyboard handling
   * Enforce Ctrl as held down (except with AltGr) (~#1266, ~#1273).
+
+Window handling
+  * Fix frame adjustment when disabling darkmode.
+  * Display hair cross mouse pointer in pixel-grained mouse reporting modes.
 
 Font configuration:
   * Handle font metrics errors (#1309).
 
 Configuration:
-  * New shift prefix for option FontChoice (#1313).
+  * New option ThemeDark to be used if Windows Darkmode is set (#1305, ~#1303).
+  * New glyph centering prefix ">" for option FontChoice (#1313).
+  * Propagate TERM config setting to WSL HOSTTERM variable (mintty/wsltty#290, ~mintty/wsltty#278).
+  * New option PixMousePointer.
+  * New option MaxImageSize.
 
 ### 3.7.7 (21 December 2024) ###
 

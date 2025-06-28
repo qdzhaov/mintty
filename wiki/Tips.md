@@ -337,7 +337,8 @@ the Windows program.
 ### Text attribute handling from WSL and other Windows programs ###
 
 When running native Windows programs, like `wsl` access program to WSL, 
-or `cmd` and `powershell`, the `conhost` console layer of Windows interferes 
+or `cmd` and `powershell`, or MinGW-compiled Windows console applications, 
+the `conhost` console layer of Windows interferes 
 with escape sequence controls; even for WSL, it does not pass them through 
 transparently but imposes its own idea of terminal capabilities, mangling 
 basic controls like bold and reverse attributes, so bold text is enforced 
@@ -350,7 +351,14 @@ From the [release area](https://github.com/microsoft/terminal/releases),
 among the Assets, download the WindowsTerminalPreview zip file of your 
 architecture, extract its `OpenConsole.exe`, rename it to `conhost.exe` 
 and replace the conhost program in your Windows System32 folder with it.
+Make a backup copy of conhost.exe first, just in case.
 (Do **not** copy conhost.exe from Windows 11 into Windows 10.)
+
+### Mouse interaction in console-based programs ###
+
+Under the same conditions that cause broken text attribute handling, 
+mouse reporting modes may be inhibited so mouse control would not work.
+Also the workaround is the same as above.
 
 ### Line end copy/paste from WSL and other console-based programs ###
 
@@ -382,6 +390,12 @@ environment variables for this purpose is not reliable (see
 [issue #776](https://github.com/mintty/mintty/issues/776) for a discussion), 
 mintty sets environment variables TERM_PROGRAM and TERM_PROGRAM_VERSION 
 as various other terminals do.
+
+### WSL terminal type ###
+
+In WSL mode, since 3.7.8, mintty does not propagate its TERM setting 
+to WSL anymore, in order to allow WSL local preferences 
+(often xterm-256color). Instead it sets environment variable HOSTTERM.
 
 
 ## Terminal line settings ##
@@ -970,7 +984,8 @@ Character width can be modified by a number of configuration or dynamic settings
 * `Charset`: may affect CJK ambiguous-width handling if used with `Locale`
 * `Font`: may affect CJK ambiguous-width handling if locale support fails
 * `PrintableControls`: makes C1 or C0 control characters visible (width 1)
-* [DECSET 2521](https://github.com/mintty/mintty/wiki/CtrlSeqs#lamalef-joining): renders Arabic LAM/ALEF ligatures in single-cell width.
+* [DECSET 2521](https://github.com/mintty/mintty/wiki/CtrlSeqs#lamalef-joining): renders Arabic LAM/ALEF ligatures in single-cell width
+* [DECSET 2027](https://github.com/mintty/mintty/wiki/CtrlSeqs#emoji-width-mode): 2-cell “emoji width” mode
 * [OSC 701](https://github.com/mintty/mintty/wiki/CtrlSeqs#locale): changes locale/charset, may affect ambiguous width handling
 * OSC 50: changes font, may affect ambiguous width handling (with `Locale`)
 * [OSC 77119](https://github.com/mintty/mintty/wiki/CtrlSeqs#wide-characters): turns some character ranges to wide characters
@@ -1200,6 +1215,9 @@ Emojis are displayed in the rectangular character cell group determined
 by the cumulated width of the emoji sequence characters. The option 
 `EmojiPlacement` can adjust the location of emoji graphics within that area.
 You can use the escape sequence PEC to tune emoji width.
+
+Since mintty 3.7.5, there is also “emoji width” mode (DECSET 2027) to 
+enforce 2-cell display width of emojis.
 
 ### Installing emoji resources ###
 

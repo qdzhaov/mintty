@@ -1,5 +1,5 @@
 // config.c (part of mintty)
-// Copyright 2008-2023 Andy Koppe, 2015-2024 Thomas Wolff
+// Copyright 2008-2023 Andy Koppe, 2015-2025 Thomas Wolff
 // Based on code from PuTTY-0.60 by Simon Tatham and team.
 // Licensed under the terms of the GNU General Public License v3 or later.
 
@@ -1524,10 +1524,15 @@ void apply_config(bool save) {
   fix_config();
   if (save)
     save_config();
-  bool had_theme = !!*cfg.theme_file;
+  bool had_theme = !!*cfg.theme_file || !!*cfg.dark_theme;
 
   if (*cfg.colour_scheme) {
     load_scheme(cfg.colour_scheme);
+    win_reset_colours();
+    win_invalidate_all(false);
+  }
+  else if (*cfg.dark_theme && is_win_dark_mode()) {
+    load_theme(cfg.dark_theme);
     win_reset_colours();
     win_invalidate_all(false);
   }
@@ -1592,68 +1597,6 @@ static void closemuicache() {
     RegCloseKey(evlabels);
     RegCloseKey(muicache);
   }
-}
-
-wchar * getregstr(HKEY key, wstring subkey, wstring attribute) {
-#if CYGWIN_VERSION_API_MINOR < 74
-  (void)key;
-  (void)subkey;
-  (void)attribute;
-  return 0;
-#else
-  // RegGetValueW is easier but not supported on Windows XP
-  HKEY sk = 0;
-  if(subkey){
-    RegOpenKeyW(key, subkey, &sk);
-    if (!sk) return 0;
-  }else sk=key;
-  DWORD type;
-  DWORD len;
-  int res = RegQueryValueExW(sk, attribute, 0, &type, 0, &len);
-  if (res)
-    return 0;
-  if (!(type == REG_SZ || type == REG_EXPAND_SZ || type == REG_MULTI_SZ))
-    return 0;
-  wchar * val = malloc (len);
-  res = RegQueryValueExW(sk, attribute, 0, &type, (void *)val, &len);
-  if(subkey){
-    RegCloseKey(sk);
-  }
-  if (res) {
-    delete(val);
-    return 0;
-  }
-  return val;
-#endif
-}
-
-uint getregval(HKEY key, wstring subkey, wstring attribute) {
-#if CYGWIN_VERSION_API_MINOR < 74
-  (void)key;
-  (void)subkey;
-  (void)attribute;
-  return 0;
-#else
-  // RegGetValueW is easier but not supported on Windows XP
-  HKEY sk = 0;
-  RegOpenKeyW(key, subkey, &sk);
-  if (!sk)
-    return 0;
-  DWORD type;
-  DWORD len;
-  int res = RegQueryValueExW(sk, attribute, 0, &type, 0, &len);
-  if (res)
-    return 0;
-  if (type == REG_DWORD) {
-    DWORD val;
-    len = sizeof(DWORD);
-    res = RegQueryValueExW(sk, attribute, 0, &type, (void *)&val, &len);
-    RegCloseKey(sk);
-    if (!res)
-      return (uint)val;
-  }
-  return 0;
-#endif
 }
 
 static wchar * muieventlabel(const wchar * event) {

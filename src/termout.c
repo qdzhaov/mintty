@@ -17,10 +17,12 @@
 #include "base64.h"
 #include "unicodever.t"
 
+#include <termios.h>
 #include <sys/time.h>
 
 #define TERM_CMD_BUF_INC_STEP 128
-#define TERM_CMD_BUF_MAX_SIZE (1024 * 1024)
+//#define TERM_CMD_BUF_MAX_SIZE (1024 * 1024)
+#define TERM_CMD_BUF_MAX_SIZE max(2222, (uint)cfg.max_image_size)
 
 #define SUB_PARS (1 << (sizeof(*term.csi_argv) * 8 - 1))
 
@@ -1289,7 +1291,7 @@ mapfont(struct rangefont * ranges, uint len, const char * script, uchar f, int s
   for (uint i = 0; i < len; i++) {
     if (0 == strcmp(ranges[i].scriptname, script)){
       ranges[i].font = f;
-      // register glyph shift as configured in setting FontChoice
+      // register glyph shift / centering as configured in setting FontChoice
       // to be applied as character attribute
       //ranges[i].shift = shift;
       ranges[i].font |= shift << 4;
@@ -1324,12 +1326,16 @@ cfg_apply(const char * conf, const char * item)
       *sepp = '\0';
 
     if (!item || !strcmp(cmdp, item)) {
-      // determine glyph shift as configured by setting FontChoice
+      // determine glyph shift / centering as configured by setting FontChoice
       uint shift = 0;
       while (*cmdp == '>') {
         cmdp ++;
+#ifdef configured_glyph_shift
         if (shift < GLYPHSHIFT_MAX)
           shift ++;
+#else
+        shift = 1;
+#endif
       }
       // setup font for block range (with '|') or script ranges
       if (*cmdp == '|')
@@ -1417,18 +1423,24 @@ write_ucschar(wchar hwc, wchar wc, int width)
   // determine alternative font
   uchar cf = scriptfont(c);
   // handle configured glyph shift
-  uint glyph_shift = cf >> 4;  // extract glyph shift
-  cf &= 0xF;  // mask glyph shift
+  uint glyph_shift = cf >> 4;  // extract glyph shift / glyph centering flag
+  cf &= 0xF;                   // mask glyph shift / glyph centering flag
 #ifdef debug_scriptfonts
   if (c && (cf || c > 0xFF))
     printf("write_ucschar %04X scriptfont %d\n", c, cf);
 #endif
+#ifdef configured_glyph_shift
   // set attribute for alternative font
   if (cf && cf <= 10 && !(attr & FONTFAM_MASK))
     term.curs.attr.attr = attr | ((cattrflags)cf << ATTR_FONTFAM_SHIFT);
   // set attribute to indicate glyph shift
   glyph_shift &= GLYPHSHIFT_MAX;
   term.curs.attr.attr |= ((cattrflags)glyph_shift << ATTR_GLYPHSHIFT_SHIFT);
+#else
+  // set attribute to indicate glyph centering
+  if (glyph_shift)
+    term.curs.attr.attr |= ATTR_GLYPHSHIFT;
+#endif
 
   // Auto-expanded glyphs
   if (width == 2
@@ -2439,12 +2451,16 @@ set_modes(bool state)
           term.report_focus = state;
         when 1005: /* Xterm's UTF8 encoding for mouse positions */
           term.mouse_enc = state ? ME_UTF8 : 0;
+          win_update_mouse();  // reset pixel pointer
         when 1006: /* Xterm's CSI-style mouse encoding */
           term.mouse_enc = state ? ME_XTERM_CSI : 0;
+          win_update_mouse();  // reset pixel pointer
         when 1016: /* Xterm's CSI-style mouse encoding with pixel resolution */
           term.mouse_enc = state ? ME_PIXEL_CSI : 0;
+          win_update_mouse();  // set pixel pointer
         when 1015: /* Urxvt's CSI-style mouse encoding */
           term.mouse_enc = state ? ME_URXVT_CSI : 0;
+          win_update_mouse();  // reset pixel pointer
         when 1037:
           term.delete_sends_del = state;
         when 1042:
@@ -3420,12 +3436,24 @@ do_csi(uchar c)
           }
         child_printf(&term,"\e\\");
       }
-    when CPAIR('>', 'm'):     /* xterm XTMODKEYS: modifier key setting */
-      /* only the modifyOtherKeys setting is implemented */
-      if (!arg0)
-        term.modify_other_keys = 0;
-      else if (arg0 == 4)
-        term.modify_other_keys = arg1;
+    when CPAIR('>', 'm'): {   /* xterm XTMODKEYS: modifier key setting */
+        int Pp = arg0;
+        uint iPv = 1;
+        int Pv = 0;
+        //int modify_mask = 0;
+        if (term.csi_argv[0] & SUB_PARS) {
+          // ignore modifier mask but accept its escape sequence (xterm 398)
+          Pp = term.csi_argv[0] & ~SUB_PARS;
+          iPv ++;
+          //modify_mask = term.csi_argv[1];
+        }
+        if (iPv < term.csi_argc)
+          Pv = term.csi_argv[iPv];
+        if (!Pp)  // reset all
+          term.modify_other_keys = 0;
+        else if (Pp == 4)  // modifyOtherKeys
+          term.modify_other_keys = Pv;
+      }
     when CPAIR('?', 'm'):     /* xterm XTQMODKEYS: query XTMODKEYS */
       /* only the modifyOtherKeys setting is implemented */
       if (arg0 == 4)

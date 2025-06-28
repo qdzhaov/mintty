@@ -1,5 +1,5 @@
 // wininput.c (part of mintty)
-// Copyright 2008-23 Andy Koppe, 2015-2024 Thomas Wolff
+// Copyright 2008-23 Andy Koppe, 2015-2025 Thomas Wolff
 // Licensed under the terms of the GNU General Public License v3 or later.
 
 //G #include "winpriv.h"
@@ -881,6 +881,7 @@ mod_keys tagmods(const char * k,const char**pn){
 /* Mouse handling */
 static void update_mouse(mod_keys mods){
   static bool last_app_mouse = false;
+  static bool last_pix_mouse = false;
 
   // unhover (end hovering) if hover modifiers are withdrawn
   if (term.hovering && (char)(mods & ~cfg.click_target_mod) != cfg.opening_mod) {
@@ -894,13 +895,15 @@ static void update_mouse(mod_keys mods){
     && !term.show_other_screen
     // disable app mouse pointer while not targetting app
     && (cfg.clicks_target_app ^ ((mods & cfg.click_target_mod) != 0));
+  bool new_pix_mouse = is_mouse_mode_by_pixels();
 
-  if (new_app_mouse != last_app_mouse) {
+  if (new_app_mouse != last_app_mouse || new_pix_mouse != last_pix_mouse) {
     //HCURSOR cursor = LoadCursor(null, new_app_mouse ? IDC_ARROW : IDC_IBEAM);
     HCURSOR cursor = win_get_cursor(new_app_mouse);
     SetClassLongPtr(wv.wnd, GCLP_HCURSOR, (LONG_PTR)cursor);
     SetCursor(cursor);
     last_app_mouse = new_app_mouse;
+    last_pix_mouse = new_pix_mouse;
   }
 }
 
@@ -927,9 +930,9 @@ static pos translate_pos(int x, int y){
     y = max(0, y - term.rows * wv.cell_height);
   }
   return (pos){
-    .x = floorf((x - PADDING) / (float)wv.cell_width),
+    .x = floorf((x - PADDING + horclip()) / (float)wv.cell_width),
     .y = floorf((y - PADDING - OFFSET) / (float)wv.cell_height),
-    .pix = min(max(0, x - PADDING), term.cols * wv.cell_width - 1),
+    .pix = min(max(0, x - PADDING), term.cols * wv.cell_width - 1) + horclip(),
     .piy = min(max(0, y - PADDING - OFFSET), rows * wv.cell_height - 1),
     .r = (cfg.elastic_mouse && !term.mouse_mode)
          ? (x - PADDING) % wv.cell_width > wv.cell_width / 2
@@ -1719,9 +1722,9 @@ struct SCKDef{
     int  (*fct_keyv)(uint key, mod_keys mods);
     void (*fct_par1)(int p0);
     void (*fct_par2)(int p0,int p1);
-    int rmkey;
-    wstring rmstr;
-    struct HKDef rmhk;
+    //int rmkey;
+    //wstring rmstr;
+    //struct HKDef rmhk;
   };
   short key,type;
   int p0,p1,p2;
