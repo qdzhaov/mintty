@@ -228,7 +228,7 @@ __declspec(dllexport) void hookglb(int id,bool on){
       pv->cbt_hook=NULL;
     }
   }
-  return ;
+  //return ;
 #endif
   if(id&2) {
     if (on){

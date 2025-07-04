@@ -3795,6 +3795,16 @@ win_proc(HWND wnd, UINT message, WPARAM wp, LPARAM lp)
 }
 #define HKDBG(fmt, ...)	printf(fmt, ##__VA_ARGS__)
 #define UNCAP_INFO (WM_APP + 3195) /* 35963 */
+int checkWinTitle(LPCWSTR wstr){
+  HWND hwnd=GetForegroundWindow();
+  wchar_t stitle[32];
+  GetWindowTextW(hwnd,stitle,32);
+  if(lstrcmpiW(stitle,wstr)==0){
+     return 1;
+  }
+  return 0;
+}
+HWND dstwnd=NULL;
 static LRESULT CALLBACK hookprockbll(int nCode, WPARAM wParam, LPARAM lParam) {
   LPKBDLLHOOKSTRUCT kbdll = (LPKBDLLHOOKSTRUCT)lParam;
   if(kbdll->dwExtraInfo == UNCAP_INFO){
@@ -3810,15 +3820,30 @@ static LRESULT CALLBACK hookprockbll(int nCode, WPARAM wParam, LPARAM lParam) {
   if(hwnd== wv.wnd)isself=1;
   else if(hwnd== wv.config_wnd)isself=2;
   if(!isself) {
-    //if(wParam==WM_KEYDOWN){
-    //  if(key==VK_LWIN||key==VK_RWIN||key==VK_LCONTROL||key=='K'){
-    //    wchar_t stitle[32];
-    //    GetWindowTextW(hwnd,stitle,32);
-    //  }
-    //}
+    if(wv.hotkey&&key == wv.hotkey&&wParam==WM_KEYDOWN ){
+      if(get_mods()== wv.hotkey_mods){
+        ShowWindow(wv.wnd, SW_SHOW);  
+        ShowWindow(wv.wnd, SW_MINIMIZE);
+        return 1;
+      }
+    }
+#if 0
+    if(dstwnd==NULL){
+      wchar_t stitle[32];
+      GetWindowTextW(hwnd,stitle,32);
+      if(lstrcmpiW(stitle,wstr)==0){
+        dstwnd=hwnd;
+      }
+    }
+    if(dstwnd==hwnd){
+      if(key==VK_LWIN||key==VK_RWIN){
+        return 0; 
+      }
+    }
+#endif
     return CallNextHookEx(wv.kb_hook, nCode, wParam, lParam);
   }
-  //Map key
+  //Map key VK_CAPITAL to VK_ESCAPE
   if(cfg.capmapesc&&key==VK_CAPITAL&&kbdll->dwExtraInfo != UNCAP_INFO){
     INPUT inputs;
     PKEYBDINPUT ki = &inputs.ki;
@@ -3892,11 +3917,11 @@ static LRESULT CALLBACK hookprockbll(int nCode, WPARAM wParam, LPARAM lParam) {
   }
   return CallNextHookEx(wv.kb_hook, nCode, wParam, lParam);
 }
+#if 0
 void (*phookglb)(int id,bool on)=NULL;
 void (*phookset)(HWND wnd,int hotkey,int hkmod);
 static HMODULE hookdll=NULL;
 void HookGlb(int id,bool on){
-  return ;
   if(phookglb==NULL){
     hookdll=LoadLibraryA("minttyhook.dll");
     if(hookdll==NULL){
@@ -3907,19 +3932,26 @@ void HookGlb(int id,bool on){
     }
     phookglb= (void *)GetProcAddress(hookdll, "hookglb");
     phookset= (void *)GetProcAddress(hookdll, "hookset");
-    printf("PROC  %p %p \n",phookglb,phookset);
-    if(phookglb==NULL)return;
-    if(phookset){
-      phookset(wv.wnd,wv.hotkey,wv.hotkey_mods);
-    };
+    //printf("PROC  %p %p \n",phookglb,phookset);
+    if(phookglb==NULL||phookset==NULL){
+      FreeLibrary(hookdll);
+      return;
+    }
+    phookset(wv.wnd,wv.hotkey,wv.hotkey_mods);
   }
-  printf("hookglb %d\n",on);
+  //printf("hookglb %d\n",on);
   phookglb(id,on);
   if(id==-1&&on==0){
-    phookglb=NULL;
+    phookglb=NULL; phookset=NULL;
     FreeLibrary(hookdll);
   }
 }
+#else
+
+void HookGlb(int id,bool on){
+  (void)id;(void)on;
+}
+#endif
 void
 win_global_keyboard_hook(bool on,bool autooff)
 {
@@ -3942,14 +3974,14 @@ win_global_keyboard_hook(bool on,bool autooff)
     if(!wv.kb_hook){
       // must be global for WH_KEYBOARD_LL,and hmodule maybe NULL
       // but hook funcion not in dll,so cann't hook another process
-      wv.kb_hook = SetWindowsHookExW(WH_KEYBOARD_LL, hookprockbll,0,  GetCurrentThreadId());
+      wv.kb_hook = SetWindowsHookExW(WH_KEYBOARD_LL, hookprockbll,0,  0);
       if(!wv.kb_hook)ErrMsg(GetLastError(),"in win_global_keyboard_hook,SetWindowsHookExW:");
-
     }
   }else if (wv.kb_hook){
     UnhookWindowsHookEx(wv.kb_hook);
     wv.kb_hook=NULL;
   }
+  HookGlb(3,on);
 }
 bool
 win_get_ime(void)
@@ -4019,7 +4051,6 @@ win_to_top(HWND top_wnd)
 void
 exit_mintty(void)
 {
-  HookGlb(3,0);
   win_global_keyboard_hook(0,0);
   win_destroy_tip();
   report_pos();
@@ -5596,7 +5627,6 @@ main(int argc, const char *argv[])
 
   win_update_shortcuts();
   win_global_keyboard_hook(1,0);
-  HookGlb(3,1);
   if (wv.report_winpid) {
     DWORD wpid = -1;
     DWORD parent = GetWindowThreadProcessId(wv.wnd, &wpid);

@@ -228,7 +228,7 @@ $(exe): $(objs)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) $(LDOPT) -o $@
 
 bin := $(BINDIR)/$(NAME).exe
-bin: $(BINDIR) stamp $(bin) $(BINFOLDER)/minttyhook.dll
+bin: $(BINDIR) stamp $(bin) #$(BINFOLDER)/minttyhook.dll
 $(BINDIR):
 	mkdir -p $(BINDIR)
 $(bin): $(bins)
