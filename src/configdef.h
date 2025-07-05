@@ -430,7 +430,7 @@ _CFGDEFE: Legacy options for Backward Compatibility
   _CFGDEFD(CBOOL    ,bloom                  ,0               ,       IS(0),OPT_BOOL         ,OPF_CHK  ,1,0,0,"Bloom"                    ,__("Bloom")                    )
   _CFGDEFD(string   ,old_options            ,""              ,       IS(0),OPT_STR          ,OPF_STR  ,1,0,5,"OldOptions"               ,__("OldOptions")               )
   _CFGDEFD(CBOOL    ,old_xbuttons           ,0               ,       IS(0),OPT_BOOL         ,OPF_CHK  ,1,0,0,"OldXButtons"              ,__("OldXButtons")              )
-  _CFGDEFD(int      ,wslbridge              ,2               ,IV( 0,    0),OPT_INT          ,OPF_INT  ,1,0,5,"WSLBridge"                ,__("wslbridge version,0:nobridge,1:wslbridge,2:wslbreadge2") )
+  _CFGDEFD(int      ,wslbridge              ,2               ,IV( 0,    0),OPT_INT          ,OPF_INT  ,1,0,5,"WSLbridge"                ,__("wslbridge version,0:nobridge,1:wslbridge,2:wslbreadge2") )
   _CFGDEFD(string   ,wslname                ,""              ,       IS(0),OPT_STR          ,OPF_STR  ,1,0,5,"WSLName"                  ,__("wslDistribution,null is default"))
   // Legacy
   _CFGDEFD(int      ,status_debug           ,0               ,IV( 0,    0),OPT_INT          ,OPF_INT  ,1,0,5,"StatusDebug"              ,__("status_debug")             )

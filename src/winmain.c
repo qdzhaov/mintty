@@ -4947,9 +4947,9 @@ main(int argc, const char *argv[])
   if (wv.wsl_guid && wv.wsl_launch) {
     argc -= optind;
     cmd=wv.wslcmd;
-    bool login_dash = false;
+    bool login_shell = false;
     if (*argv && !strcmp(*argv, "-") && !argv[1]) {
-      login_dash = true;
+      login_shell = true;
       argv++;
     }
     argc += wv.start_home;
@@ -4957,7 +4957,7 @@ main(int argc, const char *argv[])
 
     const char ** new_argv = newn(const char *, argc + 8 + wv.start_home + (wv.wsltty_appx ? 2 : 0));
     const char ** pargv = new_argv;
-    if (login_dash) {
+    if (login_shell) {
       *pargv++ = wv.wslcmd0;
     }
     else
