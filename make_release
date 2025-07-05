@@ -12,7 +12,7 @@ vcp(){
 rm -f mintty-$VER.*
 vcp cygwin/minttyrc               etc
 vcp bin/mintty.exe                bin
-vcp bin/minttyhook.dll            bin
+#vcp bin/minttyhook.dll            bin
 vcp tools/mintheme                bin
 vcp LICENSE                       usr/share/doc/mintty
 vcp LICENSE.GPL                   usr/share/doc/mintty 

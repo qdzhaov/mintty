@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: mintty\n"
 "Report-Msgid-Bugs-To: https://github.com/mintty/mintty/issues/700\n"
-"POT-Creation-Date: 2025-06-28 19:47+0800\n"
+"POT-Creation-Date: 2025-07-06 07:24+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -16,7 +16,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: charset.c:228 charset.c:239 winmain.c:4472 winmain.c:4479 winmain.c:4837
+#: charset.c:228 charset.c:239 winmain.c:4507 winmain.c:4514 winmain.c:4872
 msgid "(Default)"
 msgstr ""
 
@@ -1051,16 +1051,16 @@ msgstr "Versuche '--help' für mehr Information"
 msgid "Could not load icon"
 msgstr "Konnte Symbol nicht laden"
 
-#: winmain.c:4196
+#: winmain.c:4231
 msgid "Usage:"
 msgstr "Aufruf:"
 
-#: winmain.c:4197
+#: winmain.c:4232
 msgid "[OPTION]... [ PROGRAM [ARG]... | - ]"
 msgstr "[OPTION]... [ PROGRAMM [ARG]... | - ]"
 
 #. __ help text (output of -H / --help), after initial line ("synopsis")
-#: winmain.c:4200
+#: winmain.c:4235
 msgid ""
 "Start a new terminal session running the specified program or the user's "
 "shell.\n"
@@ -1132,39 +1132,39 @@ msgid ""
 "See manual page for further command line options and configuration.\n"
 msgstr ""
 
-#: winmain.c:4459
+#: winmain.c:4494
 msgid "Duplicate option '%s'"
 msgstr "Doppelte Option '%s'"
 
-#: winmain.c:4472 winmain.c:4479 winmain.c:4837
+#: winmain.c:4507 winmain.c:4514 winmain.c:4872
 msgid "WSL distribution '%s' not found"
 msgstr "WSL-Distribution '%s' nicht gefunden"
 
-#: winmain.c:4509 winmain.c:4601
+#: winmain.c:4544 winmain.c:4636
 msgid "Unknown option '%s'"
 msgstr "Unbekannte Option '%s'"
 
-#: winmain.c:4511
+#: winmain.c:4546
 msgid "Option '%s' requires an argument"
 msgstr "Option '%s' benötigt einen Parameter"
 
-#: winmain.c:4538
+#: winmain.c:4573
 msgid "Syntax error in position argument '%s'"
 msgstr "Formatfehler in Positionsparameter '%s'"
 
-#: winmain.c:4549
+#: winmain.c:4584
 msgid "Syntax error in size argument '%s'"
 msgstr "Formatfehler in Größenparameter '%s'"
 
-#: winmain.c:4710
+#: winmain.c:4745
 msgid "Syntax error in geometry argument '%s'"
 msgstr "Formatfehler in Größen-/Positionsparameter '%s'"
 
-#: winmain.c:4897
+#: winmain.c:4932
 msgid "Mintty could not detach from caller, starting anyway"
 msgstr "Mintty konnte nicht vom Aufrufer abkoppeln, startet trotzdem"
 
-#: winmain.c:5111
+#: winmain.c:5146
 msgid "Using default title due to invalid characters in program name"
 msgstr "Nehme Default-Titel wegen ungültiger Zeichen im Programmnamen"
 

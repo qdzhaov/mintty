@@ -1,5 +1,6 @@
 .gdbinit
 bin/
+/dist
 release/
 *.sw[op]
 src/so

@@ -3287,7 +3287,7 @@ win_proc(HWND wnd, UINT message, WPARAM wp, LPARAM lp)
       } else {
         flash_taskbar(false);  /* stop */
         term_set_focus(true, true);
-        win_global_keyboard_hook(0,1);
+        win_global_keyboard_hook(1,0);
       }
       win_update_transparency(cfg.transparency, cfg.opaque_when_focused);
       win_key_reset();
@@ -3844,6 +3844,7 @@ static LRESULT CALLBACK hookprockbll(int nCode, WPARAM wParam, LPARAM lParam) {
     return CallNextHookEx(wv.kb_hook, nCode, wParam, lParam);
   }
   //Map key VK_CAPITAL to VK_ESCAPE
+  //printf("%d %d %d %d\n",cfg.capmapesc,key,key==VK_CAPITAL,kbdll->dwExtraInfo != UNCAP_INFO);
   if(cfg.capmapesc&&key==VK_CAPITAL&&kbdll->dwExtraInfo != UNCAP_INFO){
     INPUT inputs;
     PKEYBDINPUT ki = &inputs.ki;
@@ -3968,7 +3969,7 @@ win_global_keyboard_hook(bool on,bool autooff)
   if(autooff)if(!wv.hotkey)on=0;
   if(on){
     if(!cfg.hook_keyboard)return;
-    if(!cfg.win_shortcuts)return;
+    //if(!cfg.win_shortcuts)return;
   }
   if (on){
     if(!wv.kb_hook){

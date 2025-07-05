@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: mintty\n"
 "Report-Msgid-Bugs-To: https://github.com/mintty/mintty/issues/700\n"
-"POT-Creation-Date: 2025-06-28 19:47+0800\n"
+"POT-Creation-Date: 2025-07-06 07:24+0800\n"
 "PO-Revision-Date: 2022-09-16 00:06+0200\n"
 "Last-Translator: A Regnander <anton_r_3 at hotmail dot com>\n"
 "Language-Team: \n"
@@ -18,7 +18,7 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "X-Generator: Poedit 3.1.1\n"
 
-#: charset.c:228 charset.c:239 winmain.c:4472 winmain.c:4479 winmain.c:4837
+#: charset.c:228 charset.c:239 winmain.c:4507 winmain.c:4514 winmain.c:4872
 msgid "(Default)"
 msgstr "(standard)"
 
@@ -1056,16 +1056,16 @@ msgstr "Prova att skriva \"--help\" för mer information"
 msgid "Could not load icon"
 msgstr "Kunde inte läsa in ikon"
 
-#: winmain.c:4196
+#: winmain.c:4231
 msgid "Usage:"
 msgstr "Användning:"
 
-#: winmain.c:4197
+#: winmain.c:4232
 msgid "[OPTION]... [ PROGRAM [ARG]... | - ]"
 msgstr "[ALTERNATIV]... [ PROGRAM [ARGUMENT]... | - ]"
 
 #. __ help text (output of -H / --help), after initial line ("synopsis")
-#: winmain.c:4200
+#: winmain.c:4235
 msgid ""
 "Start a new terminal session running the specified program or the user's "
 "shell.\n"
@@ -1137,39 +1137,39 @@ msgid ""
 "See manual page for further command line options and configuration.\n"
 msgstr ""
 
-#: winmain.c:4459
+#: winmain.c:4494
 msgid "Duplicate option '%s'"
 msgstr "Alternativet \"%s\" är en dubblett"
 
-#: winmain.c:4472 winmain.c:4479 winmain.c:4837
+#: winmain.c:4507 winmain.c:4514 winmain.c:4872
 msgid "WSL distribution '%s' not found"
 msgstr "WSL-distributionen \"%s\" hittades inte"
 
-#: winmain.c:4509 winmain.c:4601
+#: winmain.c:4544 winmain.c:4636
 msgid "Unknown option '%s'"
 msgstr "Alternativet \"%s\" är okänt"
 
-#: winmain.c:4511
+#: winmain.c:4546
 msgid "Option '%s' requires an argument"
 msgstr "Alternativet \"%s\" kräver ett argument"
 
-#: winmain.c:4538
+#: winmain.c:4573
 msgid "Syntax error in position argument '%s'"
 msgstr "Syntaxfel vid positionsargumentet \"%s\""
 
-#: winmain.c:4549
+#: winmain.c:4584
 msgid "Syntax error in size argument '%s'"
 msgstr "Syntaxfel i storleksargumentet \"%s\""
 
-#: winmain.c:4710
+#: winmain.c:4745
 msgid "Syntax error in geometry argument '%s'"
 msgstr "Syntaxfel i geometriargumentet \"%s\""
 
-#: winmain.c:4897
+#: winmain.c:4932
 msgid "Mintty could not detach from caller, starting anyway"
 msgstr "Mintty kunde inte frigöras från anroparen, men startas ändå"
 
-#: winmain.c:5111
+#: winmain.c:5146
 msgid "Using default title due to invalid characters in program name"
 msgstr "Standardnamnlisten används p.g.a. ogiltiga tecken i programmets namn"
 

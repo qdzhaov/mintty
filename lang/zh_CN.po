@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: mintty\n"
 "Report-Msgid-Bugs-To: https://github.com/mintty/mintty/issues/700\n"
-"POT-Creation-Date: 2025-06-28 19:47+0800\n"
+"POT-Creation-Date: 2025-07-06 07:24+0800\n"
 "PO-Revision-Date: 2022-06-20 23:00+0800\n"
 "Last-Translator: GeekDuanLian <dl@pbstu.com>\n"
 "Language-Team: \n"
@@ -19,7 +19,7 @@ msgstr ""
 "X-Generator: Poedit 2.0.3\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
-#: charset.c:228 charset.c:239 winmain.c:4472 winmain.c:4479 winmain.c:4837
+#: charset.c:228 charset.c:239 winmain.c:4507 winmain.c:4514 winmain.c:4872
 msgid "(Default)"
 msgstr "(默认)"
 
@@ -1029,16 +1029,16 @@ msgstr "使用 --help 参数运行来了解如何使用"
 msgid "Could not load icon"
 msgstr "无法加载图标"
 
-#: winmain.c:4196
+#: winmain.c:4231
 msgid "Usage:"
 msgstr "用法："
 
-#: winmain.c:4197
+#: winmain.c:4232
 msgid "[OPTION]... [ PROGRAM [ARG]... | - ]"
 msgstr "[选项]... [ 程序名 [参数]... | - ]"
 
 #. __ help text (output of -H / --help), after initial line ("synopsis")
-#: winmain.c:4200
+#: winmain.c:4235
 msgid ""
 "Start a new terminal session running the specified program or the user's "
 "shell.\n"
@@ -1170,39 +1170,39 @@ msgstr ""
 "      --sl NUM          设置设置回滚行数\n"
 "请查阅 man 手册了解更多命令行选项和配置相关帮助内容。\n"
 
-#: winmain.c:4459
+#: winmain.c:4494
 msgid "Duplicate option '%s'"
 msgstr "重复的选项 %s"
 
-#: winmain.c:4472 winmain.c:4479 winmain.c:4837
+#: winmain.c:4507 winmain.c:4514 winmain.c:4872
 msgid "WSL distribution '%s' not found"
 msgstr "找不到 '%s' WSL 发行版"
 
-#: winmain.c:4509 winmain.c:4601
+#: winmain.c:4544 winmain.c:4636
 msgid "Unknown option '%s'"
 msgstr "未知的选项 %s"
 
-#: winmain.c:4511
+#: winmain.c:4546
 msgid "Option '%s' requires an argument"
 msgstr "选项 %s 需要一个参数"
 
-#: winmain.c:4538
+#: winmain.c:4573
 msgid "Syntax error in position argument '%s'"
 msgstr "position 选项的参数 '%s' 有语法错误"
 
-#: winmain.c:4549
+#: winmain.c:4584
 msgid "Syntax error in size argument '%s'"
 msgstr "size 选项的参数 '%s' 有语法错误"
 
-#: winmain.c:4710
+#: winmain.c:4745
 msgid "Syntax error in geometry argument '%s'"
 msgstr "geometry 选项的参数 '%s' 有语法错误"
 
-#: winmain.c:4897
+#: winmain.c:4932
 msgid "Mintty could not detach from caller, starting anyway"
 msgstr "Mintty 不能从调用者分离，但继续启动"
 
-#: winmain.c:5111
+#: winmain.c:5146
 msgid "Using default title due to invalid characters in program name"
 msgstr "使用默认的标题栏文字，因为程序名中有无效字符"
 
