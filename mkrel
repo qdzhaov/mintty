@@ -1,0 +1,147 @@
+#!/bin/bash
+set +vx
+if [ -f .git/gitee.cfg ];then
+  source .git/gitee.cfg
+fi
+if [ -z $ATK ];then
+  echo "Please Set vars in .git/gitee.cfg:"
+  echo "   ATK=<access_token>"
+  echo "   owner=<owner>"
+  echo "   repo=<repo>"
+  exit
+fi
+[ -z $owner ] && owner=qdzhaov
+[ -z $repo ] && repo=mintty
+PATK="access_token=$ATK"
+urlb=https://gitee.com/api/v5/repos/$owner/$repo/releases
+header="Content-Type: application/json;charset=UTF-8"
+GET="curl -sk -X GET --header \"$header\""
+POST="curl -sk -X POST "
+DEL="curl -sk -X DELETE --header \"$header\""
+new_rel(){
+  tnm=$1;msg=$2;rln=$3;brc=$4;
+  rln=${rln:-"$tnm"}
+  brc=${brc:-"master"}
+  data="{'access_token':\"$ATK\",'tag_name':\"$tnm\",'name':\"$rln\",'body':\"$msg\",'target_commitish':'master'}"
+  $POST --header "$header" $urlb -d "{\"access_token\":\"$ATK\",\"tag_name\":\"$tnm\",\"name\":\"$rln\",\"body\":\"$msg\",\"target_commitish\":\"master\"}"
+  #$POST $urlb -d '{"access_token":"0dd02ad0da7fafc9a75d9447da44c94f","tag_name":"z3.7.8","name":"z3.7.8","body":"aaaaaaaaaa","target_commitish":"master"}'
+
+}
+rm_rel(){
+  id=$1; $DEL $urlb/$id?$PATK
+}
+getlast_relid(){
+  $GET "$urlb/latest?access_token=$ATK"|jq .id
+}
+list_rel(){
+  n=20
+  rs=""
+  while [ $n == 20 ];do
+    r=`$GET "$urlb?$PATK&page=1&per_page=20"`
+    n=`echo $r|jq ".|length"`
+    rs="$rs `echo $r|jq '.[]|del(.author)|del(.body)|del(.assets)'`"
+  done
+  r=""; echo $rs;rs=""
+}
+get_relid_byname(){
+  list_rel|jq ".[]|select(.name == \"$1\") |.id"
+}
+get_relid_bytag(){
+  $GET  "$urlb/tags/$1?$PATK"|jq ".id"
+}
+uploadfile(){
+  fn=$2;
+  id=$1;
+  fnb=`basename $fn`
+  $POST  -F "name=$fnb" -F "file=@$fn" $urlb/$id/attach_files?$PATK
+}
+listfile(){
+  id=$1; $GET $urlb/$id/attach_files?$PATK|jq ".[]|del(.uploader)"
+}
+get_fileid_byname(){
+  id=$1;name=$2 ; listfile $id|jq ".[]|select(.name == \"$name\") |.id"
+}
+del_file_byid(){
+  id=$1;fid=$2 ; $DEL $urlb/$id/attach_files/fid?$PATK
+}
+del_file_byname(){
+  id=$1;fn=$2 ; 
+  get_fileid_byname $id $fn
+  $DEL $urlb/$id/attach_files/fid?$PATK
+}
+relbdy=
+cmd=upload
+until [ $# = 0 ] ; do
+  case "$1" in
+    --tag |tag )
+      shift;tnm=$1;shift
+      ;;
+    --desc|desc )
+      shift;bdyfn=$1;shift
+      ;;
+    --DESC|DESC )
+      upbdy=1
+      shift;bdyfn=$1;shift
+      ;;
+    --list|list)
+      cmd=list; shift
+      ;;
+    --listf|listf)
+      cmd=listf; shift
+      ;;
+    --upload|upload)
+      cmd=upload; shift
+      ;;
+    --del|del)
+      cmd=del;shift
+      ;;
+    --remove|remove)
+      cmd=remove;shift
+      ;;
+    *)
+      pks+=($1);shift
+      ;;
+  esac
+done
+if [ $cmd == list ];then
+  list_rel |jq #".|del(.id)"
+  exit
+fi
+[ -z $tnm ] && tnm=`git log -n 1  --tags --decorate=short|sed -n "s,^commit .*tag: *\([^,]*\).*,\1,p"`
+
+id=`get_relid_bytag $tnm`
+[ "$id" == "null" ] && id=""
+if [ $cmd == upload ];then
+  if [ "A$id" == "A" ];then
+    msg=`cat ${bdyfn:-release.txt}`
+    new_rel $tnm "$msg" 
+    id=`get_relid_bytag $tnm`
+    [ "$id" == "null" ] && exit
+  fi
+  for f in ${pks[*]};do
+    echo uploadfile $id $f
+    uploadfile $id $f
+  done
+  exit
+fi
+[ A$id == A ] && exit
+if [ $cmd == listf ];then
+  listfile $id |jq ".|del(.id)"
+  exit
+fi
+if [ $cmd == del ];then
+  if [ A$id != A ];then
+    for f in ${pks[*]};do
+      del_file_byname $id $f
+    done 
+  fi
+  exit
+fi
+if [ $cmd == remove ];then
+  if [ A$id != A ];then
+    rm_rel $id
+  fi
+  exit
+fi
+
+

@@ -1,0 +1,19 @@
+合并mintty升级/补丁，重要bug修复
+surport Map CapLock to Escape
+支持映射CapLock键到Escape
+surport multiple Tab followed fatty,Control key like gnome-termal
+完美支持标签,像fatty,标签控制键像gnome-termal
+Add control mode,So can release many hotkeys,it's helpfull for tmux+vim
+添加控制模式,Win+x 或者 Ctrl>Ctrl>A 进入控制模式,减少快捷键冲突
+surport partline last line can be partline,usrful for tmux
+半行模式,屏幕下方不足一行时,可以显示半行,使用tmux,screen,vim 的状态栏很方便
+Control config dialog fontsize
+设置窗口的字体可以改大了,对眼睛不好的人更友好了
+Surport Win+key as shortcuts key,all confict key with windows,will overide it.
+支持Win+key热键,
+Surport WSL/CYGWIN/COMMAND/POWERSHELL session
+支持快速启动WSL/CYGWIN/COMMAND/POWERSHELL标签
+surport colour & theme edit
+支持终端颜色编辑
+No translation of language pack except Chinese
+语言包除中文外没有进行翻译
