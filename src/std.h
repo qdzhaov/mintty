@@ -70,9 +70,6 @@ typedef WCHAR wchar;    // UTF-16
 typedef const char *string;
 typedef const wchar *wstring;
 
-#include "winpriv.h"
-#include "charset.h"
-#include "child.h"
 
 #if CYGWIN_VERSION_API_MINOR >= 91
 #include <argz.h>
@@ -120,7 +117,7 @@ extern char *asform(const char *fmt, ...);
 #endif
 
 
-typedef struct {
+typedef struct _strings{
   int n,m;
   const char **s;
 }strings;
@@ -192,4 +189,7 @@ extern wchar*awsform(const wchar *fmt, ...);
 
 #define VFREE(p) delete(p)
 
+#include "winpriv.h"
+#include "charset.h"
+#include "child.h"
 #endif

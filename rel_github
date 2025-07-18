@@ -1,0 +1,12 @@
+curl -X POST \
+  https://api.github.com/repos/owner/repo/releases \
+    -H 'Authorization: token YOUR_PERSONAL_ACCESS_TOKEN' \
+      -H 'Content-Type: application/json' \
+        -d '{
+          "tag_name": "v1.0.0",
+              "target_commitish": "master",
+              "name": "Release 1.0.0",
+              "body": "Description of the release",
+              "draft": false,
+              "prerelease": false
+        }'

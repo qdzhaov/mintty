@@ -1165,13 +1165,13 @@ string vk_name(uint key){
   if(*p>(char*)0xFFFF)return *p;
   return (char*)p;
 }
-static int getvk(const char *n){
+int getvk(const char *n){
   if(n[1]==0){
-    return (int)(unsigned char)(n[0]&0xdf);
+    return (int)(unsigned char)(n[0]&0xdf);//low to up
   }
   if(n[0]=='\\'){
-    if((n[1]|0x20)=='x') return strtol(n+2,NULL,16);
-    return strtol(n+1,NULL,0);
+    if((n[1]|0x20)=='x') return strtol(n+2,NULL,16)&0xFF;
+    return strtol(n+1,NULL,0)&0xFF;
   } 
   struct knvhash*p=&knvh[HASHS(n)];
   for(int i=0;i<p->n;i++){
@@ -1179,7 +1179,7 @@ static int getvk(const char *n){
       return p->p[i].key;
     }
   }
-  return -1;
+  return 0;
 }
 mod_keys str2key(const char * k,int*key){
   const char*pk;

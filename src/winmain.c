@@ -3805,6 +3805,29 @@ int checkWinTitle(LPCWSTR wstr){
   return 0;
 }
 HWND dstwnd=NULL;
+int getvk(const char *n);
+unsigned char selfmapkey[257]={0};
+void clrMapKey(unsigned char*mks){
+  memset(mks,0,257);
+}
+void initMapkey(unsigned char*mks,strings *ss){
+  int i;
+  clrMapKey(mks);
+  if(cfg.capmapesc){
+    selfmapkey[VK_CAPITAL]=VK_ESCAPE;
+  }
+  if(ss==NULL)return ;
+  char a[64],b[64],*d;
+  for(i=0;i<ss->n;i++){
+    const unsigned char *s=(const unsigned char *)ss->s[i];
+    const unsigned char*p=s;
+    for(;isspace(*p);p++);
+    for(d=a;!isspace(*p);p++){*d=*p;} *d=0;
+    for(;isspace(*p)||*p==',';p++);
+    for(d=b;!isspace(*p);p++){*d=*p;} *d=0;
+    mks[getvk(a)]=getvk(b);
+  }
+}
 static LRESULT CALLBACK hookprockbll(int nCode, WPARAM wParam, LPARAM lParam) {
   LPKBDLLHOOKSTRUCT kbdll = (LPKBDLLHOOKSTRUCT)lParam;
   if(kbdll->dwExtraInfo == UNCAP_INFO){
@@ -3845,16 +3868,19 @@ static LRESULT CALLBACK hookprockbll(int nCode, WPARAM wParam, LPARAM lParam) {
   }
   //Map key VK_CAPITAL to VK_ESCAPE
   //printf("%d %d %d %d\n",cfg.capmapesc,key,key==VK_CAPITAL,kbdll->dwExtraInfo != UNCAP_INFO);
-  if(cfg.capmapesc&&key==VK_CAPITAL&&kbdll->dwExtraInfo != UNCAP_INFO){
-    INPUT inputs;
-    PKEYBDINPUT ki = &inputs.ki;
-    inputs.type = INPUT_KEYBOARD;
-    ki->time = ki->wScan = 0;
-    ki->wVk = VK_ESCAPE;
-    ki->dwFlags = (wParam == WM_KEYUP || wParam == WM_SYSKEYUP) ? KEYEVENTF_KEYUP : 0;
-    ki->dwExtraInfo = UNCAP_INFO;
-    SendInput(1, &inputs, sizeof (inputs));
-    return 1;
+  if(key<=256&&kbdll->dwExtraInfo != UNCAP_INFO){
+    int mk=selfmapkey[key];
+    if(mk){
+      INPUT inputs;
+      PKEYBDINPUT ki = &inputs.ki;
+      inputs.type = INPUT_KEYBOARD;
+      ki->time = ki->wScan = 0;
+      ki->wVk = mk;
+      ki->dwFlags = (wParam == WM_KEYUP || wParam == WM_SYSKEYUP) ? KEYEVENTF_KEYUP : 0;
+      ki->dwExtraInfo = UNCAP_INFO;
+      SendInput(1, &inputs, sizeof (inputs));
+      return 1;
+    }
   }
   if (term.shortcut_override ||(kbdll->flags&0x10)){
     return CallNextHookEx(wv.kb_hook, nCode, wParam, lParam);
@@ -5627,6 +5653,7 @@ main(int argc, const char *argv[])
   SetWindowLong(wv.wnd, GWL_USERDATA, mtime() & GWL_TIMEMASK);
 
   win_update_shortcuts();
+  initMapkey(selfmapkey,NULL);
   win_global_keyboard_hook(1,0);
   if (wv.report_winpid) {
     DWORD wpid = -1;

@@ -48,6 +48,7 @@ _CFGDEFE: Legacy options for Backward Compatibility
 #define FNT_NON  FNTD("")
 #define FNT_NUL  {W(""),16,400,0}
 #define SAVE_FN W("mintty.%Y%m%d_%H%M%S")
+
 #define _CFGDEFA(t,v,d,i,T,F,l,c,s,n,b) 
 #define _CFGDEFB(t,v,d,i,T,F,l,c,s,n,b) .v = d,
 #define _CFGDEFC(t,v,d,i,T,F,l,c,s,n,b) 
@@ -207,6 +208,7 @@ _CFGDEFE: Legacy options for Backward Compatibility
   _CFGDEFD(CBOOL    ,ctrl_alt_is_altgr      ,0               ,       IS(0),OPT_BOOL         ,OPF_CHK  ,9,0,0,"CtrlAltIsAltGr"           ,__("Ctrl+LeftAlt is Alt&Gr")   ) 
   _CFGDEFD(CBOOL    ,altgr_is_alt           ,0               ,       IS(0),OPT_BOOL         ,OPF_CHK  ,9,0,0,"AltGrIsAlsoAlt"           ,__("AltGr is also Alt")        ) 
   _CFGDEFD(CBOOL    ,capmapesc              ,1               ,       IS(0),OPT_BOOL         ,OPF_CHK  ,9,0,0,"capmapesc"                ,__("Caplock As Escape")        )  
+  _CFGDEFD(strings  ,mapkeys                ,{0}             ,       IS(0),OPT_STRS         ,OPF_STRS ,1,0,0,"MapKeys"                  ,__("MapKeys")                  )
   _CFGDEFD(CBOOL    ,key_alpha_mode         ,1               ,       IS(0),OPT_BOOL         ,OPF_CHK  ,9,0,0,"KeyAlphaMode"             ,__("&Esc/Enter reset IME to alphanumeric")   )
   _CFGDEFC(0        ,=======                ,0               ,       IS(0),OPT_CMT          ,OPF_COL  ,9,3,0,""  ,0)
   _CFGDEFD(CBOOL    ,old_altgr_detection    ,0               ,       IS(0),OPT_BOOL         ,OPF_CHK  ,3,5,0,"OldAltGrDetection"        ,__("OldAltGrDetection")        )
